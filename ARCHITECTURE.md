@@ -118,11 +118,11 @@ L’interface de jeu sera une application à onglets plutôt qu’une multitude 
   static/                   # portraits et illustrations facultatifs
 ```
 
-### 3.1 Écarts avec l’arborescence cible (état après P1-08)
+### 3.1 Écarts avec l’arborescence cible (état pendant P1-10)
 
 - `engine/actions.ts` est devenu `engine/plan.ts` (plan d’actions et d’achats : prévision et exécution) ; `characters.ts` et suivants viendront avec l’alpha.
-- Ajouts : `content/types.ts` (types sans dépendance, seul module de contenu lisible par le moteur), `content/version.ts` (empreinte des catalogues), `content/data/cast.json` (distribution fictive) ; `persistence/state-schema.ts` et `persistence/index.ts` ; `app/format.ts` et `app/browser.ts` (frontière navigateur) ; `components/organisation/` et `components/journal/` ; `scripts/base-path.ts` et `scripts/serve-static.ts` ; `tests/e2e/support/`.
-- Pas encore créés : `content/data/world/` (monde, alpha), `scripts/simulate.ts` (P1-10).
+- Ajouts : `content/types.ts` (types sans dépendance, seul module de contenu lisible par le moteur), `content/version.ts` (empreinte des catalogues), `content/load-node.ts` (frontière fichier des outils Node), `content/data/cast.json` (distribution fictive) ; `engine/acceleration.ts` ; `simulation/index.ts` ; `persistence/state-schema.ts` et `persistence/index.ts` ; `app/format.ts` et `app/browser.ts` (frontière navigateur) ; `components/organisation/` et `components/journal/` ; `scripts/base-path.ts`, `scripts/serve-static.ts` et `scripts/simulate.ts` ; `tests/e2e/support/`.
+- Pas encore créé : `content/data/world/` (monde, alpha).
 - Tests non colocés : `tests/unit`, `tests/scenarios`, `tests/fixtures`, `tests/e2e`.
 
 Arborescence cible et non exigence de créer des dossiers vides : commencer par les modules utiles au prototype. Les fichiers séparés par virgules ci-dessus sont des fichiers distincts. Les tests peuvent aussi être colocés si convention unique documentée. Pas de dépendance circulaire : types et utilitaires → règles métier → orchestrateur ; le moteur ne dépend jamais de l’application ou de l’UI. Le catalogue ne dépend pas du navigateur.
@@ -430,6 +430,17 @@ Exécutable Node via un script TypeScript (par exemple tsx) appelant `transition
 
 Rapport JSON/CSV : durée en tours, interventions significatives, causes de fin, ressources, mandats, promesses, fréquence/répétition des événements, violations d’invariants et seeds problématiques. Une carrière arrêtée par le plafond technique est un cas à analyser, pas une mort normale. Aucune estimation de durée humaine déduite uniquement de la vitesse CPU ; le rythme de 45–60 minutes est mesuré en playtests. Lancer un petit lot reproductible en CI et des lots plus larges à la demande.
 
+### 11.1 bis Décisions et première mesure de P1-10 (24 novembre 2026)
+
+- **Orchestration :** `simulation/index.ts` appelle exclusivement `createGame`, `previewPlan` et `transition` avec `commitTurn` ou `chooseEventCommand`. Le simulateur ne possède aucune résolution alternative. Les invariants sont contrôlés après chaque transition.
+- **Politiques publiques :** `prudent`, `ambitious`, `patrimonial`, `mixed` et `random-valid`. Les plans sont assemblés gloutonnement depuis les catalogues et la prévision publique. Les choix narratifs ne reçoivent que `PendingEventView` ; le tirage de la politique aléatoire est dérivé de la seed du lot sans lire ni avancer le PRNG de la carrière.
+- **Plafond :** une carrière qui atteint `maxTurns` reçoit le statut `capped`, sans cause de décès, et sa seed apparaît dans `problemSeeds`. Les erreurs de transition et violations d’invariants ont un statut distinct. Le CLI renvoie un code non nul dès qu’une seed problématique existe.
+- **Rapports :** le JSON contient configuration, versions, agrégats par stratégie et détails par carrière ; le CSV contient une ligne par carrière. Tours, âge, décisions, épisodes d’alerte, fins, ressources, améliorations, suspensions et occurrences d’événements sont mesurés. Mandats et promesses sont explicitement déclarés indisponibles tant que ces systèmes n’existent pas, plutôt que remplis de zéros trompeurs.
+- **Exécution :** `npm run simulate -- --runs 100 --seed 42 --strategy all --max-turns 400 --format json`. `--format csv` fournit le second format et `--output` écrit dans un fichier. La CI lance 25 carrières réparties entre les cinq stratégies.
+- **Mesure avant réglage :** 500 carrières (`p1-10-baseline`, 100 par stratégie) : 500 fins, aucun plafond, aucune erreur ni violation ; 188,52 trimestres et 47,18 décisions en moyenne. La stratégie prudente atteint un âge médian de 83 ans ; la stratégie ambitieuse finit à 94 % par défaillance de santé, vers 45 ans. Les stratégies patrimoniale et aléatoire accumulent environ 180 trimestres de producteurs suspendus : l’absence de revente ou licenciement rend leur plan naïf durablement inefficace.
+- **Réglage provisoire :** `ordinaryEventChance` passe de `0,40` à `0,30`. À seeds identiques, la moyenne descend de 47,18 à 36,54 décisions sans plafond ni violation et sans changement significatif de la durée simulée. Un second lot de 500 carrières avec le catalogue réglé confirme 500 fins, 0 problème, 183,70 trimestres et 35,84 décisions en moyenne. Ce réglage réduit les interruptions répétitives ; il ne préjuge pas de la qualité des textes ou du temps de lecture.
+- **Validation humaine :** une carrière complète a été jouée jusqu’au bilan sans bug fonctionnel ; voir `PLAYTEST.md`. L’interface est réactive, mais lourde et trop textuelle, et la conservation du plan diffère entre avance manuelle et accélération. P1-10 et la phase 1 sont validées ; la cible chiffrée de 45–60 minutes reste à mesurer avec chronométrage lors de P3-09.
+
 ## 12. Outils de développement, build et hébergement
 
 Scripts npm cibles, à créer et documenter lors du bootstrap :
@@ -443,7 +454,7 @@ Scripts npm cibles, à créer et documenter lors du bootstrap :
 | `npm run test` | Tests unitaires et scénarios |
 | `npm run test:e2e` | Tests navigateur |
 | `npm run content:validate` | Validation exhaustive des catalogues |
-| `npm run simulate -- --runs 100 --seed 42` | Exemple de commande cible du simulateur |
+| `npm run simulate -- --runs 100 --seed 42` | Lance le simulateur seedé (JSON par défaut, CSV avec `--format csv`) |
 | `npm run build` | Build statique dans `build/` |
 | `npm run preview` | Vérification du résultat local |
 
@@ -512,17 +523,17 @@ DESIGN.md et ROADMAP.md sont rédigés ; l’avancement réel est suivi dans ROA
 
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
-Relevé du 24 novembre 2026, avant passage de relais. Rien de ce qui suit n’est un défaut bloquant connu : 363 tests unitaires et de scénarios et 22 tests E2E (racine et sous-répertoire) passent après installation propre.
+Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.
 
 ### 15.1 Règles provisoires à confirmer
 
 - **Format de sauvegarde.** `STATE_SCHEMA_VERSION = 1` et `SAVE_VERSION = 1`. Toute modification de `GameState` doit mettre à jour `persistence/state-schema.ts` (la compilation l’impose). Proposition : tant qu’aucune version jouable n’est publiée, conserver la version 1 (une sauvegarde de développement devenue incompatible est signalée, jamais effacée) ; dès la première publication de la phase 1, toute modification de format incrémente `SAVE_VERSION` avec une migration testée.
-- **Version des règles.** `RULES_VERSION = '0.6.0'`, incrémentée à chaque changement de règle ; elle n’est qu’informative à la lecture d’une sauvegarde.
+- **Version des règles.** `RULES_VERSION = '0.7.0'`, incrémentée à chaque changement de règle ; elle n’est qu’informative à la lecture d’une sauvegarde.
 - **Paramètre `?seed=`.** Réservé aux essais et à la reproduction ; à masquer ou documenter auprès des joueurs avant diffusion large.
 
 ### 15.2 Limites fonctionnelles connues (prototype)
 
-- Accélération minimale disponible (P1-09), mais pas encore de simulateur par lots ni de réglages fondés sur son rapport (P1-10). Durée de jeu de 45–60 minutes non mesurée avec des joueurs ; mesures CPU indicatives : ≈ 200 trimestres et 40–50 décisions par carrière (§7.4), à réduire probablement via le tuning et à valider en playtest.
+- Accélération minimale et simulateur par lots disponibles. Le premier réglage P1-10 réduit la mesure CPU à ≈ 184 trimestres et 36 décisions par carrière, mais la durée de jeu de 45–60 minutes reste non mesurée avec un joueur ; voir §11.1 bis et `PLAYTEST.md`.
 - Jauges du GDD non encore modélisées : popularité, exposition médiatique, risque judiciaire ; pas de mandats ni de « fonction principale » dans l’en-tête (DESIGN §3) ; pas de compteur de fonds détournés pour le bilan (GDD §12) : les choix opportunistes existent mais ne sont pas encore comptabilisés.
 - Libellé « Argent personnel » dans l’interface pour la ressource `personalCashCents` (GDD : « Fortune personnelle », DESIGN : « Fortune ») : la fortune au sens du GDD inclura plus tard les actifs (V1).
 - Aucun coût de la vie personnel : l’insolvabilité ne vient que des charges d’améliorations (question d’équilibrage ouverte, GDD §17).
@@ -530,6 +541,7 @@ Relevé du 24 novembre 2026, avant passage de relais. Rien de ce qui suit n’es
 - Rejoindre le parti fictif n’enregistre aucune affiliation (partis : P2-01). Distribution d’acteurs figée (ni âge ni relations, P2-04).
 - Accueil : pas de réglages, seed non affichée (DESIGN §4.1). Bilan minimal sans distinctions (DESIGN §6, V1). Pas de message `<noscript>` : sans JavaScript, la page reste sur « Ouverture du cabinet… ».
 - « Accueil » abandonne le brouillon de plan non validé sans confirmation (permis par §10, mais perceptible). L’accueil ne se rafraîchit pas si un autre onglet modifie la sauvegarde pendant qu’il est affiché (le blocage ne s’applique qu’en partie).
+- Après un trimestre manuel, le plan est vidé ; après une accélération, le plan récurrent reste affiché. Le playtest P1-10 juge cette différence incohérente et les clics répétés fastidieux. La finition V1 doit aussi réduire la densité de texte, privilégier l’aide contextuelle et rendre l’accès à l’agenda plus direct (P3-08).
 - Mise en page vérifiée à 1280 × 720 et 1440 × 900 ; repli sous 1 100 px et zoom à 125 % non testés automatiquement. Accessibilité vérifiée par tests clavier et rôles ARIA, sans audit automatisé (axe) ni lecteur d’écran.
 
 ### 15.3 Dette technique

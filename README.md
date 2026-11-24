@@ -13,9 +13,9 @@ compte, aucune IA au runtime ; les sauvegardes restent dans le navigateur.
 - **Jouer :** <https://bencorb.github.io/la-republique-cest-moi/>
 - **Code source :** <https://github.com/BenCorb/la-republique-cest-moi>
 
-> **État actuel : prototype en cours (phase 1).** Une carrière se joue de bout en bout dans
-> l’environnement de développement (branche `feat/p1-prototype`) ; le site publié montre encore la
-> phase 0. L’avancement fait foi dans [ROADMAP.md](ROADMAP.md).
+> **État actuel : prototype terminé (phase 1).** Une carrière se joue de bout en bout et le premier
+> playtest humain est validé sur la branche `feat/p1-prototype` ; la PR de phase reste à intégrer et
+> le site publié montre encore la phase 0. L’avancement fait foi dans [ROADMAP.md](ROADMAP.md).
 
 ## Jouer (prototype)
 
@@ -37,6 +37,7 @@ interrompu entre deux trimestres. La partie est sauvegardée automatiquement dan
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Contrats techniques, ordre du tour, tests, sauvegarde |
 | [DESIGN.md](DESIGN.md)             | Direction artistique et interface                     |
 | [ROADMAP.md](ROADMAP.md)           | Phases, tâches et critères d’acceptation              |
+| [PLAYTEST.md](PLAYTEST.md)         | Protocoles et résultats des essais humains            |
 
 ## Prérequis
 
@@ -66,6 +67,7 @@ npm run test:e2e:install
 | `npm run lint`             | Formatage Prettier vérifié puis ESLint                             |
 | `npm run format`           | Reformate les fichiers (hors documents de conception)              |
 | `npm run content:validate` | Valide les catalogues JSON de `src/lib/game/content/data/`         |
+| `npm run simulate`         | Simule des lots seedés et produit un rapport JSON ou CSV           |
 | `npm run test`             | Tests unitaires et de scénarios (Vitest, environnement Node)       |
 | `npm run test:e2e`         | Construit le site puis lance Playwright sur le build statique      |
 | `npm run build`            | Build statique prérendu dans `build/`                              |
@@ -74,6 +76,17 @@ npm run test:e2e:install
 
 Toutes les commandes de build, d’aperçu et de test respectent la variable `BASE_PATH` (voir
 « Hébergement GitHub Pages »).
+
+Exemple de simulation reproductible :
+
+```bash
+npm run simulate -- --runs 100 --seed 42 --strategy all --max-turns 400 --format json --output rapport.json
+npm run simulate -- --runs 100 --seed 42 --strategy all --max-turns 400 --format csv --output rapport.csv
+```
+
+Les stratégies disponibles sont `prudent`, `ambitious`, `patrimonial`, `mixed`, `random-valid` et
+`all`. Une carrière arrêtée par le plafond technique, une erreur ou une violation d’invariant est
+signalée dans `problemSeeds` et fait échouer la commande.
 
 Vérification complète avant de rendre une tâche :
 

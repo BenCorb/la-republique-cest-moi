@@ -23,6 +23,7 @@
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
 		"content:validate": "node scripts/validate-content.ts",
+		"simulate": "node scripts/simulate.ts",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:e2e": "playwright test",

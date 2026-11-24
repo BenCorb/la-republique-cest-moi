@@ -1,7 +1,7 @@
 # La République, c’est moi ! — Feuille de route
 
 **Version 0.1 — 24 novembre 2026**  
-**Statut :** phase 0 terminée (P0-01 à P0-06). Phase 1 en cours sur la branche `feat/p1-prototype` (une PR vers `main` en fin de phase) : P1-01 à P1-09 réalisées et vérifiées le 24 novembre 2026 (✅ = tâche terminée dans les tableaux). Reprise : voir §9.
+**Statut :** phases 0 et 1 terminées : P0-01 à P0-06 et P1-01 à P1-10 réalisées et vérifiées le 24 novembre 2026 (✅ = tâche terminée dans les tableaux). La branche `feat/p1-prototype` doit encore être intégrée par une PR unique vers `main`. Reprise : voir §9.
 
 **Références :** [GAME_DESIGN.md](GAME_DESIGN.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN.md](DESIGN.md), [AGENTS.md](AGENTS.md).
 
@@ -43,7 +43,7 @@ Dépendances : P0-01 précède les autres ; P0-02 et P0-03 peuvent être traité
 | P1-07 ✅ | Sauvegarde locale | P1-05 | Enveloppe versionnée, reprise à l’identique y compris décision en attente, export/import et erreurs traitées ; pas de progression hors ligne |
 | P1-08 ✅ | Interface jouable | P1-03 à 07 | Agenda, tableau de bord, producteurs simples, événements, journal et bilan accessibles ; coûts et erreurs lisibles |
 | P1-09 ✅ | Accélération minimale et tests de scénarios | P1-08 | Tours multiples identiques aux tours unitaires ; arrêt sur choix/alerte/fin, annulation possible ; E2E complet |
-| P1-10 | Simulateur et réglages initiaux | P1-09 | Exécution de lots seedés ; rapport JSON/CSV ; invariants et fins analysés ; playtest humain effectué et documenté |
+| P1-10 ✅ | Simulateur et réglages initiaux | P1-09 | Exécution de lots seedés ; rapport JSON/CSV ; invariants et fins analysés ; playtest humain effectué et documenté |
 
 ### Contenu minimal
 
@@ -84,7 +84,7 @@ Actions de militantisme, rencontres, recrutement générique, organisation, repo
 | P3-05 | Institutions modifiables | P3-01/04 | Réformes limitées aux fonctions autorisées, règles persistantes, activation à date fixe, conséquences aussi pour adversaires |
 | P3-06 | Âges de départ et passé | P2-08 | Trois familles de profils et passé cohérent ; bagage contre horizon de vie ; pas d’avantage interparties |
 | P3-07 | Époques, chaînes et contenu | P3-01 à 06 | Événements et technologies disponibles selon dates ; références fictives ; répétitions contrôlées ; catalogue enrichi et validé |
-| P3-08 | Interface et bilan définitifs V1 | P3-07 | Écrans intégrés, nécrologies diversifiées, distinctions fondées sur historique, pas de sous-système de prestige |
+| P3-08 | Interface et bilan définitifs V1 | P3-07 | Interface allégée et plus graphique ; plan cohérent entre avance manuelle et accélération ; écrans intégrés, nécrologies diversifiées, distinctions fondées sur historique, pas de sous-système de prestige |
 | P3-09 | Équilibrage et tests | P3-08 | Lots de simulations par stratégie, playtests, corrections documentées ; cible de durée évaluée ; aucune anomalie critique connue |
 | P3-10 | Livraison statique | P3-09 | Build, vérification locale et sous-chemin GitHub Pages ; procédure de déploiement/rollback (workflow manuel) éprouvée ; publication seulement sur demande |
 
@@ -114,10 +114,10 @@ Les tâches de phase 0 peuvent également être confiées une par une pour facil
 
 ## 9. Reprise du travail — passage de relais (24 novembre 2026)
 
-- **Branche :** `feat/p1-prototype` (poussée), basée sur `main` (`2b1ab80`), un commit par tâche P1-02 à P1-08 ; une seule pull request vers `main` en fin de phase 1 (exception documentée dans `AGENTS.md`). Le site publié montre encore la phase 0.
-- **État :** P0-01 à P0-06 et P1-01 à P1-09 terminées et vérifiées. Vérification complète après `npm ci` : `check`, `lint`, `content:validate`, `test` (374), `build`, `test:e2e` (28 à la racine, 28 avec `BASE_PATH=/la-republique-cest-moi`).
-- **Où lire :** décisions de chaque tâche dans `ARCHITECTURE.md` (§5.2 bis, §6.1, §7.1 bis, §7.3, §7.4, §8.1 bis, §8.2 bis, §9.1, §10.1, §12.1–12.3) ; limites, dette et règles provisoires au §15.
-- **Prochaine tâche : P1-10** (simulateur et réglages initiaux). Points d’attention : appeler les mêmes transitions que le jeu ; proposer des stratégies seedées sans accès aux informations cachées ; produire JSON et CSV ; signaler toute carrière arrêtée par le plafond technique ; compléter les mesures CPU par un playtest humain documenté.
+- **Branche :** `feat/p1-prototype` (poussée), basée sur `main` (`2b1ab80`), un commit par tâche P1-02 à P1-09 ; une seule pull request vers `main` en fin de phase 1 (exception documentée dans `AGENTS.md`). Le site publié montre encore la phase 0.
+- **État :** phases 0 et 1 terminées et vérifiées. P1-10 fournit le simulateur, les rapports JSON/CSV, le lot CI et un premier réglage ; le playtest humain a mené une carrière complète jusqu’au bilan sans bug fonctionnel. Retours détaillés dans `PLAYTEST.md`.
+- **Où lire :** décisions de chaque tâche dans `ARCHITECTURE.md` (§5.2 bis, §6.1, §7.1 bis, §7.3, §7.4, §8.1 bis, §8.2 bis, §9.1, §10.1, §11.1 bis, §12.1–12.3) ; protocole humain dans `PLAYTEST.md` ; limites, dette et règles provisoires au §15.
+- **Prochaine étape :** vérifier et committer P1-10, pousser la branche, ouvrir la PR unique de phase 1 et attendre une CI verte avant fusion. La prochaine tâche de développement après intégration est P2-01. Ne pas déployer sans demande explicite.
 - **Décisions attendues du créateur :** règle de version de sauvegarde (§15.1) ; coût de la vie personnel ; relecture éditoriale des 30 événements ; déplacement du dépôt hors d’iCloud (§15.4).
 - **Avant de commencer :** `git fetch --prune`, `git status`, rechercher les copies de synchronisation (`find . -path ./node_modules -prune -o -name '* [0-9].*' -print`), `npm ci`, puis la vérification complète ci-dessus.
 

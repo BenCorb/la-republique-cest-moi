@@ -64,6 +64,6 @@
 	},
 	"events": {
 		"ordinaryDrawsPerTurn": 1,
-		"ordinaryEventChance": 0.4
+		"ordinaryEventChance": 0.3
 	}
 }

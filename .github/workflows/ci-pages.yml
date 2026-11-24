@@ -52,6 +52,7 @@ jobs:
       - run: npm run lint
       - run: npm run content:validate
       - run: npm run test
+      - run: npm run simulate -- --runs 25 --seed ci-p1-10 --strategy all --max-turns 400 --format json --output /tmp/lrcm-simulation-ci.json
       - run: npm run build
 
       - name: Installer Chromium pour Playwright
