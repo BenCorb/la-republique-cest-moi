@@ -17,11 +17,14 @@
  */
 import type { Content } from '../content/types.ts';
 import {
+	accelerate as accelerateEngine,
 	chooseEventCommand,
 	commitTurn,
 	createGame,
 	formatTurn,
 	transition,
+	type AccelerationResult,
+	type AccelerationStopReason,
 	type GameCommand,
 	type GameState,
 	type PlanStep
@@ -49,6 +52,8 @@ export interface ControllerDependencies {
 	readonly now: () => string;
 	/** Seed d'une nouvelle carrière (tirée par le navigateur à sa frontière). */
 	readonly newSeed: () => string;
+	/** Rend la main à l'hôte entre deux tours accélérés (une frame dans le navigateur). */
+	readonly yieldControl?: () => Promise<void>;
 }
 
 export type SaveStatus =
@@ -83,6 +88,17 @@ export interface Notice {
 	readonly details: readonly string[];
 }
 
+export type ControllerAccelerationStopReason =
+	AccelerationStopReason | 'cancelled' | 'save_failed' | 'conflict';
+
+export interface AccelerationStatus {
+	readonly running: boolean;
+	readonly turnsAdvanced: number;
+	readonly targetTurns: number;
+	readonly stopReason: ControllerAccelerationStopReason | null;
+	readonly message: string;
+}
+
 export interface ControllerSnapshot {
 	readonly screen: 'home' | 'game';
 	readonly home: HomeInfo;
@@ -94,6 +110,7 @@ export interface ControllerSnapshot {
 	readonly continuingUnsaved: boolean;
 	readonly pendingImport: PendingImport | null;
 	readonly notice: Notice | null;
+	readonly acceleration: AccelerationStatus | null;
 }
 
 export type StartResult = 'started' | 'needs_confirmation' | 'failed';
@@ -111,6 +128,8 @@ export class GameController {
 	private loaded: SaveEnvelope | null = null;
 	private pendingImport: SaveEnvelope | null = null;
 	private notice: Notice | null = null;
+	private acceleration: AccelerationStatus | null = null;
+	private accelerationToken = 0;
 	private readonly listeners = new Set<Listener>();
 	private cachedSnapshot: ControllerSnapshot | null = null;
 
@@ -144,7 +163,8 @@ export class GameController {
 						savedAtLabel: formatSavedAt(this.pendingImport.savedAt)
 					}
 				: null,
-			notice: this.notice
+			notice: this.notice,
+			acceleration: this.acceleration
 		};
 		return this.cachedSnapshot;
 	}
@@ -217,40 +237,46 @@ export class GameController {
 
 	/** Retour à l'accueil ; le brouillon de plan non validé est abandonné. */
 	leave(): void {
+		this.accelerationToken += 1;
 		this.state = null;
 		this.plan = [];
 		this.screen = 'home';
 		this.saveStatus = null;
 		this.continuingUnsaved = false;
 		this.notice = null;
+		this.acceleration = null;
 		this.home = this.readHome();
 		this.changed();
 	}
 
 	private enterGame(state: GameState, status: SaveStatus | null): void {
+		this.accelerationToken += 1;
 		this.state = state;
 		this.plan = [];
 		this.screen = 'game';
 		this.continuingUnsaved = false;
 		this.notice = null;
+		this.acceleration = null;
 		this.saveStatus = this.deps.storage ? status : { kind: 'unavailable' };
 	}
 
 	// -- Plan ---------------------------------------------------------------
 
 	addStep(step: PlanStep): void {
-		if (!this.state || this.state.phase !== 'planning') return;
+		if (!this.state || this.state.phase !== 'planning' || this.acceleration?.running) return;
 		this.plan = [...this.plan, step];
 		this.notice = null;
 		this.changed();
 	}
 
 	removeStep(index: number): void {
+		if (this.acceleration?.running) return;
 		this.plan = this.plan.filter((_step, position) => position !== index);
 		this.changed();
 	}
 
 	moveStep(index: number, offset: -1 | 1): void {
+		if (this.acceleration?.running) return;
 		const target = index + offset;
 		if (target < 0 || target >= this.plan.length) return;
 		const next = [...this.plan];
@@ -260,6 +286,7 @@ export class GameController {
 	}
 
 	clearPlan(): void {
+		if (this.acceleration?.running) return;
 		this.plan = [];
 		this.changed();
 	}
@@ -267,20 +294,139 @@ export class GameController {
 	// -- Transitions --------------------------------------------------------
 
 	private canAct(): boolean {
-		if (!this.state || this.state.phase === 'ended') return false;
+		if (!this.state || this.state.phase === 'ended' || this.acceleration?.running) return false;
 		const status = this.saveStatus;
 		if (!status || status.kind === 'conflict') return false;
 		return status.kind !== 'failed' || this.continuingUnsaved;
 	}
 
 	commitTurn(): boolean {
+		if (this.acceleration?.running) return false;
+		this.acceleration = null;
 		return this.run(commitTurn({ steps: this.plan }), true);
 	}
 
 	choose(choiceId: string): boolean {
+		if (this.acceleration?.running) return false;
+		this.acceleration = null;
 		const instanceId = this.state?.events.pending[0]?.instanceId;
 		if (!instanceId) return false;
 		return this.run(chooseEventCommand(instanceId, choiceId), false);
+	}
+
+	// -- Accélération -------------------------------------------------------
+
+	private accelerationMessage(
+		result: Pick<AccelerationResult, 'stopReason' | 'alerts' | 'issues'>,
+		turnsAdvanced: number
+	): string {
+		const count = `${turnsAdvanced} trimestre${turnsAdvanced > 1 ? 's' : ''} simulé${turnsAdvanced > 1 ? 's' : ''}`;
+		switch (result.stopReason) {
+			case 'limit_reached':
+				return `${count} : limite demandée atteinte.`;
+			case 'decision_pending':
+				return `${count} : une décision attend votre réponse.`;
+			case 'alert':
+				return `${count} : ${result.alerts[0]?.message ?? 'une nouvelle alerte demande votre attention'}`;
+			case 'game_ended':
+				return `${count} : la carrière est terminée.`;
+			case 'invalid_plan':
+				return `${count} : ${result.issues[0]?.message ?? 'le plan récurrent n’est plus valide'}`;
+		}
+	}
+
+	private finishAcceleration(
+		running: AccelerationStatus,
+		stopReason: ControllerAccelerationStopReason,
+		message: string
+	): void {
+		this.acceleration = { ...running, running: false, stopReason, message };
+	}
+
+	/**
+	 * Simule au plus `maxTurns` trimestres, un par lot : chaque état cohérent est
+	 * sauvegardé puis le navigateur reprend la main avant le tour suivant.
+	 */
+	async accelerate(maxTurns: number): Promise<boolean> {
+		if (!Number.isSafeInteger(maxTurns) || maxTurns < 1) return false;
+		if (!this.state || !this.canAct() || this.state.phase !== 'planning') return false;
+
+		const token = ++this.accelerationToken;
+		const recurringPlan = { steps: [...this.plan] };
+		let running: AccelerationStatus = {
+			running: true,
+			turnsAdvanced: 0,
+			targetTurns: maxTurns,
+			stopReason: null,
+			message: 'Accélération en cours…'
+		};
+		this.acceleration = running;
+		this.notice = null;
+		this.changed();
+
+		while (running.turnsAdvanced < maxTurns && this.state) {
+			if (token !== this.accelerationToken) return true;
+			const batch = accelerateEngine(
+				this.state,
+				{ plan: recurringPlan, maxTurns: 1 },
+				this.deps.content
+			);
+			this.state = batch.state;
+			running = {
+				...running,
+				turnsAdvanced: running.turnsAdvanced + batch.turnsAdvanced
+			};
+
+			if (batch.turnsAdvanced > 0) {
+				this.persist();
+				if (this.saveStatus?.kind === 'failed' && !this.continuingUnsaved) {
+					this.finishAcceleration(
+						running,
+						'save_failed',
+						`${running.turnsAdvanced} trimestre${running.turnsAdvanced > 1 ? 's' : ''} simulé${running.turnsAdvanced > 1 ? 's' : ''} : la sauvegarde a échoué.`
+					);
+					this.changed();
+					return true;
+				}
+			}
+
+			if (batch.stopReason !== 'limit_reached') {
+				this.finishAcceleration(
+					running,
+					batch.stopReason,
+					this.accelerationMessage(batch, running.turnsAdvanced)
+				);
+				this.changed();
+				return true;
+			}
+			if (running.turnsAdvanced >= maxTurns) {
+				this.finishAcceleration(
+					running,
+					'limit_reached',
+					this.accelerationMessage(batch, running.turnsAdvanced)
+				);
+				this.changed();
+				return true;
+			}
+
+			this.acceleration = running;
+			this.changed();
+			await (this.deps.yieldControl?.() ?? Promise.resolve());
+		}
+		return true;
+	}
+
+	cancelAcceleration(): boolean {
+		const running = this.acceleration;
+		if (!running?.running) return false;
+		this.accelerationToken += 1;
+		this.finishAcceleration(
+			running,
+			'cancelled',
+			`${running.turnsAdvanced} trimestre${running.turnsAdvanced > 1 ? 's' : ''} simulé${running.turnsAdvanced > 1 ? 's' : ''} : accélération interrompue.`
+		);
+		this.changed();
+		return true;
 	}
 
 	private run(command: GameCommand, clearsPlan: boolean): boolean {
@@ -356,6 +502,15 @@ export class GameController {
 	/** Un autre onglet a modifié la sauvegarde : plus aucune écriture ni transition. */
 	markExternalChange(): void {
 		if (this.screen !== 'game' || !this.deps.storage) return;
+		if (this.acceleration?.running) {
+			const running = this.acceleration;
+			this.accelerationToken += 1;
+			this.finishAcceleration(
+				running,
+				'conflict',
+				`${running.turnsAdvanced} trimestre${running.turnsAdvanced > 1 ? 's' : ''} simulé${running.turnsAdvanced > 1 ? 's' : ''} : une autre fenêtre a modifié la sauvegarde.`
+			);
+		}
 		this.saveStatus = { kind: 'conflict' };
 		this.changed();
 	}

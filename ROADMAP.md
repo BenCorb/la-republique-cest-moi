@@ -1,7 +1,8 @@
 # La République, c’est moi ! — Feuille de route
 
 **Version 0.1 — 24 novembre 2026**  
-**Statut :** phase 0 terminée (P0-01 à P0-06). Phase 1 en cours sur la branche `feat/p1-prototype` (une PR vers `main` en fin de phase) : P1-01 à P1-08 réalisées et vérifiées le 24 novembre 2026 (✅ = tâche terminée dans les tableaux). Reprise : voir §9.  
+**Statut :** phase 0 terminée (P0-01 à P0-06). Phase 1 en cours sur la branche `feat/p1-prototype` (une PR vers `main` en fin de phase) : P1-01 à P1-09 réalisées et vérifiées le 24 novembre 2026 (✅ = tâche terminée dans les tableaux). Reprise : voir §9.
+
 **Références :** [GAME_DESIGN.md](GAME_DESIGN.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN.md](DESIGN.md), [AGENTS.md](AGENTS.md).
 
 ## 1. Stratégie de livraison
@@ -41,7 +42,7 @@ Dépendances : P0-01 précède les autres ; P0-02 et P0-03 peuvent être traité
 | P1-06 ✅ | Premier catalogue narratif | P1-05 | 20–30 événements écrits et paramétrables ; aucun texte non résolu ; aucun choix sans issue ; validation automatisée |
 | P1-07 ✅ | Sauvegarde locale | P1-05 | Enveloppe versionnée, reprise à l’identique y compris décision en attente, export/import et erreurs traitées ; pas de progression hors ligne |
 | P1-08 ✅ | Interface jouable | P1-03 à 07 | Agenda, tableau de bord, producteurs simples, événements, journal et bilan accessibles ; coûts et erreurs lisibles |
-| P1-09 | Accélération minimale et tests de scénarios | P1-08 | Tours multiples identiques aux tours unitaires ; arrêt sur choix/alerte/fin, annulation possible ; E2E complet |
+| P1-09 ✅ | Accélération minimale et tests de scénarios | P1-08 | Tours multiples identiques aux tours unitaires ; arrêt sur choix/alerte/fin, annulation possible ; E2E complet |
 | P1-10 | Simulateur et réglages initiaux | P1-09 | Exécution de lots seedés ; rapport JSON/CSV ; invariants et fins analysés ; playtest humain effectué et documenté |
 
 ### Contenu minimal
@@ -114,9 +115,9 @@ Les tâches de phase 0 peuvent également être confiées une par une pour facil
 ## 9. Reprise du travail — passage de relais (24 novembre 2026)
 
 - **Branche :** `feat/p1-prototype` (poussée), basée sur `main` (`2b1ab80`), un commit par tâche P1-02 à P1-08 ; une seule pull request vers `main` en fin de phase 1 (exception documentée dans `AGENTS.md`). Le site publié montre encore la phase 0.
-- **État :** P0-01 à P0-06 et P1-01 à P1-08 terminées et vérifiées. Vérification complète après `npm ci` : `check`, `lint`, `content:validate`, `test` (363), `build`, `test:e2e` (22 à la racine, 22 avec `BASE_PATH=/la-republique-cest-moi`).
-- **Où lire :** décisions de chaque tâche dans `ARCHITECTURE.md` (§6.1, §7.1 bis, §7.3, §7.4, §8.1 bis, §8.2 bis, §9.1, §10.1, §12.1–12.3) ; limites, dette et règles provisoires au §15.
-- **Prochaine tâche : P1-09** (accélération minimale et tests de scénarios). Points d’attention : réutiliser `transition` sans raccourci (ARCHITECTURE §5.2) ; s’arrêter sur décision bloquante, alerte et fin ; persister via le contrôleur à chaque tour ou lot borné ; prévoir l’annulation ; un plan récurrent invalide doit arrêter l’accélération avec un motif.
+- **État :** P0-01 à P0-06 et P1-01 à P1-09 terminées et vérifiées. Vérification complète après `npm ci` : `check`, `lint`, `content:validate`, `test` (374), `build`, `test:e2e` (28 à la racine, 28 avec `BASE_PATH=/la-republique-cest-moi`).
+- **Où lire :** décisions de chaque tâche dans `ARCHITECTURE.md` (§5.2 bis, §6.1, §7.1 bis, §7.3, §7.4, §8.1 bis, §8.2 bis, §9.1, §10.1, §12.1–12.3) ; limites, dette et règles provisoires au §15.
+- **Prochaine tâche : P1-10** (simulateur et réglages initiaux). Points d’attention : appeler les mêmes transitions que le jeu ; proposer des stratégies seedées sans accès aux informations cachées ; produire JSON et CSV ; signaler toute carrière arrêtée par le plafond technique ; compléter les mesures CPU par un playtest humain documenté.
 - **Décisions attendues du créateur :** règle de version de sauvegarde (§15.1) ; coût de la vie personnel ; relecture éditoriale des 30 événements ; déplacement du dépôt hors d’iCloud (§15.4).
 - **Avant de commencer :** `git fetch --prune`, `git status`, rechercher les copies de synchronisation (`find . -path ./node_modules -prune -o -name '* [0-9].*' -print`), `npm ci`, puis la vérification complète ci-dessus.
 

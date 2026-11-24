@@ -19,13 +19,15 @@ class MemoryStorage implements KeyValueStorage {
 let clock = 0;
 function controller(
 	storage: KeyValueStorage | null = new MemoryStorage(),
-	content: Content = fixtureContent
+	content: Content = fixtureContent,
+	yieldControl?: () => Promise<void>
 ) {
 	return new GameController({
 		content,
 		storage,
 		now: () => `2026-11-24T10:00:${String(clock++ % 60).padStart(2, '0')}.000Z`,
-		newSeed: () => 'contrôleur'
+		newSeed: () => 'contrôleur',
+		...(yieldControl ? { yieldControl } : {})
 	});
 }
 
@@ -158,6 +160,109 @@ describe('décisions', () => {
 		expect(game.snapshot().view?.decision).toBeNull();
 		const saved = readSave(storage, alert);
 		expect(saved.status === 'loaded' && saved.envelope.state.phase).toBe('planning');
+	});
+});
+
+describe('accélération', () => {
+	it('répète le plan pendant une année et sauvegarde chaque état cohérent', async () => {
+		const storage = new MemoryStorage();
+		const game = controller(storage);
+		game.newCareer();
+		game.addStep({ kind: 'action', id: 'test.fixed' });
+
+		expect(await game.accelerate(4)).toBe(true);
+		const snapshot = game.snapshot();
+		expect(snapshot.view?.dateLabel).toBe('T1 2001');
+		expect(snapshot.view?.resources.find((resource) => resource.id === 'influence')?.value).toBe(
+			'8'
+		);
+		expect(snapshot.plan).toEqual([{ kind: 'action', id: 'test.fixed' }]);
+		expect(snapshot.acceleration).toMatchObject({
+			running: false,
+			turnsAdvanced: 4,
+			stopReason: 'limit_reached'
+		});
+		const saved = readSave(storage, fixtureContent);
+		expect(saved.status === 'loaded' && saved.envelope.state.turn).toBe(4);
+	});
+
+	it('rend la main entre les tours et peut être interrompue', async () => {
+		let release: (() => void) | undefined;
+		const yieldControl = () =>
+			new Promise<void>((resolve) => {
+				release = resolve;
+			});
+		const storage = new MemoryStorage();
+		const game = controller(storage, fixtureContent, yieldControl);
+		game.newCareer();
+
+		const running = game.accelerate(40);
+		await Promise.resolve();
+		expect(game.snapshot().acceleration).toMatchObject({ running: true, turnsAdvanced: 1 });
+		expect(game.cancelAcceleration()).toBe(true);
+		release?.();
+		expect(await running).toBe(true);
+		expect(game.snapshot().acceleration).toMatchObject({
+			running: false,
+			turnsAdvanced: 1,
+			stopReason: 'cancelled'
+		});
+		const saved = readSave(storage, fixtureContent);
+		expect(saved.status === 'loaded' && saved.envelope.state.turn).toBe(1);
+	});
+
+	it('s’arrête et sauvegarde lorsqu’une décision apparaît', async () => {
+		const events = withEvents(['test.stress_alert']);
+		const content: Content = {
+			...events,
+			balance: {
+				...events.balance,
+				wellbeing: { ...events.balance.wellbeing, startingStress: 70 }
+			}
+		};
+		const storage = new MemoryStorage();
+		const game = controller(storage, content);
+		game.newCareer();
+
+		await game.accelerate(40);
+		expect(game.snapshot().acceleration).toMatchObject({
+			turnsAdvanced: 1,
+			stopReason: 'decision_pending'
+		});
+		expect(game.snapshot().view?.decision).not.toBeNull();
+		const saved = readSave(storage, content);
+		expect(saved.status === 'loaded' && saved.envelope.state.phase).toBe('decision');
+	});
+
+	it('s’arrête si le plan récurrent devient invalide', async () => {
+		const game = controller();
+		game.newCareer();
+		game.addStep({ kind: 'purchase', id: 'test.donors' });
+
+		await game.accelerate(4);
+		expect(game.snapshot().acceleration).toMatchObject({
+			turnsAdvanced: 1,
+			stopReason: 'invalid_plan'
+		});
+		expect(game.snapshot().view?.plan.valid).toBe(false);
+	});
+
+	it('s’arrête au premier échec de sauvegarde', async () => {
+		const storage = new MemoryStorage();
+		const game = controller(storage);
+		game.newCareer();
+		storage.quota = true;
+
+		await game.accelerate(4);
+		expect(game.snapshot().acceleration).toMatchObject({
+			turnsAdvanced: 1,
+			stopReason: 'save_failed'
+		});
+		expect(game.snapshot().saveStatus).toMatchObject({
+			kind: 'failed',
+			error: { code: 'quota_exceeded' }
+		});
+		expect(game.snapshot().canAct).toBe(false);
 	});
 });
 

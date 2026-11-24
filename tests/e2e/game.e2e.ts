@@ -67,6 +67,49 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByText('Actif ce trimestre')).toBeVisible();
 	});
 
+	test('accélère une année, sauvegarde puis reprend au même trimestre', async ({ page }) => {
+		await startCareer(page, 'e2e-year');
+		await page.getByRole('button', { name: 'Année suivante' }).click();
+
+		await expect(page.getByTestId('acceleration-status')).toContainText(
+			'4 trimestres simulés : limite demandée atteinte.'
+		);
+		await expect(page.getByTestId('game-date')).toHaveText('T1 2001 · 26 ans');
+
+		await page.reload();
+		await page.getByRole('button', { name: 'Reprendre la carrière' }).click();
+		await expect(page.getByTestId('game-date')).toHaveText('T1 2001 · 26 ans');
+	});
+
+	test('peut interrompre une accélération longue entre deux trimestres', async ({ page }) => {
+		await startCareer(page, 'e2e-year');
+		await page.getByRole('button', { name: 'Jusqu’à une alerte' }).click();
+		const cancel = page.getByRole('button', { name: 'Interrompre' });
+		await expect(cancel).toBeVisible();
+		await cancel.click();
+
+		await expect(page.getByTestId('acceleration-status')).toContainText('accélération interrompue');
+		await expect(page.getByRole('button', { name: 'Trimestre suivant' })).toBeEnabled();
+		await expect(page.getByRole('button', { name: 'Année suivante' })).toBeEnabled();
+	});
+
+	test('arrête l’accélération sur une décision et la conserve au rechargement', async ({
+		page
+	}) => {
+		await startCareer(page, 'e2e-decision');
+		await page.getByRole('button', { name: 'Jusqu’à une alerte' }).click();
+		await expect(page.getByRole('dialog')).toBeVisible();
+		await expect(page.getByTestId('acceleration-status')).toContainText(
+			'une décision attend votre réponse'
+		);
+		const date = await page.getByTestId('game-date').textContent();
+
+		await page.reload();
+		await page.getByRole('button', { name: 'Reprendre la carrière' }).click();
+		await expect(page.getByRole('dialog')).toBeVisible();
+		await expect(page.getByTestId('game-date')).toHaveText(date ?? '');
+	});
+
 	test('conserve une décision en attente au rechargement et l’applique une fois', async ({
 		page
 	}) => {

@@ -14,6 +14,7 @@
 	let { session }: Props = $props();
 	const view = $derived(session.snapshot.view);
 	const plan = $derived(view?.plan);
+	const accelerating = $derived(session.snapshot.acceleration?.running === true);
 </script>
 
 {#if view && plan}
@@ -77,7 +78,7 @@
 									type="button"
 									class="btn-secondary btn-small"
 									aria-label="Monter « {step.label} »"
-									disabled={step.index === 0}
+									disabled={accelerating || step.index === 0}
 									onclick={() => session.controller.moveStep(step.index, -1)}
 								>
 									<ArrowUp class="size-3.5" aria-hidden="true" />
@@ -86,7 +87,7 @@
 									type="button"
 									class="btn-secondary btn-small"
 									aria-label="Descendre « {step.label} »"
-									disabled={step.index === plan.steps.length - 1}
+									disabled={accelerating || step.index === plan.steps.length - 1}
 									onclick={() => session.controller.moveStep(step.index, 1)}
 								>
 									<ArrowDown class="size-3.5" aria-hidden="true" />
@@ -95,6 +96,7 @@
 									type="button"
 									class="btn-secondary btn-small"
 									aria-label="Retirer « {step.label} »"
+									disabled={accelerating}
 									onclick={() => session.controller.removeStep(step.index)}
 								>
 									<X class="size-3.5" aria-hidden="true" />
@@ -107,6 +109,7 @@
 			<button
 				type="button"
 				class="btn-secondary btn-small mt-2"
+				disabled={accelerating}
 				onclick={() => session.controller.clearPlan()}
 			>
 				Vider le plan

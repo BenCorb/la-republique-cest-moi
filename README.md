@@ -22,9 +22,11 @@ compte, aucune IA au runtime ; les sauvegardes restent dans le navigateur.
 Une carrière commence à 25 ans, au premier trimestre 2000. À chaque trimestre : composer le plan
 dans l’**Agenda** (actions) et l’**Organisation** (achats), vérifier la prévision, puis valider avec
 « Trimestre suivant ». Les décisions bloquantes s’affichent dans une fenêtre et doivent être
-tranchées. La partie est sauvegardée automatiquement dans le navigateur ; « Exporter » produit un
-fichier JSON réimportable depuis l’accueil. Paramètre d’essai : `?seed=texte` dans l’adresse impose
-la seed d’une nouvelle carrière.
+tranchées. « Année suivante » répète le plan pendant au plus quatre trimestres ; « Jusqu’à une
+alerte » accélère jusqu’à une décision, une alerte, une fin ou un plan devenu invalide, et peut être
+interrompu entre deux trimestres. La partie est sauvegardée automatiquement dans le navigateur ;
+« Exporter » produit un fichier JSON réimportable depuis l’accueil. Paramètre d’essai :
+`?seed=texte` dans l’adresse impose la seed d’une nouvelle carrière.
 
 ## Documents de référence
 

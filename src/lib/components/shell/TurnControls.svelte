@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Download, House, Play } from '@lucide/svelte';
+	import { CalendarDays, Download, FastForward, House, Play, Square } from '@lucide/svelte';
 	import { downloadExport } from '#lib/game/app/browser.ts';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 	import { formatSavedAt } from '#lib/game/app/format.ts';
@@ -14,9 +14,11 @@
 	let { session, onTab }: Props = $props();
 	const snapshot = $derived(session.snapshot);
 	const view = $derived(snapshot.view);
+	const acceleration = $derived(snapshot.acceleration);
 
 	const blockedReason = $derived.by(() => {
 		if (!view) return null;
+		if (acceleration?.running) return 'Accélération en cours.';
 		if (view.phase === 'ended') return 'La carrière est terminée.';
 		if (view.phase === 'decision') return 'Une décision attend votre réponse.';
 		if (!snapshot.canAct) return 'La dernière étape n’est pas sauvegardée.';
@@ -45,6 +47,11 @@
 		if (session.controller.commitTurn()) onTab('dashboard');
 		else onTab('agenda');
 	}
+
+	function accelerate(turns: number): void {
+		onTab('dashboard');
+		void session.controller.accelerate(turns);
+	}
 </script>
 
 {#if view}
@@ -55,6 +62,11 @@
 			</span>
 		</p>
 		<p class="text-sm text-muted" data-testid="save-status" aria-live="polite">{saveText}</p>
+		{#if acceleration}
+			<p class="text-sm text-primary" data-testid="acceleration-status" aria-live="polite">
+				{acceleration.message}
+			</p>
+		{/if}
 		{#if blockedReason}
 			<p class="text-sm text-warning" id="advance-blocked">{blockedReason}</p>
 		{/if}
@@ -72,15 +84,43 @@
 			>
 				<Download class="size-4" aria-hidden="true" /> Exporter
 			</button>
-			<button
-				type="button"
-				class="btn-primary"
-				disabled={blockedReason !== null}
-				aria-describedby={blockedReason ? 'advance-blocked' : undefined}
-				onclick={commit}
-			>
-				<Play class="size-4" aria-hidden="true" /> Trimestre suivant
-			</button>
+			{#if acceleration?.running}
+				<button
+					type="button"
+					class="btn-danger"
+					onclick={() => session.controller.cancelAcceleration()}
+				>
+					<Square class="size-4" aria-hidden="true" /> Interrompre
+				</button>
+			{:else}
+				<button
+					type="button"
+					class="btn-secondary"
+					disabled={blockedReason !== null}
+					aria-describedby={blockedReason ? 'advance-blocked' : undefined}
+					onclick={() => accelerate(4)}
+				>
+					<CalendarDays class="size-4" aria-hidden="true" /> Année suivante
+				</button>
+				<button
+					type="button"
+					class="btn-secondary"
+					disabled={blockedReason !== null}
+					aria-describedby={blockedReason ? 'advance-blocked' : undefined}
+					onclick={() => accelerate(40)}
+				>
+					<FastForward class="size-4" aria-hidden="true" /> Jusqu’à une alerte
+				</button>
+				<button
+					type="button"
+					class="btn-primary"
+					disabled={blockedReason !== null}
+					aria-describedby={blockedReason ? 'advance-blocked' : undefined}
+					onclick={commit}
+				>
+					<Play class="size-4" aria-hidden="true" /> Trimestre suivant
+				</button>
+			{/if}
 		</div>
 	</footer>
 {/if}

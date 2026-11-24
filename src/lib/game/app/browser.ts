@@ -25,7 +25,8 @@ export function createBrowserSession(): { session: GameSession; dispose: () => v
 		content: loadContent(),
 		storage: browserStorage(),
 		now: () => new Date().toISOString(),
-		newSeed: browserSeed
+		newSeed: browserSeed,
+		yieldControl: () => new Promise((resolve) => requestAnimationFrame(() => resolve()))
 	});
 	const session = new GameSession(controller);
 	const onStorage = (event: StorageEvent): void => {

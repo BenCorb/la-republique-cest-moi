@@ -10,6 +10,7 @@
 
 	let { session }: Props = $props();
 	const view = $derived(session.snapshot.view);
+	const accelerating = $derived(session.snapshot.acceleration?.running === true);
 </script>
 
 {#if view}
@@ -43,7 +44,7 @@
 							<button
 								type="button"
 								class="btn-secondary btn-small self-end"
-								disabled={!action.addable}
+								disabled={!action.addable || accelerating}
 								aria-label="Ajouter « {action.label} » au plan"
 								aria-describedby={action.reason ? `reason-${action.id}` : undefined}
 								onclick={() => session.controller.addStep({ kind: 'action', id: action.id })}

@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.6.0';
+export const RULES_VERSION = '0.7.0';
 
 export {
 	START_YEAR,
@@ -131,4 +131,12 @@ export {
 	type PendingEventView
 } from './events.ts';
 export { transition } from './turn.ts';
+export {
+	accelerate,
+	accelerationAlerts,
+	type AccelerationAlert,
+	type AccelerationRequest,
+	type AccelerationResult,
+	type AccelerationStopReason
+} from './acceleration.ts';
 export { assertInvariants, checkContentReferences, checkInvariants } from './invariants.ts';
