@@ -1,0 +1,153 @@
+{
+	"events": [
+		{
+			"id": "campaign.old_photo",
+			"category": "campaign",
+			"title": "Une vieille photo ressort",
+			"text": "En pleine campagne, une photo de vous à vingt ans circule : chemise à fleurs, coupe discutable et pancarte d’une manifestation dont personne ne se souvient du motif.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 6,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": {
+				"op": "gte",
+				"stat": "player.campaigning",
+				"value": 1
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "own",
+					"label": "L’assumer avec humour",
+					"hints": ["Sympathie des classes moyennes", "Un peu de stress"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": "deny",
+					"label": "Parler de « photomontage »",
+					"hints": ["Gagne du temps", "Si ça se sait…"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": -3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": "ignore",
+					"label": "Ne pas réagir",
+					"hints": ["L’affaire s’essouffle, peut-être"],
+					"costs": [],
+					"effects": []
+				}
+			]
+		},
+		{
+			"id": "campaign.tv_debate",
+			"category": "campaign",
+			"title": "Un débat télévisé",
+			"text": "La chaîne régionale organise un débat entre candidats, en direct, avec un chronomètre géant et un animateur qui adore couper la parole.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 6,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": {
+				"op": "gte",
+				"stat": "player.campaigning",
+				"value": 1
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "prepare",
+					"label": "Répéter toute la semaine",
+					"hints": ["Campagne mieux préparée", "Semaine éprouvante"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "prepareCampaign",
+							"value": 5
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": "improvise",
+					"label": "Y aller au culot",
+					"hints": ["Un peu de préparation"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "prepareCampaign",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": "skip",
+					"label": "Envoyer un porte-parole",
+					"hints": ["Rien de gagné, rien de perdu"],
+					"costs": [],
+					"effects": []
+				}
+			]
+		},
+		{
+			"id": "campaign.anonymous_leaflet",
+			"category": "campaign",
+			"title": "Un tract anonyme",
+			"text": "Un tract anonyme vous accuse d’avoir « un appartement à Paris, un chalet à la montagne et un avis sur tout ». Seul le dernier point est exact.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "gte",
+				"stat": "player.campaigning",
+				"value": 1
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				},
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": -2
+				}
+			]
+		}
+	]
+}

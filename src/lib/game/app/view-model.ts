@@ -35,6 +35,7 @@ import {
 	type DeadlinesRecord,
 	type MandateEndReason,
 	activeMandates,
+	campaignPoll,
 	mainMandate,
 	reservedTime,
 	type WellbeingSource,
@@ -251,6 +252,25 @@ export interface BallotView {
 	readonly early: boolean;
 	/** Le joueur exerce un mandat qui prend fin à ce scrutin. */
 	readonly endsMandate: boolean;
+	/** Mandat brigué en cas de victoire. */
+	readonly stake: string;
+	/** Candidature : déjà déposée (campagne en cours), prévue dans le plan, ou possible. */
+	readonly campaign: CampaignView | null;
+	readonly candidacyPlanned: boolean;
+	readonly candidacyAddable: boolean;
+	readonly candidacyReason: string | null;
+}
+
+export interface CampaignView {
+	readonly campaignId: string;
+	readonly label: string;
+	readonly dateLabel: string;
+	readonly declared: string;
+	readonly investiture: string;
+	readonly preparation: number;
+	/** Sondage : fourchette du score face à l'adversaire principal (en cours seulement). */
+	readonly poll: { readonly min: number; readonly max: number } | null;
+	readonly outcome: string | null;
 }
 
 export interface CareerView {
@@ -272,6 +292,9 @@ export interface CareerView {
 		readonly early: boolean;
 	}[];
 	readonly pastMandates: readonly { readonly label: string; readonly period: string }[];
+	readonly declareActionId: string | null;
+	/** Campagnes passées, de la plus récente à la plus ancienne. */
+	readonly pastCampaigns: readonly CampaignView[];
 }
 
 export interface SupportGroupView {
@@ -381,6 +404,10 @@ function describeEffect(range: EffectRange, content: Content): string {
 					: `Fin du mandat : ${content.mandates[range.mandate]?.label ?? range.mandate}`;
 		case 'earlyElection':
 			return `Élection anticipée : ${content.elections[range.election]?.label ?? range.election}`;
+		case 'candidacy':
+			return 'Candidature déposée';
+		case 'preparation':
+			return `Préparation de campagne + ${range.value}`;
 	}
 }
 
@@ -402,6 +429,12 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 					return `entrée en fonction : ${content.mandates[change.mandateId]?.label ?? change.mandateId}`;
 				case 'mandateEnded':
 					return `fin de mandat (${MANDATE_END_LABELS[change.reason]}) : ${content.mandates[change.mandateId]?.label ?? change.mandateId}`;
+				case 'candidacy':
+					return change.invested
+						? 'candidature déposée avec l’investiture du parti'
+						: 'candidature déposée sans investiture';
+				case 'preparation':
+					return `préparation de campagne + ${change.delta}`;
 				case 'earlyElection':
 					return `${content.elections[change.electionId]?.label ?? change.electionId} anticipées au ${formatTurn(change.turn)}`;
 			}
@@ -437,6 +470,19 @@ function deadlineLines(
 	const ended = politicsText(record.mandates, content);
 	if (ended)
 		lines.push({ kind: 'career', text: ended.charAt(0).toUpperCase() + ended.slice(1) + '.' });
+	for (const result of record.campaigns) {
+		const campaign = state.campaigns.find((entry) => entry.campaignId === result.campaignId);
+		const label = content.elections[campaign?.electionId ?? '']?.label ?? 'Élection';
+		lines.push({
+			kind: 'career',
+			text:
+				result.status === 'won'
+					? `${label} : vous l’emportez avec ${result.playerPercent} % face à l’adversaire principal.`
+					: result.status === 'lost'
+						? `${label} : défaite avec ${result.playerPercent} %. La notoriété progresse, la fatigue aussi.`
+						: `${label} : candidature invalidée (${result.reason ?? 'conditions non remplies'}).`
+		});
+	}
 	for (const result of record.ballots) {
 		const ballot = state.ballots.find((entry) => entry.ballotId === result.ballotId);
 		const label = content.elections[result.electionId]?.label ?? result.electionId;
@@ -848,6 +894,37 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 	const label = (mandateId: string): string => content.mandates[mandateId]?.label ?? mandateId;
 	const resignActionId =
 		content.actionIds.find((id) => content.actions[id]?.target === 'mandate') ?? null;
+	const declareActionId =
+		content.actionIds.find((id) => content.actions[id]?.target === 'ballot') ?? null;
+	const campaignView = (campaign: GameState['campaigns'][number]): CampaignView => {
+		const ballot = state.ballots.find((entry) => entry.ballotId === campaign.ballotId);
+		const outcome =
+			campaign.status === 'won'
+				? `Victoire avec ${campaign.playerPercent} % face à l’adversaire principal`
+				: campaign.status === 'lost'
+					? `Défaite avec ${campaign.playerPercent} % : la carrière continue`
+					: campaign.status === 'disqualified'
+						? `Candidature invalidée : ${campaign.reason ?? 'conditions non remplies'}`
+						: null;
+		return {
+			campaignId: campaign.campaignId,
+			label: content.elections[campaign.electionId]?.label ?? campaign.electionId,
+			dateLabel: ballot ? formatTurn(ballot.turn) : '—',
+			declared: `Candidature déclarée au ${formatTurn(campaign.declaredTurn)}`,
+			investiture:
+				campaign.partyId === null
+					? 'Sans étiquette'
+					: campaign.invested
+						? `Investiture du ${content.parties[campaign.partyId]?.name ?? campaign.partyId}`
+						: 'Sans investiture : l’appareil du parti ne vous soutient pas',
+			preparation: campaign.preparation,
+			poll:
+				campaign.status === 'running'
+					? campaignPoll(campaign, state.player, state.world, state.mandates, content)
+					: null,
+			outcome
+		};
+	};
 	const scheduled = state.ballots
 		.filter((ballot) => ballot.status === 'scheduled')
 		.sort((a, b) => a.turn - b.turn);
@@ -901,7 +978,27 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 		),
 		calendar: scheduled.map((ballot) => {
 			const definition = content.elections[ballot.electionId];
+			const running = state.campaigns.find(
+				(campaign) => campaign.status === 'running' && campaign.ballotId === ballot.ballotId
+			);
+			const declare =
+				declareActionId && !running
+					? addability(
+							state,
+							plan,
+							{ kind: 'action', id: declareActionId, target: ballot.ballotId },
+							content
+						)
+					: { addable: false, reason: null };
 			return {
+				stake: definition ? label(definition.grants) : '—',
+				campaign: running ? campaignView(running) : null,
+				candidacyPlanned: plan.some(
+					(step) =>
+						step.kind === 'action' && step.id === declareActionId && step.target === ballot.ballotId
+				),
+				candidacyAddable: declare.addable,
+				candidacyReason: declare.reason,
 				ballotId: ballot.ballotId,
 				label: definition?.label ?? ballot.electionId,
 				dateLabel: formatTurn(ballot.turn),
@@ -925,6 +1022,11 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 				shares: sharesText(ballot, content),
 				early: ballot.early
 			})),
+		declareActionId,
+		pastCampaigns: state.campaigns
+			.filter((campaign) => campaign.status !== 'running')
+			.map(campaignView)
+			.reverse(),
 		pastMandates: state.mandates
 			.filter((mandate) => mandate.status === 'ended')
 			.map((mandate) => ({
@@ -1082,6 +1184,20 @@ export function projectView(
 		if (ballot.status !== 'scheduled' || left < 0 || left > lead || state.phase === 'ended')
 			continue;
 		const label = content.elections[ballot.electionId]?.label ?? ballot.electionId;
+		const candidate = state.campaigns.some(
+			(campaign) => campaign.status === 'running' && campaign.ballotId === ballot.ballotId
+		);
+		const filingLeft = ballot.filingClosesTurn - state.turn;
+		if (!candidate && filingLeft >= 0 && filingLeft <= lead) {
+			alerts.push({
+				level: 'info',
+				text:
+					filingLeft === 0
+						? `${label} : dernier trimestre pour déposer une candidature.`
+						: `${label} : candidatures closes au ${formatTurn(ballot.filingClosesTurn)}.`
+			});
+			continue;
+		}
 		alerts.push({
 			level: 'info',
 			text:

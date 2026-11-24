@@ -86,6 +86,16 @@ test.describe('parcours de jeu', () => {
 		);
 		await expect(page.getByTestId('support-support.apparatus')).toContainText('Appareil du parti');
 		await expect(page.getByRole('meter', { name: 'Popularité' }).first()).toBeVisible();
+
+		// Candidature aux municipales, puis sondage de la campagne en cours.
+		await page
+			.getByRole('button', { name: 'Prévoir la candidature : Élections municipales du T1 2001' })
+			.click();
+		await expect(municipal).toContainText('Candidature prévue ce trimestre.');
+		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await page.getByRole('button', { name: 'Carrière', exact: true }).click();
+		await expect(page.getByTestId('campaign-campaign.1')).toContainText('Candidature déposée');
+		await expect(page.getByTestId('poll-campaign.1')).toContainText('Sondage : entre');
 	});
 
 	test('adhère à un parti depuis le monde politique', async ({ page }) => {

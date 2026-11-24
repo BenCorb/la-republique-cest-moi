@@ -104,5 +104,20 @@
 		"partyAlignmentMax": 12,
 		"influencePerPoint": 5,
 		"notorietyMax": 30
+	},
+	"campaigns": {
+		"popularityWeightPercent": 40,
+		"partyWeightPercent": 60,
+		"preparationWeightPercent": 50,
+		"preparationCap": 30,
+		"incumbentBonus": 6,
+		"volatility": 8,
+		"passivePreparation": 1,
+		"stressPerTurn": 1,
+		"investitureMinApparatus": 15,
+		"apparatusGroup": "support.apparatus",
+		"victoryInfluence": 5,
+		"defeatInfluence": 1,
+		"defeatStress": 4
 	}
 }

@@ -34,7 +34,14 @@ const politicalChange = z.discriminatedUnion('kind', [
 		mandateId: id,
 		reason: mandateEndReason
 	}),
-	z.strictObject({ kind: z.literal('earlyElection'), ballotId: id, electionId: id, turn: int })
+	z.strictObject({ kind: z.literal('earlyElection'), ballotId: id, electionId: id, turn: int }),
+	z.strictObject({
+		kind: z.literal('candidacy'),
+		campaignId: id,
+		ballotId: id,
+		invested: z.boolean()
+	}),
+	z.strictObject({ kind: z.literal('preparation'), delta: int })
 ]);
 
 const peopleChange = z.discriminatedUnion('kind', [
@@ -119,6 +126,14 @@ const turnEntry = z.strictObject({
 					winnerPartyId: id,
 					governingBefore: id,
 					governingAfter: id
+				})
+			),
+			campaigns: z.array(
+				z.strictObject({
+					campaignId: id,
+					status: z.enum(['won', 'lost', 'disqualified']),
+					playerPercent: int.nullable(),
+					reason: text.nullable()
 				})
 			)
 		})
@@ -235,6 +250,20 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 			shares: z.array(z.strictObject({ partyId: id, percent: int })).nullable(),
 			winnerPartyId: id.nullable(),
 			cancelReason: text.nullable()
+		})
+	),
+	campaigns: z.array(
+		z.strictObject({
+			campaignId: id,
+			ballotId: id,
+			electionId: id,
+			declaredTurn: int,
+			partyId: id.nullable(),
+			invested: z.boolean(),
+			preparation: int,
+			status: z.enum(['running', 'won', 'lost', 'disqualified']),
+			playerPercent: int.nullable(),
+			reason: text.nullable()
 		})
 	),
 	institutions: z.strictObject({

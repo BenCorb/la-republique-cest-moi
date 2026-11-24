@@ -22,8 +22,20 @@ const content = loadContent();
 const act = (id: string): PlanStep => ({ kind: 'action', id });
 const buy = (id: string): PlanStep => ({ kind: 'purchase', id });
 
+/** Marqueur : déclarer une candidature à la première échéance ouverte (P2-03). */
+const CANDIDACY = { kind: 'action', id: 'campaign.declare', target: '*' } as const;
+const declare = (target: string): PlanStep => ({ kind: 'action', id: 'campaign.declare', target });
+
 function choosePlan(state: GameState, wishes: readonly PlanStep[]): TurnPlan {
-	let candidate: PlanStep[] = [...wishes];
+	let candidate: PlanStep[] = wishes.flatMap((step): PlanStep[] => {
+		if (step !== CANDIDACY) return [step];
+		const open = state.ballots.find(
+			(ballot) =>
+				ballot.status === 'scheduled' &&
+				previewPlan(state, { steps: [declare(ballot.ballotId)] }, content).valid
+		);
+		return open ? [declare(open.ballotId)] : [];
+	});
 	for (;;) {
 		const turnPlan: TurnPlan = { steps: candidate };
 		const preview = previewPlan(state, turnPlan, content);
@@ -176,9 +188,11 @@ describe('scénario : catalogue réel', () => {
 				act('activism.leaflets'),
 				act('personal.freelance')
 			],
-			// Militant encarté au parti du gouvernement de départ (P2-01).
+			// Militant encarté au parti du gouvernement de départ (P2-01), candidat (P2-03).
 			[
 				{ kind: 'action', id: 'party.join', target: content.world.startingGoverningParty },
+				CANDIDACY,
+				act('campaign.canvass'),
 				act('party.section_meeting'),
 				act('network.meet_officials'),
 				act('organization.fundraising'),

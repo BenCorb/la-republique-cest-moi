@@ -7,7 +7,15 @@
 			"cycleTurns": 24,
 			"filingLeadTurns": 2,
 			"scope": "local",
-			"decidesGovernment": false
+			"decidesGovernment": false,
+			"minAge": 18,
+			"grants": "mandate.municipal_councillor",
+			"bonusGrant": {
+				"mandate": "mandate.mayor",
+				"minPercent": 55
+			},
+			"requiresAnyMandate": [],
+			"rivalStrength": 32
 		},
 		{
 			"id": "election.senatorial",
@@ -16,7 +24,15 @@
 			"cycleTurns": 24,
 			"filingLeadTurns": 2,
 			"scope": "national",
-			"decidesGovernment": false
+			"decidesGovernment": false,
+			"minAge": 30,
+			"grants": "mandate.senator",
+			"requiresAnyMandate": [
+				"mandate.municipal_councillor",
+				"mandate.mayor",
+				"mandate.regional_councillor"
+			],
+			"rivalStrength": 38
 		},
 		{
 			"id": "election.legislative",
@@ -25,7 +41,11 @@
 			"cycleTurns": 20,
 			"filingLeadTurns": 2,
 			"scope": "national",
-			"decidesGovernment": true
+			"decidesGovernment": true,
+			"minAge": 23,
+			"grants": "mandate.deputy",
+			"requiresAnyMandate": [],
+			"rivalStrength": 42
 		},
 		{
 			"id": "election.regional",
@@ -34,7 +54,11 @@
 			"cycleTurns": 24,
 			"filingLeadTurns": 2,
 			"scope": "regional",
-			"decidesGovernment": false
+			"decidesGovernment": false,
+			"minAge": 18,
+			"grants": "mandate.regional_councillor",
+			"requiresAnyMandate": [],
+			"rivalStrength": 35
 		}
 	],
 	"mandates": [

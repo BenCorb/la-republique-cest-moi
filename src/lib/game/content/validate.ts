@@ -290,7 +290,7 @@ function conditionIssues(
 function effectIssues(
 	effects: readonly Effect[],
 	refs: Refs,
-	targetKind: 'party' | 'mandate' | null,
+	targetKind: 'party' | 'mandate' | 'ballot' | null,
 	source: string,
 	path: string,
 	roles: ReadonlySet<string> | null = null
@@ -333,6 +333,15 @@ function effectIssues(
 					}
 				} else if (!refs.parties.has(effect.party)) {
 					issues.push({ source, path: `${at}.party`, message: `parti inconnu : ${effect.party}` });
+				}
+				break;
+			case 'declareCandidacy':
+				if (targetKind !== 'ballot') {
+					issues.push({
+						source,
+						path: at,
+						message: 'candidature réservée aux actions ciblant une échéance'
+					});
 				}
 				break;
 			case 'addSupport':
@@ -436,7 +445,8 @@ function crossCheckPolitics(
 		const usesTarget = action.effects.some(
 			(effect) =>
 				(effect.op === 'joinParty' && effect.party === 'target') ||
-				(effect.op === 'endMandate' && effect.mandate === 'target')
+				(effect.op === 'endMandate' && effect.mandate === 'target') ||
+				effect.op === 'declareCandidacy'
 		);
 		if (targetKind !== null && !usesTarget) {
 			issues.push({
@@ -555,6 +565,23 @@ function crossCheckCareer(
 			});
 		}
 		issues.push(...duplicateResources(mandate.income, source, `${path}.income`, 'les revenus'));
+	});
+	elections.forEach((election, index) => {
+		const path = `elections[${index}]`;
+		const grants = [election.grants, ...(election.bonusGrant ? [election.bonusGrant.mandate] : [])];
+		for (const mandateId of [...grants, ...election.requiresAnyMandate]) {
+			if (!mandateIds.has(mandateId)) {
+				issues.push({ source, path, message: `mandat inconnu : ${mandateId}` });
+			}
+		}
+		const granted = mandates.find((mandate) => mandate.id === election.grants);
+		if (granted && granted.election !== election.id) {
+			issues.push({
+				source,
+				path: `${path}.grants`,
+				message: `le mandat obtenu doit prendre fin à cette élection : ${election.grants}`
+			});
+		}
 	});
 	institutions.incompatibilities.forEach(([left, right], index) => {
 		if (!mandateIds.has(left) || !mandateIds.has(right) || left === right) {
@@ -871,6 +898,13 @@ export function validateContent(raw: RawContent): ContentValidation {
 	);
 	const groupList = supportCatalog.data.groups;
 	issues.push(...crossCheckSupports(groupList, knownIds));
+	if (!groupList.some((group) => group.id === balance.data.campaigns.apparatusGroup)) {
+		issues.push({
+			source: 'balance.json',
+			path: 'campaigns.apparatusGroup',
+			message: `groupe de soutien inconnu : ${balance.data.campaigns.apparatusGroup}`
+		});
+	}
 	const refs: Refs = {
 		groups: new Set(groupList.map((group) => group.id)),
 		parties: new Set(world.data.parties.map((party) => party.id)),

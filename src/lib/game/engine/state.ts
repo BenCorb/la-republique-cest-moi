@@ -176,6 +176,27 @@ export interface Ballot {
 	readonly cancelReason: string | null;
 }
 
+export type CampaignStatus = 'running' | 'won' | 'lost' | 'disqualified';
+
+/** Candidature du joueur à une échéance (instance `campaign.N`, P2-03). */
+export interface Campaign {
+	readonly campaignId: string;
+	readonly ballotId: string;
+	readonly electionId: string;
+	readonly declaredTurn: Turn;
+	/** Parti du joueur à la déclaration, `null` pour une candidature indépendante. */
+	readonly partyId: string | null;
+	/** Investi par son parti (soutien suffisant de l'appareil) ; sinon dissident ou indépendant. */
+	readonly invested: boolean;
+	/** Préparation accumulée (actions de campagne et temps écoulé). */
+	readonly preparation: number;
+	readonly status: CampaignStatus;
+	/** Score du joueur face à l'adversaire principal, en %, une fois le scrutin tenu. */
+	readonly playerPercent: number | null;
+	/** Motif d'une disqualification, sinon `null`. */
+	readonly reason: string | null;
+}
+
 /** Règles du cumul en vigueur, copiées du catalogue (modifiables par réforme, P3-05). */
 export interface InstitutionsState extends InstitutionsDefinition {
 	/** Mandats à détenir pour en obtenir un autre, par définition (copie de `requires`). */
@@ -197,6 +218,13 @@ export type PoliticalChange =
 			readonly reason: MandateEndReason;
 	  }
 	| {
+			readonly kind: 'candidacy';
+			readonly campaignId: string;
+			readonly ballotId: string;
+			readonly invested: boolean;
+	  }
+	| { readonly kind: 'preparation'; readonly delta: number }
+	| {
 			readonly kind: 'earlyElection';
 			readonly ballotId: string;
 			readonly electionId: string;
@@ -213,6 +241,13 @@ export interface DeadlinesRecord {
 		readonly winnerPartyId: string;
 		readonly governingBefore: string;
 		readonly governingAfter: string;
+	}[];
+	/** Campagnes du joueur jugées à ces scrutins. */
+	readonly campaigns: readonly {
+		readonly campaignId: string;
+		readonly status: Exclude<CampaignStatus, 'running'>;
+		readonly playerPercent: number | null;
+		readonly reason: string | null;
 	}[];
 }
 
@@ -423,6 +458,8 @@ export interface GameState {
 	readonly mandates: readonly MandateInstance[];
 	/** Calendrier électoral : échéances tenues, annulées et à venir, dans l'ordre de création. */
 	readonly ballots: readonly Ballot[];
+	/** Candidatures du joueur, en cours et passées, dans l'ordre de déclaration. */
+	readonly campaigns: readonly Campaign[];
 	readonly institutions: InstitutionsState;
 	/** Journal : trimestres résolus et choix, dans l'ordre chronologique. */
 	readonly history: readonly JournalEntry[];
@@ -464,6 +501,7 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		relationships: {},
 		mandates: [],
 		ballots: createCalendar(START_TURN, content),
+		campaigns: [],
 		institutions: {
 			incompatibilities: content.institutions.incompatibilities.map(
 				([left, right]) => [left, right] as const

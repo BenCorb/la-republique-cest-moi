@@ -90,7 +90,9 @@ export const STAT_IDS = [
 	/** Nombre de mandats en cours du joueur (P2-02). */
 	'player.mandates',
 	/** Popularité : synthèse pondérée des soutiens électoraux, de 0 à 100 (P2-07). */
-	'player.popularity'
+	'player.popularity',
+	/** Nombre de campagnes en cours du joueur (P2-03). */
+	'player.campaigning'
 ] as const;
 export type StatId = (typeof STAT_IDS)[number];
 
@@ -175,7 +177,11 @@ export type Effect =
 	/** Fin d'un mandat en cours : définition, ou `target` (exemplaire choisi dans le plan). */
 	| { readonly op: 'endMandate'; readonly mandate: string }
 	/** Élection anticipée : remplace l'échéance régulière prévue de ce type. */
-	| { readonly op: 'callEarlyElection'; readonly election: string; readonly delayTurns: number };
+	| { readonly op: 'callEarlyElection'; readonly election: string; readonly delayTurns: number }
+	/** Candidature à l'échéance choisie dans le plan (`target`), sous conditions d'éligibilité. */
+	| { readonly op: 'declareCandidacy' }
+	/** Préparation ajoutée à chaque campagne en cours. */
+	| { readonly op: 'prepareCampaign'; readonly value: number };
 
 export interface ResourceAmount {
 	readonly resource: ResourceId;
@@ -199,10 +205,10 @@ export interface ActionDefinition {
 	readonly unavailableReason?: string | undefined;
 	readonly effects: readonly Effect[];
 	/**
-	 * Cible à choisir dans le plan : `party` (identifiant de parti) ou `mandate`
-	 * (exemplaire de mandat en cours).
+	 * Cible à choisir dans le plan : `party` (identifiant de parti), `mandate`
+	 * (exemplaire de mandat en cours) ou `ballot` (échéance électorale).
 	 */
-	readonly target?: 'party' | 'mandate' | undefined;
+	readonly target?: 'party' | 'mandate' | 'ballot' | undefined;
 }
 
 /**
@@ -335,6 +341,7 @@ export interface Balance {
 	readonly characters: CharactersBalance;
 	readonly elections: ElectionsBalance;
 	readonly supports: SupportsBalance;
+	readonly campaigns: CampaignsBalance;
 }
 
 /** Paramètres des scrutins et du gouvernement (hypothèses de tuning, P2-02). */
@@ -359,6 +366,33 @@ export interface SupportsBalance {
 	readonly influencePerPoint: number;
 	/** Plafond du bonus de notoriété. */
 	readonly notorietyMax: number;
+}
+
+/**
+ * Modèle de campagne et de scrutin du joueur (hypothèses de tuning, P2-03). Les
+ * poids sont des pourcentages appliqués aux composantes du score.
+ */
+export interface CampaignsBalance {
+	readonly popularityWeightPercent: number;
+	/** Part du score du parti au scrutin reprise par un candidat investi. */
+	readonly partyWeightPercent: number;
+	readonly preparationWeightPercent: number;
+	/** Préparation au-delà de laquelle travailler davantage ne rapporte plus. */
+	readonly preparationCap: number;
+	readonly incumbentBonus: number;
+	/** Aléa maximal ajouté au score du joueur et à celui de l'adversaire. */
+	readonly volatility: number;
+	/** Préparation gagnée chaque trimestre de campagne, même sans action. */
+	readonly passivePreparation: number;
+	/** Stress de chaque trimestre de campagne (exposition). */
+	readonly stressPerTurn: number;
+	/** Soutien minimal de l'appareil du parti pour obtenir l'investiture. */
+	readonly investitureMinApparatus: number;
+	/** Groupe dont le soutien décide l'investiture. */
+	readonly apparatusGroup: string;
+	readonly victoryInfluence: number;
+	readonly defeatInfluence: number;
+	readonly defeatStress: number;
 }
 
 /** Bornes de l'attitude d'un personnage envers le joueur. */
@@ -422,6 +456,16 @@ export interface ElectionDefinition {
 	readonly scope: 'local' | 'regional' | 'national';
 	/** Le vainqueur forme le gouvernement (élections législatives). */
 	readonly decidesGovernment: boolean;
+	/** Âge minimal pour être candidat le jour du scrutin. */
+	readonly minAge: number;
+	/** Mandat obtenu par le joueur élu. */
+	readonly grants: string;
+	/** Mandat supplémentaire au-delà d'un score (la tête de liste municipale devient maire). */
+	readonly bonusGrant?: { readonly mandate: string; readonly minPercent: number } | undefined;
+	/** Mandats dont l'un au moins est exigé pour se présenter (grands électeurs), vide sinon. */
+	readonly requiresAnyMandate: readonly string[];
+	/** Score de l'adversaire principal, avant aléa. */
+	readonly rivalStrength: number;
 }
 
 /**

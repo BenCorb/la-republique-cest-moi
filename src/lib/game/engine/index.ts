@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.11.0';
+export const RULES_VERSION = '0.12.0';
 
 export {
 	START_YEAR,
@@ -66,6 +66,8 @@ export {
 	type Affiliation,
 	type Ballot,
 	type BallotShare,
+	type Campaign,
+	type CampaignStatus,
 	type DeadlinesRecord,
 	type InstitutionsState,
 	type MandateEndReason,
@@ -95,7 +97,13 @@ export {
 	activeMandates,
 	applyCareerEffect,
 	ballotId,
+	campaignId,
+	campaignPoll,
+	campaignScore,
+	candidacyIssue,
 	careerEffectIssue,
+	partyPollShare,
+	runningCampaigns,
 	conflictingMandates,
 	createCalendar,
 	holdIssue,
@@ -108,6 +116,7 @@ export {
 	termId,
 	type CareerEffect,
 	type CareerParts,
+	type DeadlineParts,
 	type FrontierDeadlines
 } from './career.ts';
 export {

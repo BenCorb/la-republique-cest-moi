@@ -52,7 +52,23 @@ export const fixtureBalance = {
 	// Scrutins sans aléa par défaut : le parti le plus fort l'emporte.
 	elections: { voteVolatility: 0, momentum: 1, newGovernmentStability: 60, alertLeadTurns: 2 },
 	// Soutiens immobiles par défaut : les tests de soutiens activent le retour à la référence.
-	supports: { reversionPercent: 0, partyAlignmentMax: 10, influencePerPoint: 10, notorietyMax: 20 }
+	supports: { reversionPercent: 0, partyAlignmentMax: 10, influencePerPoint: 10, notorietyMax: 20 },
+	// Scrutin du joueur sans aléa par défaut ; préparation passive et stress de campagne nuls.
+	campaigns: {
+		popularityWeightPercent: 50,
+		partyWeightPercent: 50,
+		preparationWeightPercent: 100,
+		preparationCap: 20,
+		incumbentBonus: 5,
+		volatility: 0,
+		passivePreparation: 0,
+		stressPerTurn: 0,
+		investitureMinApparatus: 10,
+		apparatusGroup: 'support.members',
+		victoryInfluence: 5,
+		defeatInfluence: 1,
+		defeatStress: 4
+	}
 };
 
 /** Deux groupes électoraux (poids 3 et 1) et un groupe d'influence. */
@@ -107,7 +123,12 @@ export const fixtureCareer = {
 			cycleTurns: 24,
 			filingLeadTurns: 2,
 			scope: 'local',
-			decidesGovernment: false
+			decidesGovernment: false,
+			minAge: 18,
+			grants: 'mandate.councillor',
+			bonusGrant: { mandate: 'mandate.mayor', minPercent: 60 },
+			requiresAnyMandate: [],
+			rivalStrength: 30
 		},
 		{
 			id: 'election.national',
@@ -116,7 +137,11 @@ export const fixtureCareer = {
 			cycleTurns: 20,
 			filingLeadTurns: 2,
 			scope: 'national',
-			decidesGovernment: true
+			decidesGovernment: true,
+			minAge: 30,
+			grants: 'mandate.deputy',
+			requiresAnyMandate: ['mandate.councillor'],
+			rivalStrength: 40
 		}
 	],
 	mandates: [

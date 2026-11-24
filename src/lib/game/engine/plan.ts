@@ -46,6 +46,7 @@ import { applyPoliticalEffect, isPoliticalEffect } from './world.ts';
 import {
 	activeMandates,
 	applyCareerEffect,
+	candidacyIssue,
 	isCareerEffect,
 	mandateIncome,
 	reservedTime,
@@ -182,7 +183,7 @@ function applyStateEffects(
 			world = outcome.world;
 			changes.push(...outcome.changes);
 		} else if (isCareerEffect(effect)) {
-			const outcome = applyCareerEffect(effect, career, turn, target, content);
+			const outcome = applyCareerEffect(effect, career, turn, target, content, player);
 			career = outcome.parts;
 			changes.push(...outcome.changes);
 		}
@@ -191,7 +192,12 @@ function applyStateEffects(
 }
 
 function careerOf(state: GameState): CareerParts {
-	return { mandates: state.mandates, ballots: state.ballots, institutions: state.institutions };
+	return {
+		mandates: state.mandates,
+		ballots: state.ballots,
+		campaigns: state.campaigns,
+		institutions: state.institutions
+	};
 }
 
 function definitionOf<T>(catalog: Readonly<Record<string, T>>, id: string): T | undefined {
@@ -298,6 +304,12 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 				if (target === null || !Object.hasOwn(content.parties, target)) {
 					fail('invalid_target', `« ${label} » : choisissez un parti existant.`);
 				}
+			} else if (definition.target === 'ballot') {
+				const issue =
+					target === null
+						? 'choisissez une élection'
+						: candidacyIssue(target, workingCareer, workingPlayer, state.turn, content);
+				if (issue) fail('invalid_target', `« ${label} » : ${issue}`);
 			} else if (definition.target === 'mandate') {
 				const held = activeMandates(workingCareer.mandates).some(
 					(mandate) => mandate.instanceId === target
@@ -337,6 +349,7 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			upgrades,
 			world: workingWorld,
 			mandates: workingCareer.mandates,
+			campaigns: workingCareer.campaigns,
 			institutions: workingCareer.institutions
 		};
 		if (requires && !evaluateCondition(context, requires)) {

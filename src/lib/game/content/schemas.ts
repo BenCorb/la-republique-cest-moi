@@ -25,6 +25,7 @@ import {
 	type ActionDefinition,
 	type AgeBand,
 	type AxisDefinition,
+	type CampaignsBalance,
 	type CharactersBalance,
 	type ElectionDefinition,
 	type ElectionsBalance,
@@ -143,6 +144,11 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 		op: z.literal('endMandate'),
 		mandate: z.union([contentId, z.literal('target')])
 	}),
+	z.strictObject({ op: z.literal('declareCandidacy') }),
+	z.strictObject({
+		op: z.literal('prepareCampaign'),
+		value: safeInt.refine((value) => value > 0 && value <= 100, 'préparation de 1 à 100')
+	}),
 	z.strictObject({
 		op: z.literal('callEarlyElection'),
 		election: contentId,
@@ -166,7 +172,7 @@ export const actionSchema: z.ZodType<ActionDefinition> = z
 		requires: conditionSchema.optional(),
 		unavailableReason: frenchText.optional(),
 		effects: z.array(effectSchema).min(1),
-		target: z.enum(['party', 'mandate']).optional()
+		target: z.enum(['party', 'mandate', 'ballot']).optional()
 	})
 	.refine(
 		(action) => (action.requires === undefined) === (action.unavailableReason === undefined),
@@ -470,7 +476,12 @@ export const electionSchema: z.ZodType<ElectionDefinition> = z
 		cycleTurns: positiveInt,
 		filingLeadTurns: nonNegativeInt,
 		scope: z.enum(['local', 'regional', 'national']),
-		decidesGovernment: z.boolean()
+		decidesGovernment: z.boolean(),
+		minAge: positiveInt,
+		grants: contentId,
+		bonusGrant: z.strictObject({ mandate: contentId, minPercent: gaugeValue }).optional(),
+		requiresAnyMandate: z.array(contentId),
+		rivalStrength: gaugeValue
 	})
 	.refine((election) => election.filingLeadTurns < election.cycleTurns, {
 		message: 'la clôture des candidatures doit précéder le scrutin dans le cycle',
@@ -536,6 +547,22 @@ export const supportCatalogSchema = z.strictObject({
 	groups: z.array(supportGroupSchema).min(1)
 });
 
+export const campaignsBalanceSchema: z.ZodType<CampaignsBalance> = z.strictObject({
+	popularityWeightPercent: percent,
+	partyWeightPercent: percent,
+	preparationWeightPercent: percent,
+	preparationCap: nonNegativeInt,
+	incumbentBonus: nonNegativeInt,
+	volatility: nonNegativeInt,
+	passivePreparation: nonNegativeInt,
+	stressPerTurn: nonNegativeInt,
+	investitureMinApparatus: gaugeValue,
+	apparatusGroup: contentId,
+	victoryInfluence: nonNegativeInt,
+	defeatInfluence: nonNegativeInt,
+	defeatStress: nonNegativeInt
+});
+
 export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	timeBudgetPerTurn: positiveInt,
 	startingResources: z.strictObject({
@@ -548,5 +575,6 @@ export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	world: worldBalanceSchema,
 	characters: charactersBalanceSchema,
 	elections: electionsBalanceSchema,
-	supports: supportsBalanceSchema
+	supports: supportsBalanceSchema,
+	campaigns: campaignsBalanceSchema
 });

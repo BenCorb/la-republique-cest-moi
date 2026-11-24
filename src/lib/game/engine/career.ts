@@ -18,13 +18,17 @@ import {
 	GAUGE_MIN,
 	type Content,
 	type Effect,
-	type ResourceAmount
+	type ResourceAmount,
+	type ResourceId,
+	type Resources
 } from '../content/types.ts';
-import type { Turn } from './calendar.ts';
+import { ageAt, type Turn } from './calendar.ts';
 import { nextInt, type RngState } from './random.ts';
 import type {
 	Ballot,
 	BallotShare,
+	Campaign,
+	PlayerState,
 	DeadlinesRecord,
 	InstitutionsState,
 	MandateEndReason,
@@ -39,6 +43,10 @@ export function ballotId(number: number): string {
 
 export function termId(number: number): string {
 	return `term.${number}`;
+}
+
+export function campaignId(number: number): string {
+	return `campaign.${number}`;
 }
 
 function newBallot(
@@ -185,19 +193,85 @@ function endMandates(
 /** Effets de carrière (mandats et élections anticipées), déterministes. */
 export type CareerEffect = Extract<
 	Effect,
-	{ op: 'grantMandate' | 'endMandate' | 'callEarlyElection' }
+	{
+		op:
+			'grantMandate' | 'endMandate' | 'callEarlyElection' | 'declareCandidacy' | 'prepareCampaign';
+	}
 >;
 
 export function isCareerEffect(effect: Effect): effect is CareerEffect {
 	return (
-		effect.op === 'grantMandate' || effect.op === 'endMandate' || effect.op === 'callEarlyElection'
+		effect.op === 'grantMandate' ||
+		effect.op === 'endMandate' ||
+		effect.op === 'callEarlyElection' ||
+		effect.op === 'declareCandidacy' ||
+		effect.op === 'prepareCampaign'
 	);
 }
 
 export interface CareerParts {
 	readonly mandates: readonly MandateInstance[];
 	readonly ballots: readonly Ballot[];
+	readonly campaigns: readonly Campaign[];
 	readonly institutions: InstitutionsState;
+}
+
+export function runningCampaigns(campaigns: readonly Campaign[]): Campaign[] {
+	return campaigns.filter((campaign) => campaign.status === 'running');
+}
+
+/** Mandats encore en cours une fois passé le scrutin de cette élection (réélection possible). */
+function mandatesAfterTerm(
+	mandates: readonly MandateInstance[],
+	electionId: string,
+	content: Content | null
+): MandateInstance[] {
+	return activeMandates(mandates).filter(
+		(mandate) => content?.mandates[mandate.mandateId]?.election !== electionId
+	);
+}
+
+/**
+ * Raison pour laquelle le joueur ne peut se présenter à cette échéance, ou
+ * `null` : échéance programmée, candidatures encore ouvertes, pas déjà
+ * candidat, âge au jour du scrutin, mandat exigé (grands électeurs) et règles
+ * du cumul pour le mandat brigué (les mandats qui s'achèvent à ce scrutin sont
+ * réputés libérés : un sortant peut se représenter).
+ */
+export function candidacyIssue(
+	ballotIdValue: string,
+	parts: CareerParts,
+	player: PlayerState,
+	turn: Turn,
+	content: Content
+): string | null {
+	const ballot = parts.ballots.find((entry) => entry.ballotId === ballotIdValue);
+	if (!ballot || ballot.status !== 'scheduled') return 'Aucune élection programmée à cette date.';
+	const definition = content.elections[ballot.electionId];
+	if (!definition) return `Élection inconnue : ${ballot.electionId}.`;
+	if (turn > ballot.filingClosesTurn) return 'Les candidatures sont closes.';
+	if (runningCampaigns(parts.campaigns).some((campaign) => campaign.ballotId === ballot.ballotId)) {
+		return 'Vous êtes déjà candidat à cette élection.';
+	}
+	if (ageAt(player.birthTurn, ballot.turn) < definition.minAge) {
+		return `Il faut avoir ${definition.minAge} ans le jour du scrutin.`;
+	}
+	return eligibilityIssue(ballot, parts, content);
+}
+
+/** Conditions revérifiées au jour du scrutin (mandats exigés et cumul), sans l'âge ni la clôture. */
+function eligibilityIssue(ballot: Ballot, parts: CareerParts, content: Content): string | null {
+	const definition = content.elections[ballot.electionId];
+	if (!definition) return `Élection inconnue : ${ballot.electionId}.`;
+	const remaining = mandatesAfterTerm(parts.mandates, ballot.electionId, content);
+	if (
+		definition.requiresAnyMandate.length > 0 &&
+		!remaining.some((mandate) => definition.requiresAnyMandate.includes(mandate.mandateId))
+	) {
+		const labels = definition.requiresAnyMandate.map((id) => content.mandates[id]?.label ?? id);
+		return `Il faut exercer l’un de ces mandats : ${labels.join(', ')}.`;
+	}
+	return holdIssue(definition.grants, remaining, parts.institutions, content);
 }
 
 /**
@@ -211,9 +285,55 @@ export function applyCareerEffect(
 	parts: CareerParts,
 	turn: Turn,
 	target: string | null,
-	content: Content
+	content: Content,
+	player: PlayerState
 ): { parts: CareerParts; changes: PoliticalChange[] } {
 	switch (effect.op) {
+		case 'declareCandidacy': {
+			if (target === null || candidacyIssue(target, parts, player, turn, content)) {
+				return { parts, changes: [] };
+			}
+			const ballot = parts.ballots.find((entry) => entry.ballotId === target)!;
+			const apparatus = player.supports[content.balance.campaigns.apparatusGroup] ?? 0;
+			const campaign: Campaign = {
+				campaignId: campaignId(parts.campaigns.length + 1),
+				ballotId: ballot.ballotId,
+				electionId: ballot.electionId,
+				declaredTurn: turn,
+				partyId: player.partyId,
+				invested:
+					player.partyId !== null && apparatus >= content.balance.campaigns.investitureMinApparatus,
+				preparation: 0,
+				status: 'running',
+				playerPercent: null,
+				reason: null
+			};
+			return {
+				parts: { ...parts, campaigns: [...parts.campaigns, campaign] },
+				changes: [
+					{
+						kind: 'candidacy',
+						campaignId: campaign.campaignId,
+						ballotId: ballot.ballotId,
+						invested: campaign.invested
+					}
+				]
+			};
+		}
+		case 'prepareCampaign': {
+			if (runningCampaigns(parts.campaigns).length === 0) return { parts, changes: [] };
+			return {
+				parts: {
+					...parts,
+					campaigns: parts.campaigns.map((campaign) =>
+						campaign.status === 'running'
+							? { ...campaign, preparation: campaign.preparation + effect.value }
+							: campaign
+					)
+				},
+				changes: [{ kind: 'preparation', delta: effect.value }]
+			};
+		}
 		case 'grantMandate': {
 			const replace = effect.replaceIncompatible === true;
 			if (holdIssue(effect.mandate, parts.mandates, parts.institutions, content, replace)) {
@@ -286,9 +406,16 @@ export function applyCareerEffect(
 					: ballot
 			);
 			const ballot = newBallot(ballots, effect.election, early, true, content);
+			// Les candidatures en cours suivent l'échéance anticipée, préparation comprise.
+			const campaigns = parts.campaigns.map((campaign) =>
+				regular && campaign.status === 'running' && campaign.ballotId === regular.ballotId
+					? { ...campaign, ballotId: ballot.ballotId }
+					: campaign
+			);
 			return {
 				parts: {
 					...parts,
+					campaigns,
 					ballots: [
 						...ballots,
 						{ ...ballot, filingClosesTurn: Math.max(turn, ballot.filingClosesTurn) }
@@ -386,55 +513,166 @@ function percentages(weights: readonly { partyId: string; weight: number }[]): B
 		);
 }
 
-export interface FrontierDeadlines {
+// ---------------------------------------------------------------------------
+// Campagne et scrutin du joueur
+// ---------------------------------------------------------------------------
+
+/** Part du parti dans les intentions de vote actuelles (forces normalisées), en %. */
+export function partyPollShare(
+	partyId: string | null,
+	world: WorldState,
+	content: Content
+): number {
+	if (partyId === null) return 0;
+	const total = content.partyIds.reduce((sum, id) => sum + (world.parties[id]?.strength ?? 0), 0);
+	return total > 0 ? Math.round(((world.parties[partyId]?.strength ?? 0) * 100) / total) : 0;
+}
+
+/**
+ * Score du joueur avant aléa : popularité, part du parti s'il est investi,
+ * préparation plafonnée et prime du sortant. Les poids sont des pourcentages.
+ */
+export function campaignScore(
+	campaign: Campaign,
+	popularity: number,
+	partyPercent: number,
+	incumbent: boolean,
+	content: Content
+): number {
+	const balance = content.balance.campaigns;
+	return Math.round(
+		(popularity * balance.popularityWeightPercent +
+			(campaign.invested ? partyPercent * balance.partyWeightPercent : 0) +
+			Math.min(campaign.preparation, balance.preparationCap) * balance.preparationWeightPercent) /
+			100 +
+			(incumbent ? balance.incumbentBonus : 0)
+	);
+}
+
+function percentOf(player: number, rival: number): number {
+	const left = Math.max(1, player);
+	const right = Math.max(1, rival);
+	return Math.round((left * 100) / (left + right));
+}
+
+/**
+ * Sondage publié : fourchette de score (en %) face à l'adversaire principal,
+ * sans aléa ni information cachée. L'aléa du scrutin réel peut en sortir.
+ */
+export function campaignPoll(
+	campaign: Campaign,
+	player: PlayerState,
+	world: WorldState,
+	mandates: readonly MandateInstance[],
+	content: Content
+): { readonly min: number; readonly max: number } {
+	const definition = content.elections[campaign.electionId];
+	if (!definition) return { min: 0, max: 0 };
+	const incumbent = activeMandates(mandates).some(
+		(mandate) => mandate.mandateId === definition.grants
+	);
+	const score = campaignScore(
+		campaign,
+		player.popularity,
+		partyPollShare(campaign.partyId, world, content),
+		incumbent,
+		content
+	);
+	const { volatility } = content.balance.campaigns;
+	return {
+		min: percentOf(score - volatility, definition.rivalStrength + volatility),
+		max: percentOf(score + volatility, definition.rivalStrength - volatility)
+	};
+}
+
+/** Parties de l'état touchées par les échéances de fin de trimestre. */
+export interface DeadlineParts {
 	readonly world: WorldState;
-	readonly mandates: readonly MandateInstance[];
-	readonly ballots: readonly Ballot[];
+	readonly player: PlayerState;
+	readonly resources: Resources;
+	readonly career: CareerParts;
+}
+
+export interface FrontierDeadlines extends DeadlineParts {
 	readonly rng: RngState;
 	readonly record: DeadlinesRecord;
 }
 
 /**
- * Échéances de la fin du trimestre `turn` (T), dans un ordre fixe : fins de
- * mandats liées aux scrutins du trimestre, puis scrutins dans l'ordre du
- * catalogue, puis programmation des échéances suivantes. Un changement de
- * gouvernement met fin aux mandats qui en dépendent.
+ * Échéances de la fin du trimestre `turn` (T), dans un ordre fixe : préparation
+ * passive et stress des campagnes en cours, fins de mandats liées aux scrutins
+ * du trimestre, puis scrutins dans l'ordre du catalogue — parts des partis,
+ * puis candidature du joueur revalidée et jugée —, puis échéances suivantes.
+ * Un changement de gouvernement met fin aux mandats qui en dépendent. Une
+ * défaite n'est jamais terminale.
  */
 export function resolveDeadlines(
-	world: WorldState,
-	mandates: readonly MandateInstance[],
-	ballots: readonly Ballot[],
+	parts: DeadlineParts,
 	turn: Turn,
 	rng: RngState,
 	content: Content
 ): FrontierDeadlines {
+	const balance = content.balance.elections;
+	const campaignBalance = content.balance.campaigns;
+	const { minPartyStrength, maxPartyStrength } = content.balance.world;
+	let currentWorld = parts.world;
+	let player = parts.player;
+	const resources: Record<ResourceId, number> = { ...parts.resources };
+	let career = parts.career;
+	let currentRng = rng;
+
+	// 0. Campagnes en cours : préparation passive et exposition (stress).
+	const running = runningCampaigns(career.campaigns);
+	if (running.length > 0) {
+		career = {
+			...career,
+			campaigns: career.campaigns.map((campaign) =>
+				campaign.status === 'running'
+					? { ...campaign, preparation: campaign.preparation + campaignBalance.passivePreparation }
+					: campaign
+			)
+		};
+		player = {
+			...player,
+			stress: Math.min(GAUGE_MAX, player.stress + campaignBalance.stressPerTurn * running.length)
+		};
+	}
+
 	const due = content.electionIds.flatMap((electionId) => {
-		const ballot = ballots.find(
+		const ballot = career.ballots.find(
 			(entry) =>
 				entry.electionId === electionId && entry.status === 'scheduled' && entry.turn === turn
 		);
 		return ballot ? [ballot] : [];
 	});
 	if (due.length === 0) {
-		return { world, mandates, ballots, rng, record: { mandates: [], ballots: [] } };
+		return {
+			world: currentWorld,
+			player,
+			resources,
+			career,
+			rng: currentRng,
+			record: { mandates: [], ballots: [], campaigns: [] }
+		};
 	}
 
-	const balance = content.balance.elections;
-	const { minPartyStrength, maxPartyStrength } = content.balance.world;
-	let currentWorld = world;
-	let currentRng = rng;
-	let currentBallots = [...ballots];
 	const mandateChanges: PoliticalChange[] = [];
+	const campaignRecords: DeadlinesRecord['campaigns'][number][] = [];
 
 	// 1. Fins de mandats : un mandat arrive à terme au scrutin de son élection.
 	const dueElections = new Set(due.map((ballot) => ballot.electionId));
+	const outgoing = new Set(
+		activeMandates(career.mandates)
+			.filter((mandate) => dueElections.has(content.mandates[mandate.mandateId]?.election ?? ''))
+			.map((mandate) => mandate.mandateId)
+	);
 	const terms = endMandates(
-		mandates,
+		career.mandates,
 		(mandate) => dueElections.has(content.mandates[mandate.mandateId]?.election ?? ''),
 		'term',
 		turn
 	);
-	let currentMandates = terms.mandates;
+	career = { ...career, mandates: terms.mandates };
 	mandateChanges.push(...terms.changes);
 
 	// 2. Scrutins.
@@ -484,24 +722,99 @@ export function resolveDeadlines(
 		};
 		if (governingAfter !== governingBefore) {
 			const fallen = endMandates(
-				currentMandates,
+				career.mandates,
 				(mandate) => content.mandates[mandate.mandateId]?.endsWithGovernment === true,
 				'government_change',
 				turn
 			);
-			currentMandates = fallen.mandates;
+			career = { ...career, mandates: fallen.mandates };
 			mandateChanges.push(...fallen.changes);
 		}
 
+		// Candidature du joueur : revalidée au jour du scrutin, puis jugée.
+		for (const campaign of runningCampaigns(career.campaigns)) {
+			if (campaign.ballotId !== ballot.ballotId) continue;
+			const issue = eligibilityIssue(ballot, career, content);
+			let status: Exclude<Campaign['status'], 'running'>;
+			let playerPercent: number | null = null;
+			if (issue) {
+				status = 'disqualified';
+			} else {
+				const partyPercent =
+					shares.find((share) => share.partyId === campaign.partyId)?.percent ?? 0;
+				let score = campaignScore(
+					campaign,
+					player.popularity,
+					partyPercent,
+					outgoing.has(definition.grants),
+					content
+				);
+				let rival = definition.rivalStrength;
+				if (campaignBalance.volatility > 0) {
+					const own = nextInt(currentRng, -campaignBalance.volatility, campaignBalance.volatility);
+					const other = nextInt(own.rng, -campaignBalance.volatility, campaignBalance.volatility);
+					currentRng = other.rng;
+					score += own.value;
+					rival += other.value;
+				}
+				playerPercent = percentOf(score, rival);
+				status = playerPercent > 50 ? 'won' : 'lost';
+			}
+			if (status === 'won') {
+				const grants = [definition.grants];
+				if (definition.bonusGrant && (playerPercent ?? 0) >= definition.bonusGrant.minPercent) {
+					grants.push(definition.bonusGrant.mandate);
+				}
+				for (const mandateId of grants) {
+					const granted = applyCareerEffect(
+						{ op: 'grantMandate', mandate: mandateId },
+						career,
+						turn,
+						null,
+						content,
+						player
+					);
+					career = granted.parts;
+					mandateChanges.push(...granted.changes);
+				}
+				resources.influence += campaignBalance.victoryInfluence;
+			} else if (status === 'lost') {
+				// Une défaite coûte, mais fait connaître : la carrière continue.
+				resources.influence += campaignBalance.defeatInfluence;
+				player = {
+					...player,
+					stress: Math.min(GAUGE_MAX, player.stress + campaignBalance.defeatStress)
+				};
+			}
+			career = {
+				...career,
+				campaigns: career.campaigns.map((entry) =>
+					entry.campaignId === campaign.campaignId
+						? { ...entry, status, playerPercent, reason: issue }
+						: entry
+				)
+			};
+			campaignRecords.push({
+				campaignId: campaign.campaignId,
+				status,
+				playerPercent,
+				reason: issue
+			});
+		}
+
 		// Scrutin tenu, puis échéance suivante un cycle plus tard.
-		currentBallots = currentBallots.map((entry) =>
+		const held = career.ballots.map((entry) =>
 			entry.ballotId === ballot.ballotId
 				? { ...entry, status: 'held' as const, shares, winnerPartyId }
 				: entry
 		);
-		currentBallots.push(
-			newBallot(currentBallots, ballot.electionId, turn + definition.cycleTurns, false, content)
-		);
+		career = {
+			...career,
+			ballots: [
+				...held,
+				newBallot(held, ballot.electionId, turn + definition.cycleTurns, false, content)
+			]
+		};
 		ballotRecords.push({
 			ballotId: ballot.ballotId,
 			electionId: ballot.electionId,
@@ -513,9 +826,10 @@ export function resolveDeadlines(
 
 	return {
 		world: currentWorld,
-		mandates: currentMandates,
-		ballots: currentBallots,
+		player,
+		resources,
+		career,
 		rng: currentRng,
-		record: { mandates: mandateChanges, ballots: ballotRecords }
+		record: { mandates: mandateChanges, ballots: ballotRecords, campaigns: campaignRecords }
 	};
 }

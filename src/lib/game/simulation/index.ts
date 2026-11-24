@@ -34,7 +34,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 5;
+export const SIMULATION_REPORT_VERSION = 6;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -95,6 +95,10 @@ export interface SimulationRun {
 	/** Scrutins tenus et alternances au gouvernement pendant la carrière. */
 	readonly ballotsHeld: number;
 	readonly governmentChanges: number;
+	/** Candidatures déposées, victoires et défaites. */
+	readonly campaigns: number;
+	readonly campaignsWon: number;
+	readonly campaignsLost: number;
 	/** Popularité en fin de carrière et la plus haute atteinte. */
 	readonly finalPopularity: number;
 	readonly peakPopularity: number;
@@ -165,6 +169,8 @@ export interface SimulationAggregate {
 	readonly traitsRevealed: Distribution;
 	readonly mandatesHeld: Distribution;
 	readonly governmentChanges: Distribution;
+	readonly campaigns: Distribution;
+	readonly campaignsWon: Distribution;
 	readonly finalPopularity: Distribution;
 	readonly peakPopularity: Distribution;
 	/** Plus haute fonction atteinte, `none` pour les carrières sans mandat. */
@@ -221,17 +227,54 @@ function partyWish(
 	return target ? [{ kind: 'action', id: joinId, target }] : [];
 }
 
+/**
+ * Candidature par politique : les ambitieux et l'aléatoire visent toute
+ * échéance ouverte, les profils mixtes les municipales et les législatives,
+ * les prudents les seules municipales ; les patrimoniaux ne se présentent pas.
+ */
+const CANDIDACY_TARGETS: Readonly<Record<SimulationStrategy, readonly string[] | 'all'>> = {
+	prudent: ['election.municipal'],
+	ambitious: 'all',
+	patrimonial: [],
+	mixed: ['election.municipal', 'election.legislative'],
+	'random-valid': 'all'
+};
+
+function candidacyWish(
+	strategy: SimulationStrategy,
+	state: GameState,
+	content: Content
+): PlanStep[] {
+	const declareId = content.actionIds.find((id) => content.actions[id]?.target === 'ballot');
+	const targets = CANDIDACY_TARGETS[strategy];
+	if (!declareId || (targets !== 'all' && targets.length === 0)) return [];
+	const ballots = [...state.ballots]
+		.filter(
+			(ballot) =>
+				ballot.status === 'scheduled' && (targets === 'all' || targets.includes(ballot.electionId))
+		)
+		.sort((left, right) => left.turn - right.turn);
+	for (const ballot of ballots) {
+		const step: PlanStep = { kind: 'action', id: declareId, target: ballot.ballotId };
+		if (previewPlan(state, { steps: [step] }, content).valid) return [step];
+	}
+	return [];
+}
+
 const STRATEGY_WISHES: Readonly<
 	Record<Exclude<SimulationStrategy, 'random-valid'>, readonly PlanStep[]>
 > = {
+	// Le repos passe en premier : élu, le temps manque et la prudence protège la santé.
 	prudent: [
+		action('personal.rest'),
 		action('network.meet_officials'),
 		action('organization.fundraising'),
 		action('personal.freelance'),
-		action('personal.rest'),
 		action('personal.rest')
 	],
 	ambitious: [
+		action('campaign.rally'),
+		action('campaign.canvass'),
 		action('party.section_meeting'),
 		action('activism.public_meeting'),
 		action('organization.fundraising'),
@@ -251,12 +294,12 @@ const STRATEGY_WISHES: Readonly<
 		action('personal.rest')
 	],
 	mixed: [
+		action('personal.rest'),
 		purchase('organization.donor_file'),
 		purchase('organization.volunteer'),
 		action('network.meet_officials'),
 		action('organization.fundraising'),
-		action('personal.freelance'),
-		action('personal.rest')
+		action('personal.freelance')
 	]
 };
 
@@ -275,7 +318,10 @@ function wishesFor(
 	seed: string,
 	content: Content
 ): readonly PlanStep[] {
-	const party = partyWish(strategy, state, seed, content);
+	const party = [
+		...partyWish(strategy, state, seed, content),
+		...candidacyWish(strategy, state, content)
+	];
 	if (strategy === 'random-valid') return [...party, ...randomWishes(seed, state.turn, content)];
 	return [
 		...party,
@@ -396,6 +442,9 @@ function finalizeRun(
 					(content.mandates[right.mandateId]?.rank ?? 0) -
 					(content.mandates[left.mandateId]?.rank ?? 0)
 			)[0]?.mandateId ?? null,
+		campaigns: state.campaigns.length,
+		campaignsWon: state.campaigns.filter((campaign) => campaign.status === 'won').length,
+		campaignsLost: state.campaigns.filter((campaign) => campaign.status === 'lost').length,
 		finalPopularity: state.player.popularity,
 		peakPopularity,
 		ballotsHeld: state.ballots.filter((ballot) => ballot.status === 'held').length,
@@ -622,6 +671,8 @@ function aggregateRuns(runs: readonly SimulationRun[]): SimulationAggregate {
 		traitsRevealed: distribution(runs.map((run) => run.traitsRevealed)),
 		mandatesHeld: distribution(runs.map((run) => run.mandatesHeld)),
 		governmentChanges: distribution(runs.map((run) => run.governmentChanges)),
+		campaigns: distribution(runs.map((run) => run.campaigns)),
+		campaignsWon: distribution(runs.map((run) => run.campaignsWon)),
 		finalPopularity: distribution(runs.map((run) => run.finalPopularity)),
 		peakPopularity: distribution(runs.map((run) => run.peakPopularity)),
 		highestMandates: runs.reduce<Record<string, number>>((totals, run) => {
@@ -744,6 +795,9 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'highestMandate',
 		'ballotsHeld',
 		'governmentChanges',
+		'campaigns',
+		'campaignsWon',
+		'campaignsLost',
 		'finalPopularity',
 		'peakPopularity',
 		'indicatorRanges',
@@ -782,6 +836,9 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.highestMandate,
 		run.ballotsHeld,
 		run.governmentChanges,
+		run.campaigns,
+		run.campaignsWon,
+		run.campaignsLost,
 		run.finalPopularity,
 		run.peakPopularity,
 		JSON.stringify(run.indicatorRanges),

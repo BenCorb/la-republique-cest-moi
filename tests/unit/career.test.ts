@@ -266,6 +266,7 @@ describe('calendrier électoral', () => {
 		const parts = {
 			mandates: base.mandates,
 			ballots: base.ballots,
+			campaigns: base.campaigns,
 			institutions: base.institutions
 		};
 		const outcome = applyCareerEffect(
@@ -273,7 +274,8 @@ describe('calendrier électoral', () => {
 			{ ...parts, ballots: parts.ballots.map((ballot) => ({ ...ballot, turn: 1 })) },
 			0,
 			null,
-			catalog
+			catalog,
+			base.player
 		);
 		expect(outcome.changes).toEqual([]);
 	});
@@ -289,9 +291,17 @@ describe('calendrier électoral', () => {
 		const base = createGame({ seed: 'aléa' }, volatile);
 		const run = () =>
 			resolveDeadlines(
-				base.world,
-				[],
-				base.ballots.map((ballot) => ({ ...ballot, turn: 0 })),
+				{
+					world: base.world,
+					player: base.player,
+					resources: base.resources,
+					career: {
+						mandates: [],
+						ballots: base.ballots.map((ballot) => ({ ...ballot, turn: 0 })),
+						campaigns: [],
+						institutions: base.institutions
+					}
+				},
 				0,
 				base.rng,
 				volatile
@@ -403,10 +413,15 @@ describe('mandats et cumul', () => {
 });
 
 describe('projection et alertes', () => {
-	it('annonce une échéance proche dans les alertes', () => {
-		const state = advanceTo(createGame({ seed: 'alerte' }, catalog), 38);
-		const alerts = projectView(state, [], catalog).alerts.map((alert) => alert.text);
-		expect(alerts).toContain('Élection locale au T1 2010, dans 2 trimestres.');
+	it('annonce la clôture des candidatures puis l’échéance proche', () => {
+		const filing = advanceTo(createGame({ seed: 'alerte' }, catalog), 38);
+		expect(projectView(filing, [], catalog).alerts.map((alert) => alert.text)).toContain(
+			'Élection locale : dernier trimestre pour déposer une candidature.'
+		);
+		const after = advanceTo(filing, 39);
+		expect(projectView(after, [], catalog).alerts.map((alert) => alert.text)).toContain(
+			'Élection locale au T1 2010, dans 1 trimestre.'
+		);
 	});
 });
 

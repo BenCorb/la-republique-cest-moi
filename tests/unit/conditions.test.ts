@@ -22,6 +22,7 @@ const context: ConditionContext = {
 	},
 	world: createGame({ seed: 'conditions' }, fixtureContent).world,
 	mandates: [],
+	campaigns: [],
 	institutions: createGame({ seed: 'conditions' }, fixtureContent).institutions,
 	resources: { influence: 12, politicalBudgetCents: 5_000, personalCashCents: 0 },
 	upgrades: [

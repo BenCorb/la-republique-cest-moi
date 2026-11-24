@@ -123,24 +123,28 @@ function commitTurn(
 		: null;
 
 	// 5. Échéances de la fin de T : fins de mandat, scrutins, échéances suivantes.
-	const deadlines = world
-		? resolveDeadlines(
-				world.world,
-				execution.career.mandates,
-				execution.career.ballots,
-				resolvedTurn,
-				world.rng,
-				content
-			)
-		: null;
+	const deadlines =
+		world && supports
+			? resolveDeadlines(
+					{
+						world: world.world,
+						player: supports.player,
+						resources: afterMandates,
+						career: execution.career
+					},
+					resolvedTurn,
+					world.rng,
+					content
+				)
+			: null;
 
 	// 6. Passage à T+1, puis suites dues et tirage des événements (sauf décès en 4).
 	const frontier = world
 		? resolveEventFrontier(
 				{
 					turn: nextTurn,
-					player: supports!.player,
-					resources: afterMandates,
+					player: deadlines!.player,
+					resources: deadlines!.resources,
 					upgrades: execution.upgrades,
 					rng: deadlines!.rng,
 					nextInstanceNumber: execution.nextInstanceNumber,
@@ -148,11 +152,7 @@ function commitTurn(
 					world: deadlines!.world,
 					characters: world.characters,
 					relationships: state.relationships,
-					career: {
-						mandates: deadlines!.mandates,
-						ballots: deadlines!.ballots,
-						institutions: execution.career.institutions
-					}
+					career: deadlines!.career
 				},
 				content
 			)
@@ -194,6 +194,7 @@ function commitTurn(
 			relationships: frontier?.relationships ?? state.relationships,
 			mandates: frontier?.career.mandates ?? execution.career.mandates,
 			ballots: frontier?.career.ballots ?? execution.career.ballots,
+			campaigns: frontier?.career.campaigns ?? execution.career.campaigns,
 			institutions: frontier?.career.institutions ?? execution.career.institutions,
 			upgrades: execution.upgrades,
 			nextInstanceNumber: frontier?.nextInstanceNumber ?? execution.nextInstanceNumber,

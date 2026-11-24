@@ -363,6 +363,36 @@ function checkCareerInvariants(state: GameState): string[] {
 			violations.push(`clôture des candidatures après le scrutin : ${ballot.ballotId}`);
 		}
 	});
+	state.campaigns.forEach((campaign, index) => {
+		if (campaign.campaignId !== `campaign.${index + 1}`) {
+			violations.push(`identifiant de campagne invalide : ${campaign.campaignId}`);
+		}
+		const ballot = ballots.find((entry) => entry.ballotId === campaign.ballotId);
+		if (!ballot) {
+			violations.push(`campagne pour une échéance inconnue : ${campaign.campaignId}`);
+		} else if (campaign.status === 'running' && ballot.status !== 'scheduled') {
+			violations.push(`campagne en cours pour une échéance passée : ${campaign.campaignId}`);
+		} else if (campaign.status !== 'running' && ballot.status === 'scheduled') {
+			violations.push(`campagne jugée avant son scrutin : ${campaign.campaignId}`);
+		}
+		if (
+			campaign.declaredTurn > state.turn ||
+			!Number.isSafeInteger(campaign.preparation) ||
+			campaign.preparation < 0
+		) {
+			violations.push(`campagne incohérente : ${campaign.campaignId}`);
+		}
+		if (
+			(campaign.status === 'won' || campaign.status === 'lost') !==
+			(campaign.playerPercent !== null)
+		) {
+			violations.push(`score de campagne incohérent : ${campaign.campaignId}`);
+		}
+	});
+	const running = state.campaigns.filter((campaign) => campaign.status === 'running');
+	if (new Set(running.map((campaign) => campaign.ballotId)).size !== running.length) {
+		violations.push('deux campagnes en cours pour une même échéance');
+	}
 	const scheduledTypes = ballots
 		.filter((ballot) => ballot.status === 'scheduled')
 		.map((ballot) => ballot.electionId);

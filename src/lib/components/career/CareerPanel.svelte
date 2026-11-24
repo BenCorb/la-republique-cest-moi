@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CalendarClock, LogOut, Vote } from '@lucide/svelte';
+	import { CalendarClock, LogOut, Megaphone, Vote } from '@lucide/svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 	import SupportsCard from './SupportsCard.svelte';
 
@@ -129,9 +129,74 @@
 								: `Dans ${ballot.turnsLeft} trimestre${ballot.turnsLeft > 1 ? 's' : ''}`} ·
 							{ballot.filing}{ballot.endsMandate ? ' · Votre mandat arrive à son terme' : ''}
 						</p>
+						<p class="text-xs">Enjeu : {ballot.stake}</p>
+						{#if ballot.campaign}
+							<div
+								class="mt-2 rounded bg-surface p-2"
+								data-testid="campaign-{ballot.campaign.campaignId}"
+							>
+								<p class="text-xs font-semibold">
+									Candidature déposée · {ballot.campaign.investiture}
+								</p>
+								<p class="text-xs text-muted">
+									{ballot.campaign.declared} · Préparation : {ballot.campaign.preparation}
+								</p>
+								{#if ballot.campaign.poll}
+									<p class="text-xs" data-testid="poll-{ballot.campaign.campaignId}">
+										Sondage : entre {ballot.campaign.poll.min} % et {ballot.campaign.poll.max} % face
+										à l’adversaire principal. Un sondage n’est pas un résultat.
+									</p>
+								{/if}
+							</div>
+						{:else if career.declareActionId}
+							<div class="mt-2 flex flex-wrap items-center justify-end gap-2">
+								{#if ballot.candidacyPlanned}
+									<span class="text-xs text-muted">Candidature prévue ce trimestre.</span>
+								{:else}
+									{#if ballot.candidacyReason}
+										<span class="text-xs text-warning" id="candidacy-{ballot.ballotId}">
+											{ballot.candidacyReason}
+										</span>
+									{/if}
+									<button
+										type="button"
+										class="btn-secondary btn-small"
+										disabled={!ballot.candidacyAddable || accelerating}
+										aria-label="Prévoir la candidature : {ballot.label} du {ballot.dateLabel}"
+										aria-describedby={ballot.candidacyReason
+											? `candidacy-${ballot.ballotId}`
+											: undefined}
+										onclick={() =>
+											career.declareActionId &&
+											session.controller.addStep({
+												kind: 'action',
+												id: career.declareActionId,
+												target: ballot.ballotId
+											})}
+									>
+										<Megaphone class="size-3.5" aria-hidden="true" /> Se présenter
+									</button>
+								{/if}
+							</div>
+						{/if}
 					</li>
 				{/each}
 			</ul>
+			<p class="text-xs text-muted">
+				Se déclarer tôt laisse le temps de préparer la campagne, mais expose plus longtemps aux
+				coups durs ; se déclarer tard limite la préparation. Porte-à-porte et meetings de campagne
+				s’ajoutent depuis l’agenda.
+			</p>
+			{#if career.pastCampaigns.length > 0}
+				<h3 class="section-title mt-2">Vos campagnes</h3>
+				<ul class="flex flex-col gap-1 text-sm">
+					{#each career.pastCampaigns as campaign (campaign.campaignId)}
+						<li>
+							<span class="font-medium">{campaign.label}, {campaign.dateLabel}</span> — {campaign.outcome}
+						</li>
+					{/each}
+				</ul>
+			{/if}
 			<h3 class="section-title mt-2 flex items-center gap-2">
 				<Vote class="size-4" aria-hidden="true" /> Derniers résultats
 			</h3>

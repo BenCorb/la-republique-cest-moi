@@ -327,6 +327,90 @@
 				}
 			],
 			"target": "mandate"
+		},
+		{
+			"id": "campaign.declare",
+			"label": "Déclarer sa candidature",
+			"description": "Une conférence de presse, un slogan testé auprès de trois cousins et un dépôt de candidature en préfecture. Plus tôt on se déclare, plus longtemps on est exposé.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [
+				{
+					"resource": "politicalBudgetCents",
+					"amount": 5000
+				}
+			],
+			"effects": [
+				{
+					"op": "declareCandidacy"
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 1
+				}
+			],
+			"target": "ballot"
+		},
+		{
+			"id": "campaign.canvass",
+			"label": "Faire du porte-à-porte",
+			"description": "Sonner, sourire, laisser un tract, éviter le chien. Recommencer quatre cents fois.",
+			"timeCost": 25,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "gte",
+				"stat": "player.campaigning",
+				"value": 1
+			},
+			"unavailableReason": "Il faut être en campagne.",
+			"effects": [
+				{
+					"op": "prepareCampaign",
+					"value": 3
+				},
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "campaign.rally",
+			"label": "Tenir un meeting de campagne",
+			"description": "Une salle des fêtes, une sono capricieuse, un discours applaudi aux bons endroits par des militants bien placés.",
+			"timeCost": 35,
+			"maxPerTurn": 1,
+			"costs": [
+				{
+					"resource": "politicalBudgetCents",
+					"amount": 40000
+				}
+			],
+			"requires": {
+				"op": "gte",
+				"stat": "player.campaigning",
+				"value": 1
+			},
+			"unavailableReason": "Il faut être en campagne.",
+			"effects": [
+				{
+					"op": "prepareCampaign",
+					"value": 6
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				},
+				{
+					"op": "addSupport",
+					"group": "support.middle_class",
+					"value": 1
+				}
+			]
 		}
 	]
 }

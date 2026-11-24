@@ -229,7 +229,9 @@ La campagne utilise les ressources et le budget de temps existants : recherche d
 
 Le scrutin fictif combine le soutien électoral, la position du parti, la préparation de campagne, le contexte national, les adversaires, les événements récents et une part d’incertitude bornée. Les estimations doivent informer sans garantir le résultat. La modélisation des tours de scrutin sera simplifiée pour rester jouable ; aucune simulation de chaque électeur n’est prévue.
 
-Une défaite peut entraîner une perte de ressources, mais aussi apporter de la notoriété, de l’expérience, des relations ou de nouvelles opportunités. Le personnage poursuit sa carrière sauf condition de fin explicite.
+Une défaite peut entraîner une perte de ressources, mais aussi apporter de la notoriété, de l’expérience, des relations ou de nouvelles opportunités.
+
+**Hypothèses provisoires de l’alpha (P2-03, 24 novembre 2026, choix délégués) :** âge minimal par élection (18, 23 ou 30 ans), un siège local exigé pour les sénatoriales, investiture accordée selon le soutien de l’appareil du parti (sinon candidature dissidente sans l’apport du parti), sondage publié en fourchette, scrutin simplifié à un seul tour face à un adversaire principal : popularité, poids du parti si investi, préparation de campagne plafonnée, prime du sortant et part de hasard bornée. La tête de liste municipale bien élue devient maire. Le personnage poursuit sa carrière sauf condition de fin explicite.
 
 ### 7.5 Gouverner et tenir ses promesses
 

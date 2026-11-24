@@ -40,7 +40,9 @@ export type EffectRange =
 	/** Effet sur un acteur d'événement : jamais chiffré pour le joueur. */
 	| { readonly kind: 'people'; readonly role: string }
 	| { readonly kind: 'mandate'; readonly change: 'grant' | 'end'; readonly mandate: string }
-	| { readonly kind: 'earlyElection'; readonly election: string; readonly delayTurns: number };
+	| { readonly kind: 'earlyElection'; readonly election: string; readonly delayTurns: number }
+	| { readonly kind: 'candidacy' }
+	| { readonly kind: 'preparation'; readonly value: number };
 
 export type ResolvedEffect =
 	| {
@@ -101,6 +103,10 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'mandate', change: 'end', mandate: effect.mandate };
 		case 'callEarlyElection':
 			return { kind: 'earlyElection', election: effect.election, delayTurns: effect.delayTurns };
+		case 'declareCandidacy':
+			return { kind: 'candidacy' };
+		case 'prepareCampaign':
+			return { kind: 'preparation', value: effect.value };
 		default: {
 			const unknown: never = effect;
 			throw new Error(`Effet inconnu : ${JSON.stringify(unknown)}`);
@@ -130,6 +136,8 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 		case 'grantMandate':
 		case 'endMandate':
 		case 'callEarlyElection':
+		case 'declareCandidacy':
+		case 'prepareCampaign':
 			return { kind: 'career', effect, rng };
 		default: {
 			const unknown: never = effect;

@@ -242,7 +242,7 @@ function applyAutomaticEffects(
 				people.push(...outcome.changes);
 			}
 		} else if (resolved.kind === 'career') {
-			const outcome = applyCareerEffect(resolved.effect, career, turn, null, content);
+			const outcome = applyCareerEffect(resolved.effect, career, turn, null, content, player);
 			career = outcome.parts;
 			politics.push(...outcome.changes);
 		} else {
@@ -409,6 +409,7 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		upgrades: input.upgrades,
 		world,
 		mandates: career.mandates,
+		campaigns: career.campaigns,
 		institutions: career.institutions
 	});
 
@@ -603,6 +604,7 @@ export function choiceAvailability(
 	const career: CareerParts = {
 		mandates: state.mandates,
 		ballots: state.ballots,
+		campaigns: state.campaigns,
 		institutions: state.institutions
 	};
 	for (const effect of choice.effects) {
@@ -658,6 +660,7 @@ export function chooseEvent(
 			career: {
 				mandates: state.mandates,
 				ballots: state.ballots,
+				campaigns: state.campaigns,
 				institutions: state.institutions
 			},
 			rng: state.rng
@@ -696,6 +699,7 @@ export function chooseEvent(
 		upgrades: state.upgrades,
 		world: outcome.world,
 		mandates: outcome.career.mandates,
+		campaigns: outcome.career.campaigns,
 		institutions: outcome.career.institutions
 	};
 	const cancelled: { instanceId: string; reason: string }[] = [];
@@ -741,6 +745,7 @@ export function chooseEvent(
 			relationships: outcome.relationships,
 			mandates: outcome.career.mandates,
 			ballots: outcome.career.ballots,
+			campaigns: outcome.career.campaigns,
 			institutions: outcome.career.institutions,
 			rng: outcome.rng,
 			phase: deathCause ? 'ended' : remaining.length > 0 ? 'decision' : 'planning',
