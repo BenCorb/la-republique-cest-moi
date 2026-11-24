@@ -138,6 +138,7 @@ src/
   routes/                 # +layout.svelte, +page.svelte (coque d’accueil), layout.css (tokens)
   lib/
     game/engine/          # moteur TypeScript pur (sans Svelte, DOM, stockage, réseau, hasard réel)
+    game/content/         # types, schémas Zod, validation et catalogues JSON (data/)
     components/shell/     # coque desktop (GameShell)
 static/                   # fichiers copiés tels quels (favicon.svg, .nojekyll)
 scripts/
@@ -147,6 +148,8 @@ scripts/
 .github/workflows/        # CI et déploiement GitHub Pages
 tests/
   unit/                   # Vitest (Node)
+  scenarios/              # scénarios moteur sur plusieurs trimestres (Vitest)
+  fixtures/               # contenu de test figé, indépendant du tuning
   e2e/                    # Playwright (*.e2e.ts), contre le build statique
 ```
 

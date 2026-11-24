@@ -1,9 +1,10 @@
 /**
  * Commandes du moteur et résultats de transition (ARCHITECTURE.md §5).
  *
- * Les commandes sont des unions discriminées. P1-01 ne définit que la validation
- * d'un trimestre ; `chooseEvent` arrive avec le moteur d'événements (P1-05).
+ * Les commandes sont des unions discriminées. Seule la validation d'un trimestre
+ * existe ; `chooseEvent` arrive avec le moteur d'événements (P1-05).
  */
+import type { PlanIssue } from './actions.ts';
 import type { Turn } from './calendar.ts';
 import type { GameState, HistoryEntry } from './state.ts';
 
@@ -24,17 +25,14 @@ export interface CommitTurnCommand {
 export type GameCommand = CommitTurnCommand;
 
 export type CommandErrorCode =
-	| 'game_ended'
-	| 'decision_pending'
-	| 'invalid_phase'
-	| 'unknown_command'
-	| 'invalid_plan'
-	| 'unknown_action';
+	'game_ended' | 'decision_pending' | 'invalid_phase' | 'unknown_command' | 'invalid_plan';
 
 export interface CommandError {
 	readonly code: CommandErrorCode;
 	/** Message lisible en français, destiné à l'interface. */
 	readonly message: string;
+	/** Problèmes détaillés d'un plan refusé (`invalid_plan`), vide sinon. */
+	readonly issues: readonly PlanIssue[];
 }
 
 export interface TransitionSuccess {

@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.1.0';
+export const RULES_VERSION = '0.2.0';
 
 export {
 	START_YEAR,
@@ -44,8 +44,10 @@ export {
 	type GamePhase,
 	type GameState,
 	type HistoryEntry,
+	type ActionRecord,
 	type NewGameConfig,
-	type PlayerState
+	type PlayerState,
+	type ResourceChange
 } from './state.ts';
 export {
 	commitTurn,
@@ -59,5 +61,19 @@ export {
 	type TransitionSuccess,
 	type TurnPlan
 } from './commands.ts';
+export {
+	RESOURCE_LABELS,
+	executePlan,
+	previewPlan,
+	type PlanExecution,
+	type PlanIssue,
+	type PlanIssueCode,
+	type PlanPreview,
+	type PlanStepPreview,
+	type ResourceRange,
+	type ResourceRanges
+} from './actions.ts';
+export { evaluateCondition, readStat, type ConditionContext } from './conditions.ts';
+export { effectRange, resolveEffect, type EffectRange, type ResolvedEffect } from './effects.ts';
 export { transition } from './turn.ts';
 export { assertInvariants, checkInvariants } from './invariants.ts';

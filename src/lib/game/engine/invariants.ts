@@ -4,6 +4,7 @@
  * Utilisé après chaque transition dans les tests et, plus tard, aux frontières de
  * chargement (sauvegarde, import). Ne corrige rien : signale toutes les violations.
  */
+import { RESOURCE_IDS } from '../content/types.ts';
 import { RNG_ALGORITHM, validateSeed } from './random.ts';
 import { START_TURN, STATE_SCHEMA_VERSION, type GameState } from './state.ts';
 
@@ -33,6 +34,13 @@ export function checkInvariants(state: GameState): string[] {
 
 	if (!Number.isSafeInteger(state.player.birthTurn) || state.player.birthTurn > state.turn) {
 		violations.push(`naissance invalide : ${state.player.birthTurn}`);
+	}
+
+	for (const resource of RESOURCE_IDS) {
+		const value = state.resources[resource];
+		if (!Number.isSafeInteger(value) || value < 0) {
+			violations.push(`ressource invalide : ${resource} = ${value}`);
+		}
 	}
 
 	// Le journal contient exactement un tour résolu par trimestre écoulé, dans l'ordre.

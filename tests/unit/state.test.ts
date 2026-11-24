@@ -6,9 +6,10 @@ import {
 	formatTurn,
 	type GameState
 } from '../../src/lib/game/engine/index.ts';
+import { fixtureContent } from '../fixtures/content.ts';
 
 describe('création de partie', () => {
-	const game = createGame({ seed: 'création' });
+	const game = createGame({ seed: 'création' }, fixtureContent);
 
 	it('démarre au T1 2000 en phase de planification', () => {
 		expect(game.turn).toBe(0);
@@ -25,12 +26,17 @@ describe('création de partie', () => {
 
 	it('initialise le générateur depuis la seed fournie', () => {
 		expect(game.rng.seed).toBe('création');
-		expect(createGame({ seed: 'création' })).toEqual(game);
-		expect(createGame({ seed: 'autre' }).rng.state).not.toBe(game.rng.state);
+		expect(createGame({ seed: 'création' }, fixtureContent)).toEqual(game);
+		expect(createGame({ seed: 'autre' }, fixtureContent).rng.state).not.toBe(game.rng.state);
 	});
 
 	it('refuse une seed invalide', () => {
-		expect(() => createGame({ seed: '' })).toThrow(RangeError);
+		expect(() => createGame({ seed: '' }, fixtureContent)).toThrow(RangeError);
+	});
+
+	it('démarre avec les ressources de l’équilibrage, budgets séparés', () => {
+		expect(game.resources).toEqual(fixtureContent.balance.startingResources);
+		expect(game.resources).not.toBe(fixtureContent.balance.startingResources);
 	});
 
 	it('respecte les invariants', () => {
@@ -44,7 +50,7 @@ describe('création de partie', () => {
 });
 
 describe('contrôle des invariants', () => {
-	const game = createGame({ seed: 'invariants' });
+	const game = createGame({ seed: 'invariants' }, fixtureContent);
 
 	it.each<[string, GameState, string]>([
 		['tour négatif', { ...game, turn: -1 }, 'tour invalide'],
@@ -61,14 +67,24 @@ describe('contrôle des invariants', () => {
 				...game,
 				turn: 2,
 				history: [
-					{ type: 'turn.resolved', turn: 1 },
-					{ type: 'turn.resolved', turn: 0 }
+					{ type: 'turn.resolved', turn: 1, actions: [] },
+					{ type: 'turn.resolved', turn: 0, actions: [] }
 				]
 			},
 			'hors séquence'
 		],
 		['fin sans phase terminale', { ...game, end: { turn: 0, reason: 'test' } }, 'fin'],
 		['phase terminale sans fin', { ...game, phase: 'ended' }, 'fin'],
+		[
+			'ressource négative',
+			{ ...game, resources: { ...game.resources, influence: -1 } },
+			'ressource invalide'
+		],
+		[
+			'ressource non entière',
+			{ ...game, resources: { ...game.resources, personalCashCents: 0.5 } },
+			'ressource invalide'
+		],
 		['naissance future', { ...game, player: { birthTurn: 1 } }, 'naissance']
 	])('détecte : %s', (_label, state, fragment) => {
 		expect(checkInvariants(state).join('\n')).toContain(fragment);

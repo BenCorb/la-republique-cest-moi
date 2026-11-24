@@ -1,16 +1,20 @@
 /**
- * Validation des catalogues de contenu JSON (`npm run content:validate`).
+ * Validation des catalogues de contenu (`npm run content:validate`).
  *
- * Phase 0 : vérifie que chaque fichier `.json` du répertoire de données est lisible
- * et syntaxiquement valide. La validation par schémas et le contrôle des références
- * croisées seront ajoutés avec les premiers catalogues (P1-02, ARCHITECTURE.md §7).
+ * 1. Chaque fichier `.json` du répertoire de données doit être du JSON valide.
+ * 2. Les catalogues connus (`actions.json`, `balance.json`) passent la validation
+ *    complète du jeu : schémas et contrôles croisés (`content/validate.ts`).
  *
  * Exécuté directement par Node (suppression native des types TypeScript).
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
+import { validateContent } from '../src/lib/game/content/validate.ts';
 
 export const DEFAULT_CONTENT_DIR = resolve(import.meta.dirname, '../src/lib/game/content/data');
+
+/** Catalogues obligatoires, validés par le moteur de contenu. */
+export const REQUIRED_CATALOGS = ['actions.json', 'balance.json'] as const;
 
 export interface ContentIssue {
 	file: string;
@@ -36,6 +40,7 @@ function listJsonFiles(dir: string): string[] {
 	return found;
 }
 
+/** Vérifie uniquement la syntaxe JSON de tous les fichiers du répertoire. */
 export function validateContentDirectory(dir: string): ContentReport {
 	if (!existsSync(dir)) {
 		return { directoryExists: false, files: [], issues: [] };
@@ -56,20 +61,46 @@ export function validateContentDirectory(dir: string): ContentReport {
 	return { directoryExists: true, files: files.map((file) => relative(dir, file)), issues };
 }
 
+/** Syntaxe JSON, présence des catalogues obligatoires puis validation complète. */
+export function validateGameContent(dir: string): ContentReport {
+	const report = validateContentDirectory(dir);
+	if (!report.directoryExists || report.issues.length > 0) return report;
+
+	const missing = REQUIRED_CATALOGS.filter((name) => !report.files.includes(name));
+	if (missing.length > 0) {
+		return {
+			...report,
+			issues: missing.map((file) => ({ file, message: 'catalogue obligatoire manquant' }))
+		};
+	}
+
+	const read = (name: string): unknown => JSON.parse(readFileSync(join(dir, name), 'utf8'));
+	const result = validateContent({ actions: read('actions.json'), balance: read('balance.json') });
+	if (result.ok) return report;
+	return {
+		...report,
+		issues: result.issues.map((issue) => ({
+			file: issue.source,
+			message: `${issue.path || '(racine)'} : ${issue.message}`
+		}))
+	};
+}
+
 function main(): void {
 	const dir = DEFAULT_CONTENT_DIR;
-	const report = validateContentDirectory(dir);
+	const report = validateGameContent(dir);
 	const shownDir = relative(process.cwd(), dir) || '.';
 
 	if (!report.directoryExists) {
-		console.log(`Aucun catalogue de contenu à valider : ${shownDir} n'existe pas encore.`);
+		console.error(`Répertoire de contenu introuvable : ${shownDir}.`);
+		process.exitCode = 1;
 		return;
 	}
 	for (const issue of report.issues) {
 		console.error(`✗ ${issue.file} : ${issue.message}`);
 	}
 	if (report.issues.length > 0) {
-		console.error(`${report.issues.length} fichier(s) de contenu invalide(s).`);
+		console.error(`${report.issues.length} problème(s) de contenu.`);
 		process.exitCode = 1;
 		return;
 	}

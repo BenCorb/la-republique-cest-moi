@@ -1,0 +1,8 @@
+{
+	"timeBudgetPerTurn": 100,
+	"startingResources": {
+		"influence": 0,
+		"politicalBudgetCents": 10000,
+		"personalCashCents": 300000
+	}
+}

@@ -1,7 +1,7 @@
 # La République, c’est moi ! — Feuille de route
 
 **Version 0.1 — 24 novembre 2026**  
-**Statut :** phase 0 terminée (P0-01 à P0-06). Phase 1 en cours : P1-01 réalisée et vérifiée le 24 novembre 2026 (✅ = tâche terminée dans les tableaux).  
+**Statut :** phase 0 terminée (P0-01 à P0-06). Phase 1 en cours sur la branche `feat/p1-prototype` (une PR vers `main` en fin de phase) : P1-01 et P1-02 réalisées et vérifiées le 24 novembre 2026 (✅ = tâche terminée dans les tableaux).  
 **Références :** [GAME_DESIGN.md](GAME_DESIGN.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN.md](DESIGN.md), [AGENTS.md](AGENTS.md).
 
 ## 1. Stratégie de livraison
@@ -34,7 +34,7 @@ Dépendances : P0-01 précède les autres ; P0-02 et P0-03 peuvent être traité
 | ID | Tâche | Dépendances | Critère d’acceptation |
 |---|---|---|---|
 | P1-01 ✅ | État, calendrier, seed, PRNG et commandes | P0 | Profil fixe de 25 ans, T1 2000 ; 4 tours = 1 an ; état sérialisable ; même seed et commandes reproduisent le même résultat |
-| P1-02 | Catalogue d’actions, conditions et effets | P1-01 | Schéma validé ; temps trimestriel et coûts vérifiés ; preview pure ; plan rejeté sans modification |
+| P1-02 ✅ | Catalogue d’actions, conditions et effets | P1-01 | Schéma validé ; temps trimestriel et coûts vérifiés ; preview pure ; plan rejeté sans modification |
 | P1-03 | Économie, producteurs et améliorations | P1-02 | Budget politique séparé des finances personnelles ; charges explicites ; achat T produit en T+1 ; invariants testés |
 | P1-04 | Santé, stress, vieillissement et fin | P1-03 | Effets du repos et de la charge testés ; décès et bilan atteignables ; aucune commande de tour après fin |
 | P1-05 | Moteur d’événements | P1-04 | Tirage conditionnel, acteurs pertinents, choix, répétition et au moins une suite différée ; choix bloquant appliqué une seule fois |

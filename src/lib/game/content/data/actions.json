@@ -1,0 +1,69 @@
+{
+	"actions": [
+		{
+			"id": "activism.leaflets",
+			"label": "Distribuer des tracts",
+			"description": "Un samedi matin au marché, entre le fromager et un militant adverse qui distribue exactement le même tract avec un autre logo.",
+			"timeCost": 15,
+			"maxPerTurn": 2,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 2000 }],
+			"effects": [{ "op": "addResourceRandom", "resource": "influence", "min": 1, "max": 3 }]
+		},
+		{
+			"id": "network.meet_officials",
+			"label": "Rencontrer des élus locaux",
+			"description": "Serrer des mains, écouter longuement les anecdotes de mandats passés et rire au bon moment.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"effects": [{ "op": "addResource", "resource": "influence", "value": 3 }]
+		},
+		{
+			"id": "activism.public_meeting",
+			"label": "Organiser une réunion publique",
+			"description": "Louer une salle des fêtes, installer cent chaises et espérer en occuper plus de douze.",
+			"timeCost": 50,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 30000 }],
+			"requires": { "op": "gte", "stat": "resources.influence", "value": 10 },
+			"unavailableReason": "Il faut au moins 10 points d’influence pour espérer remplir une salle.",
+			"effects": [{ "op": "addResourceRandom", "resource": "influence", "min": 5, "max": 12 }]
+		},
+		{
+			"id": "organization.fundraising",
+			"label": "Organiser une collecte",
+			"description": "Un dîner-débat à prix libre, dont le prix s’avère étonnamment peu libre.",
+			"timeCost": 25,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "gte", "stat": "resources.influence", "value": 5 },
+			"unavailableReason": "Il faut au moins 5 points d’influence pour que quelqu’un se déplace.",
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "politicalBudgetCents",
+					"min": 10000,
+					"max": 40000
+				}
+			]
+		},
+		{
+			"id": "personal.freelance",
+			"label": "Accepter des missions en free-lance",
+			"description": "Il faut bien payer le loyer : quelques missions de conseil, réalisées entre deux réunions.",
+			"timeCost": 30,
+			"maxPerTurn": 2,
+			"costs": [],
+			"effects": [{ "op": "addResource", "resource": "personalCashCents", "value": 80000 }]
+		},
+		{
+			"id": "personal.donate",
+			"label": "Verser un don à son organisation",
+			"description": "Transférer une partie de ses économies au budget politique. Le geste est noble, le compte en banque moins enthousiaste.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "personalCashCents", "amount": 50000 }],
+			"effects": [{ "op": "addResource", "resource": "politicalBudgetCents", "value": 50000 }]
+		}
+	]
+}

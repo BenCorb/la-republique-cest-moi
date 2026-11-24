@@ -2,9 +2,10 @@
  * État central de la partie (ARCHITECTURE.md §4.1) — sous-ensemble du prototype.
  *
  * L'état est un objet JSON pur (nombres, chaînes, booléens, tableaux, objets,
- * `null`) : il se sérialise et se recharge sans perte. Les ressources, la santé,
- * les événements, etc. rejoignent cet état avec leurs tâches (P1-02 à P1-05).
+ * `null`) : il se sérialise et se recharge sans perte. La santé, les producteurs,
+ * les événements, etc. rejoignent cet état avec leurs tâches (P1-03 à P1-05).
  */
+import type { Content, ResourceId, Resources } from '../content/types.ts';
 import { TURNS_PER_YEAR, type Turn } from './calendar.ts';
 import { createRng, type RngState } from './random.ts';
 
@@ -24,10 +25,24 @@ export interface PlayerState {
 	readonly birthTurn: Turn;
 }
 
+export interface ResourceChange {
+	readonly resource: ResourceId;
+	/** Variation nette (coûts et effets), non nulle. */
+	readonly delta: number;
+}
+
+/** Action exécutée pendant un trimestre, avec ses variations réelles. */
+export interface ActionRecord {
+	readonly actionId: string;
+	readonly changes: readonly ResourceChange[];
+}
+
 export interface HistoryEntry {
 	readonly type: 'turn.resolved';
 	/** Trimestre résolu (T), le journal étant produit au passage vers T+1. */
 	readonly turn: Turn;
+	/** Actions du plan, dans l'ordre d'exécution. */
+	readonly actions: readonly ActionRecord[];
 }
 
 export interface EndState {
@@ -41,6 +56,8 @@ export interface GameState {
 	readonly rng: RngState;
 	readonly phase: GamePhase;
 	readonly player: PlayerState;
+	/** Influence, budget politique et liquidités personnelles, jamais fusionnés. */
+	readonly resources: Resources;
 	readonly history: readonly HistoryEntry[];
 	readonly end: EndState | null;
 }
@@ -53,13 +70,14 @@ export interface NewGameConfig {
 	readonly seed: string;
 }
 
-export function createGame(config: NewGameConfig): GameState {
+export function createGame(config: NewGameConfig, content: Content): GameState {
 	return {
 		schemaVersion: STATE_SCHEMA_VERSION,
 		turn: START_TURN,
 		rng: createRng(config.seed),
 		phase: 'planning',
 		player: { birthTurn: START_TURN - PROTOTYPE_STARTING_AGE * TURNS_PER_YEAR },
+		resources: { ...content.balance.startingResources },
 		history: [],
 		end: null
 	};
