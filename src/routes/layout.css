@@ -1,0 +1,54 @@
+@import 'tailwindcss';
+
+/*
+ * Tokens visuels (DESIGN.md §2). Valeurs indicatives, ajustables après essais de
+ * contraste. Tailwind les expose en utilitaires (`bg-canvas`, `text-ink`…) et en
+ * variables CSS (`var(--color-canvas)`).
+ */
+@theme {
+	--color-canvas: #f3f0e9;
+	--color-surface: #fffdfa;
+	--color-sidebar: #eae6de;
+	--color-primary: #203957;
+	--color-ink: #202a35;
+	--color-muted: #565e68;
+	--color-line: #d5d0c5;
+	--color-danger: #a32938;
+	--color-positive: #286044;
+	--color-warning: #80520d;
+
+	--font-serif: Georgia, 'Times New Roman', serif;
+	--font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+@layer base {
+	html {
+		color-scheme: light;
+	}
+
+	body {
+		@apply bg-canvas font-sans text-base text-ink antialiased;
+	}
+
+	h1,
+	h2,
+	h3 {
+		@apply font-serif;
+	}
+
+	:focus-visible {
+		outline: 2px solid var(--color-primary);
+		outline-offset: 2px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}

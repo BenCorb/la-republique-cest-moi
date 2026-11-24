@@ -1,0 +1,21 @@
+# Package Managers
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lock
+bun.lockb
+
+# Miscellaneous
+/static/
+
+# Documents de conception rédigés à la main (ne pas reformater)
+/AGENTS.md
+/CLAUDE.md
+/GAME_DESIGN.md
+/ARCHITECTURE.md
+/DESIGN.md
+/ROADMAP.md
+
+# Sorties de tests
+/test-results/
+/playwright-report/
