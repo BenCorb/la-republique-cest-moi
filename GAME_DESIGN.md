@@ -99,6 +99,8 @@ Le joueur peut partir avec des convictions initiales, rejoindre un parti fictif,
 
 Axes proposés, à retenir en nombre limité pour la V1 : économie (interventionnisme/libéralisme), société (progressisme/conservatisme), environnement (productivisme/écologie), institutions (concentration du pouvoir/démocratie participative), international (souverainisme/internationalisme). Ces axes décrivent la compatibilité politique, pas la moralité. Il n’est pas nécessaire d’exposer des scores numériques pour chacun.
 
+**Décision du 24 novembre 2026 (alpha, déléguée par le créateur) :** trois axes retenus — économie (interventionnisme/libéralisme), société (progressisme/conservatisme), souveraineté (construction européenne et ouverture/souverainisme). L’environnement et les institutions passent par les sujets d’actualité et les événements plutôt que par des axes. Les positions sont internes et affichées seulement en termes qualitatifs.
+
 ### 3.3 Famille et vie privée
 
 La famille fait partie de la simulation, mais sans système de vie domestique exhaustif. Parents, conjoint, enfants et autres proches peuvent apporter un réseau, des revenus, des dépenses, du soutien ou du stress. Des événements permettent notamment de gérer des tensions familiales, un divorce, une demande de poste, un héritage ou une révélation embarrassante. Les liens familiaux alimentent le moteur de personnages et d’événements existant.
@@ -238,6 +240,21 @@ Exemple fictif : un candidat promet une réforme fiscale ; une fois élu, ses so
 Les noms de partis, médias, institutions et organisations sont fictifs et peuvent faire clairement référence à des réalités françaises. Les personnages sont inventés ; éviter d’attribuer des comportements criminels fictifs à des personnes réelles identifiables. La satire porte notamment sur les mécanismes et contradictions du pouvoir.
 
 Le paysage politique initial est globalement le même à chaque partie : mêmes partis, médias, institutions, règles et rapports de force de référence. Les dirigeants, leurs noms, leurs personnalités et leurs relations sont générés ou sélectionnés aléatoirement. Les événements ultérieurs divergent. Les noms parodiques exacts et la composition du catalogue initial restent à écrire et à valider.
+
+**Catalogue initial de l’alpha (24 novembre 2026, consigne du créateur : noms proches du paysage français réel mais distincts et humoristiques ; poids de départ provisoires) :**
+
+| Parti fictif | Sigle | Famille | Clin d’œil |
+|---|---|---|---|
+| Lutte Toujours Intransigeante | LTI | Extrême gauche | Prépare le grand soir depuis 1968 |
+| Parti Camarade Français | PCF | Gauche communiste | Mairies de banlieue et nostalgie militante |
+| Parti des Synthèses | PS | Gauche de gouvernement | Fusionne dix-sept motions en une phrase |
+| Les Verts Divisés | LVD | Écologistes | Plus de courants que de rivières propres |
+| Union des Démocrates Flottants | UDF | Centre | Centre de gravité, tant qu’il ne faut pas choisir |
+| Rassemblement pour la Réélection | RPR | Droite de gouvernement | Gaulliste de tradition, réélectionniste de conviction |
+| Chasse, Pêche, Nature et Apéro | CPNA | Ruralistes | Défend les traditions, surtout celle de 18 h |
+| Front du Non | FN | Extrême droite | Contre, par principe, et contre le principe aussi |
+
+En 2000, le Parti des Synthèses conduit le gouvernement. Les dirigeants sont générés à chaque partie ; aucun personnage réel n’est représenté. Les fusions, scissions et créations de partis passeront par des événements.
 
 ### 8.2 Évolution du monde
 

@@ -1,7 +1,7 @@
 # La République, c’est moi ! — Feuille de route
 
 **Version 0.1 — 24 novembre 2026**  
-**Statut :** phases 0 et 1 terminées : P0-01 à P0-06 et P1-01 à P1-10 réalisées et vérifiées le 24 novembre 2026 (✅ = tâche terminée dans les tableaux). La branche `feat/p1-prototype` doit encore être intégrée par une PR unique vers `main`. Reprise : voir §9.
+**Statut :** phases 0 et 1 terminées et intégrées à `main` (PR #4, CI verte, 24 novembre 2026) ; P0-01 à P0-06 et P1-01 à P1-10 réalisées et vérifiées (✅ = tâche terminée dans les tableaux). Phase 2 en cours sur `feat/p2-alpha` (§4.1). Le site publié montre encore la phase 0. Reprise : voir §9.
 
 **Références :** [GAME_DESIGN.md](GAME_DESIGN.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN.md](DESIGN.md), [AGENTS.md](AGENTS.md).
 
@@ -73,6 +73,41 @@ Actions de militantisme, rencontres, recrutement générique, organisation, repo
 
 Éviter un système de simulation individuelle de tous les électeurs ou un moteur d’IA autonome. Les personnages et le monde évoluent via règles, traits et événements. Les valeurs de départ, poids électoraux et fréquences restent calibrables dans le contenu.
 
+### 4.1 Préparation de la mise en œuvre (24 novembre 2026)
+
+Cette section est un plan de travail. **Décisions du créateur (24 novembre 2026) :** branche de phase unique `feat/p2-alpha` (`AGENTS.md`) ; partis et axes satiriques proches du paysage français (catalogue et axes reportés dans le GDD §3.2 et §8.1) ; pour le reste, le créateur délègue les choix : les propositions ci-dessous sont **retenues comme hypothèses provisoires**, chiffres modifiables à l’équilibrage. En particulier : sauvegardes conservées en version 1 pendant l’alpha avec refus explicite des sauvegardes de développement incompatibles ; noyau de P2-07 (groupes et popularité) avancé avant P2-03 ; mandats, groupes, taille de l’entourage et profils selon les propositions de lots C, E et F.
+
+**Constats de départ.** Le moteur du prototype ne connaît qu’un joueur (santé, stress, ressources), des améliorations, des événements et une distribution d’acteurs figée (`cast.json`, sans âge ni relation). `GameState` n’a ni monde, ni personnages, ni mandats, ni élections ; les conditions lisent un registre fermé de statistiques (`STAT_IDS`) et les effets ne touchent que ressources et jauges. La phase 2 étend donc d’abord le modèle d’état, puis branche chaque système sur l’ordre de tour existant (ARCHITECTURE §5.1, étapes 3 à 6), sans résolution parallèle.
+
+**Préalables techniques (avant ou au début de P2-01), sans nouvel identifiant de tâche :**
+
+1. **Politique de version de sauvegarde** (§15.1 de l’architecture, décision attendue). Proposition : aucune version jouable n’étant publiée, garder `STATE_SCHEMA_VERSION = SAVE_VERSION = 1` pendant l’alpha et refuser explicitement les sauvegardes de développement incompatibles ; incrémenter avec migration testée dès le premier déploiement public. P2-10 vérifie l’une ou l’autre voie.
+2. **Extensibilité du contenu** : registres typés de statistiques et d’effets étendus par module (monde, personnages, carrière) avec `switch` exhaustif, sans chemin arbitraire vers l’état ; conditions portant sur un acteur (`actor.<rôle>.<stat>`) pour les événements à personnages.
+3. **Dette à solder avant P2-04** : attribution des acteurs gloutonne (§15.3) — passer à une recherche avec retour arrière bornée, puisque les événements à plusieurs personnages vont se multiplier ; codes d’invariants structurés plutôt que fragments de texte.
+4. **Simulateur** : ajouter au rapport mandats, élections, partis et entourage au fur et à mesure (aujourd’hui déclarés « indisponibles ») ; chaque tâche alimente ses propres métriques.
+5. **Environnement** : déplacer le dépôt hors d’iCloud (§15.4) ; des copies « 2 » existent encore dans `build/`, `test-results/`, `.svelte-kit/` et `.git/index 2`.
+
+**Ordre recommandé** (respecte les dépendances du tableau, avec un ajustement à trancher) :
+
+| Lot | Tâches | Contenu livré | Remarque |
+|---|---|---|---|
+| A — Monde | P2-01 | `world` dans l’état : partis (catalogue fixe, dirigeants tirés), indicateurs nationaux bornés, affiliation du joueur, événements nationaux conditionnels | Rend effective l’action « rejoindre le parti » (limite §15.2) |
+| B — Personnages | P2-04 | Modèle `Character` commun, traits réels/connus, vieillissement et départs, mémoire d’actes ; migration de `cast.json` vers ce modèle | Peut démarrer dès P2-01 commencé, mais pas sur les mêmes fichiers en parallèle |
+| C — Carrière | P2-02, **P2-07 minimal**, P2-03 | Calendrier électoral, mandats, cumul ; groupes de soutien et popularité dérivée ; candidatures, campagne, sondages, scrutin | Retenu : le scrutin de P2-03 a besoin du soutien électoral, le noyau de P2-07 (groupes et popularité) passe avant P2-03 ; son détail UI reste après |
+| D — Rivaux | P2-06 | Adversaires récurrents issus du modèle commun, revalidés à chaque scrutin | |
+| E — Entourage | P2-05 | Postes clés, recrutement à information partielle, missions persistantes, conseil de qualité variable | Plus coûteux en UI ; nouveaux producteurs actifs en T+1 |
+| F — Création | P2-08 | Origine, profession, famille légère ; âge toujours fixé à 25 ans | Écran de création alpha |
+| G — Intégration | P2-09, P2-10 | Accélération complète, onglets Carrière/Entourage, alertes d’échéance ; contenu alpha, lots par stratégie, sauvegardes | P2-09 peut reprendre la dette UX du playtest (plan conservé après « Trimestre suivant ») si le créateur l’avance de P3-08 |
+
+**Décisions de contenu par lot** (hypothèses retenues par délégation, chiffres provisoires) :
+
+- *Lot A* — Huit partis fictifs (GDD §8.1) ; trois axes : économie, société, souveraineté (GDD §3.2), non affichés en chiffres ; indicateurs nationaux : situation économique, climat social, stabilité gouvernementale.
+- *Lot C* — Liste des mandats alpha (proposition : conseiller municipal, maire, conseiller régional, député, sénateur ; responsabilités de parti à part ; ministre seulement par nomination événementielle) ; durées et cycles fictifs fixes ; règles de cumul ; éligibilité (âge, affiliation ou investiture, ressources) ; modèle de scrutin (proposition : un tour simplifié, score = soutien des groupes pondéré + poids du parti + préparation + contexte + bruit borné, testé en sensibilité) ; groupes (proposition GDD §4.4 : 3 électoraux, 3 d’influence).
+- *Lot E* — Taille maximale de l’entourage et nombre d’acteurs simulés activement (proposition : 5 postes, une trentaine de personnages nommés au plus).
+- *Lot F* — Nombre de profils d’origine et de professions (proposition : 4 origines × 6 professions, combinaisons limitées et sans avantage net).
+
+**Organisation Git.** Branche de phase `feat/p2-alpha`, un commit par tâche (`Refs: P2-0x`), une PR unique vers `main` en fin de phase (`AGENTS.md`).
+
 ## 5. Phase 3 — V1 : profondeur et finition
 
 | ID | Tâche | Dépendances | Critère d’acceptation |
@@ -114,10 +149,9 @@ Les tâches de phase 0 peuvent également être confiées une par une pour facil
 
 ## 9. Reprise du travail — passage de relais (24 novembre 2026)
 
-- **Branche :** `feat/p1-prototype` (poussée), basée sur `main` (`2b1ab80`), un commit par tâche P1-02 à P1-09 ; une seule pull request vers `main` en fin de phase 1 (exception documentée dans `AGENTS.md`). Le site publié montre encore la phase 0.
-- **État :** phases 0 et 1 terminées et vérifiées. P1-10 fournit le simulateur, les rapports JSON/CSV, le lot CI et un premier réglage ; le playtest humain a mené une carrière complète jusqu’au bilan sans bug fonctionnel. Retours détaillés dans `PLAYTEST.md`.
-- **Où lire :** décisions de chaque tâche dans `ARCHITECTURE.md` (§5.2 bis, §6.1, §7.1 bis, §7.3, §7.4, §8.1 bis, §8.2 bis, §9.1, §10.1, §11.1 bis, §12.1–12.3) ; protocole humain dans `PLAYTEST.md` ; limites, dette et règles provisoires au §15.
-- **Prochaine étape :** vérifier et committer P1-10, pousser la branche, ouvrir la PR unique de phase 1 et attendre une CI verte avant fusion. La prochaine tâche de développement après intégration est P2-01. Ne pas déployer sans demande explicite.
-- **Décisions attendues du créateur :** règle de version de sauvegarde (§15.1) ; coût de la vie personnel ; relecture éditoriale des 30 événements ; déplacement du dépôt hors d’iCloud (§15.4).
-- **Avant de commencer :** `git fetch --prune`, `git status`, rechercher les copies de synchronisation (`find . -path ./node_modules -prune -o -name '* [0-9].*' -print`), `npm ci`, puis la vérification complète ci-dessus.
-
+- **Branche :** `feat/p2-alpha`, créée depuis `main` (`0a59481`, fusion « squash » de la phase 1 via la PR #4, CI verte). La branche distante `feat/p1-prototype` a été supprimée ; la copie locale peut l’être aussi. Le site publié montre encore la phase 0 (aucun déploiement demandé).
+- **État :** phases 0 et 1 terminées et intégrées. Phase 2 planifiée au §4.1 (ordre des lots, préalables techniques, décisions retenues).
+- **Où lire :** décisions de chaque tâche de phase 1 dans `ARCHITECTURE.md` (§5.2 bis, §6.1, §7.1 bis, §7.3, §7.4, §8.1 bis, §8.2 bis, §9.1, §10.1, §11.1 bis, §12.1–12.3) ; protocole humain dans `PLAYTEST.md` ; limites, dette et règles provisoires au §15.
+- **Prochaine étape :** P2-01 sur `feat/p2-alpha`. Ne pas déployer sans demande explicite.
+- **Décisions attendues du créateur :** relecture des hypothèses provisoires du §4.1 ; coût de la vie personnel ; relecture éditoriale des 30 événements ; déplacement du dépôt hors d’iCloud (§15.4).
+- **Avant de commencer :** `git fetch --prune`, `git status`, rechercher les copies de synchronisation (`find . -path ./node_modules -prune -o -name '* [0-9].*' -print`), `npm ci`, puis `npm run check`, `npm run lint`, `npm run content:validate`, `npm run test` et `npm run build`.
