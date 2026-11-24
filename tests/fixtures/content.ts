@@ -5,9 +5,32 @@
 import { validateContent } from '../../src/lib/game/content/validate.ts';
 import type { Content } from '../../src/lib/game/content/types.ts';
 
+/**
+ * Modèle de santé neutre : ni charge de travail, ni vieillissement, ni mortalité,
+ * pour que les tests d'actions et d'économie restent indépendants de la santé.
+ * Les tests de santé utilisent `withWellbeing` pour activer chaque mécanisme.
+ */
+export const neutralWellbeing = {
+	startingHealth: 80,
+	startingStress: 10,
+	workloadThreshold: 100,
+	workloadStressPer10Points: 0,
+	stressRecoveryPerTurn: 0,
+	highStressThreshold: 100,
+	highStressHealthLoss: 0,
+	calmStressThreshold: 0,
+	calmHealthGain: 0,
+	fragileHealthThreshold: 0,
+	fragileMortalityMultiplier: 1,
+	ageBands: [
+		{ fromAge: 0, maxHealth: 100, ageingChance: 0, ageingHealthLoss: 0, mortalityChance: 0 }
+	]
+};
+
 export const fixtureBalance = {
 	timeBudgetPerTurn: 100,
-	startingResources: { influence: 0, politicalBudgetCents: 10_000, personalCashCents: 100_000 }
+	startingResources: { influence: 0, politicalBudgetCents: 10_000, personalCashCents: 100_000 },
+	wellbeing: neutralWellbeing
 };
 
 export const fixtureActions = {
@@ -78,6 +101,24 @@ export const fixtureActions = {
 			effects: [{ op: 'addResource', resource: 'influence', value: 1 }]
 		},
 		{
+			id: 'test.rest',
+			label: 'Repos',
+			description: 'Réduit le stress.',
+			timeCost: 20,
+			maxPerTurn: 2,
+			costs: [],
+			effects: [{ op: 'addStat', stat: 'player.stress', value: -15 }]
+		},
+		{
+			id: 'test.tonic',
+			label: 'Cure',
+			description: 'Améliore la santé, coûte de l’argent personnel.',
+			timeCost: 10,
+			maxPerTurn: 1,
+			costs: [{ resource: 'personalCashCents', amount: 10_000 }],
+			effects: [{ op: 'addStat', stat: 'player.health', value: 5 }]
+		},
+		{
 			id: 'test.heavy',
 			label: 'Trimestre complet',
 			description: 'Occupe tout le temps disponible.',
@@ -143,3 +184,14 @@ function load(): Content {
 }
 
 export const fixtureContent: Content = load();
+
+/** Contenu de test avec un modèle de santé modifié. */
+export function withWellbeing(changes: Partial<Content['balance']['wellbeing']>): Content {
+	return {
+		...fixtureContent,
+		balance: {
+			...fixtureContent.balance,
+			wellbeing: { ...fixtureContent.balance.wellbeing, ...changes }
+		}
+	};
+}

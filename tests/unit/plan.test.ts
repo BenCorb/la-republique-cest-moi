@@ -56,7 +56,9 @@ describe('prévision du plan', () => {
 			'Gain aléatoire',
 			'Gain aléatoire'
 		]);
-		expect(preview.steps[1]?.effects).toEqual([{ resource: 'influence', min: 1, max: 5 }]);
+		expect(preview.steps[1]?.effects).toEqual([
+			{ kind: 'resource', resource: 'influence', min: 1, max: 5 }
+		]);
 		expect(preview.resourceChanges).toEqual({
 			influence: { min: 4, max: 12 },
 			politicalBudgetCents: { min: -1_000, max: -1_000 },
@@ -185,7 +187,8 @@ describe('validation du trimestre avec un plan', () => {
 				kind: 'action',
 				id: 'test.earn',
 				instanceId: null,
-				changes: [{ resource: 'personalCashCents', delta: 50_000 }]
+				changes: [{ resource: 'personalCashCents', delta: 50_000 }],
+				gauges: []
 			},
 			{
 				kind: 'action',
@@ -194,7 +197,8 @@ describe('validation du trimestre avec un plan', () => {
 				changes: [
 					{ resource: 'politicalBudgetCents', delta: 120_000 },
 					{ resource: 'personalCashCents', delta: -120_000 }
-				]
+				],
+				gauges: []
 			},
 			{
 				kind: 'action',
@@ -203,7 +207,8 @@ describe('validation du trimestre avec un plan', () => {
 				changes: [
 					{ resource: 'influence', delta: 2 },
 					{ resource: 'politicalBudgetCents', delta: -1_000 }
-				]
+				],
+				gauges: []
 			}
 		]);
 		// Aucun effet aléatoire : le PRNG n'avance pas.

@@ -67,13 +67,29 @@ describe('contrôle des invariants', () => {
 				...game,
 				turn: 2,
 				history: [
-					{ type: 'turn.resolved', turn: 1, steps: [], economy: { producers: [], changes: [] } },
-					{ type: 'turn.resolved', turn: 0, steps: [], economy: { producers: [], changes: [] } }
+					{
+						type: 'turn.resolved',
+						turn: 1,
+						steps: [],
+						economy: { producers: [], changes: [] },
+						wellbeing: { contributions: [], deathCause: null }
+					},
+					{
+						type: 'turn.resolved',
+						turn: 0,
+						steps: [],
+						economy: { producers: [], changes: [] },
+						wellbeing: { contributions: [], deathCause: null }
+					}
 				]
 			},
 			'hors séquence'
 		],
-		['fin sans phase terminale', { ...game, end: { turn: 0, reason: 'test' } }, 'fin'],
+		[
+			'fin sans phase terminale',
+			{ ...game, end: { turn: 0, reason: 'death', cause: 'natural_causes' } },
+			'fin'
+		],
 		['phase terminale sans fin', { ...game, phase: 'ended' }, 'fin'],
 		[
 			'ressource négative',
@@ -85,7 +101,7 @@ describe('contrôle des invariants', () => {
 			{ ...game, resources: { ...game.resources, personalCashCents: 0.5 } },
 			'ressource invalide'
 		],
-		['naissance future', { ...game, player: { birthTurn: 1 } }, 'naissance']
+		['naissance future', { ...game, player: { ...game.player, birthTurn: 1 } }, 'naissance']
 	])('détecte : %s', (_label, state, fragment) => {
 		expect(checkInvariants(state).join('\n')).toContain(fragment);
 	});

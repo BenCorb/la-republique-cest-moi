@@ -9,7 +9,7 @@ import {
 
 const context: ConditionContext = {
 	turn: turnOf(2004, 2),
-	player: { birthTurn: turnOf(1975, 1) },
+	player: { birthTurn: turnOf(1975, 1), health: 64, stress: 37 },
 	resources: { influence: 12, politicalBudgetCents: 5_000, personalCashCents: 0 }
 };
 
@@ -25,6 +25,8 @@ describe('statistiques du registre', () => {
 		expect(readStat(context, 'resources.politicalBudgetCents')).toBe(5_000);
 		expect(readStat(context, 'resources.personalCashCents')).toBe(0);
 		expect(readStat(context, 'player.age')).toBe(29);
+		expect(readStat(context, 'player.health')).toBe(64);
+		expect(readStat(context, 'player.stress')).toBe(37);
 		expect(readStat(context, 'calendar.year')).toBe(2004);
 		expect(readStat(context, 'calendar.quarter')).toBe(2);
 	});

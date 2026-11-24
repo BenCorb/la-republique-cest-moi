@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadContent } from '../../src/lib/game/content/load.ts';
 import {
 	assertInvariants,
+	careerSummary,
 	commitTurn,
 	createGame,
 	formatTurn,
@@ -31,7 +32,7 @@ function choosePlan(state: GameState, wishes: readonly PlanStep[]): TurnPlan {
 
 function career(seed: string, wishes: readonly PlanStep[], turns: number): GameState {
 	let state = createGame({ seed }, content);
-	for (let turn = 0; turn < turns; turn += 1) {
+	for (let turn = 0; turn < turns && state.end === null; turn += 1) {
 		const result = transition(state, commitTurn(choosePlan(state, wishes)), content);
 		if (!result.ok) throw new Error(`${formatTurn(state.turn)} : ${result.error.message}`);
 		state = result.state;
@@ -97,5 +98,25 @@ describe('scénario : catalogue réel', () => {
 		);
 		expect(preview.valid).toBe(false);
 		expect(preview.issues[0]?.code).toBe('condition_not_met');
+	});
+
+	it('mène une carrière complète jusqu’au décès et à son bilan', () => {
+		// Plafond technique de sécurité : 100 ans de trimestres.
+		const prudent = [
+			act('network.meet_officials'),
+			act('organization.fundraising'),
+			act('personal.freelance'),
+			act('personal.rest')
+		];
+		for (const seed of ['carrière-1', 'carrière-2', 'carrière-3']) {
+			const state = career(seed, prudent, 400);
+			const summary = careerSummary(state);
+			expect(summary.ended).toBe(true);
+			expect(summary.cause).not.toBeNull();
+			expect(summary.age).toBeGreaterThan(25);
+			expect(summary.quartersPlayed).toBe(state.turn);
+			const after = transition(state, commitTurn(), content);
+			expect(after.ok).toBe(false);
+		}
 	});
 });

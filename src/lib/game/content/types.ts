@@ -23,6 +23,12 @@ export type TreasuryId = (typeof TREASURY_IDS)[number];
 export const UPGRADE_FAMILIES = ['organization', 'communication', 'network', 'personal'] as const;
 export type UpgradeFamily = (typeof UPGRADE_FAMILIES)[number];
 
+/** Jauges du personnage, entières et bornées entre 0 et 100 (GDD §4.2). */
+export const GAUGE_IDS = ['player.health', 'player.stress'] as const;
+export type GaugeId = (typeof GAUGE_IDS)[number];
+export const GAUGE_MIN = 0;
+export const GAUGE_MAX = 100;
+
 /**
  * Registre typé des statistiques lisibles par les conditions. Toute nouvelle
  * statistique s'ajoute ici et dans `engine/conditions.ts` (switch exhaustif) :
@@ -33,6 +39,8 @@ export const STAT_IDS = [
 	'resources.politicalBudgetCents',
 	'resources.personalCashCents',
 	'player.age',
+	'player.health',
+	'player.stress',
 	'calendar.year',
 	'calendar.quarter'
 ] as const;
@@ -49,6 +57,12 @@ export type Condition =
 
 export type Effect =
 	| { readonly op: 'addResource'; readonly resource: ResourceId; readonly value: number }
+	| {
+			readonly op: 'addStat';
+			readonly stat: GaugeId;
+			/** Variation appliquée puis maintenue dans les bornes de la jauge. */
+			readonly value: number;
+	  }
 	| {
 			readonly op: 'addResourceRandom';
 			readonly resource: ResourceId;
@@ -106,10 +120,50 @@ export interface UpgradeDefinition {
 	readonly unavailableReason?: string | undefined;
 }
 
+/**
+ * Tranche d'âge du modèle de santé. Les probabilités sont des nombres de 0 à 1
+ * appliqués à chaque trimestre ; aucune n'est affichée au joueur.
+ */
+export interface AgeBand {
+	/** Âge (années révolues) à partir duquel la tranche s'applique. */
+	readonly fromAge: number;
+	/** Plafond de la récupération naturelle de santé. */
+	readonly maxHealth: number;
+	/** Probabilité trimestrielle de perdre de la santé en vieillissant. */
+	readonly ageingChance: number;
+	readonly ageingHealthLoss: number;
+	/** Probabilité trimestrielle de décès de cause naturelle. */
+	readonly mortalityChance: number;
+}
+
+/** Paramètres de santé, de stress et de vieillissement (hypothèses de tuning). */
+export interface WellbeingBalance {
+	readonly startingHealth: number;
+	readonly startingStress: number;
+	/** Temps utilisé au-delà duquel la charge de travail stresse. */
+	readonly workloadThreshold: number;
+	/** Stress ajouté par tranche complète de 10 points de temps au-delà du seuil. */
+	readonly workloadStressPer10Points: number;
+	/** Stress retiré chaque trimestre (récupération naturelle). */
+	readonly stressRecoveryPerTurn: number;
+	/** À partir de ce stress, la santé se dégrade. */
+	readonly highStressThreshold: number;
+	readonly highStressHealthLoss: number;
+	/** Sous ce stress, la santé récupère jusqu'au plafond de la tranche d'âge. */
+	readonly calmStressThreshold: number;
+	readonly calmHealthGain: number;
+	/** Sous cette santé, le risque de décès est multiplié. */
+	readonly fragileHealthThreshold: number;
+	readonly fragileMortalityMultiplier: number;
+	/** Tranches triées par âge croissant, la première commençant à 0. */
+	readonly ageBands: readonly AgeBand[];
+}
+
 export interface Balance {
 	/** Points de temps disponibles chaque trimestre, non cumulables. */
 	readonly timeBudgetPerTurn: number;
 	readonly startingResources: Resources;
+	readonly wellbeing: WellbeingBalance;
 }
 
 /** Contenu validé et indexé, tel que le reçoit le moteur. */

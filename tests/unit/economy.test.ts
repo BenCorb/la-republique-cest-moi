@@ -31,7 +31,8 @@ function game(
 			type: 'turn.resolved' as const,
 			turn: index,
 			steps: [],
-			economy: { producers: [], changes: [] }
+			economy: { producers: [], changes: [] },
+			wellbeing: { contributions: [], deathCause: null }
 		})),
 		resources: { ...base.resources, ...resources },
 		upgrades,
@@ -66,7 +67,8 @@ describe('achat d’une amélioration', () => {
 				kind: 'purchase',
 				id: 'test.donors',
 				instanceId: 'upgrade.1',
-				changes: [{ resource: 'politicalBudgetCents', delta: -5_000 }]
+				changes: [{ resource: 'politicalBudgetCents', delta: -5_000 }],
+				gauges: []
 			}
 		]);
 		// Trimestre T : aucune production.

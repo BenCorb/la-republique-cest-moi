@@ -5,7 +5,7 @@
  * chargement (sauvegarde, import). Ne corrige rien : signale toutes les violations.
  * Avec le contenu, vérifie aussi les références vers le catalogue.
  */
-import { RESOURCE_IDS, type Content } from '../content/types.ts';
+import { GAUGE_MAX, GAUGE_MIN, RESOURCE_IDS, type Content } from '../content/types.ts';
 import { RNG_ALGORITHM, validateSeed } from './random.ts';
 import { START_TURN, STATE_SCHEMA_VERSION, type GameState } from './state.ts';
 
@@ -37,6 +37,16 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
 
 	if (!Number.isSafeInteger(state.player.birthTurn) || state.player.birthTurn > state.turn) {
 		violations.push(`naissance invalide : ${state.player.birthTurn}`);
+	}
+
+	for (const gauge of ['health', 'stress'] as const) {
+		const value = state.player[gauge];
+		if (!Number.isSafeInteger(value) || value < GAUGE_MIN || value > GAUGE_MAX) {
+			violations.push(`jauge invalide : ${gauge} = ${value}`);
+		}
+	}
+	if (state.phase !== 'ended' && state.player.health <= 0) {
+		violations.push('personnage vivant avec une santé nulle');
 	}
 
 	for (const resource of RESOURCE_IDS) {
@@ -101,7 +111,7 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
 	if ((state.phase === 'ended') !== (state.end !== null)) {
 		violations.push('phase de fin et état de fin incohérents');
 	}
-	if (state.end && (!Number.isSafeInteger(state.end.turn) || state.end.turn > state.turn)) {
+	if (state.end && (!Number.isSafeInteger(state.end.turn) || state.end.turn >= state.turn)) {
 		violations.push(`tour de fin invalide : ${state.end.turn}`);
 	}
 

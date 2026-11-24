@@ -53,7 +53,13 @@ describe('scénario : passage du temps', () => {
 		expect(result.state.turn).toBe(1);
 		expect(result.resolvedTurn).toBe(0);
 		expect(result.log).toEqual([
-			{ type: 'turn.resolved', turn: 0, steps: [], economy: { producers: [], changes: [] } }
+			{
+				type: 'turn.resolved',
+				turn: 0,
+				steps: [],
+				economy: { producers: [], changes: [] },
+				wellbeing: { contributions: [], deathCause: null }
+			}
 		]);
 		expect(result.state.history).toEqual(result.log);
 		expect(state.turn).toBe(0);
@@ -180,7 +186,11 @@ describe('scénario : commandes rejetées', () => {
 		],
 		[
 			'partie terminée',
-			deepFreeze({ ...base, phase: 'ended', end: { turn: 0, reason: 'test' } }),
+			deepFreeze({
+				...base,
+				phase: 'ended',
+				end: { turn: 0, reason: 'death', cause: 'natural_causes' }
+			}),
 			commitTurn(),
 			'game_ended'
 		]

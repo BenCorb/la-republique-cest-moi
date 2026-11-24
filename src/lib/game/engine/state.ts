@@ -2,10 +2,10 @@
  * État central de la partie (ARCHITECTURE.md §4.1) — sous-ensemble du prototype.
  *
  * L'état est un objet JSON pur (nombres, chaînes, booléens, tableaux, objets,
- * `null`) : il se sérialise et se recharge sans perte. La santé et les
- * événements rejoignent cet état avec leurs tâches (P1-04, P1-05).
+ * `null`) : il se sérialise et se recharge sans perte. Les événements rejoignent
+ * cet état avec leur tâche (P1-05).
  */
-import type { Content, ResourceId, Resources } from '../content/types.ts';
+import type { Content, GaugeId, ResourceId, Resources } from '../content/types.ts';
 import { TURNS_PER_YEAR, type Turn } from './calendar.ts';
 import { createRng, type RngState } from './random.ts';
 
@@ -23,11 +23,21 @@ export type GamePhase = 'planning' | 'decision' | 'ended';
 export interface PlayerState {
 	/** Trimestre de naissance ; l'âge en est toujours dérivé. */
 	readonly birthTurn: Turn;
+	/** Santé, entier de 0 à 100 ; 0 signifie le décès. */
+	readonly health: number;
+	/** Stress, entier de 0 à 100. */
+	readonly stress: number;
 }
 
 export interface ResourceChange {
 	readonly resource: ResourceId;
 	/** Variation nette (coûts et effets), non nulle. */
+	readonly delta: number;
+}
+
+export interface GaugeChange {
+	readonly gauge: GaugeId;
+	/** Variation réelle, après maintien dans les bornes, non nulle. */
 	readonly delta: number;
 }
 
@@ -49,6 +59,8 @@ export interface StepRecord {
 	/** Instance créée par un achat, `null` pour une action. */
 	readonly instanceId: string | null;
 	readonly changes: readonly ResourceChange[];
+	/** Variations de santé et de stress dues à l'étape. */
+	readonly gauges: readonly GaugeChange[];
 }
 
 /** Résultat d'un producteur actif au trimestre résolu. */
@@ -66,6 +78,23 @@ export interface EconomyRecord {
 	readonly changes: readonly ResourceChange[];
 }
 
+export type DeathCause = 'health_failure' | 'natural_causes';
+
+/** Origine identifiable d'une variation de santé ou de stress (ARCHITECTURE.md §8.2). */
+export type WellbeingSource = 'workload' | 'recovery' | 'high_stress' | 'calm' | 'ageing';
+
+export interface WellbeingContribution {
+	readonly source: WellbeingSource;
+	readonly gauge: GaugeId;
+	readonly delta: number;
+}
+
+/** Santé et stress à la frontière du trimestre. */
+export interface WellbeingRecord {
+	readonly contributions: readonly WellbeingContribution[];
+	readonly deathCause: DeathCause | null;
+}
+
 export interface HistoryEntry {
 	readonly type: 'turn.resolved';
 	/** Trimestre résolu (T), le journal étant produit au passage vers T+1. */
@@ -74,11 +103,15 @@ export interface HistoryEntry {
 	readonly steps: readonly StepRecord[];
 	/** Charges et production des améliorations actives au trimestre T. */
 	readonly economy: EconomyRecord;
+	/** Charge de travail, récupération, vieillissement et éventuel décès. */
+	readonly wellbeing: WellbeingRecord;
 }
 
 export interface EndState {
+	/** Trimestre au cours duquel la carrière s'est terminée. */
 	readonly turn: Turn;
-	readonly reason: string;
+	readonly reason: 'death';
+	readonly cause: DeathCause;
 }
 
 export interface GameState {
@@ -111,7 +144,11 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		turn: START_TURN,
 		rng: createRng(config.seed),
 		phase: 'planning',
-		player: { birthTurn: START_TURN - PROTOTYPE_STARTING_AGE * TURNS_PER_YEAR },
+		player: {
+			birthTurn: START_TURN - PROTOTYPE_STARTING_AGE * TURNS_PER_YEAR,
+			health: content.balance.wellbeing.startingHealth,
+			stress: content.balance.wellbeing.startingStress
+		},
 		resources: { ...content.balance.startingResources },
 		upgrades: [],
 		nextInstanceNumber: 1,

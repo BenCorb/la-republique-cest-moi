@@ -6,13 +6,18 @@
  *   1. validation de la phase et du plan ........................ P1-01, P1-02
  *   2. étapes du plan dans l'ordre (actions, achats) ............ P1-02, P1-03
  *   3. charges puis production des améliorations actives ........ P1-03
- *   4. stress, santé, vieillissement, fins ...................... P1-04
+ *   4. stress, santé, vieillissement, décès ..................... P1-04
  *   5. échéances ................................................ alpha
  *   6. passage à T+1 (une seule fois) et journal du trimestre T . P1-01 ; événements P1-05
  *   7. phase `decision` si choix bloquant, sinon `planning` ..... P1-01 ; P1-05
+ *
+ * Fin de partie : un décès à l'étape 4 clôt la carrière. Le trimestre T est
+ * journalisé, `end.turn = T` (date du décès) et le compteur passe à T+1 pour
+ * clore T ; aucune opération ultérieure n'a lieu et toute commande est refusée.
  */
 import type { Content } from '../content/types.ts';
 import { economyRecords, resolveEconomy } from './economy.ts';
+import { resolveWellbeing } from './health.ts';
 import { executePlan, previewPlan } from './plan.ts';
 import type { CommandError, CommitTurnCommand, GameCommand, TransitionResult } from './commands.ts';
 import type { GameState, HistoryEntry } from './state.ts';
@@ -67,20 +72,33 @@ function commitTurn(
 	const resolvedTurn = state.turn;
 	const economy = resolveEconomy(execution.resources, execution.upgrades, resolvedTurn, content);
 
+	// 4. Stress, santé, vieillissement et décès à la frontière T/T+1.
+	const wellbeing = resolveWellbeing(
+		execution.player,
+		execution.timeUsed,
+		resolvedTurn,
+		execution.rng,
+		content.balance.wellbeing
+	);
+	const deathCause = wellbeing.record.deathCause;
+
 	// 6–7. Passage à T+1 et journal du trimestre résolu.
 	const entry: HistoryEntry = {
 		type: 'turn.resolved',
 		turn: resolvedTurn,
 		steps: execution.records,
-		economy: { producers: economyRecords(economy), changes: economy.changes }
+		economy: { producers: economyRecords(economy), changes: economy.changes },
+		wellbeing: wellbeing.record
 	};
 	return {
 		ok: true,
 		state: {
 			...state,
 			turn: resolvedTurn + 1,
-			phase: 'planning',
-			rng: execution.rng,
+			phase: deathCause ? 'ended' : 'planning',
+			end: deathCause ? { turn: resolvedTurn, reason: 'death', cause: deathCause } : null,
+			rng: wellbeing.rng,
+			player: wellbeing.player,
 			resources: economy.resources,
 			upgrades: execution.upgrades,
 			nextInstanceNumber: execution.nextInstanceNumber,

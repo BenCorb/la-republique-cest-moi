@@ -22,6 +22,10 @@ export function readStat(context: ConditionContext, stat: StatId): number {
 			return context.resources.personalCashCents;
 		case 'player.age':
 			return ageAt(context.player.birthTurn, context.turn);
+		case 'player.health':
+			return context.player.health;
+		case 'player.stress':
+			return context.player.stress;
 		case 'calendar.year':
 			return yearOf(context.turn);
 		case 'calendar.quarter':

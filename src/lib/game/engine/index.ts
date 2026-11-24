@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.3.0';
+export const RULES_VERSION = '0.4.0';
 
 export {
 	START_YEAR,
@@ -44,13 +44,18 @@ export {
 	type GamePhase,
 	type GameState,
 	type HistoryEntry,
+	type DeathCause,
 	type EconomyRecord,
+	type GaugeChange,
 	type NewGameConfig,
 	type OwnedUpgrade,
 	type PlayerState,
 	type ProducerRecord,
 	type ResourceChange,
-	type StepRecord
+	type StepRecord,
+	type WellbeingContribution,
+	type WellbeingRecord,
+	type WellbeingSource
 } from './state.ts';
 export {
 	commitTurn,
@@ -87,6 +92,22 @@ export {
 	type ProducerStatus
 } from './economy.ts';
 export { evaluateCondition, readStat, type ConditionContext } from './conditions.ts';
-export { effectRange, resolveEffect, type EffectRange, type ResolvedEffect } from './effects.ts';
+export {
+	applyGauge,
+	clampGauge,
+	effectRange,
+	resolveEffect,
+	type EffectRange,
+	type ResolvedEffect
+} from './effects.ts';
+export {
+	ageBandFor,
+	forecastWellbeing,
+	resolveWellbeing,
+	workloadStress,
+	type WellbeingForecast,
+	type WellbeingResolution
+} from './health.ts';
+export { careerSummary, type CareerSummary } from './selectors.ts';
 export { transition } from './turn.ts';
 export { assertInvariants, checkInvariants } from './invariants.ts';

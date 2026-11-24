@@ -12,13 +12,15 @@
  *   - une étape fautive est signalée puis ignorée pour la suite de la simulation,
  *     afin de présenter tous les problèmes en une fois.
  * La prévision ajoute l'économie du trimestre (charges et production des
- * améliorations déjà actives), calculée sur le pire cas du plan. Elle ne lit ni
- * ne fait avancer le PRNG.
+ * améliorations déjà actives), calculée sur le pire cas du plan, ainsi que le
+ * stress certain et une fourchette de santé. Elle ne lit ni ne fait avancer le
+ * PRNG et n'expose aucune probabilité.
  */
 import {
 	RESOURCE_IDS,
 	type Condition,
 	type Content,
+	type GaugeId,
 	type ResourceAmount,
 	type ResourceId,
 	type Resources
@@ -26,9 +28,17 @@ import {
 import type { PlanStep, TurnPlan } from './commands.ts';
 import { evaluateCondition } from './conditions.ts';
 import { resolveEconomy, type ProducerForecast } from './economy.ts';
-import { effectRange, resolveEffect, type EffectRange } from './effects.ts';
+import { applyGauge, effectRange, resolveEffect, type EffectRange } from './effects.ts';
+import { forecastWellbeing, type WellbeingForecast } from './health.ts';
 import type { RngState } from './random.ts';
-import type { GameState, OwnedUpgrade, ResourceChange, StepRecord } from './state.ts';
+import type {
+	GameState,
+	GaugeChange,
+	OwnedUpgrade,
+	PlayerState,
+	ResourceChange,
+	StepRecord
+} from './state.ts';
 
 export type PlanIssueCode =
 	| 'invalid_plan'
@@ -52,9 +62,10 @@ export interface PlanIssue {
 
 /** Avertissement non bloquant : le plan reste valide. */
 export interface PlanWarning {
-	readonly code: 'upkeep_at_risk';
-	readonly instanceId: string;
-	readonly upgradeId: string;
+	readonly code: 'upkeep_at_risk' | 'stress_high';
+	/** Exemplaire concerné (`upkeep_at_risk`), sinon `null`. */
+	readonly instanceId: string | null;
+	readonly upgradeId: string | null;
 	readonly message: string;
 }
 
@@ -92,6 +103,8 @@ export interface PlanPreview {
 	/** Producteurs du trimestre selon le pire cas du plan (achats en attente inclus). */
 	readonly producers: readonly ProducerForecast[];
 	readonly warnings: readonly PlanWarning[];
+	/** Santé et stress de fin de trimestre (stress certain, santé en fourchette). */
+	readonly wellbeing: WellbeingForecast;
 	/** Variation nette prévue par ressource : étapes valides puis économie. */
 	readonly resourceChanges: ResourceRanges;
 }
@@ -153,12 +166,14 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			],
 			producers: economy.producers,
 			warnings: [],
+			wellbeing: forecastWellbeing(state.player, 0, state.turn, content.balance.wellbeing),
 			resourceChanges: totals
 		};
 	}
 
 	// État de travail : coûts et gains certains, pire cas des effets aléatoires.
 	const working: Record<ResourceId, number> = { ...state.resources };
+	let workingPlayer: PlayerState = state.player;
 	const upgrades: OwnedUpgrade[] = [...state.upgrades];
 	let nextInstanceNumber = state.nextInstanceNumber;
 	const actionCounts = new Map<string, number>();
@@ -225,7 +240,7 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			}
 		}
 
-		const context = { turn: state.turn, player: state.player, resources: working };
+		const context = { turn: state.turn, player: workingPlayer, resources: working };
 		if (requires && !evaluateCondition(context, requires)) {
 			fail('condition_not_met', unavailableReason ?? `« ${label} » n’est pas disponible.`);
 		}
@@ -239,7 +254,9 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 
 		const after: Record<ResourceId, number> = { ...working };
 		for (const cost of costs) after[cost.resource] -= cost.amount;
-		for (const range of ranges) after[range.resource] += Math.min(0, range.min);
+		for (const range of ranges) {
+			if (range.kind === 'resource') after[range.resource] += Math.min(0, range.min);
+		}
 		for (const resource of RESOURCE_IDS) {
 			if (after[resource] < 0) {
 				fail(
@@ -276,6 +293,11 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			totals[cost.resource].max -= cost.amount;
 		}
 		for (const range of ranges) {
+			if (range.kind === 'gauge') {
+				// Les effets sur les jauges sont toujours certains.
+				workingPlayer = applyGaugeEffect(workingPlayer, range.gauge, range.min).player;
+				continue;
+			}
 			working[range.resource] += range.min === range.max ? range.min : Math.min(0, range.min);
 			totals[range.resource].min += range.min;
 			totals[range.resource].max += range.max;
@@ -301,6 +323,22 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			message: `Charges de « ${content.upgrades[producer.upgradeId]?.label ?? producer.upgradeId} » non couvertes : production suspendue ce trimestre si la trésorerie reste insuffisante.`
 		}));
 
+	// Santé et stress à la frontière du trimestre (partie certaine uniquement).
+	const wellbeing = forecastWellbeing(
+		workingPlayer,
+		timeUsed,
+		state.turn,
+		content.balance.wellbeing
+	);
+	if (wellbeing.stress >= content.balance.wellbeing.highStressThreshold) {
+		warnings.push({
+			code: 'stress_high',
+			instanceId: null,
+			upgradeId: null,
+			message: 'Stress élevé en fin de trimestre : votre santé va se dégrader.'
+		});
+	}
+
 	return {
 		valid: issues.length === 0,
 		timeAvailable,
@@ -310,12 +348,16 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 		issues,
 		producers: economy.producers,
 		warnings,
+		wellbeing,
 		resourceChanges: totals
 	};
 }
 
 export interface PlanExecution {
 	readonly resources: Resources;
+	readonly player: PlayerState;
+	/** Temps consommé par le plan, qui détermine la charge de travail. */
+	readonly timeUsed: number;
 	readonly rng: RngState;
 	readonly upgrades: readonly OwnedUpgrade[];
 	readonly nextInstanceNumber: number;
@@ -334,6 +376,8 @@ export function executePlan(
 	content: Content
 ): PlanExecution {
 	const current: Record<ResourceId, number> = { ...state.resources };
+	let player = state.player;
+	let timeUsed = 0;
 	let rng = state.rng;
 	const upgrades: OwnedUpgrade[] = [...state.upgrades];
 	let nextInstanceNumber = state.nextInstanceNumber;
@@ -346,19 +390,28 @@ export function executePlan(
 			deltas.set(resource, (deltas.get(resource) ?? 0) + delta);
 		};
 		let instanceId: string | null = null;
+		const gauges: GaugeChange[] = [];
 
 		if (step.kind === 'action') {
 			const definition = definitionOf(content.actions, step.id);
 			if (!definition) throw new Error(`Action non validée : ${step.id}`);
+			timeUsed += definition.timeCost;
 			for (const cost of definition.costs) add(cost.resource, -cost.amount);
 			for (const effect of definition.effects) {
 				const resolved = resolveEffect(effect, rng);
 				rng = resolved.rng;
-				add(resolved.resource, resolved.delta);
+				if (resolved.kind === 'resource') {
+					add(resolved.resource, resolved.delta);
+				} else {
+					const applied = applyGaugeEffect(player, resolved.gauge, resolved.delta);
+					player = applied.player;
+					if (applied.delta !== 0) gauges.push({ gauge: resolved.gauge, delta: applied.delta });
+				}
 			}
 		} else {
 			const definition = definitionOf(content.upgrades, step.id);
 			if (!definition) throw new Error(`Amélioration non validée : ${step.id}`);
+			timeUsed += definition.timeCost;
 			for (const cost of definition.price) add(cost.resource, -cost.amount);
 			instanceId = instanceIdFor(nextInstanceNumber);
 			nextInstanceNumber += 1;
@@ -373,8 +426,19 @@ export function executePlan(
 			const delta = deltas.get(resource) ?? 0;
 			return delta === 0 ? [] : [{ resource, delta }];
 		});
-		records.push({ kind: step.kind, id: step.id, instanceId, changes });
+		records.push({ kind: step.kind, id: step.id, instanceId, changes, gauges });
 	}
 
-	return { resources: current, rng, upgrades, nextInstanceNumber, records };
+	return { resources: current, player, timeUsed, rng, upgrades, nextInstanceNumber, records };
+}
+
+/** Applique une variation de jauge au personnage, dans les bornes [0, 100]. */
+function applyGaugeEffect(
+	player: PlayerState,
+	gauge: GaugeId,
+	delta: number
+): { player: PlayerState; delta: number } {
+	const key = gauge === 'player.health' ? 'health' : 'stress';
+	const { value, applied } = applyGauge(player[key], delta);
+	return { player: { ...player, [key]: value }, delta: applied };
 }

@@ -6,8 +6,20 @@
 			"description": "Un samedi matin au marché, entre le fromager et un militant adverse qui distribue exactement le même tract avec un autre logo.",
 			"timeCost": 15,
 			"maxPerTurn": 2,
-			"costs": [{ "resource": "politicalBudgetCents", "amount": 2000 }],
-			"effects": [{ "op": "addResourceRandom", "resource": "influence", "min": 1, "max": 3 }]
+			"costs": [
+				{
+					"resource": "politicalBudgetCents",
+					"amount": 2000
+				}
+			],
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "influence",
+					"min": 1,
+					"max": 3
+				}
+			]
 		},
 		{
 			"id": "network.meet_officials",
@@ -16,7 +28,13 @@
 			"timeCost": 20,
 			"maxPerTurn": 1,
 			"costs": [],
-			"effects": [{ "op": "addResource", "resource": "influence", "value": 3 }]
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 3
+				}
+			]
 		},
 		{
 			"id": "activism.public_meeting",
@@ -24,10 +42,31 @@
 			"description": "Louer une salle des fêtes, installer cent chaises et espérer en occuper plus de douze.",
 			"timeCost": 50,
 			"maxPerTurn": 1,
-			"costs": [{ "resource": "politicalBudgetCents", "amount": 30000 }],
-			"requires": { "op": "gte", "stat": "resources.influence", "value": 10 },
+			"costs": [
+				{
+					"resource": "politicalBudgetCents",
+					"amount": 30000
+				}
+			],
+			"requires": {
+				"op": "gte",
+				"stat": "resources.influence",
+				"value": 10
+			},
 			"unavailableReason": "Il faut au moins 10 points d’influence pour espérer remplir une salle.",
-			"effects": [{ "op": "addResourceRandom", "resource": "influence", "min": 5, "max": 12 }]
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "influence",
+					"min": 5,
+					"max": 12
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 6
+				}
+			]
 		},
 		{
 			"id": "organization.fundraising",
@@ -36,7 +75,11 @@
 			"timeCost": 25,
 			"maxPerTurn": 1,
 			"costs": [],
-			"requires": { "op": "gte", "stat": "resources.influence", "value": 5 },
+			"requires": {
+				"op": "gte",
+				"stat": "resources.influence",
+				"value": 5
+			},
 			"unavailableReason": "Il faut au moins 5 points d’influence pour que quelqu’un se déplace.",
 			"effects": [
 				{
@@ -44,6 +87,11 @@
 					"resource": "politicalBudgetCents",
 					"min": 10000,
 					"max": 40000
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
 				}
 			]
 		},
@@ -54,7 +102,13 @@
 			"timeCost": 30,
 			"maxPerTurn": 2,
 			"costs": [],
-			"effects": [{ "op": "addResource", "resource": "personalCashCents", "value": 80000 }]
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "personalCashCents",
+					"value": 80000
+				}
+			]
 		},
 		{
 			"id": "personal.donate",
@@ -62,8 +116,59 @@
 			"description": "Transférer une partie de ses économies au budget politique. Le geste est noble, le compte en banque moins enthousiaste.",
 			"timeCost": 5,
 			"maxPerTurn": 1,
-			"costs": [{ "resource": "personalCashCents", "amount": 50000 }],
-			"effects": [{ "op": "addResource", "resource": "politicalBudgetCents", "value": 50000 }]
+			"costs": [
+				{
+					"resource": "personalCashCents",
+					"amount": 50000
+				}
+			],
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "politicalBudgetCents",
+					"value": 50000
+				}
+			]
+		},
+		{
+			"id": "personal.rest",
+			"label": "Prendre du repos",
+			"description": "Éteindre son téléphone, ne pas lire la presse, et constater que le monde politique continue de tourner sans vous, ce qui est à la fois rassurant et vexant.",
+			"timeCost": 25,
+			"maxPerTurn": 2,
+			"costs": [],
+			"effects": [
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": -12
+				}
+			]
+		},
+		{
+			"id": "personal.vacation",
+			"label": "Partir en vacances",
+			"description": "Une semaine au bord de la mer, avec un livre que vous ne finirez pas et une crème solaire que vous oublierez.",
+			"timeCost": 40,
+			"maxPerTurn": 1,
+			"costs": [
+				{
+					"resource": "personalCashCents",
+					"amount": 80000
+				}
+			],
+			"effects": [
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": -25
+				},
+				{
+					"op": "addStat",
+					"stat": "player.health",
+					"value": 2
+				}
+			]
 		}
 	]
 }
