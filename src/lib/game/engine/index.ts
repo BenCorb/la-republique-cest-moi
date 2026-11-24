@@ -6,9 +6,58 @@
  * (voir ARCHITECTURE.md §2 et §6). Ces frontières sont vérifiées par
  * `tests/unit/engine-boundaries.test.ts`.
  *
- * Phase 0 : seul l'identifiant de version des règles existe. L'état, le calendrier,
- * le PRNG et les commandes arrivent avec P1-01.
+ * Même seed + mêmes commandes + mêmes versions = même état et même journal.
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.0.0';
+export const RULES_VERSION = '0.1.0';
+
+export {
+	START_YEAR,
+	TURNS_PER_YEAR,
+	ageAt,
+	formatTurn,
+	quarterOf,
+	turnOf,
+	yearOf,
+	type Quarter,
+	type Turn
+} from './calendar.ts';
+export {
+	RNG_ALGORITHM,
+	SEED_MAX_LENGTH,
+	createRng,
+	hashSeed,
+	nextFloat,
+	nextInt,
+	nextUint32,
+	validateSeed,
+	type Draw,
+	type RngState
+} from './random.ts';
+export {
+	PROTOTYPE_STARTING_AGE,
+	START_TURN,
+	STATE_SCHEMA_VERSION,
+	createGame,
+	type EndState,
+	type GamePhase,
+	type GameState,
+	type HistoryEntry,
+	type NewGameConfig,
+	type PlayerState
+} from './state.ts';
+export {
+	commitTurn,
+	type CommandError,
+	type CommandErrorCode,
+	type CommitTurnCommand,
+	type GameCommand,
+	type PlannedAction,
+	type TransitionFailure,
+	type TransitionResult,
+	type TransitionSuccess,
+	type TurnPlan
+} from './commands.ts';
+export { transition } from './turn.ts';
+export { assertInvariants, checkInvariants } from './invariants.ts';
