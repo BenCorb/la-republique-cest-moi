@@ -1,0 +1,131 @@
+import { describe, expect, it } from 'vitest';
+import {
+	ageAt,
+	assertInvariants,
+	commitTurn,
+	createGame,
+	formatTurn,
+	transition,
+	yearOf,
+	type GameCommand,
+	type GameState
+} from '../../src/lib/game/engine/index.ts';
+
+function deepFreeze<T>(value: T): T {
+	if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+		Object.freeze(value);
+		for (const child of Object.values(value)) deepFreeze(child);
+	}
+	return value;
+}
+
+/** Rejoue une partie et vérifie les invariants et l'immuabilité après chaque commande. */
+function play(seed: string, commands: readonly GameCommand[]): GameState {
+	let state = deepFreeze(createGame({ seed }));
+	assertInvariants(state);
+	for (const command of commands) {
+		const result = transition(state, command);
+		if (!result.ok) throw new Error(`${result.error.code} : ${result.error.message}`);
+		state = deepFreeze(result.state);
+		assertInvariants(state);
+	}
+	return state;
+}
+
+const quarters = (count: number): GameCommand[] =>
+	Array.from({ length: count }, () => commitTurn());
+
+describe('scénario : passage du temps', () => {
+	it('fait passer un an en quatre trimestres, et l’âge avec', () => {
+		const start = play('calendrier', []);
+		const oneYearLater = play('calendrier', quarters(4));
+		expect(formatTurn(oneYearLater.turn)).toBe('T1 2001');
+		expect(yearOf(oneYearLater.turn) - yearOf(start.turn)).toBe(1);
+		expect(ageAt(oneYearLater.player.birthTurn, oneYearLater.turn)).toBe(26);
+	});
+
+	it('avance exactement d’un trimestre par validation et le journalise', () => {
+		const state = createGame({ seed: 'un-tour' });
+		const result = transition(state, commitTurn());
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(result.state.turn).toBe(1);
+		expect(result.resolvedTurn).toBe(0);
+		expect(result.log).toEqual([{ type: 'turn.resolved', turn: 0 }]);
+		expect(result.state.history).toEqual(result.log);
+		expect(state.turn).toBe(0);
+	});
+
+	it('enchaîne une carrière longue sans violer d’invariant', () => {
+		const state = play('longue', quarters(220));
+		expect(formatTurn(state.turn)).toBe('T1 2055');
+		expect(ageAt(state.player.birthTurn, state.turn)).toBe(80);
+		expect(state.history).toHaveLength(220);
+	});
+});
+
+describe('scénario : reproductibilité', () => {
+	it('même seed et mêmes commandes donnent un état identique', () => {
+		const first = play('reproductible', quarters(12));
+		const second = play('reproductible', quarters(12));
+		expect(second).toStrictEqual(first);
+		expect(JSON.stringify(second)).toBe(JSON.stringify(first));
+	});
+
+	it('une partie rechargée depuis JSON se poursuit à l’identique', () => {
+		const direct = play('reprise', quarters(8));
+		const halfway = JSON.parse(JSON.stringify(play('reprise', quarters(5)))) as GameState;
+		let resumed = halfway;
+		for (const command of quarters(3)) {
+			const result = transition(resumed, command);
+			if (!result.ok) throw new Error(result.error.message);
+			resumed = result.state;
+		}
+		expect(resumed).toStrictEqual(direct);
+	});
+
+	it('des seeds différentes produisent des générateurs différents', () => {
+		expect(play('alpha', quarters(4)).rng).not.toEqual(play('beta', quarters(4)).rng);
+	});
+});
+
+describe('scénario : commandes rejetées', () => {
+	const base = deepFreeze(createGame({ seed: 'rejets' }));
+
+	it.each<[string, GameState, GameCommand, string]>([
+		[
+			'action inconnue',
+			base,
+			commitTurn({ actions: [{ actionId: 'action.inexistante' }] }),
+			'unknown_action'
+		],
+		[
+			'plan mal formé',
+			base,
+			{ type: 'commitTurn', plan: {} } as unknown as GameCommand,
+			'invalid_plan'
+		],
+		['commande inconnue', base, { type: 'teleport' } as unknown as GameCommand, 'unknown_command'],
+		[
+			'décision en attente',
+			deepFreeze({ ...base, phase: 'decision' }),
+			commitTurn(),
+			'decision_pending'
+		],
+		[
+			'partie terminée',
+			deepFreeze({ ...base, phase: 'ended', end: { turn: 0, reason: 'test' } }),
+			commitTurn(),
+			'game_ended'
+		]
+	])('%s : refus sans modifier l’état ni le générateur', (_label, state, command, code) => {
+		const before = JSON.stringify(state);
+		const result = transition(state, command);
+		expect(result.ok).toBe(false);
+		if (result.ok) return;
+		expect(result.error.code).toBe(code);
+		expect(result.error.message.length).toBeGreaterThan(0);
+		expect(result.state).toBe(state);
+		expect(JSON.stringify(state)).toBe(before);
+	});
+});
