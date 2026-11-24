@@ -1,13 +1,20 @@
 /**
  * Validation complète des catalogues (ARCHITECTURE.md §7) :
  *   1. structure par les schémas Zod ;
- *   2. contrôles croisés : identifiants uniques, coûts non dupliqués, temps
- *      compatible avec le budget trimestriel.
+ *   2. contrôles croisés : identifiants uniques (actions et améliorations
+ *      partagent un même espace de noms), ressources non dupliquées, temps
+ *      compatible avec le budget trimestriel, trésorerie unique par amélioration.
  * Renvoie soit le contenu indexé, soit la liste complète des problèmes.
  */
 import type { z } from 'zod';
-import { actionCatalogSchema, balanceSchema } from './schemas.ts';
-import type { ActionDefinition, Content } from './types.ts';
+import { actionCatalogSchema, balanceSchema, upgradeCatalogSchema } from './schemas.ts';
+import {
+	TREASURY_IDS,
+	type ActionDefinition,
+	type Content,
+	type ResourceAmount,
+	type UpgradeDefinition
+} from './types.ts';
 
 export interface ContentIssue {
 	/** Fichier ou catalogue concerné, par exemple `actions.json`. */
@@ -19,6 +26,7 @@ export interface ContentIssue {
 
 export interface RawContent {
 	readonly actions: unknown;
+	readonly upgrades: unknown;
 	readonly balance: unknown;
 }
 
@@ -41,66 +49,114 @@ function zodIssues(source: string, error: z.ZodError): ContentIssue[] {
 	}));
 }
 
-function crossCheckActions(
+function duplicateResources(
+	amounts: readonly ResourceAmount[],
+	source: string,
+	path: string,
+	label: string
+): ContentIssue[] {
+	const seen = new Set<string>();
+	const issues: ContentIssue[] = [];
+	amounts.forEach((amount, index) => {
+		if (seen.has(amount.resource)) {
+			issues.push({
+				source,
+				path: `${path}[${index}]`,
+				message: `ressource en double dans ${label} : ${amount.resource}`
+			});
+		}
+		seen.add(amount.resource);
+	});
+	return issues;
+}
+
+function crossCheck(
 	actions: readonly ActionDefinition[],
+	upgrades: readonly UpgradeDefinition[],
 	timeBudgetPerTurn: number
 ): ContentIssue[] {
 	const issues: ContentIssue[] = [];
-	const seen = new Set<string>();
+	const ids = new Set<string>();
+	const checkId = (id: string, source: string, path: string): void => {
+		if (ids.has(id)) issues.push({ source, path, message: `identifiant en double : ${id}` });
+		ids.add(id);
+	};
+	const checkTime = (timeCost: number, source: string, path: string): void => {
+		if (timeCost > timeBudgetPerTurn) {
+			issues.push({
+				source,
+				path,
+				message: `coût en temps ${timeCost} supérieur au budget trimestriel ${timeBudgetPerTurn}`
+			});
+		}
+	};
+
 	actions.forEach((action, index) => {
 		const path = `actions[${index}]`;
-		if (seen.has(action.id)) {
-			issues.push({
-				source: 'actions.json',
-				path: `${path}.id`,
-				message: `identifiant en double : ${action.id}`
+		checkId(action.id, 'actions.json', `${path}.id`);
+		checkTime(action.timeCost, 'actions.json', `${path}.timeCost`);
+		issues.push(...duplicateResources(action.costs, 'actions.json', `${path}.costs`, 'les coûts'));
+	});
+
+	upgrades.forEach((upgrade, index) => {
+		const path = `upgrades[${index}]`;
+		const source = 'upgrades.json';
+		checkId(upgrade.id, source, `${path}.id`);
+		checkTime(upgrade.timeCost, source, `${path}.timeCost`);
+		for (const [field, label] of [
+			['price', 'le prix'],
+			['upkeep', 'les charges'],
+			['production', 'la production']
+		] as const) {
+			issues.push(...duplicateResources(upgrade[field], source, `${path}.${field}`, label));
+		}
+		// Le prix et les charges monétaires n'utilisent que la trésorerie déclarée.
+		for (const field of ['price', 'upkeep'] as const) {
+			upgrade[field].forEach((amount, amountIndex) => {
+				const isTreasury = (TREASURY_IDS as readonly string[]).includes(amount.resource);
+				if (isTreasury && amount.resource !== upgrade.treasury) {
+					issues.push({
+						source,
+						path: `${path}.${field}[${amountIndex}]`,
+						message: `${amount.resource} ne correspond pas à la trésorerie déclarée (${upgrade.treasury})`
+					});
+				}
 			});
 		}
-		seen.add(action.id);
-
-		if (action.timeCost > timeBudgetPerTurn) {
-			issues.push({
-				source: 'actions.json',
-				path: `${path}.timeCost`,
-				message: `coût en temps ${action.timeCost} supérieur au budget trimestriel ${timeBudgetPerTurn}`
-			});
-		}
-
-		const costResources = new Set<string>();
-		action.costs.forEach((cost, costIndex) => {
-			if (costResources.has(cost.resource)) {
-				issues.push({
-					source: 'actions.json',
-					path: `${path}.costs[${costIndex}]`,
-					message: `ressource en double dans les coûts : ${cost.resource}`
-				});
-			}
-			costResources.add(cost.resource);
-		});
 	});
 	return issues;
 }
 
 export function validateContent(raw: RawContent): ContentValidation {
 	const balance = balanceSchema.safeParse(raw.balance);
-	const catalog = actionCatalogSchema.safeParse(raw.actions);
+	const actionCatalog = actionCatalogSchema.safeParse(raw.actions);
+	const upgradeCatalog = upgradeCatalogSchema.safeParse(raw.upgrades);
 
 	const issues: ContentIssue[] = [];
 	if (!balance.success) issues.push(...zodIssues('balance.json', balance.error));
-	if (!catalog.success) issues.push(...zodIssues('actions.json', catalog.error));
-	if (!balance.success || !catalog.success) return { ok: false, issues };
+	if (!actionCatalog.success) issues.push(...zodIssues('actions.json', actionCatalog.error));
+	if (!upgradeCatalog.success) issues.push(...zodIssues('upgrades.json', upgradeCatalog.error));
+	if (!balance.success || !actionCatalog.success || !upgradeCatalog.success) {
+		return { ok: false, issues };
+	}
 
-	issues.push(...crossCheckActions(catalog.data.actions, balance.data.timeBudgetPerTurn));
+	const actionList = actionCatalog.data.actions;
+	const upgradeList = upgradeCatalog.data.upgrades;
+	issues.push(...crossCheck(actionList, upgradeList, balance.data.timeBudgetPerTurn));
 	if (issues.length > 0) return { ok: false, issues };
 
 	const actions: Record<string, ActionDefinition> = {};
-	for (const action of catalog.data.actions) actions[action.id] = action;
+	for (const action of actionList) actions[action.id] = action;
+	const upgrades: Record<string, UpgradeDefinition> = {};
+	for (const upgrade of upgradeList) upgrades[upgrade.id] = upgrade;
 	return {
 		ok: true,
 		content: {
 			balance: balance.data,
 			actions,
-			actionIds: catalog.data.actions.map((action) => action.id)
+			actionIds: actionList.map((action) => action.id),
+			upgrades,
+			upgradeIds: upgradeList.map((upgrade) => upgrade.id)
 		}
 	};
 }

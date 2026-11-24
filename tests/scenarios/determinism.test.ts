@@ -23,12 +23,12 @@ function deepFreeze<T>(value: T): T {
 /** Rejoue une partie et vérifie les invariants et l'immuabilité après chaque commande. */
 function play(seed: string, commands: readonly GameCommand[]): GameState {
 	let state = deepFreeze(createGame({ seed }, fixtureContent));
-	assertInvariants(state);
+	assertInvariants(state, fixtureContent);
 	for (const command of commands) {
 		const result = transition(state, command, fixtureContent);
 		if (!result.ok) throw new Error(`${result.error.code} : ${result.error.message}`);
 		state = deepFreeze(result.state);
-		assertInvariants(state);
+		assertInvariants(state, fixtureContent);
 	}
 	return state;
 }
@@ -52,7 +52,9 @@ describe('scénario : passage du temps', () => {
 		if (!result.ok) return;
 		expect(result.state.turn).toBe(1);
 		expect(result.resolvedTurn).toBe(0);
-		expect(result.log).toEqual([{ type: 'turn.resolved', turn: 0, actions: [] }]);
+		expect(result.log).toEqual([
+			{ type: 'turn.resolved', turn: 0, steps: [], economy: { producers: [], changes: [] } }
+		]);
 		expect(result.state.history).toEqual(result.log);
 		expect(state.turn).toBe(0);
 	});
@@ -87,10 +89,10 @@ describe('scénario : reproductibilité', () => {
 
 	it('rejoue à l’identique des trimestres avec effets aléatoires', () => {
 		const busy = commitTurn({
-			actions: [
-				{ actionId: 'test.random' },
-				{ actionId: 'test.random' },
-				{ actionId: 'test.random_budget' }
+			steps: [
+				{ kind: 'action', id: 'test.random' },
+				{ kind: 'action', id: 'test.random' },
+				{ kind: 'action', id: 'test.random_budget' }
 			]
 		});
 		const commands = Array.from({ length: 12 }, () => busy);
@@ -104,7 +106,10 @@ describe('scénario : reproductibilité', () => {
 
 	it('une partie avec aléa rechargée depuis JSON se poursuit à l’identique', () => {
 		const busy = commitTurn({
-			actions: [{ actionId: 'test.random' }, { actionId: 'test.random_budget' }]
+			steps: [
+				{ kind: 'action', id: 'test.random' },
+				{ kind: 'action', id: 'test.random_budget' }
+			]
 		});
 		const direct = play(
 			'reprise-aléa',
@@ -126,6 +131,25 @@ describe('scénario : reproductibilité', () => {
 		expect(resumed).toStrictEqual(direct);
 	});
 
+	it('rejoue à l’identique achats, charges et production', () => {
+		const buyAndAct = commitTurn({
+			steps: [
+				{ kind: 'purchase', id: 'test.volunteer' },
+				{ kind: 'action', id: 'test.random_budget' },
+				{ kind: 'action', id: 'test.random' }
+			]
+		});
+		const actOnly = commitTurn({ steps: [{ kind: 'action', id: 'test.random_budget' }] });
+		const commands = [buyAndAct, buyAndAct, ...Array.from({ length: 10 }, () => actOnly)];
+		const first = play('économie', commands);
+		expect(play('économie', commands)).toStrictEqual(first);
+		expect(first.upgrades).toHaveLength(2);
+		const statuses = first.history.flatMap((entry) =>
+			entry.economy.producers.map((producer) => producer.status)
+		);
+		expect(statuses.length).toBeGreaterThan(0);
+	});
+
 	it('des seeds différentes produisent des générateurs différents', () => {
 		expect(play('alpha', quarters(4)).rng).not.toEqual(play('beta', quarters(4)).rng);
 	});
@@ -138,7 +162,7 @@ describe('scénario : commandes rejetées', () => {
 		[
 			'action inconnue',
 			base,
-			commitTurn({ actions: [{ actionId: 'action.inexistante' }] }),
+			commitTurn({ steps: [{ kind: 'action', id: 'action.inexistante' }] }),
 			'invalid_plan'
 		],
 		[

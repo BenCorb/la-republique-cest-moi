@@ -3,8 +3,9 @@
  *
  * Utilisé après chaque transition dans les tests et, plus tard, aux frontières de
  * chargement (sauvegarde, import). Ne corrige rien : signale toutes les violations.
+ * Avec le contenu, vérifie aussi les références vers le catalogue.
  */
-import { RESOURCE_IDS } from '../content/types.ts';
+import { RESOURCE_IDS, type Content } from '../content/types.ts';
 import { RNG_ALGORITHM, validateSeed } from './random.ts';
 import { START_TURN, STATE_SCHEMA_VERSION, type GameState } from './state.ts';
 
@@ -14,7 +15,9 @@ function isUint32(value: unknown): boolean {
 	return Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 0xffffffff;
 }
 
-export function checkInvariants(state: GameState): string[] {
+const INSTANCE_ID = /^upgrade\.([1-9][0-9]*)$/;
+
+export function checkInvariants(state: GameState, content?: Content): string[] {
 	const violations: string[] = [];
 
 	if (state.schemaVersion !== STATE_SCHEMA_VERSION) {
@@ -43,6 +46,45 @@ export function checkInvariants(state: GameState): string[] {
 		}
 	}
 
+	if (!Number.isSafeInteger(state.nextInstanceNumber) || state.nextInstanceNumber < 1) {
+		violations.push(`compteur d’instances invalide : ${state.nextInstanceNumber}`);
+	}
+	const instanceIds = new Set<string>();
+	let previousTurn = -Infinity;
+	for (const upgrade of state.upgrades) {
+		const match = INSTANCE_ID.exec(upgrade.instanceId);
+		if (!match || Number(match[1]) >= state.nextInstanceNumber) {
+			violations.push(`identifiant d’instance invalide : ${upgrade.instanceId}`);
+		}
+		if (instanceIds.has(upgrade.instanceId)) {
+			violations.push(`instance en double : ${upgrade.instanceId}`);
+		}
+		instanceIds.add(upgrade.instanceId);
+		// Les achats ont lieu pendant un trimestre déjà résolu, dans l'ordre chronologique.
+		if (!Number.isSafeInteger(upgrade.acquiredTurn) || upgrade.acquiredTurn >= state.turn) {
+			violations.push(`date d’acquisition invalide : ${upgrade.instanceId}`);
+		}
+		if (upgrade.acquiredTurn < previousTurn) {
+			violations.push(`améliorations hors ordre d’acquisition : ${upgrade.instanceId}`);
+		}
+		previousTurn = upgrade.acquiredTurn;
+		if (content && !Object.hasOwn(content.upgrades, upgrade.upgradeId)) {
+			violations.push(`amélioration inconnue du catalogue : ${upgrade.upgradeId}`);
+		}
+	}
+	if (content) {
+		const counts = new Map<string, number>();
+		for (const upgrade of state.upgrades) {
+			counts.set(upgrade.upgradeId, (counts.get(upgrade.upgradeId) ?? 0) + 1);
+		}
+		for (const [upgradeId, count] of counts) {
+			const maxOwned = content.upgrades[upgradeId]?.maxOwned;
+			if (maxOwned !== undefined && count > maxOwned) {
+				violations.push(`trop d’exemplaires de ${upgradeId} : ${count} > ${maxOwned}`);
+			}
+		}
+	}
+
 	// Le journal contient exactement un tour résolu par trimestre écoulé, dans l'ordre.
 	const resolved = state.history.filter((entry) => entry.type === 'turn.resolved');
 	if (resolved.length !== state.turn - START_TURN) {
@@ -66,8 +108,8 @@ export function checkInvariants(state: GameState): string[] {
 	return violations;
 }
 
-export function assertInvariants(state: GameState): void {
-	const violations = checkInvariants(state);
+export function assertInvariants(state: GameState, content?: Content): void {
+	const violations = checkInvariants(state, content);
 	if (violations.length > 0) {
 		throw new Error(`Invariants violés :\n- ${violations.join('\n- ')}`);
 	}

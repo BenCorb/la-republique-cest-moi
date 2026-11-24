@@ -4,17 +4,18 @@
  * Les commandes sont des unions discriminées. Seule la validation d'un trimestre
  * existe ; `chooseEvent` arrive avec le moteur d'événements (P1-05).
  */
-import type { PlanIssue } from './actions.ts';
+import type { PlanIssue } from './plan.ts';
 import type { Turn } from './calendar.ts';
 import type { GameState, HistoryEntry } from './state.ts';
 
-/** Action planifiée, référencée par l'identifiant d'une définition du catalogue (P1-02). */
-export interface PlannedAction {
-	readonly actionId: string;
-}
+/** Étape d'un plan trimestriel : une action ou l'achat d'une amélioration. */
+export type PlanStep =
+	| { readonly kind: 'action'; readonly id: string }
+	| { readonly kind: 'purchase'; readonly id: string };
 
+/** Plan d'un trimestre : étapes exécutées dans l'ordre annoncé. */
 export interface TurnPlan {
-	readonly actions: readonly PlannedAction[];
+	readonly steps: readonly PlanStep[];
 }
 
 export interface CommitTurnCommand {
@@ -53,6 +54,6 @@ export interface TransitionFailure {
 
 export type TransitionResult = TransitionSuccess | TransitionFailure;
 
-export function commitTurn(plan: TurnPlan = { actions: [] }): CommitTurnCommand {
+export function commitTurn(plan: TurnPlan = { steps: [] }): CommitTurnCommand {
 	return { type: 'commitTurn', plan };
 }

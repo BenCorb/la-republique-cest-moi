@@ -5,11 +5,12 @@
  */
 import actions from './data/actions.json';
 import balance from './data/balance.json';
+import upgrades from './data/upgrades.json';
 import type { Content } from './types.ts';
 import { validateContent } from './validate.ts';
 
 export function loadContent(): Content {
-	const result = validateContent({ actions, balance });
+	const result = validateContent({ actions, upgrades, balance });
 	if (!result.ok) {
 		const details = result.issues
 			.map((issue) => `${issue.source} ${issue.path} : ${issue.message}`)

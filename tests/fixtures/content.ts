@@ -89,8 +89,55 @@ export const fixtureActions = {
 	]
 };
 
+export const fixtureUpgrades = {
+	upgrades: [
+		{
+			id: 'test.volunteer',
+			family: 'organization',
+			label: 'Bénévole',
+			description: 'Gratuit à l’achat, charge et production politiques.',
+			treasury: 'politicalBudgetCents',
+			timeCost: 10,
+			maxOwned: 3,
+			price: [],
+			upkeep: [{ resource: 'politicalBudgetCents', amount: 4_000 }],
+			production: [{ resource: 'influence', amount: 1 }]
+		},
+		{
+			id: 'test.donors',
+			family: 'organization',
+			label: 'Donateurs',
+			description: 'Prix et production sur le budget politique, sans charge.',
+			treasury: 'politicalBudgetCents',
+			timeCost: 20,
+			maxOwned: 1,
+			price: [{ resource: 'politicalBudgetCents', amount: 5_000 }],
+			upkeep: [],
+			production: [{ resource: 'politicalBudgetCents', amount: 3_000 }]
+		},
+		{
+			id: 'test.club',
+			family: 'network',
+			label: 'Club',
+			description: 'Payé sur l’argent personnel.',
+			treasury: 'personalCashCents',
+			timeCost: 0,
+			maxOwned: 1,
+			price: [{ resource: 'personalCashCents', amount: 30_000 }],
+			upkeep: [{ resource: 'personalCashCents', amount: 10_000 }],
+			production: [{ resource: 'influence', amount: 2 }],
+			requires: { op: 'gte', stat: 'resources.influence', value: 2 },
+			unavailableReason: 'Il faut au moins 2 points d’influence.'
+		}
+	]
+};
+
 function load(): Content {
-	const result = validateContent({ actions: fixtureActions, balance: fixtureBalance });
+	const result = validateContent({
+		actions: fixtureActions,
+		upgrades: fixtureUpgrades,
+		balance: fixtureBalance
+	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;
 }

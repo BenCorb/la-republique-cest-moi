@@ -67,8 +67,8 @@ describe('contrôle des invariants', () => {
 				...game,
 				turn: 2,
 				history: [
-					{ type: 'turn.resolved', turn: 1, actions: [] },
-					{ type: 'turn.resolved', turn: 0, actions: [] }
+					{ type: 'turn.resolved', turn: 1, steps: [], economy: { producers: [], changes: [] } },
+					{ type: 'turn.resolved', turn: 0, steps: [], economy: { producers: [], changes: [] } }
 				]
 			},
 			'hors séquence'

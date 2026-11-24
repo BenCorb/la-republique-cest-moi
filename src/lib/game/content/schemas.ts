@@ -14,11 +14,14 @@ import {
 	COMPARISON_OPS,
 	RESOURCE_IDS,
 	STAT_IDS,
+	TREASURY_IDS,
+	UPGRADE_FAMILIES,
 	type ActionDefinition,
 	type Balance,
 	type Condition,
 	type Effect,
-	type ResourceAmount
+	type ResourceAmount,
+	type UpgradeDefinition
 } from './types.ts';
 
 /** Identifiant stable : segments en minuscules séparés par des points (`activism.leaflets`). */
@@ -86,6 +89,30 @@ export const actionSchema: z.ZodType<ActionDefinition> = z
 
 export const actionCatalogSchema = z.strictObject({
 	actions: z.array(actionSchema).min(1)
+});
+
+export const upgradeSchema: z.ZodType<UpgradeDefinition> = z
+	.strictObject({
+		id: contentId,
+		family: z.enum(UPGRADE_FAMILIES),
+		label: frenchText,
+		description: frenchText,
+		treasury: z.enum(TREASURY_IDS),
+		timeCost: nonNegativeInt,
+		maxOwned: positiveInt,
+		price: z.array(resourceAmountSchema),
+		upkeep: z.array(resourceAmountSchema),
+		production: z.array(resourceAmountSchema).min(1),
+		requires: conditionSchema.optional(),
+		unavailableReason: frenchText.optional()
+	})
+	.refine(
+		(upgrade) => (upgrade.requires === undefined) === (upgrade.unavailableReason === undefined),
+		{ message: '« requires » et « unavailableReason » vont ensemble', path: ['unavailableReason'] }
+	);
+
+export const upgradeCatalogSchema = z.strictObject({
+	upgrades: z.array(upgradeSchema)
 });
 
 export const balanceSchema: z.ZodType<Balance> = z.strictObject({

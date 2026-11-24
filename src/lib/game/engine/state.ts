@@ -2,8 +2,8 @@
  * État central de la partie (ARCHITECTURE.md §4.1) — sous-ensemble du prototype.
  *
  * L'état est un objet JSON pur (nombres, chaînes, booléens, tableaux, objets,
- * `null`) : il se sérialise et se recharge sans perte. La santé, les producteurs,
- * les événements, etc. rejoignent cet état avec leurs tâches (P1-03 à P1-05).
+ * `null`) : il se sérialise et se recharge sans perte. La santé et les
+ * événements rejoignent cet état avec leurs tâches (P1-04, P1-05).
  */
 import type { Content, ResourceId, Resources } from '../content/types.ts';
 import { TURNS_PER_YEAR, type Turn } from './calendar.ts';
@@ -31,9 +31,38 @@ export interface ResourceChange {
 	readonly delta: number;
 }
 
-/** Action exécutée pendant un trimestre, avec ses variations réelles. */
-export interface ActionRecord {
-	readonly actionId: string;
+/** Exemplaire possédé d'une amélioration (instance d'une définition du catalogue). */
+export interface OwnedUpgrade {
+	/** Identifiant d'instance stable, tiré du compteur `nextInstanceNumber`. */
+	readonly instanceId: string;
+	/** Identifiant de la définition, par exemple `organization.volunteer`. */
+	readonly upgradeId: string;
+	/** Trimestre d'achat ; l'exemplaire produit à partir du trimestre suivant. */
+	readonly acquiredTurn: Turn;
+}
+
+/** Étape du plan exécutée pendant un trimestre, avec ses variations réelles. */
+export interface StepRecord {
+	readonly kind: 'action' | 'purchase';
+	/** Identifiant de l'action ou de l'amélioration. */
+	readonly id: string;
+	/** Instance créée par un achat, `null` pour une action. */
+	readonly instanceId: string | null;
+	readonly changes: readonly ResourceChange[];
+}
+
+/** Résultat d'un producteur actif au trimestre résolu. */
+export interface ProducerRecord {
+	readonly instanceId: string;
+	readonly upgradeId: string;
+	/** `suspended` : charges impayées, aucune production ce trimestre. */
+	readonly status: 'active' | 'suspended';
+	readonly changes: readonly ResourceChange[];
+}
+
+export interface EconomyRecord {
+	readonly producers: readonly ProducerRecord[];
+	/** Variation nette de l'économie (charges et production). */
 	readonly changes: readonly ResourceChange[];
 }
 
@@ -41,8 +70,10 @@ export interface HistoryEntry {
 	readonly type: 'turn.resolved';
 	/** Trimestre résolu (T), le journal étant produit au passage vers T+1. */
 	readonly turn: Turn;
-	/** Actions du plan, dans l'ordre d'exécution. */
-	readonly actions: readonly ActionRecord[];
+	/** Étapes du plan (actions et achats), dans l'ordre d'exécution. */
+	readonly steps: readonly StepRecord[];
+	/** Charges et production des améliorations actives au trimestre T. */
+	readonly economy: EconomyRecord;
 }
 
 export interface EndState {
@@ -58,6 +89,10 @@ export interface GameState {
 	readonly player: PlayerState;
 	/** Influence, budget politique et liquidités personnelles, jamais fusionnés. */
 	readonly resources: Resources;
+	/** Améliorations possédées, dans l'ordre d'acquisition. */
+	readonly upgrades: readonly OwnedUpgrade[];
+	/** Prochain numéro d'instance (identifiants déterministes, jamais réutilisés). */
+	readonly nextInstanceNumber: number;
 	readonly history: readonly HistoryEntry[];
 	readonly end: EndState | null;
 }
@@ -78,6 +113,8 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		phase: 'planning',
 		player: { birthTurn: START_TURN - PROTOTYPE_STARTING_AGE * TURNS_PER_YEAR },
 		resources: { ...content.balance.startingResources },
+		upgrades: [],
+		nextInstanceNumber: 1,
 		history: [],
 		end: null
 	};

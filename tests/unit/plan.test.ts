@@ -19,7 +19,7 @@ function deepFreeze<T>(value: T): T {
 }
 
 const plan = (...actionIds: string[]): TurnPlan => ({
-	actions: actionIds.map((actionId) => ({ actionId }))
+	steps: actionIds.map((id) => ({ kind: 'action', id }))
 });
 
 function game(overrides: Partial<GameState['resources']> = {}): GameState {
@@ -103,11 +103,14 @@ describe('prévision du plan', () => {
 	});
 
 	it('rejette un plan mal formé', () => {
-		const malformed = { actions: 'tout' } as unknown as TurnPlan;
+		const malformed = { steps: 'tout' } as unknown as TurnPlan;
 		expect(issueCodes(game(), malformed)).toEqual([[null, 'invalid_plan']]);
-		expect(issueCodes(game(), { actions: [{}, null] } as unknown as TurnPlan)).toEqual([
+		expect(
+			issueCodes(game(), { steps: [{}, null, { kind: 'vote', id: 'x' }] } as unknown as TurnPlan)
+		).toEqual([
 			[0, 'invalid_plan'],
-			[1, 'invalid_plan']
+			[1, 'invalid_plan'],
+			[2, 'invalid_plan']
 		]);
 	});
 
@@ -177,17 +180,26 @@ describe('validation du trimestre avec un plan', () => {
 			politicalBudgetCents: 10_000 + 120_000 - 1_000,
 			personalCashCents: 100_000 + 50_000 - 120_000
 		});
-		expect(result.log[0]?.actions).toEqual([
-			{ actionId: 'test.earn', changes: [{ resource: 'personalCashCents', delta: 50_000 }] },
+		expect(result.log[0]?.steps).toEqual([
 			{
-				actionId: 'test.spend_cash',
+				kind: 'action',
+				id: 'test.earn',
+				instanceId: null,
+				changes: [{ resource: 'personalCashCents', delta: 50_000 }]
+			},
+			{
+				kind: 'action',
+				id: 'test.spend_cash',
+				instanceId: null,
 				changes: [
 					{ resource: 'politicalBudgetCents', delta: 120_000 },
 					{ resource: 'personalCashCents', delta: -120_000 }
 				]
 			},
 			{
-				actionId: 'test.fixed',
+				kind: 'action',
+				id: 'test.fixed',
+				instanceId: null,
 				changes: [
 					{ resource: 'influence', delta: 2 },
 					{ resource: 'politicalBudgetCents', delta: -1_000 }

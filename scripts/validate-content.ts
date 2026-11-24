@@ -2,7 +2,7 @@
  * Validation des catalogues de contenu (`npm run content:validate`).
  *
  * 1. Chaque fichier `.json` du répertoire de données doit être du JSON valide.
- * 2. Les catalogues connus (`actions.json`, `balance.json`) passent la validation
+ * 2. Les catalogues connus (`actions.json`, `upgrades.json`, `balance.json`) passent la validation
  *    complète du jeu : schémas et contrôles croisés (`content/validate.ts`).
  *
  * Exécuté directement par Node (suppression native des types TypeScript).
@@ -14,7 +14,7 @@ import { validateContent } from '../src/lib/game/content/validate.ts';
 export const DEFAULT_CONTENT_DIR = resolve(import.meta.dirname, '../src/lib/game/content/data');
 
 /** Catalogues obligatoires, validés par le moteur de contenu. */
-export const REQUIRED_CATALOGS = ['actions.json', 'balance.json'] as const;
+export const REQUIRED_CATALOGS = ['actions.json', 'upgrades.json', 'balance.json'] as const;
 
 export interface ContentIssue {
 	file: string;
@@ -75,7 +75,11 @@ export function validateGameContent(dir: string): ContentReport {
 	}
 
 	const read = (name: string): unknown => JSON.parse(readFileSync(join(dir, name), 'utf8'));
-	const result = validateContent({ actions: read('actions.json'), balance: read('balance.json') });
+	const result = validateContent({
+		actions: read('actions.json'),
+		upgrades: read('upgrades.json'),
+		balance: read('balance.json')
+	});
 	if (result.ok) return report;
 	return {
 		...report,

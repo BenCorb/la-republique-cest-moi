@@ -4,15 +4,16 @@
  *
  * Ordre de résolution d'un trimestre (§5.1) et tâches qui le complètent :
  *   1. validation de la phase et du plan ........................ P1-01, P1-02
- *   2. actions planifiées dans l'ordre (coûts, effets) .......... P1-02 ; achats P1-03
- *   3. production, revenus, charges ............................. P1-03
+ *   2. étapes du plan dans l'ordre (actions, achats) ............ P1-02, P1-03
+ *   3. charges puis production des améliorations actives ........ P1-03
  *   4. stress, santé, vieillissement, fins ...................... P1-04
  *   5. échéances ................................................ alpha
  *   6. passage à T+1 (une seule fois) et journal du trimestre T . P1-01 ; événements P1-05
  *   7. phase `decision` si choix bloquant, sinon `planning` ..... P1-01 ; P1-05
  */
 import type { Content } from '../content/types.ts';
-import { executePlan, previewPlan } from './actions.ts';
+import { economyRecords, resolveEconomy } from './economy.ts';
+import { executePlan, previewPlan } from './plan.ts';
 import type { CommandError, CommitTurnCommand, GameCommand, TransitionResult } from './commands.ts';
 import type { GameState, HistoryEntry } from './state.ts';
 
@@ -59,15 +60,19 @@ function commitTurn(
 		});
 	}
 
-	// 2. Actions dans l'ordre annoncé ; les effets aléatoires sont tirés ici.
-	const execution = executePlan(state.resources, state.rng, command.plan.actions, content);
+	// 2. Étapes dans l'ordre annoncé ; effets aléatoires tirés ici, achats en attente.
+	const execution = executePlan(state, command.plan.steps, content);
+
+	// 3. Charges puis production des améliorations acquises avant T.
+	const resolvedTurn = state.turn;
+	const economy = resolveEconomy(execution.resources, execution.upgrades, resolvedTurn, content);
 
 	// 6–7. Passage à T+1 et journal du trimestre résolu.
-	const resolvedTurn = state.turn;
 	const entry: HistoryEntry = {
 		type: 'turn.resolved',
 		turn: resolvedTurn,
-		actions: execution.records
+		steps: execution.records,
+		economy: { producers: economyRecords(economy), changes: economy.changes }
 	};
 	return {
 		ok: true,
@@ -76,7 +81,9 @@ function commitTurn(
 			turn: resolvedTurn + 1,
 			phase: 'planning',
 			rng: execution.rng,
-			resources: execution.resources,
+			resources: economy.resources,
+			upgrades: execution.upgrades,
+			nextInstanceNumber: execution.nextInstanceNumber,
 			history: [...state.history, entry]
 		},
 		resolvedTurn,

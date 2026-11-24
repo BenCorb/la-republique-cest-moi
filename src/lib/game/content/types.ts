@@ -12,6 +12,18 @@ export type ResourceId = (typeof RESOURCE_IDS)[number];
 export type Resources = { readonly [K in ResourceId]: number };
 
 /**
+ * Trésoreries monétaires. Une amélioration déclare celle qui la finance : ses
+ * coûts et charges en argent n'utilisent que cette ressource (budget politique et
+ * patrimoine personnel ne sont jamais mélangés, GDD §4.1).
+ */
+export const TREASURY_IDS = ['politicalBudgetCents', 'personalCashCents'] as const;
+export type TreasuryId = (typeof TREASURY_IDS)[number];
+
+/** Familles d'améliorations (GDD §5.2). */
+export const UPGRADE_FAMILIES = ['organization', 'communication', 'network', 'personal'] as const;
+export type UpgradeFamily = (typeof UPGRADE_FAMILIES)[number];
+
+/**
  * Registre typé des statistiques lisibles par les conditions. Toute nouvelle
  * statistique s'ajoute ici et dans `engine/conditions.ts` (switch exhaustif) :
  * jamais de chemin arbitraire vers l'état.
@@ -68,6 +80,32 @@ export interface ActionDefinition {
 	readonly effects: readonly Effect[];
 }
 
+/**
+ * Amélioration achetable (producteur) : coût initial, charges et production
+ * récurrentes explicites. Un achat du trimestre T produit à partir de T+1.
+ */
+export interface UpgradeDefinition {
+	/** Identifiant stable, par exemple `organization.volunteer`. */
+	readonly id: string;
+	readonly family: UpgradeFamily;
+	readonly label: string;
+	readonly description: string;
+	/** Trésorerie qui paie le prix et les charges monétaires. */
+	readonly treasury: TreasuryId;
+	/** Points de temps consommés par l'achat (0 si aucun). */
+	readonly timeCost: number;
+	/** Nombre maximal d'exemplaires possédés. */
+	readonly maxOwned: number;
+	/** Prix payé à l'achat. */
+	readonly price: readonly ResourceAmount[];
+	/** Charges prélevées chaque trimestre ; impayées, elles suspendent la production. */
+	readonly upkeep: readonly ResourceAmount[];
+	/** Production de chaque trimestre où l'amélioration est active. */
+	readonly production: readonly ResourceAmount[];
+	readonly requires?: Condition | undefined;
+	readonly unavailableReason?: string | undefined;
+}
+
 export interface Balance {
 	/** Points de temps disponibles chaque trimestre, non cumulables. */
 	readonly timeBudgetPerTurn: number;
@@ -81,4 +119,6 @@ export interface Content {
 	readonly actions: Readonly<Record<string, ActionDefinition>>;
 	/** Ordre de présentation du catalogue. */
 	readonly actionIds: readonly string[];
+	readonly upgrades: Readonly<Record<string, UpgradeDefinition>>;
+	readonly upgradeIds: readonly string[];
 }

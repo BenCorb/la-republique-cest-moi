@@ -7,7 +7,7 @@ import {
 	validateContentDirectory,
 	validateGameContent
 } from '../../scripts/validate-content.ts';
-import { fixtureActions, fixtureBalance } from '../fixtures/content.ts';
+import { fixtureActions, fixtureBalance, fixtureUpgrades } from '../fixtures/content.ts';
 
 const temporaryDirs: string[] = [];
 
@@ -51,14 +51,17 @@ describe('validation de contenu', () => {
 	it('valide le catalogue réel du jeu', () => {
 		const report = validateGameContent(DEFAULT_CONTENT_DIR);
 		expect(report.issues).toEqual([]);
-		expect(report.files).toEqual(expect.arrayContaining(['actions.json', 'balance.json']));
+		expect(report.files).toEqual(
+			expect.arrayContaining(['actions.json', 'upgrades.json', 'balance.json'])
+		);
 	});
 
 	it('signale un catalogue obligatoire manquant', () => {
 		const dir = makeTempDir();
 		writeFileSync(join(dir, 'balance.json'), JSON.stringify(fixtureBalance));
 		expect(validateGameContent(dir).issues).toEqual([
-			{ file: 'actions.json', message: 'catalogue obligatoire manquant' }
+			{ file: 'actions.json', message: 'catalogue obligatoire manquant' },
+			{ file: 'upgrades.json', message: 'catalogue obligatoire manquant' }
 		]);
 	});
 
@@ -69,6 +72,7 @@ describe('validation de contenu', () => {
 		if (first) first.timeCost = 500;
 		writeFileSync(join(dir, 'actions.json'), JSON.stringify(broken));
 		writeFileSync(join(dir, 'balance.json'), JSON.stringify(fixtureBalance));
+		writeFileSync(join(dir, 'upgrades.json'), JSON.stringify(fixtureUpgrades));
 		const report = validateGameContent(dir);
 		expect(report.issues).toHaveLength(1);
 		expect(report.issues[0]?.message).toContain('actions[0].timeCost');

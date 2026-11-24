@@ -1,0 +1,70 @@
+{
+	"upgrades": [
+		{
+			"id": "organization.volunteer",
+			"family": "organization",
+			"label": "Recruter un militant bénévole",
+			"description": "Bénévole, motivé, disponible le week-end. Ses frais de photocopies et de covoiturage, eux, ne sont pas bénévoles.",
+			"treasury": "politicalBudgetCents",
+			"timeCost": 15,
+			"maxOwned": 10,
+			"price": [],
+			"upkeep": [{ "resource": "politicalBudgetCents", "amount": 1500 }],
+			"production": [{ "resource": "influence", "amount": 1 }]
+		},
+		{
+			"id": "organization.donor_file",
+			"family": "organization",
+			"label": "Constituer un fichier de donateurs",
+			"description": "Une liste soigneusement entretenue de sympathisants qui ont un jour signé une pétition et ne s’en souviennent plus.",
+			"treasury": "politicalBudgetCents",
+			"timeCost": 30,
+			"maxOwned": 1,
+			"price": [{ "resource": "politicalBudgetCents", "amount": 5000 }],
+			"upkeep": [],
+			"production": [{ "resource": "politicalBudgetCents", "amount": 12000 }],
+			"requires": { "op": "gte", "stat": "resources.influence", "value": 10 },
+			"unavailableReason": "Il faut au moins 10 points d’influence pour que des donateurs vous répondent."
+		},
+		{
+			"id": "organization.local_office",
+			"family": "organization",
+			"label": "Ouvrir une permanence",
+			"description": "Un local en rez-de-chaussée, une affiche à votre effigie et une machine à café qui fédère davantage que le programme.",
+			"treasury": "politicalBudgetCents",
+			"timeCost": 30,
+			"maxOwned": 1,
+			"price": [{ "resource": "politicalBudgetCents", "amount": 150000 }],
+			"upkeep": [{ "resource": "politicalBudgetCents", "amount": 20000 }],
+			"production": [{ "resource": "influence", "amount": 4 }],
+			"requires": { "op": "gte", "stat": "resources.influence", "value": 20 },
+			"unavailableReason": "Il faut au moins 20 points d’influence pour justifier une permanence."
+		},
+		{
+			"id": "communication.press_officer",
+			"family": "communication",
+			"label": "Embaucher un attaché de presse à mi-temps",
+			"description": "Il connaît trois journalistes, en tutoie deux et rédige des communiqués plus vite que vous ne les lisez.",
+			"treasury": "politicalBudgetCents",
+			"timeCost": 20,
+			"maxOwned": 1,
+			"price": [],
+			"upkeep": [{ "resource": "politicalBudgetCents", "amount": 90000 }],
+			"production": [{ "resource": "influence", "amount": 6 }],
+			"requires": { "op": "gte", "stat": "resources.influence", "value": 35 },
+			"unavailableReason": "Il faut au moins 35 points d’influence pour intéresser un attaché de presse."
+		},
+		{
+			"id": "network.think_tank",
+			"family": "network",
+			"label": "Adhérer à un cercle de réflexion",
+			"description": "Un dîner mensuel où l’on réfléchit beaucoup, surtout à qui sera assis à côté de qui. Cotisation payée sur vos deniers personnels.",
+			"treasury": "personalCashCents",
+			"timeCost": 10,
+			"maxOwned": 1,
+			"price": [{ "resource": "personalCashCents", "amount": 30000 }],
+			"upkeep": [{ "resource": "personalCashCents", "amount": 5000 }],
+			"production": [{ "resource": "influence", "amount": 1 }]
+		}
+	]
+}

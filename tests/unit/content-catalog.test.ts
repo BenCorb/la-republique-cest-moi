@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadContent } from '../../src/lib/game/content/load.ts';
 import { validateContent } from '../../src/lib/game/content/validate.ts';
-import { fixtureActions, fixtureBalance } from '../fixtures/content.ts';
+import { fixtureActions, fixtureBalance, fixtureUpgrades } from '../fixtures/content.ts';
 
 type MutableAction = Record<string, unknown>;
 
@@ -11,7 +11,7 @@ function validateWithFirstAction(change: (action: MutableAction) => void) {
 	const first = actions.actions[0];
 	if (!first) throw new Error('fixture vide');
 	change(first);
-	return validateContent({ actions, balance: fixtureBalance });
+	return validateContent({ actions, upgrades: fixtureUpgrades, balance: fixtureBalance });
 }
 
 function messages(result: ReturnType<typeof validateContent>): string {
@@ -34,7 +34,11 @@ describe('catalogue réel', () => {
 
 describe('validation des catalogues', () => {
 	it('accepte le catalogue de test et l’indexe dans l’ordre', () => {
-		const result = validateContent({ actions: fixtureActions, balance: fixtureBalance });
+		const result = validateContent({
+			actions: fixtureActions,
+			upgrades: fixtureUpgrades,
+			balance: fixtureBalance
+		});
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
 		expect(result.content.actionIds).toEqual(fixtureActions.actions.map((action) => action.id));
@@ -118,6 +122,7 @@ describe('validation des catalogues', () => {
 	it('rejette un équilibrage invalide et signale tous les problèmes', () => {
 		const result = validateContent({
 			actions: { actions: [] },
+			upgrades: { upgrades: [] },
 			balance: { timeBudgetPerTurn: 0, startingResources: { influence: -1 } }
 		});
 		expect(result.ok).toBe(false);
@@ -126,5 +131,82 @@ describe('validation des catalogues', () => {
 		expect(text).toContain('startingResources.influence');
 		expect(text).toContain('startingResources.politicalBudgetCents');
 		expect(text).toContain('actions');
+	});
+});
+
+describe('validation des améliorations', () => {
+	type MutableUpgrade = Record<string, unknown>;
+
+	function validateWithFirstUpgrade(change: (upgrade: MutableUpgrade) => void) {
+		const upgrades = structuredClone(fixtureUpgrades) as { upgrades: MutableUpgrade[] };
+		const first = upgrades.upgrades[0];
+		if (!first) throw new Error('fixture vide');
+		change(first);
+		return validateContent({ actions: fixtureActions, upgrades, balance: fixtureBalance });
+	}
+
+	it('indexe les améliorations dans l’ordre du catalogue', () => {
+		const result = validateContent({
+			actions: fixtureActions,
+			upgrades: fixtureUpgrades,
+			balance: fixtureBalance
+		});
+		expect(result.ok && result.content.upgradeIds).toEqual(
+			fixtureUpgrades.upgrades.map((upgrade) => upgrade.id)
+		);
+	});
+
+	it.each<[string, (upgrade: MutableUpgrade) => void, string]>([
+		['identifiant partagé avec une action', (u) => (u.id = 'test.fixed'), 'en double'],
+		['famille inconnue', (u) => (u.family = 'media'), 'family'],
+		['trésorerie non monétaire', (u) => (u.treasury = 'influence'), 'treasury'],
+		[
+			'charge sur l’autre trésorerie',
+			(u) => (u.upkeep = [{ resource: 'personalCashCents', amount: 100 }]),
+			'trésorerie déclarée'
+		],
+		[
+			'prix sur l’autre trésorerie',
+			(u) => (u.price = [{ resource: 'personalCashCents', amount: 100 }]),
+			'trésorerie déclarée'
+		],
+		['sans production', (u) => (u.production = []), 'production'],
+		[
+			'production en double',
+			(u) =>
+				(u.production = [
+					{ resource: 'influence', amount: 1 },
+					{ resource: 'influence', amount: 1 }
+				]),
+			'en double'
+		],
+		['temps négatif', (u) => (u.timeCost = -1), 'timeCost'],
+		['temps supérieur au budget', (u) => (u.timeCost = 150), 'supérieur au budget'],
+		['aucun exemplaire autorisé', (u) => (u.maxOwned = 0), 'maxOwned'],
+		[
+			'prérequis sans explication',
+			(u) => (u.requires = { op: 'gte', stat: 'resources.influence', value: 1 }),
+			'unavailableReason'
+		]
+	])('rejette : %s', (_label, change, fragment) => {
+		const result = validateWithFirstUpgrade(change);
+		expect(result.ok).toBe(false);
+		expect(messages(result)).toContain(fragment);
+	});
+
+	it('accepte un prix en influence sur une amélioration financée par le budget', () => {
+		const result = validateWithFirstUpgrade(
+			(u) => (u.price = [{ resource: 'influence', amount: 2 }])
+		);
+		expect(messages(result)).toBe('');
+	});
+});
+
+describe('catalogue réel des améliorations', () => {
+	it('respecte la séparation des trésoreries et propose un premier achat accessible', () => {
+		const content = loadContent();
+		expect(content.upgradeIds.length).toBeGreaterThan(0);
+		const firstAffordable = content.upgradeIds.filter((id) => !content.upgrades[id]?.requires);
+		expect(firstAffordable.length).toBeGreaterThan(0);
 	});
 });
