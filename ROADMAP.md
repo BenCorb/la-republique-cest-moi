@@ -1,7 +1,7 @@
 # La République, c’est moi ! — Feuille de route
 
 **Version 0.1 — 24 novembre 2026**  
-**Statut :** phase 0 terminée (P0-01 à P0-06). Phase 1 en cours sur la branche `feat/p1-prototype` (une PR vers `main` en fin de phase) : P1-01 à P1-08 réalisées et vérifiées le 24 novembre 2026 (✅ = tâche terminée dans les tableaux).  
+**Statut :** phase 0 terminée (P0-01 à P0-06). Phase 1 en cours sur la branche `feat/p1-prototype` (une PR vers `main` en fin de phase) : P1-01 à P1-08 réalisées et vérifiées le 24 novembre 2026 (✅ = tâche terminée dans les tableaux). Reprise : voir §9.  
 **Références :** [GAME_DESIGN.md](GAME_DESIGN.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN.md](DESIGN.md), [AGENTS.md](AGENTS.md).
 
 ## 1. Stratégie de livraison
@@ -110,3 +110,13 @@ Les deux assistants doivent lire `AGENTS.md`, puis les documents concernés et c
 > Lis `AGENTS.md`, `GAME_DESIGN.md`, `ARCHITECTURE.md`, `DESIGN.md` et `ROADMAP.md`. Vérifie l’état actuel du dépôt et conserve les documents existants. Implémente uniquement la phase 0 de la feuille de route (P0-01 à P0-04), en commençant par P0-01. Initialise SvelteKit statique avec TypeScript strict, Tailwind CSS, Lucide et npm ; verrouille la version Node et les dépendances. Configure les outils de vérification et les tests de démarrage, une coque desktop minimale et un README de démarrage. Ne développe pas encore le moteur de carrière, les élections, la justice ou les événements. Pas de backend, de service externe ni de dépendance IA au runtime. Vérifie les scripts effectivement disponibles et le build statique. Mets à jour les cases des tâches uniquement lorsqu’elles sont vérifiées. Termine avec un récapitulatif des fichiers modifiés, des tests réellement exécutés, des éventuelles limites et de la prochaine tâche P1-01. Ne publie pas et ne pousse pas le dépôt sans demande.
 
 Les tâches de phase 0 peuvent également être confiées une par une pour faciliter la revue. Après le bootstrap, commencer P1-01, pas une implémentation globale de la V1.
+
+## 9. Reprise du travail — passage de relais (24 novembre 2026)
+
+- **Branche :** `feat/p1-prototype` (poussée), basée sur `main` (`2b1ab80`), un commit par tâche P1-02 à P1-08 ; une seule pull request vers `main` en fin de phase 1 (exception documentée dans `AGENTS.md`). Le site publié montre encore la phase 0.
+- **État :** P0-01 à P0-06 et P1-01 à P1-08 terminées et vérifiées. Vérification complète après `npm ci` : `check`, `lint`, `content:validate`, `test` (363), `build`, `test:e2e` (22 à la racine, 22 avec `BASE_PATH=/la-republique-cest-moi`).
+- **Où lire :** décisions de chaque tâche dans `ARCHITECTURE.md` (§6.1, §7.1 bis, §7.3, §7.4, §8.1 bis, §8.2 bis, §9.1, §10.1, §12.1–12.3) ; limites, dette et règles provisoires au §15.
+- **Prochaine tâche : P1-09** (accélération minimale et tests de scénarios). Points d’attention : réutiliser `transition` sans raccourci (ARCHITECTURE §5.2) ; s’arrêter sur décision bloquante, alerte et fin ; persister via le contrôleur à chaque tour ou lot borné ; prévoir l’annulation ; un plan récurrent invalide doit arrêter l’accélération avec un motif.
+- **Décisions attendues du créateur :** règle de version de sauvegarde (§15.1) ; coût de la vie personnel ; relecture éditoriale des 30 événements ; déplacement du dépôt hors d’iCloud (§15.4).
+- **Avant de commencer :** `git fetch --prune`, `git status`, rechercher les copies de synchronisation (`find . -path ./node_modules -prune -o -name '* [0-9].*' -print`), `npm ci`, puis la vérification complète ci-dessus.
+

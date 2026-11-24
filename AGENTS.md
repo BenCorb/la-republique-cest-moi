@@ -46,6 +46,7 @@ Le dépôt Git et les documents constituent la mémoire commune. Ne pas dépendr
 1. **Avant de passer la main** : terminer une étape cohérente ou la documenter ; vérifier les scripts concernés ; committer sur la branche de la tâche et la pousser. Dans la description de la pull request (ouverte en brouillon si nécessaire), tenir une section « Reprise » : tâche, état, commandes exécutées et résultats, décisions, points ouverts, prochaine étape. Ne laisser aucune modification non commitée dont l’autre assistant aurait besoin.
 2. **En reprenant** : `git fetch --prune`, `git status`, puis lire `AGENTS.md`, `ROADMAP.md` et la section « Reprise » de la pull request en cours (`gh pr list`, `gh pr view`) ; vérifier l’état de la CI (`gh run list`). Poursuivre sur la même branche ; ne jamais travailler simultanément sur la même branche ou les mêmes fichiers.
 3. Les décisions durables vont dans les documents du dépôt, pas dans la mémoire privée d’un assistant.
+4. Le dépôt ne doit pas se trouver dans un dossier synchronisé (iCloud Drive, Dropbox…) : la synchronisation crée des copies « nom 2.ext » qui cassent les vérifications et peuvent corrompre `.git`. Si c’est le cas, chercher ces copies avant chaque tâche et ne jamais les versionner (ARCHITECTURE.md §15.4).
 
 `CLAUDE.md` se limite à importer ce fichier (`@AGENTS.md`) ; Codex lit `AGENTS.md` directement. Toute nouvelle consigne commune s’ajoute ici.
 

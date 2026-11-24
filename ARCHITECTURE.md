@@ -41,7 +41,7 @@ flowchart TD
 
 Le moteur reçoit les données, l’état précédent et une commande. Il renvoie un nouvel état et un résultat de transition, sans modifier ses arguments. Le contrôleur valide, persiste, publie l’état puis expose une projection à l’interface. Les composants n’écrivent jamais directement dans les ressources ni dans l’historique. Les règles de simulation n’existent qu’à un seul endroit. Les tests et le simulateur importent exactement ce moteur.
 
-L’interface de jeu sera une application à onglets plutôt qu’une multitude de routes ; les onglets ne changent pas le temps. L’écran d’accueil propose nouvelle partie, reprise et import. Les détails du design restent dans DESIGN.md (à rédiger).
+L’interface de jeu sera une application à onglets plutôt qu’une multitude de routes ; les onglets ne changent pas le temps. L’écran d’accueil propose nouvelle partie, reprise et import. Les détails du design sont dans DESIGN.md.
 
 ## 3. Structure cible du dépôt
 
@@ -51,8 +51,8 @@ L’interface de jeu sera une application à onglets plutôt qu’une multitude 
   CLAUDE.md                 # import des règles communes (compatibilité)
   GAME_DESIGN.md
   ARCHITECTURE.md
-  DESIGN.md                 # à rédiger
-  ROADMAP.md                # à rédiger
+  DESIGN.md
+  ROADMAP.md
   README.md                 # commandes et démarrage
   package.json
   package-lock.json
@@ -117,6 +117,13 @@ L’interface de jeu sera une application à onglets plutôt qu’une multitude 
     e2e/
   static/                   # portraits et illustrations facultatifs
 ```
+
+### 3.1 Écarts avec l’arborescence cible (état après P1-08)
+
+- `engine/actions.ts` est devenu `engine/plan.ts` (plan d’actions et d’achats : prévision et exécution) ; `characters.ts` et suivants viendront avec l’alpha.
+- Ajouts : `content/types.ts` (types sans dépendance, seul module de contenu lisible par le moteur), `content/version.ts` (empreinte des catalogues), `content/data/cast.json` (distribution fictive) ; `persistence/state-schema.ts` et `persistence/index.ts` ; `app/format.ts` et `app/browser.ts` (frontière navigateur) ; `components/organisation/` et `components/journal/` ; `scripts/base-path.ts` et `scripts/serve-static.ts` ; `tests/e2e/support/`.
+- Pas encore créés : `content/data/world/` (monde, alpha), `scripts/simulate.ts` (P1-10).
+- Tests non colocés : `tests/unit`, `tests/scenarios`, `tests/fixtures`, `tests/e2e`.
 
 Arborescence cible et non exigence de créer des dossiers vides : commencer par les modules utiles au prototype. Les fichiers séparés par virgules ci-dessus sont des fichiers distincts. Les tests peuvent aussi être colocés si convention unique documentée. Pas de dépendance circulaire : types et utilitaires → règles métier → orchestrateur ; le moteur ne dépend jamais de l’application ou de l’UI. Le catalogue ne dépend pas du navigateur.
 
@@ -189,6 +196,8 @@ previewPlan(state: GameState, plan: TurnPlan, content: Content): PlanPreview;
 transition(state: GameState, command: GameCommand, content: Content): TransitionResult;
 projectView(state: GameState, content: Content): PlayerView;
 ```
+
+Signatures réellement implémentées (P1-08) : `createGame(config, content)`, `previewPlan(state, plan, content)` et `transition(state, command, content)` dans `engine/` ; la projection est `projectView(state, plan, content)` dans `app/view-model.ts`, car elle intègre le brouillon de plan de l’interface et le formatage français, qui ne relèvent pas du moteur.
 
 Les commandes sont des unions discriminées : `commitTurn(plan)`, `chooseEvent(instanceId, choiceId)`, et ultérieurement changements de missions, candidatures et nominations lorsqu’elles sont permises. Les opérations de planification sont modifiables avant validation ; leurs previews ne consomment aucun aléatoire. Un plan contient actions ordonnées, cibles, achats, consignes et coûts dérivés du catalogue. Validation et exécution réutilisent les mêmes règles, sur un état de travail simulant les prérequis déterministes du plan. Aucun effet partiel sur commande rejetée. Les effets aléatoires des actions sont résolus seulement à la validation et ne financent pas d’autres actions du même plan dans le prototype.
 
@@ -439,7 +448,7 @@ Le bootstrap crée les scripts réellement disponibles ; ne pas annoncer un test
 - TypeScript : `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`, `noFallthroughCasesInSwitch` ; `svelte-check --fail-on-warnings`.
 - Tests : non colocés. `tests/unit` et `tests/scenarios` (`*.test.ts`, Vitest en environnement Node) ; `tests/e2e` (`*.e2e.ts`, Playwright Chromium à 1440 × 900 et 1280 × 720) exécutés contre `build/` servi par `scripts/serve-static.ts`, sans serveur SvelteKit.
 - Frontières du moteur vérifiées par analyse statique (`tests/unit/engine-boundaries.test.ts`) : pas d’import Svelte/`$app`/UI, ni `Math.random`, `Date.now`, `new Date`, stockage, DOM, réseau ou `eval`.
-- Scripts `scripts/*.ts` exécutés directement par Node (suppression native des types), sans `tsx` ; syntaxe TypeScript effaçable uniquement. `content:validate` vérifie pour l’instant la syntaxe JSON ; schémas et références arrivent avec P1-02.
+- Scripts `scripts/*.ts` exécutés directement par Node (suppression native des types), sans `tsx` ; syntaxe TypeScript effaçable uniquement. `content:validate` ne vérifiait alors que la syntaxe JSON ; depuis P1-02, il applique la validation complète des catalogues (§7.1 bis, §7.3).
 - Scripts ajoutés au tableau ci-dessus : `format`, `test:watch`, `test:e2e:install` (Chromium), `serve:static`. `npm run test` n’exécute pas les tests navigateur.
 - CI : voir §12.2 (GitHub Actions, ajoutée en extension de phase 0).
 
@@ -490,4 +499,41 @@ Références pour les fichiers d’instructions : [Codex — AGENTS.md](https://
 
 Le plan de tâches détaillé sera dans ROADMAP.md. Les chiffres de gameplay, fréquences, conditions d’élection, liste des groupes et seuils de santé demeurent ouverts. Préférer une implémentation simple à une abstraction spéculative. Les choix techniques qui touchent les invariants (ordre de tour, RNG, schémas, migrations) doivent être fixés avant de multiplier les systèmes.
 
-**Prochaine étape de conception :** DESIGN.md, puis ROADMAP.md ; aucun code applicatif n’est livré par ce document.
+DESIGN.md et ROADMAP.md sont rédigés ; l’avancement réel est suivi dans ROADMAP.md, l’état technique dans les sections « Décisions » et au §15.
+
+## 15. État après P1-08 : limites connues, dette technique et règles provisoires
+
+Relevé du 24 novembre 2026, avant passage de relais. Rien de ce qui suit n’est un défaut bloquant connu : 363 tests unitaires et de scénarios et 22 tests E2E (racine et sous-répertoire) passent après installation propre.
+
+### 15.1 Règles provisoires à confirmer
+
+- **Format de sauvegarde.** `STATE_SCHEMA_VERSION = 1` et `SAVE_VERSION = 1`. Toute modification de `GameState` doit mettre à jour `persistence/state-schema.ts` (la compilation l’impose). Proposition : tant qu’aucune version jouable n’est publiée, conserver la version 1 (une sauvegarde de développement devenue incompatible est signalée, jamais effacée) ; dès la première publication de la phase 1, toute modification de format incrémente `SAVE_VERSION` avec une migration testée.
+- **Version des règles.** `RULES_VERSION = '0.6.0'`, incrémentée à chaque changement de règle ; elle n’est qu’informative à la lecture d’une sauvegarde.
+- **Paramètre `?seed=`.** Réservé aux essais et à la reproduction ; à masquer ou documenter auprès des joueurs avant diffusion large.
+
+### 15.2 Limites fonctionnelles connues (prototype)
+
+- Pas d’accélération du temps (P1-09) ni de simulateur par lots (P1-10). Durée de jeu de 45–60 minutes non mesurée avec des joueurs ; mesures CPU indicatives : ≈ 200 trimestres et 40–50 décisions par carrière (§7.4), à réduire probablement via l’accélération et le tuning.
+- Jauges du GDD non encore modélisées : popularité, exposition médiatique, risque judiciaire ; pas de mandats ni de « fonction principale » dans l’en-tête (DESIGN §3) ; pas de compteur de fonds détournés pour le bilan (GDD §12) : les choix opportunistes existent mais ne sont pas encore comptabilisés.
+- Libellé « Argent personnel » dans l’interface pour la ressource `personalCashCents` (GDD : « Fortune personnelle », DESIGN : « Fortune ») : la fortune au sens du GDD inclura plus tard les actifs (V1).
+- Aucun coût de la vie personnel : l’insolvabilité ne vient que des charges d’améliorations (question d’équilibrage ouverte, GDD §17).
+- Mortalité de la première tranche d’âge non nulle : de rares carrières s’arrêtent dès 25–30 ans. Répétition des événements : jusqu’à 13 occurrences d’un même événement par carrière.
+- Rejoindre le parti fictif n’enregistre aucune affiliation (partis : P2-01). Distribution d’acteurs figée (ni âge ni relations, P2-04).
+- Accueil : pas de réglages, seed non affichée (DESIGN §4.1). Bilan minimal sans distinctions (DESIGN §6, V1). Pas de message `<noscript>` : sans JavaScript, la page reste sur « Ouverture du cabinet… ».
+- « Accueil » abandonne le brouillon de plan non validé sans confirmation (permis par §10, mais perceptible). L’accueil ne se rafraîchit pas si un autre onglet modifie la sauvegarde pendant qu’il est affiché (le blocage ne s’applique qu’en partie).
+- Mise en page vérifiée à 1280 × 720 et 1440 × 900 ; repli sous 1 100 px et zoom à 125 % non testés automatiquement. Accessibilité vérifiée par tests clavier et rôles ARIA, sans audit automatisé (axe) ni lecteur d’écran.
+
+### 15.3 Dette technique
+
+- **Attribution des acteurs gloutonne** (`events.ts`) : rôles pourvus dans l’ordre, sans retour arrière ; la validation vérifie chaque rôle séparément, pas l’existence d’une distribution complète. Sans effet sur le catalogue actuel (un seul événement à rôles chevauchants, aux étiquettes identiques), mais un futur événement pourrait être jugé impossible à tort.
+- **Projection recalculée en entier** à chaque changement du contrôleur (journal complet, une prévision par élément de catalogue) ; recherche quadratique des acteurs d’un choix dans le journal. Acceptable aux tailles actuelles (≈ 250 entrées), à mémoriser si le journal grossit.
+- **Écriture de sauvegarde** : chaque écriture relit et valide entièrement la sauvegarde existante (≈ 250 Ko) pour décider de la copie précédente.
+- **Paquet client** : catalogue et Zod validés côté navigateur (≈ 65 Ko compressés pour la page) ; une validation au seul build allégerait le paquet.
+- **Tests dépendants du catalogue réel** : seuils des scénarios (`real-catalog.test.ts`, atteinte de chaque événement) et seed E2E `e2e-decision` (décision dans les 40 premiers trimestres). Un changement de tuning peut les faire échouer : les ajuster consciemment, sans masquer un événement devenu inatteignable.
+- **Messages d’invariants** en français libre : les tests s’appuient sur des fragments de texte ; un code structuré serait plus robuste.
+- **CI jamais exécutée sur le code de la phase 1** : le workflow ne tourne que sur `main` et les pull requests ; la première exécution aura lieu à la PR de fin de phase.
+
+### 15.4 Environnement de développement
+
+Le dépôt local du créateur se trouve dans `~/Documents`, synchronisé par iCloud Drive : des copies de conflit « nom 2.ext » apparaissent (tests, `build/`, `.svelte-kit/`, `node_modules/`, et une copie `.git/index 2` ignorée par Git ; `git fsck` sain au 24 novembre 2026). Aucune n’a été versionnée. Recommandation : déplacer le dépôt hors de tout dossier synchronisé ; sinon, avant chaque tâche, chercher ces copies et réinstaller (`npm ci`) si `node_modules` en contient.
+
