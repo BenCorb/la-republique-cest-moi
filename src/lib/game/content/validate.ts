@@ -15,6 +15,7 @@ import {
 	castCatalogSchema,
 	eventCatalogSchema,
 	traitCatalogSchema,
+	careerCatalogSchema,
 	upgradeCatalogSchema,
 	worldSchema
 } from './schemas.ts';
@@ -28,7 +29,10 @@ import {
 	type Condition,
 	type Content,
 	type Effect,
+	type ElectionDefinition,
 	type EventDefinition,
+	type InstitutionsDefinition,
+	type MandateDefinition,
 	type PartyDefinition,
 	type ResourceAmount,
 	type TraitDefinition,
@@ -59,6 +63,8 @@ export interface RawContent {
 	readonly world: unknown;
 	/** Traits de personnalité (`traits.json`). */
 	readonly traits: unknown;
+	/** Élections, mandats et règles du cumul (`career.json`). */
+	readonly career: unknown;
 }
 
 export type ContentValidation =
@@ -224,10 +230,17 @@ function crossCheckWorld(
 	return issues;
 }
 
-/** Vérifie les partis cités par une condition (`memberOf`). */
+/** Identifiants connus, pour les références des conditions et des effets. */
+interface Refs {
+	readonly parties: ReadonlySet<string>;
+	readonly mandates: ReadonlySet<string>;
+	readonly elections: ReadonlySet<string>;
+}
+
+/** Vérifie les partis et mandats cités par une condition. */
 function conditionIssues(
 	condition: Condition | undefined,
-	parties: ReadonlySet<string>,
+	refs: Refs,
 	source: string,
 	path: string
 ): ContentIssue[] {
@@ -236,63 +249,128 @@ function conditionIssues(
 		case 'all':
 		case 'any':
 			return condition.conditions.flatMap((child, index) =>
-				conditionIssues(child, parties, source, `${path}.conditions[${index}]`)
+				conditionIssues(child, refs, source, `${path}.conditions[${index}]`)
 			);
 		case 'not':
-			return conditionIssues(condition.condition, parties, source, `${path}.condition`);
+			return conditionIssues(condition.condition, refs, source, `${path}.condition`);
 		case 'memberOf':
-			return parties.has(condition.party)
+			return refs.parties.has(condition.party)
 				? []
 				: [{ source, path: `${path}.party`, message: `parti inconnu : ${condition.party}` }];
+		case 'holdsMandate':
+		case 'canHoldMandate':
+			return refs.mandates.has(condition.mandate)
+				? []
+				: [{ source, path: `${path}.mandate`, message: `mandat inconnu : ${condition.mandate}` }];
 		default:
 			return [];
 	}
 }
 
-/** Vérifie les partis cités par des effets ; `target` n'est permis que pour une action ciblée. */
+/**
+ * Vérifie les références des effets. `target` n'est permis que dans une action
+ * ciblant le bon type d'objet (`targetKind`) ; les effets sur un personnage
+ * n'existent que dans les événements (`roles`).
+ */
 function effectIssues(
 	effects: readonly Effect[],
-	parties: ReadonlySet<string>,
-	allowTarget: boolean,
+	refs: Refs,
+	targetKind: 'party' | 'mandate' | null,
 	source: string,
 	path: string,
 	roles: ReadonlySet<string> | null = null
 ): ContentIssue[] {
 	const issues: ContentIssue[] = [];
 	effects.forEach((effect, index) => {
-		if (effect.op === 'addRelation' || effect.op === 'revealTraits') {
-			if (roles === null) {
-				issues.push({
-					source,
-					path: `${path}[${index}].role`,
-					message: 'effet sur un personnage réservé aux événements'
-				});
-			} else if (!roles.has(effect.role)) {
-				issues.push({
-					source,
-					path: `${path}[${index}].role`,
-					message: `rôle inconnu de l’événement : ${effect.role}`
-				});
-			}
-		}
-		const at = `${path}[${index}].party`;
-		if (effect.op === 'addPartyStrength') {
-			const relative = (PARTY_REFERENCES as readonly string[]).includes(effect.party);
-			if (!relative && !parties.has(effect.party)) {
-				issues.push({ source, path: at, message: `parti inconnu : ${effect.party}` });
-			}
-		} else if (effect.op === 'joinParty') {
-			if (effect.party === 'target') {
-				if (!allowTarget) {
+		const at = `${path}[${index}]`;
+		switch (effect.op) {
+			case 'addRelation':
+			case 'revealTraits':
+				if (roles === null) {
 					issues.push({
 						source,
-						path: at,
-						message: '« target » réservé aux actions ciblant un parti'
+						path: `${at}.role`,
+						message: 'effet sur un personnage réservé aux événements'
+					});
+				} else if (!roles.has(effect.role)) {
+					issues.push({
+						source,
+						path: `${at}.role`,
+						message: `rôle inconnu de l’événement : ${effect.role}`
 					});
 				}
-			} else if (!parties.has(effect.party)) {
-				issues.push({ source, path: at, message: `parti inconnu : ${effect.party}` });
+				break;
+			case 'addPartyStrength': {
+				const relative = (PARTY_REFERENCES as readonly string[]).includes(effect.party);
+				if (!relative && !refs.parties.has(effect.party)) {
+					issues.push({ source, path: `${at}.party`, message: `parti inconnu : ${effect.party}` });
+				}
+				break;
 			}
+			case 'joinParty':
+				if (effect.party === 'target') {
+					if (targetKind !== 'party') {
+						issues.push({
+							source,
+							path: `${at}.party`,
+							message: '« target » réservé aux actions ciblant un parti'
+						});
+					}
+				} else if (!refs.parties.has(effect.party)) {
+					issues.push({ source, path: `${at}.party`, message: `parti inconnu : ${effect.party}` });
+				}
+				break;
+			case 'grantMandate':
+				if (!refs.mandates.has(effect.mandate)) {
+					issues.push({
+						source,
+						path: `${at}.mandate`,
+						message: `mandat inconnu : ${effect.mandate}`
+					});
+				}
+				if (roles === null) {
+					issues.push({
+						source,
+						path: `${at}.mandate`,
+						message: 'attribution de mandat réservée aux événements'
+					});
+				}
+				break;
+			case 'endMandate':
+				if (effect.mandate === 'target') {
+					if (targetKind !== 'mandate') {
+						issues.push({
+							source,
+							path: `${at}.mandate`,
+							message: '« target » réservé aux actions ciblant un mandat'
+						});
+					}
+				} else if (!refs.mandates.has(effect.mandate)) {
+					issues.push({
+						source,
+						path: `${at}.mandate`,
+						message: `mandat inconnu : ${effect.mandate}`
+					});
+				}
+				break;
+			case 'callEarlyElection':
+				if (!refs.elections.has(effect.election)) {
+					issues.push({
+						source,
+						path: `${at}.election`,
+						message: `élection inconnue : ${effect.election}`
+					});
+				}
+				if (roles === null) {
+					issues.push({
+						source,
+						path: `${at}.election`,
+						message: 'élection anticipée réservée aux événements'
+					});
+				}
+				break;
+			default:
+				break;
 		}
 	});
 	return issues;
@@ -321,20 +399,22 @@ function crossCheckPolitics(
 	actions: readonly ActionDefinition[],
 	upgrades: readonly UpgradeDefinition[],
 	events: readonly SourcedEvent[],
-	parties: ReadonlySet<string>
+	refs: Refs
 ): ContentIssue[] {
 	const issues: ContentIssue[] = [];
 	actions.forEach((action, index) => {
 		const path = `actions[${index}]`;
-		issues.push(...conditionIssues(action.requires, parties, 'actions.json', `${path}.requires`));
-		const targeted = action.target === 'party';
+		issues.push(...conditionIssues(action.requires, refs, 'actions.json', `${path}.requires`));
+		const targetKind = action.target ?? null;
 		issues.push(
-			...effectIssues(action.effects, parties, targeted, 'actions.json', `${path}.effects`)
+			...effectIssues(action.effects, refs, targetKind, 'actions.json', `${path}.effects`)
 		);
 		const usesTarget = action.effects.some(
-			(effect) => effect.op === 'joinParty' && effect.party === 'target'
+			(effect) =>
+				(effect.op === 'joinParty' && effect.party === 'target') ||
+				(effect.op === 'endMandate' && effect.mandate === 'target')
 		);
-		if (targeted && !usesTarget) {
+		if (targetKind !== null && !usesTarget) {
 			issues.push({
 				source: 'actions.json',
 				path: `${path}.target`,
@@ -344,25 +424,98 @@ function crossCheckPolitics(
 	});
 	upgrades.forEach((upgrade, index) => {
 		issues.push(
-			...conditionIssues(upgrade.requires, parties, 'upgrades.json', `upgrades[${index}].requires`)
+			...conditionIssues(upgrade.requires, refs, 'upgrades.json', `upgrades[${index}].requires`)
 		);
 	});
 	for (const { source, index, event } of events) {
 		const path = `events[${index}]`;
-		issues.push(...conditionIssues(event.when, parties, source, `${path}.when`));
+		issues.push(...conditionIssues(event.when, refs, source, `${path}.when`));
 		const roles = new Set(event.actors.map((slot) => slot.role));
 		if (event.blocking) {
 			event.choices.forEach((choice, choiceIndex) => {
 				const choicePath = `${path}.choices[${choiceIndex}]`;
-				issues.push(...conditionIssues(choice.requires, parties, source, `${choicePath}.requires`));
+				issues.push(...conditionIssues(choice.requires, refs, source, `${choicePath}.requires`));
 				issues.push(
-					...effectIssues(choice.effects, parties, false, source, `${choicePath}.effects`, roles)
+					...effectIssues(choice.effects, refs, null, source, `${choicePath}.effects`, roles)
 				);
 			});
 		} else {
-			issues.push(...effectIssues(event.effects, parties, false, source, `${path}.effects`, roles));
+			issues.push(...effectIssues(event.effects, refs, null, source, `${path}.effects`, roles));
 		}
 	}
+	return issues;
+}
+
+/** Élections, mandats et règles du cumul (`career.json`). */
+function crossCheckCareer(
+	elections: readonly ElectionDefinition[],
+	mandates: readonly MandateDefinition[],
+	institutions: InstitutionsDefinition,
+	timeBudgetPerTurn: number,
+	knownIds: Set<string>
+): ContentIssue[] {
+	const issues: ContentIssue[] = [];
+	const source = 'career.json';
+	const electionIds = new Set<string>();
+	elections.forEach((election, index) => {
+		if (knownIds.has(election.id)) {
+			issues.push({
+				source,
+				path: `elections[${index}].id`,
+				message: `identifiant en double : ${election.id}`
+			});
+		}
+		knownIds.add(election.id);
+		electionIds.add(election.id);
+	});
+	const mandateIds = new Set(mandates.map((mandate) => mandate.id));
+	mandates.forEach((mandate, index) => {
+		const path = `mandates[${index}]`;
+		if (knownIds.has(mandate.id)) {
+			issues.push({ source, path: `${path}.id`, message: `identifiant en double : ${mandate.id}` });
+		}
+		knownIds.add(mandate.id);
+		if (mandate.election !== null && !electionIds.has(mandate.election)) {
+			issues.push({
+				source,
+				path: `${path}.election`,
+				message: `élection inconnue : ${mandate.election}`
+			});
+		}
+		if (mandate.election === null && !mandate.endsWithGovernment) {
+			issues.push({
+				source,
+				path: `${path}.endsWithGovernment`,
+				message: 'un mandat sans élection doit prendre fin avec le gouvernement'
+			});
+		}
+		mandate.requires.forEach((required, requiredIndex) => {
+			if (!mandateIds.has(required) || required === mandate.id) {
+				issues.push({
+					source,
+					path: `${path}.requires[${requiredIndex}]`,
+					message: `mandat requis invalide : ${required}`
+				});
+			}
+		});
+		if (mandate.timePerTurn >= timeBudgetPerTurn) {
+			issues.push({
+				source,
+				path: `${path}.timePerTurn`,
+				message: `temps réservé ${mandate.timePerTurn} supérieur ou égal au budget trimestriel`
+			});
+		}
+		issues.push(...duplicateResources(mandate.income, source, `${path}.income`, 'les revenus'));
+	});
+	institutions.incompatibilities.forEach(([left, right], index) => {
+		if (!mandateIds.has(left) || !mandateIds.has(right) || left === right) {
+			issues.push({
+				source,
+				path: `institutions.incompatibilities[${index}]`,
+				message: `incompatibilité invalide : ${left} / ${right}`
+			});
+		}
+	});
 	return issues;
 }
 
@@ -606,6 +759,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	const castCatalog = castCatalogSchema.safeParse(raw.cast);
 	const world = worldSchema.safeParse(raw.world);
 	const traitCatalog = traitCatalogSchema.safeParse(raw.traits);
+	const careerCatalog = careerCatalogSchema.safeParse(raw.career);
 	const eventFiles = Object.keys(raw.events)
 		.sort()
 		.map((source) => ({ source, parsed: eventCatalogSchema.safeParse(raw.events[source]) }));
@@ -617,6 +771,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	if (!castCatalog.success) issues.push(...zodIssues('cast.json', castCatalog.error));
 	if (!world.success) issues.push(...zodIssues('world.json', world.error));
 	if (!traitCatalog.success) issues.push(...zodIssues('traits.json', traitCatalog.error));
+	if (!careerCatalog.success) issues.push(...zodIssues('career.json', careerCatalog.error));
 	for (const { source, parsed } of eventFiles) {
 		if (!parsed.success) issues.push(...zodIssues(source, parsed.error));
 	}
@@ -627,6 +782,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 		!castCatalog.success ||
 		!world.success ||
 		!traitCatalog.success ||
+		!careerCatalog.success ||
 		eventFiles.some(({ parsed }) => !parsed.success)
 	) {
 		return { ok: false, issues };
@@ -651,8 +807,22 @@ export function validateContent(raw: RawContent): ContentValidation {
 		)
 	);
 	issues.push(...crossCheckWorld(world.data, balance.data, knownIds));
-	const partyIdSet = new Set(world.data.parties.map((party) => party.id));
-	issues.push(...crossCheckPolitics(actionList, upgradeList, sourcedEvents, partyIdSet));
+	const career = careerCatalog.data;
+	issues.push(
+		...crossCheckCareer(
+			career.elections,
+			career.mandates,
+			career.institutions,
+			balance.data.timeBudgetPerTurn,
+			knownIds
+		)
+	);
+	const refs: Refs = {
+		parties: new Set(world.data.parties.map((party) => party.id)),
+		mandates: new Set(career.mandates.map((mandate) => mandate.id)),
+		elections: new Set(career.elections.map((election) => election.id))
+	};
+	issues.push(...crossCheckPolitics(actionList, upgradeList, sourcedEvents, refs));
 	if (issues.length > 0) return { ok: false, issues };
 
 	const actions: Record<string, ActionDefinition> = {};
@@ -665,6 +835,10 @@ export function validateContent(raw: RawContent): ContentValidation {
 	for (const member of castList) cast[member.id] = member;
 	const traits: Record<string, TraitDefinition> = {};
 	for (const trait of traitList) traits[trait.id] = trait;
+	const elections: Record<string, ElectionDefinition> = {};
+	for (const election of career.elections) elections[election.id] = election;
+	const mandates: Record<string, MandateDefinition> = {};
+	for (const mandate of career.mandates) mandates[mandate.id] = mandate;
 	const parties: Record<string, PartyDefinition> = {};
 	for (const party of world.data.parties) parties[party.id] = party;
 	return {
@@ -677,6 +851,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 				cast: castCatalog.data,
 				world: world.data,
 				traits: traitCatalog.data,
+				career,
 				events: Object.fromEntries(eventFiles.map(({ source, parsed }) => [source, parsed.data]))
 			}),
 			balance: balance.data,
@@ -691,6 +866,11 @@ export function validateContent(raw: RawContent): ContentValidation {
 			world: world.data,
 			traits,
 			traitIds: traitList.map((trait) => trait.id),
+			elections,
+			electionIds: career.elections.map((election) => election.id),
+			mandates,
+			mandateIds: career.mandates.map((mandate) => mandate.id),
+			institutions: career.institutions,
 			parties,
 			partyIds: world.data.parties.map((party) => party.id)
 		}

@@ -28,6 +28,11 @@
 					{plan.timeRemaining} / {plan.timeAvailable} restants
 				</span>
 			</div>
+			{#if plan.timeReserved > 0}
+				<p class="text-xs text-muted" data-testid="time-reserved">
+					{plan.timeReserved} points réservés par vos mandats.
+				</p>
+			{/if}
 			<div
 				class="mt-1 h-2 rounded-full bg-sidebar"
 				role="meter"

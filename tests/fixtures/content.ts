@@ -48,6 +48,82 @@ export const fixtureBalance = {
 		replacementMaxAge: 40,
 		revealChancePerEncounter: 0,
 		maxMemories: 3
+	},
+	// Scrutins sans aléa par défaut : le parti le plus fort l'emporte.
+	elections: { voteVolatility: 0, momentum: 1, newGovernmentStability: 60, alertLeadTurns: 2 }
+};
+
+/** Calendrier et mandats de test : scrutins éloignés pour ne pas gêner les autres tests. */
+export const fixtureCareer = {
+	elections: [
+		{
+			id: 'election.local',
+			label: 'Élection locale',
+			firstTurn: 40,
+			cycleTurns: 24,
+			filingLeadTurns: 2,
+			scope: 'local',
+			decidesGovernment: false
+		},
+		{
+			id: 'election.national',
+			label: 'Élection nationale',
+			firstTurn: 60,
+			cycleTurns: 20,
+			filingLeadTurns: 2,
+			scope: 'national',
+			decidesGovernment: true
+		}
+	],
+	mandates: [
+		{
+			id: 'mandate.councillor',
+			label: 'Siège local',
+			rank: 10,
+			election: 'election.local',
+			endsWithGovernment: false,
+			requires: [],
+			timePerTurn: 10,
+			income: [{ resource: 'influence', amount: 1 }],
+			stressPerTurn: 0
+		},
+		{
+			id: 'mandate.mayor',
+			label: 'Mairie',
+			rank: 30,
+			election: 'election.local',
+			endsWithGovernment: false,
+			requires: ['mandate.councillor'],
+			timePerTurn: 20,
+			income: [{ resource: 'personalCashCents', amount: 50_000 }],
+			stressPerTurn: 2
+		},
+		{
+			id: 'mandate.deputy',
+			label: 'Siège national',
+			rank: 40,
+			election: 'election.national',
+			endsWithGovernment: false,
+			requires: [],
+			timePerTurn: 30,
+			income: [{ resource: 'influence', amount: 4 }],
+			stressPerTurn: 1
+		},
+		{
+			id: 'mandate.minister',
+			label: 'Ministère',
+			rank: 60,
+			election: null,
+			endsWithGovernment: true,
+			requires: [],
+			timePerTurn: 40,
+			income: [{ resource: 'influence', amount: 6 }],
+			stressPerTurn: 3
+		}
+	],
+	institutions: {
+		incompatibilities: [['mandate.minister', 'mandate.deputy']],
+		maxMandates: 3
 	}
 };
 
@@ -485,7 +561,8 @@ function load(): Content {
 		cast: fixtureCast,
 		events: fixtureEvents,
 		world: fixtureWorld,
-		traits: fixtureTraits
+		traits: fixtureTraits,
+		career: fixtureCareer
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;

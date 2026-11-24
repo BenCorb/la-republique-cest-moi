@@ -16,6 +16,7 @@ import {
 	type ResourceId
 } from '../content/types.ts';
 import { nextInt, type RngState } from './random.ts';
+import type { CareerEffect } from './career.ts';
 import type { PoliticalEffect } from './world.ts';
 
 export type EffectRange =
@@ -36,7 +37,9 @@ export type EffectRange =
 			readonly party: string | null;
 	  }
 	/** Effet sur un acteur d'événement : jamais chiffré pour le joueur. */
-	| { readonly kind: 'people'; readonly role: string };
+	| { readonly kind: 'people'; readonly role: string }
+	| { readonly kind: 'mandate'; readonly change: 'grant' | 'end'; readonly mandate: string }
+	| { readonly kind: 'earlyElection'; readonly election: string; readonly delayTurns: number };
 
 export type ResolvedEffect =
 	| {
@@ -54,7 +57,9 @@ export type ResolvedEffect =
 	/** Effet politique déterministe, appliqué par `applyPoliticalEffect`. */
 	| { readonly kind: 'politics'; readonly effect: PoliticalEffect; readonly rng: RngState }
 	/** Effet sur un acteur d'événement, appliqué par le moteur d'événements. */
-	| { readonly kind: 'people'; readonly effect: PeopleEffect; readonly rng: RngState };
+	| { readonly kind: 'people'; readonly effect: PeopleEffect; readonly rng: RngState }
+	/** Effet de carrière déterministe, appliqué par `applyCareerEffect`. */
+	| { readonly kind: 'career'; readonly effect: CareerEffect; readonly rng: RngState };
 
 export type PeopleEffect = Extract<Effect, { op: 'addRelation' | 'revealTraits' }>;
 
@@ -87,6 +92,12 @@ export function effectRange(effect: Effect): EffectRange {
 		case 'addRelation':
 		case 'revealTraits':
 			return { kind: 'people', role: effect.role };
+		case 'grantMandate':
+			return { kind: 'mandate', change: 'grant', mandate: effect.mandate };
+		case 'endMandate':
+			return { kind: 'mandate', change: 'end', mandate: effect.mandate };
+		case 'callEarlyElection':
+			return { kind: 'earlyElection', election: effect.election, delayTurns: effect.delayTurns };
 		default: {
 			const unknown: never = effect;
 			throw new Error(`Effet inconnu : ${JSON.stringify(unknown)}`);
@@ -112,6 +123,10 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 		case 'addRelation':
 		case 'revealTraits':
 			return { kind: 'people', effect, rng };
+		case 'grantMandate':
+		case 'endMandate':
+		case 'callEarlyElection':
+			return { kind: 'career', effect, rng };
 		default: {
 			const unknown: never = effect;
 			throw new Error(`Effet inconnu : ${JSON.stringify(unknown)}`);

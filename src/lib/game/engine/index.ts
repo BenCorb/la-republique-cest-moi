@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.9.0';
+export const RULES_VERSION = '0.10.0';
 
 export {
 	START_YEAR,
@@ -64,6 +64,12 @@ export {
 	type WellbeingRecord,
 	type WellbeingSource,
 	type Affiliation,
+	type Ballot,
+	type BallotShare,
+	type DeadlinesRecord,
+	type InstitutionsState,
+	type MandateEndReason,
+	type MandateInstance,
 	type Character,
 	type CharacterStatus,
 	type CharactersRecord,
@@ -76,6 +82,25 @@ export {
 	type WorldRecord,
 	type WorldState
 } from './state.ts';
+export {
+	activeMandates,
+	applyCareerEffect,
+	ballotId,
+	careerEffectIssue,
+	conflictingMandates,
+	createCalendar,
+	holdIssue,
+	isCareerEffect,
+	mainMandate,
+	mandateIncome,
+	reservedTime,
+	resolveDeadlines,
+	scheduledBallot,
+	termId,
+	type CareerEffect,
+	type CareerParts,
+	type FrontierDeadlines
+} from './career.ts';
 export {
 	addRelation,
 	characterId,

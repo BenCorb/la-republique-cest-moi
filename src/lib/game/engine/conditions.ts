@@ -7,12 +7,13 @@
  */
 import type { Condition, StatId } from '../content/types.ts';
 import { ageAt, quarterOf, yearOf } from './calendar.ts';
+import { activeMandates, holdIssue } from './career.ts';
 import type { GameState } from './state.ts';
 
 /** Sous-ensemble de l'état suffisant pour évaluer une condition. */
 export type ConditionContext = Pick<
 	GameState,
-	'turn' | 'player' | 'resources' | 'upgrades' | 'world'
+	'turn' | 'player' | 'resources' | 'upgrades' | 'world' | 'mandates' | 'institutions'
 >;
 
 export function readStat(context: ConditionContext, stat: StatId): number {
@@ -52,6 +53,8 @@ export function readStat(context: ConditionContext, stat: StatId): number {
 				context.player.partyId === context.world.governingPartyId
 				? 1
 				: 0;
+		case 'player.mandates':
+			return activeMandates(context.mandates).length;
 		default: {
 			const unknown: never = stat;
 			throw new Error(`Statistique inconnue : ${String(unknown)}`);
@@ -75,6 +78,12 @@ export function evaluateCondition(context: ConditionContext, condition: Conditio
 			return readStat(context, condition.stat) === condition.value;
 		case 'memberOf':
 			return context.player.partyId === condition.party;
+		case 'holdsMandate':
+			return activeMandates(context.mandates).some(
+				(mandate) => mandate.mandateId === condition.mandate
+			);
+		case 'canHoldMandate':
+			return holdIssue(condition.mandate, context.mandates, context.institutions, null) === null;
 		default: {
 			const unknown: never = condition;
 			throw new Error(`Condition inconnue : ${JSON.stringify(unknown)}`);

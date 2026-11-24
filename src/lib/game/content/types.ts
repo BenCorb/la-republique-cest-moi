@@ -86,7 +86,9 @@ export const STAT_IDS = [
 	/** Force du parti du joueur (0 sans parti). */
 	'player.partyStrength',
 	/** 1 si le parti du joueur conduit le gouvernement, sinon 0. */
-	'player.partyGoverning'
+	'player.partyGoverning',
+	/** Nombre de mandats en cours du joueur (P2-02). */
+	'player.mandates'
 ] as const;
 export type StatId = (typeof STAT_IDS)[number];
 
@@ -99,7 +101,11 @@ export type Condition =
 	| { readonly op: 'not'; readonly condition: Condition }
 	| { readonly op: ComparisonOp; readonly stat: StatId; readonly value: number }
 	/** Le joueur est membre de ce parti. */
-	| { readonly op: 'memberOf'; readonly party: string };
+	| { readonly op: 'memberOf'; readonly party: string }
+	/** Le joueur exerce un mandat de cette définition. */
+	| { readonly op: 'holdsMandate'; readonly mandate: string }
+	/** Le joueur pourrait recevoir ce mandat sans en quitter aucun (cumul et incompatibilités). */
+	| { readonly op: 'canHoldMandate'; readonly mandate: string };
 
 export type Effect =
 	| { readonly op: 'addResource'; readonly resource: ResourceId; readonly value: number }
@@ -145,7 +151,20 @@ export type Effect =
 			readonly memory?: string | undefined;
 	  }
 	/** Révèle au joueur les traits cachés de l'acteur du rôle. */
-	| { readonly op: 'revealTraits'; readonly role: string };
+	| { readonly op: 'revealTraits'; readonly role: string }
+	| {
+			readonly op: 'grantMandate';
+			readonly mandate: string;
+			/**
+			 * `true` : les mandats incompatibles en cours prennent fin (un ministre
+			 * laisse son siège à son suppléant) ; sinon l'effet exige la compatibilité.
+			 */
+			readonly replaceIncompatible?: boolean | undefined;
+	  }
+	/** Fin d'un mandat en cours : définition, ou `target` (exemplaire choisi dans le plan). */
+	| { readonly op: 'endMandate'; readonly mandate: string }
+	/** Élection anticipée : remplace l'échéance régulière prévue de ce type. */
+	| { readonly op: 'callEarlyElection'; readonly election: string; readonly delayTurns: number };
 
 export interface ResourceAmount {
 	readonly resource: ResourceId;
@@ -168,8 +187,11 @@ export interface ActionDefinition {
 	/** Explication affichée lorsque le prérequis n'est pas rempli. */
 	readonly unavailableReason?: string | undefined;
 	readonly effects: readonly Effect[];
-	/** Cible à choisir dans le plan : `party` pour une action portant sur un parti. */
-	readonly target?: 'party' | undefined;
+	/**
+	 * Cible à choisir dans le plan : `party` (identifiant de parti) ou `mandate`
+	 * (exemplaire de mandat en cours).
+	 */
+	readonly target?: 'party' | 'mandate' | undefined;
 }
 
 /**
@@ -300,6 +322,19 @@ export interface Balance {
 	readonly events: EventsBalance;
 	readonly world: WorldBalance;
 	readonly characters: CharactersBalance;
+	readonly elections: ElectionsBalance;
+}
+
+/** Paramètres des scrutins et du gouvernement (hypothèses de tuning, P2-02). */
+export interface ElectionsBalance {
+	/** Aléa maximal ajouté à la force de chaque parti au scrutin. */
+	readonly voteVolatility: number;
+	/** Force gagnée par le vainqueur d'un scrutin, perdue par le gouvernement battu. */
+	readonly momentum: number;
+	/** Stabilité d'un nouveau gouvernement après alternance. */
+	readonly newGovernmentStability: number;
+	/** Trimestres avant une échéance où une alerte est affichée. */
+	readonly alertLeadTurns: number;
 }
 
 /** Bornes de l'attitude d'un personnage envers le joueur. */
@@ -344,6 +379,61 @@ export interface AxisDefinition {
 	/** Adjectif (accordé avec « parti ») du pôle négatif (-100) puis du pôle positif (100). */
 	readonly negativeLabel: string;
 	readonly positiveLabel: string;
+}
+
+/**
+ * Type d'élection (GDD §7.3) : calendrier régulier fictif, échelle et effet sur
+ * le gouvernement. Le scrutin d'une échéance a lieu à la fin de son trimestre.
+ */
+export interface ElectionDefinition {
+	/** Identifiant stable, par exemple `election.legislative`. */
+	readonly id: string;
+	readonly label: string;
+	/** Trimestre du premier scrutin régulier. */
+	readonly firstTurn: number;
+	/** Trimestres entre deux scrutins réguliers (ou après une élection anticipée). */
+	readonly cycleTurns: number;
+	/** Trimestres avant le scrutin où les candidatures sont closes. */
+	readonly filingLeadTurns: number;
+	readonly scope: 'local' | 'regional' | 'national';
+	/** Le vainqueur forme le gouvernement (élections législatives). */
+	readonly decidesGovernment: boolean;
+}
+
+/**
+ * Fonction exercée par le joueur (GDD §7.1–7.2) : élective (terme lié à une
+ * élection) ou de nomination (fin avec le gouvernement). Chaque trimestre, elle
+ * réserve du temps, rapporte et stresse.
+ */
+export interface MandateDefinition {
+	/** Identifiant stable, par exemple `mandate.mayor`. */
+	readonly id: string;
+	readonly label: string;
+	/** Rang de présentation : la fonction principale est le mandat de rang le plus élevé. */
+	readonly rank: number;
+	/** Élection dont le scrutin met fin au mandat, `null` pour une nomination. */
+	readonly election: string | null;
+	/** Le mandat prend fin quand le parti au gouvernement change. */
+	readonly endsWithGovernment: boolean;
+	/** Mandats à détenir pour l'obtenir (un maire est d'abord conseiller municipal). */
+	readonly requires: readonly string[];
+	/** Points de temps réservés chaque trimestre. */
+	readonly timePerTurn: number;
+	/** Revenus et ressources perçus chaque trimestre. */
+	readonly income: readonly ResourceAmount[];
+	/** Stress ajouté chaque trimestre. */
+	readonly stressPerTurn: number;
+}
+
+/**
+ * Règles institutionnelles fictives du cumul (GDD §7.2), copiées dans l'état à
+ * la création : une réforme (P3-05) pourra les modifier en cours de partie.
+ */
+export interface InstitutionsDefinition {
+	/** Paires de mandats qui ne peuvent être détenus ensemble. */
+	readonly incompatibilities: readonly (readonly [string, string])[];
+	/** Nombre maximal de mandats simultanés. */
+	readonly maxMandates: number;
 }
 
 /** Catalogue du monde : partis, axes et noms des personnages générés. */
@@ -465,6 +555,12 @@ export interface Content {
 	readonly castIds: readonly string[];
 	readonly world: WorldDefinition;
 	readonly traits: Readonly<Record<string, TraitDefinition>>;
+	readonly elections: Readonly<Record<string, ElectionDefinition>>;
+	/** Ordre du catalogue : ordre stable de la résolution des scrutins d'un même trimestre. */
+	readonly electionIds: readonly string[];
+	readonly mandates: Readonly<Record<string, MandateDefinition>>;
+	readonly mandateIds: readonly string[];
+	readonly institutions: InstitutionsDefinition;
 	/** Ordre du catalogue : ordre stable des tirages de traits. */
 	readonly traitIds: readonly string[];
 	/** Partis indexés par identifiant. */

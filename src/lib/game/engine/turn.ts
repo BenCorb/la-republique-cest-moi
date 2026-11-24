@@ -9,7 +9,8 @@
  *   4. stress, santé, vieillissement, décès ..................... P1-04
  *      puis vieillissement et départs des personnages ........... P2-04
  *      puis évolution autonome du monde (indicateurs, partis) ... P2-01
- *   5. échéances ................................................ alpha
+ *   3 bis. revenus et stress des mandats ......................... P2-02
+ *   5. échéances : fins de mandat, scrutins, calendrier ........... P2-02
  *   6. passage à T+1 (une seule fois), journal du trimestre T,
  *      suites dues et tirage des événements ......................... P1-01, P1-05
  *   7. phase `decision` si un choix bloquant attend, sinon `planning`  P1-01, P1-05
@@ -25,6 +26,9 @@ import { chooseEvent, resolveEventFrontier } from './events.ts';
 import { resolveWellbeing } from './health.ts';
 import { executePlan, previewPlan } from './plan.ts';
 import { resolveCharacters } from './characters.ts';
+import { mandateIncome, reservedTime, resolveDeadlines } from './career.ts';
+import { applyGauge } from './effects.ts';
+import { RESOURCE_IDS, type ResourceId } from '../content/types.ts';
 import { resolveWorld } from './world.ts';
 import type { CommandError, CommitTurnCommand, GameCommand, TransitionResult } from './commands.ts';
 import type { EndState, GameState, HistoryEntry } from './state.ts';
@@ -79,10 +83,24 @@ function commitTurn(
 	const resolvedTurn = state.turn;
 	const economy = resolveEconomy(execution.resources, execution.upgrades, resolvedTurn, content);
 
-	// 4. Stress, santé, vieillissement et décès à la frontière T/T+1.
+	// 3 bis. Revenus et stress des mandats exercés pendant T (démissions du plan comprises).
+	const mandates = mandateIncome(execution.career.mandates, resolvedTurn, content);
+	const afterMandates: Record<ResourceId, number> = { ...economy.resources };
+	for (const amount of mandates.income) afterMandates[amount.resource] += amount.amount;
+	const stressed = applyGauge(execution.player.stress, mandates.stress);
+	const mandateRecord = {
+		changes: RESOURCE_IDS.flatMap((resource) => {
+			const amount = mandates.income.find((entry) => entry.resource === resource)?.amount ?? 0;
+			return amount === 0 ? [] : [{ resource, delta: amount }];
+		}),
+		stress: stressed.applied
+	};
+
+	// 4. Stress, santé, vieillissement et décès à la frontière T/T+1. Le temps
+	// réservé par les mandats (en début de trimestre) compte dans la charge.
 	const wellbeing = resolveWellbeing(
-		execution.player,
-		execution.timeUsed,
+		{ ...execution.player, stress: stressed.value },
+		execution.timeUsed + reservedTime(state.mandates, content),
 		resolvedTurn,
 		execution.rng,
 		content.balance.wellbeing
@@ -97,20 +115,37 @@ function commitTurn(
 		? resolveWorld(execution.world, people.characters, nextTurn, people.rng, content)
 		: null;
 
+	// 5. Échéances de la fin de T : fins de mandat, scrutins, échéances suivantes.
+	const deadlines = world
+		? resolveDeadlines(
+				world.world,
+				execution.career.mandates,
+				execution.career.ballots,
+				resolvedTurn,
+				world.rng,
+				content
+			)
+		: null;
+
 	// 6. Passage à T+1, puis suites dues et tirage des événements (sauf décès en 4).
 	const frontier = world
 		? resolveEventFrontier(
 				{
 					turn: nextTurn,
 					player: wellbeing.player,
-					resources: economy.resources,
+					resources: afterMandates,
 					upgrades: execution.upgrades,
-					rng: world.rng,
+					rng: deadlines!.rng,
 					nextInstanceNumber: execution.nextInstanceNumber,
 					events: state.events,
-					world: world.world,
+					world: deadlines!.world,
 					characters: world.characters,
-					relationships: state.relationships
+					relationships: state.relationships,
+					career: {
+						mandates: deadlines!.mandates,
+						ballots: deadlines!.ballots,
+						institutions: execution.career.institutions
+					}
 				},
 				content
 			)
@@ -121,9 +156,11 @@ function commitTurn(
 		turn: resolvedTurn,
 		steps: execution.records,
 		economy: { producers: economyRecords(economy), changes: economy.changes },
+		mandates: mandateRecord,
 		wellbeing: wellbeing.record,
 		characters: people?.record ?? null,
 		world: world?.record ?? null,
+		deadlines: deadlines?.record ?? null,
 		events: frontier?.records ?? []
 	};
 
@@ -143,10 +180,13 @@ function commitTurn(
 			end,
 			rng: frontier?.rng ?? wellbeing.rng,
 			player: frontier?.player ?? wellbeing.player,
-			resources: frontier?.resources ?? economy.resources,
+			resources: frontier?.resources ?? afterMandates,
 			world: frontier?.world ?? execution.world,
 			characters: frontier?.characters ?? state.characters,
 			relationships: frontier?.relationships ?? state.relationships,
+			mandates: frontier?.career.mandates ?? execution.career.mandates,
+			ballots: frontier?.career.ballots ?? execution.career.ballots,
+			institutions: frontier?.career.institutions ?? execution.career.institutions,
 			upgrades: execution.upgrades,
 			nextInstanceNumber: frontier?.nextInstanceNumber ?? execution.nextInstanceNumber,
 			events,

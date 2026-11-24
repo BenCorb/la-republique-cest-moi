@@ -26,6 +26,10 @@ import {
 	type AgeBand,
 	type AxisDefinition,
 	type CharactersBalance,
+	type ElectionDefinition,
+	type ElectionsBalance,
+	type InstitutionsDefinition,
+	type MandateDefinition,
 	type Balance,
 	type Condition,
 	type CastMember,
@@ -58,7 +62,9 @@ export const conditionSchema: z.ZodType<Condition> = z.lazy(() =>
 		z.strictObject({ op: z.literal('any'), conditions: z.array(conditionSchema).min(1) }),
 		z.strictObject({ op: z.literal('not'), condition: conditionSchema }),
 		z.strictObject({ op: z.enum(COMPARISON_OPS), stat: z.enum(STAT_IDS), value: safeInt }),
-		z.strictObject({ op: z.literal('memberOf'), party: contentId })
+		z.strictObject({ op: z.literal('memberOf'), party: contentId }),
+		z.strictObject({ op: z.literal('holdsMandate'), mandate: contentId }),
+		z.strictObject({ op: z.literal('canHoldMandate'), mandate: contentId })
 	])
 );
 
@@ -118,6 +124,20 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 	z.strictObject({
 		op: z.literal('revealTraits'),
 		role: z.string().regex(/^[a-z][a-z0-9_]*$/, 'rôle en minuscules')
+	}),
+	z.strictObject({
+		op: z.literal('grantMandate'),
+		mandate: contentId,
+		replaceIncompatible: z.boolean().optional()
+	}),
+	z.strictObject({
+		op: z.literal('endMandate'),
+		mandate: z.union([contentId, z.literal('target')])
+	}),
+	z.strictObject({
+		op: z.literal('callEarlyElection'),
+		election: contentId,
+		delayTurns: safeInt.refine((value) => value >= 1 && value <= 8, 'délai de 1 à 8 trimestres')
 	})
 ]);
 
@@ -137,7 +157,7 @@ export const actionSchema: z.ZodType<ActionDefinition> = z
 		requires: conditionSchema.optional(),
 		unavailableReason: frenchText.optional(),
 		effects: z.array(effectSchema).min(1),
-		target: z.literal('party').optional()
+		target: z.enum(['party', 'mandate']).optional()
 	})
 	.refine(
 		(action) => (action.requires === undefined) === (action.unavailableReason === undefined),
@@ -426,6 +446,51 @@ export const charactersBalanceSchema: z.ZodType<CharactersBalance> = z
 		path: ['replacementMaxAge']
 	});
 
+export const electionsBalanceSchema: z.ZodType<ElectionsBalance> = z.strictObject({
+	voteVolatility: nonNegativeInt,
+	momentum: nonNegativeInt,
+	newGovernmentStability: gaugeValue,
+	alertLeadTurns: nonNegativeInt
+});
+
+export const electionSchema: z.ZodType<ElectionDefinition> = z
+	.strictObject({
+		id: contentId.refine((value) => value.startsWith('election.'), 'identifiant « election.nom »'),
+		label: frenchText,
+		firstTurn: nonNegativeInt,
+		cycleTurns: positiveInt,
+		filingLeadTurns: nonNegativeInt,
+		scope: z.enum(['local', 'regional', 'national']),
+		decidesGovernment: z.boolean()
+	})
+	.refine((election) => election.filingLeadTurns < election.cycleTurns, {
+		message: 'la clôture des candidatures doit précéder le scrutin dans le cycle',
+		path: ['filingLeadTurns']
+	});
+
+export const mandateSchema: z.ZodType<MandateDefinition> = z.strictObject({
+	id: contentId.refine((value) => value.startsWith('mandate.'), 'identifiant « mandate.nom »'),
+	label: frenchText,
+	rank: nonNegativeInt,
+	election: contentId.nullable(),
+	endsWithGovernment: z.boolean(),
+	requires: z.array(contentId),
+	timePerTurn: nonNegativeInt,
+	income: z.array(resourceAmountSchema),
+	stressPerTurn: nonNegativeInt
+});
+
+const institutionsSchema: z.ZodType<InstitutionsDefinition> = z.strictObject({
+	incompatibilities: z.array(z.tuple([contentId, contentId])),
+	maxMandates: positiveInt
+});
+
+export const careerCatalogSchema = z.strictObject({
+	elections: z.array(electionSchema).min(1),
+	mandates: z.array(mandateSchema).min(1),
+	institutions: institutionsSchema
+});
+
 export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	timeBudgetPerTurn: positiveInt,
 	startingResources: z.strictObject({
@@ -436,5 +501,6 @@ export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	wellbeing: wellbeingSchema,
 	events: eventsBalanceSchema,
 	world: worldBalanceSchema,
-	characters: charactersBalanceSchema
+	characters: charactersBalanceSchema,
+	elections: electionsBalanceSchema
 });

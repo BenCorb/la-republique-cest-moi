@@ -1,0 +1,178 @@
+{
+	"elections": [
+		{
+			"id": "election.municipal",
+			"label": "Élections municipales",
+			"firstTurn": 4,
+			"cycleTurns": 24,
+			"filingLeadTurns": 2,
+			"scope": "local",
+			"decidesGovernment": false
+		},
+		{
+			"id": "election.senatorial",
+			"label": "Élections sénatoriales",
+			"firstTurn": 6,
+			"cycleTurns": 24,
+			"filingLeadTurns": 2,
+			"scope": "national",
+			"decidesGovernment": false
+		},
+		{
+			"id": "election.legislative",
+			"label": "Élections législatives",
+			"firstTurn": 9,
+			"cycleTurns": 20,
+			"filingLeadTurns": 2,
+			"scope": "national",
+			"decidesGovernment": true
+		},
+		{
+			"id": "election.regional",
+			"label": "Élections régionales",
+			"firstTurn": 16,
+			"cycleTurns": 24,
+			"filingLeadTurns": 2,
+			"scope": "regional",
+			"decidesGovernment": false
+		}
+	],
+	"mandates": [
+		{
+			"id": "mandate.municipal_councillor",
+			"label": "Siège au conseil municipal",
+			"rank": 10,
+			"election": "election.municipal",
+			"endsWithGovernment": false,
+			"requires": [],
+			"timePerTurn": 10,
+			"income": [
+				{
+					"resource": "influence",
+					"amount": 1
+				},
+				{
+					"resource": "personalCashCents",
+					"amount": 30000
+				}
+			],
+			"stressPerTurn": 0
+		},
+		{
+			"id": "mandate.mayor",
+			"label": "Mairie",
+			"rank": 30,
+			"election": "election.municipal",
+			"endsWithGovernment": false,
+			"requires": ["mandate.municipal_councillor"],
+			"timePerTurn": 25,
+			"income": [
+				{
+					"resource": "influence",
+					"amount": 3
+				},
+				{
+					"resource": "personalCashCents",
+					"amount": 300000
+				}
+			],
+			"stressPerTurn": 2
+		},
+		{
+			"id": "mandate.regional_councillor",
+			"label": "Siège au conseil régional",
+			"rank": 20,
+			"election": "election.regional",
+			"endsWithGovernment": false,
+			"requires": [],
+			"timePerTurn": 10,
+			"income": [
+				{
+					"resource": "influence",
+					"amount": 2
+				},
+				{
+					"resource": "personalCashCents",
+					"amount": 150000
+				}
+			],
+			"stressPerTurn": 1
+		},
+		{
+			"id": "mandate.deputy",
+			"label": "Siège à l’Assemblée nationale",
+			"rank": 40,
+			"election": "election.legislative",
+			"endsWithGovernment": false,
+			"requires": [],
+			"timePerTurn": 30,
+			"income": [
+				{
+					"resource": "influence",
+					"amount": 4
+				},
+				{
+					"resource": "personalCashCents",
+					"amount": 1500000
+				},
+				{
+					"resource": "politicalBudgetCents",
+					"amount": 500000
+				}
+			],
+			"stressPerTurn": 2
+		},
+		{
+			"id": "mandate.senator",
+			"label": "Siège au Sénat",
+			"rank": 40,
+			"election": "election.senatorial",
+			"endsWithGovernment": false,
+			"requires": [],
+			"timePerTurn": 25,
+			"income": [
+				{
+					"resource": "influence",
+					"amount": 4
+				},
+				{
+					"resource": "personalCashCents",
+					"amount": 1500000
+				},
+				{
+					"resource": "politicalBudgetCents",
+					"amount": 300000
+				}
+			],
+			"stressPerTurn": 1
+		},
+		{
+			"id": "mandate.minister",
+			"label": "Portefeuille ministériel",
+			"rank": 60,
+			"election": null,
+			"endsWithGovernment": true,
+			"requires": [],
+			"timePerTurn": 40,
+			"income": [
+				{
+					"resource": "influence",
+					"amount": 6
+				},
+				{
+					"resource": "personalCashCents",
+					"amount": 2400000
+				}
+			],
+			"stressPerTurn": 4
+		}
+	],
+	"institutions": {
+		"incompatibilities": [
+			["mandate.deputy", "mandate.senator"],
+			["mandate.minister", "mandate.deputy"],
+			["mandate.minister", "mandate.senator"]
+		],
+		"maxMandates": 3
+	}
+}

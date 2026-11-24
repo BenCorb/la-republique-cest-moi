@@ -32,9 +32,11 @@ function game(
 			turn: index,
 			steps: [],
 			economy: { producers: [], changes: [] },
+			mandates: { changes: [], stress: 0 },
 			wellbeing: { contributions: [], deathCause: null },
 			characters: null,
 			world: null,
+			deadlines: null,
 			events: []
 		})),
 		resources: { ...base.resources, ...resources },

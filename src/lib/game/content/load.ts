@@ -8,6 +8,7 @@ import actions from './data/actions.json';
 import balance from './data/balance.json';
 import cast from './data/cast.json';
 import upgrades from './data/upgrades.json';
+import career from './data/career.json';
 import traits from './data/traits.json';
 import world from './data/world.json';
 import type { Content } from './types.ts';
@@ -23,7 +24,16 @@ export function loadContent(): Content {
 	for (const [path, module] of Object.entries(eventModules)) {
 		events[path.replace('./data/', '')] = module;
 	}
-	const result = validateContent({ actions, upgrades, balance, cast, events, world, traits });
+	const result = validateContent({
+		actions,
+		upgrades,
+		balance,
+		cast,
+		events,
+		world,
+		traits,
+		career
+	});
 	if (!result.ok) {
 		const details = result.issues
 			.map((issue) => `${issue.source} ${issue.path} : ${issue.message}`)

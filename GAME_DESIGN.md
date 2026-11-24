@@ -213,6 +213,8 @@ La progression n’est pas un arbre d’améliorations imposé. Un personnage pe
 
 Le personnage possède une fonction principale et potentiellement plusieurs fonctions secondaires. Les combinaisons autorisées dépendent des règles institutionnelles en vigueur dans l’univers du jeu. Chaque mandat porte ses propres avantages et contraintes (revenus, influence, visibilité, stress, charges et échéances). Le cumul est une source de croissance incrémentale, mais aussi un arbitrage de disponibilité et de risque.
 
+**Hypothèses provisoires de l’alpha (P2-02, 24 novembre 2026, choix délégués par le créateur) :** six fonctions — siège au conseil municipal, mairie (réservée aux membres du conseil), siège au conseil régional, siège à l’Assemblée nationale, siège au Sénat, portefeuille ministériel (nomination, fin avec le gouvernement). Assemblée et Sénat sont incompatibles, le ministère est incompatible avec les deux (le siège passe au suppléant), trois mandats au plus. Chaque mandat réserve du temps chaque trimestre, rapporte des indemnités et de l’influence et ajoute du stress. Calendrier fictif régulier : municipales et régionales tous les six ans, législatives tous les cinq ans (elles désignent le gouvernement), sénatoriales tous les six ans ; une dissolution peut provoquer des législatives anticipées. Chiffres modifiables à l’équilibrage.
+
 ### 7.3 Calendrier et liberté de candidature
 
 Les élections régulières sont annoncées longtemps à l’avance dans un calendrier consultable. Le joueur peut décider librement de préparer sa candidature, dès lors que les conditions d’éligibilité fictives sont remplies. Les élections anticipées et les nominations peuvent aussi ouvrir des opportunités inattendues.

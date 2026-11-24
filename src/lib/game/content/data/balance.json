@@ -92,5 +92,11 @@
 		"replacementMaxAge": 55,
 		"revealChancePerEncounter": 0.3,
 		"maxMemories": 6
+	},
+	"elections": {
+		"voteVolatility": 3,
+		"momentum": 1,
+		"newGovernmentStability": 62,
+		"alertLeadTurns": 4
 	}
 }

@@ -4,9 +4,17 @@
  * L'état est un objet JSON pur (nombres, chaînes, booléens, tableaux, objets,
  * `null`) : il se sérialise et se recharge sans perte.
  */
-import type { Content, GaugeId, IndicatorId, ResourceId, Resources } from '../content/types.ts';
+import type {
+	Content,
+	GaugeId,
+	IndicatorId,
+	InstitutionsDefinition,
+	ResourceId,
+	Resources
+} from '../content/types.ts';
 import { TURNS_PER_YEAR, type Turn } from './calendar.ts';
 import { createRng, type RngState } from './random.ts';
+import { createCalendar } from './career.ts';
 import { createCast } from './characters.ts';
 import { createWorld } from './world.ts';
 
@@ -125,12 +133,82 @@ export interface WorldState {
 	readonly governingPartyId: string;
 }
 
+export type MandateEndReason = 'term' | 'resigned' | 'government_change' | 'replaced' | 'removed';
+
+/** Exemplaire de mandat exercé par le joueur (définition `mandate.*`, instance `term.N`). */
+export interface MandateInstance {
+	/** `term.N`, N étant le rang d'attribution (jamais réutilisé). */
+	readonly instanceId: string;
+	readonly mandateId: string;
+	/** Trimestre d'entrée en fonction : le mandat produit à partir de ce trimestre. */
+	readonly startTurn: Turn;
+	readonly access: 'election' | 'nomination';
+	readonly status: 'active' | 'ended';
+	/** Trimestre de fin, `null` tant que le mandat est en cours. */
+	readonly endTurn: Turn | null;
+	readonly endReason: MandateEndReason | null;
+}
+
+export interface BallotShare {
+	readonly partyId: string;
+	/** Part des suffrages, en % entier (le total vaut 100). */
+	readonly percent: number;
+}
+
+/** Échéance électorale (instance `ballot.N`) ; le scrutin a lieu à la fin de son trimestre. */
+export interface Ballot {
+	readonly ballotId: string;
+	readonly electionId: string;
+	readonly turn: Turn;
+	/** Dernier trimestre où une candidature peut être déposée (P2-03). */
+	readonly filingClosesTurn: Turn;
+	readonly early: boolean;
+	readonly status: 'scheduled' | 'held' | 'cancelled';
+	/** Parts triées par ordre décroissant, une fois le scrutin tenu. */
+	readonly shares: readonly BallotShare[] | null;
+	readonly winnerPartyId: string | null;
+	/** Motif d'annulation (élection anticipée), sinon `null`. */
+	readonly cancelReason: string | null;
+}
+
+/** Règles du cumul en vigueur, copiées du catalogue (modifiables par réforme, P3-05). */
+export interface InstitutionsState extends InstitutionsDefinition {
+	/** Mandats à détenir pour en obtenir un autre, par définition (copie de `requires`). */
+	readonly prerequisites: Readonly<Record<string, readonly string[]>>;
+}
+
 /** Variation politique produite par un effet (journal). */
 export type PoliticalChange =
 	| { readonly kind: 'indicator'; readonly indicator: IndicatorId; readonly delta: number }
 	| { readonly kind: 'partyStrength'; readonly partyId: string; readonly delta: number }
 	| { readonly kind: 'joined'; readonly partyId: string }
-	| { readonly kind: 'left'; readonly partyId: string };
+	| { readonly kind: 'left'; readonly partyId: string }
+	| { readonly kind: 'mandateStarted'; readonly instanceId: string; readonly mandateId: string }
+	| {
+			readonly kind: 'mandateEnded';
+			readonly instanceId: string;
+			readonly mandateId: string;
+			readonly reason: MandateEndReason;
+	  }
+	| {
+			readonly kind: 'earlyElection';
+			readonly ballotId: string;
+			readonly electionId: string;
+			readonly turn: Turn;
+	  };
+
+/** Échéances résolues à la fin du trimestre (étape 5 de l'ordre de tour). */
+export interface DeadlinesRecord {
+	/** Mandats arrivés à leur terme, puis scrutins tenus, dans l'ordre. */
+	readonly mandates: readonly PoliticalChange[];
+	readonly ballots: readonly {
+		readonly ballotId: string;
+		readonly electionId: string;
+		readonly winnerPartyId: string;
+		readonly governingBefore: string;
+		readonly governingAfter: string;
+	}[];
+}
 
 export interface LeaderChange {
 	readonly partyId: string;
@@ -274,12 +352,16 @@ export interface HistoryEntry {
 	readonly steps: readonly StepRecord[];
 	/** Charges et production des améliorations actives au trimestre T. */
 	readonly economy: EconomyRecord;
+	/** Revenus et stress des mandats exercés au trimestre T. */
+	readonly mandates: { readonly changes: readonly ResourceChange[]; readonly stress: number };
 	/** Charge de travail, récupération, vieillissement et éventuel décès. */
 	readonly wellbeing: WellbeingRecord;
 	/** Vieillissement, départs et successions, `null` si la carrière s'est terminée avant. */
 	readonly characters: CharactersRecord | null;
 	/** Évolution autonome du monde, `null` si la carrière s'est terminée avant. */
 	readonly world: WorldRecord | null;
+	/** Échéances (fins de mandat, scrutins), `null` si la carrière s'est terminée avant. */
+	readonly deadlines: DeadlinesRecord | null;
 	/** Événements créés (ou suites annulées) au passage à T+1. */
 	readonly events: readonly EventRecord[];
 }
@@ -329,6 +411,11 @@ export interface GameState {
 	readonly characters: Readonly<Record<string, Character>>;
 	/** Relations des personnages rencontrés envers le joueur. */
 	readonly relationships: Readonly<Record<string, Relationship>>;
+	/** Mandats du joueur, en cours et passés, dans l'ordre d'attribution. */
+	readonly mandates: readonly MandateInstance[];
+	/** Calendrier électoral : échéances tenues, annulées et à venir, dans l'ordre de création. */
+	readonly ballots: readonly Ballot[];
+	readonly institutions: InstitutionsState;
 	/** Journal : trimestres résolus et choix, dans l'ordre chronologique. */
 	readonly history: readonly JournalEntry[];
 	readonly end: EndState | null;
@@ -365,6 +452,20 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		world: world.world,
 		characters: cast.characters,
 		relationships: {},
+		mandates: [],
+		ballots: createCalendar(START_TURN, content),
+		institutions: {
+			incompatibilities: content.institutions.incompatibilities.map(
+				([left, right]) => [left, right] as const
+			),
+			maxMandates: content.institutions.maxMandates,
+			prerequisites: Object.fromEntries(
+				content.mandateIds.flatMap((id) => {
+					const requires = content.mandates[id]?.requires ?? [];
+					return requires.length > 0 ? [[id, [...requires]]] : [];
+				})
+			)
+		},
 		history: [],
 		end: null
 	};

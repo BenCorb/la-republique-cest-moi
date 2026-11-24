@@ -16,7 +16,7 @@
 					"role": "journalist",
 					"tags": ["journalist"],
 					"met": true,
-					"maxAttitude": -15
+					"maxAttitude": -8
 				}
 			],
 			"effects": [

@@ -251,6 +251,27 @@
 					"value": 3
 				}
 			]
+		},
+		{
+			"id": "mandate.resign",
+			"label": "Démissionner d’un mandat",
+			"description": "Libérer du temps et un siège, en promettant de « se consacrer pleinement » à autre chose. Le suppléant, lui, se consacre déjà pleinement à sa joie.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "gte",
+				"stat": "player.mandates",
+				"value": 1
+			},
+			"unavailableReason": "Vous n’exercez aucun mandat.",
+			"effects": [
+				{
+					"op": "endMandate",
+					"mandate": "target"
+				}
+			],
+			"target": "mandate"
 		}
 	]
 }

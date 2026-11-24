@@ -4,6 +4,7 @@
 		Briefcase,
 		Calendar,
 		Flag,
+		Award,
 		Landmark,
 		LayoutDashboard,
 		Newspaper,
@@ -35,6 +36,7 @@
 	const tabs: { id: GameTab; label: string; icon: typeof Calendar }[] = [
 		{ id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
 		{ id: 'agenda', label: 'Agenda', icon: Calendar },
+		{ id: 'career', label: 'Carrière', icon: Award },
 		{ id: 'world', label: 'Monde politique', icon: Flag },
 		{ id: 'relations', label: 'Relations', icon: Users },
 		{ id: 'organisation', label: 'Organisation', icon: Briefcase },
@@ -65,6 +67,10 @@
 				<p class="text-sm" data-testid="header-party">
 					<span class="text-muted">Étiquette</span>
 					<span class="font-semibold">{view.world.partyAcronym ?? 'aucune'}</span>
+				</p>
+				<p class="text-sm" data-testid="header-function">
+					<span class="text-muted">Fonction</span>
+					<span class="font-semibold">{view.career.mainFunction}</span>
 				</p>
 				<dl class="flex flex-wrap gap-x-5 gap-y-1 text-sm" aria-label="Ressources">
 					{#each view.resources as resource (resource.id)}

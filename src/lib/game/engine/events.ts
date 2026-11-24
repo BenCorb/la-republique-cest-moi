@@ -49,6 +49,7 @@ import {
 	sortedIds
 } from './characters.ts';
 import { applyPoliticalEffect, oppositionPartyId } from './world.ts';
+import { applyCareerEffect, careerEffectIssue, type CareerParts } from './career.ts';
 import type {
 	Character,
 	ChoiceRecord,
@@ -172,6 +173,7 @@ interface EffectParts {
 	readonly world: WorldState;
 	readonly characters: Readonly<Record<string, Character>>;
 	readonly relationships: Readonly<Record<string, Relationship>>;
+	readonly career: CareerParts;
 	readonly rng: RngState;
 }
 
@@ -191,7 +193,7 @@ function applyAutomaticEffects(
 	content: Content
 ): EffectOutcome {
 	const current: Record<ResourceId, number> = { ...parts.resources };
-	let { player, world, characters, relationships, rng } = parts;
+	let { player, world, characters, relationships, career, rng } = parts;
 	const politics: PoliticalChange[] = [];
 	const people: PeopleChange[] = [];
 	const deltas = new Map<ResourceId, number>();
@@ -239,6 +241,10 @@ function applyAutomaticEffects(
 				characters = { ...characters, [character.id]: outcome.character };
 				people.push(...outcome.changes);
 			}
+		} else if (resolved.kind === 'career') {
+			const outcome = applyCareerEffect(resolved.effect, career, turn, null, content);
+			career = outcome.parts;
+			politics.push(...outcome.changes);
 		} else {
 			const key = resolved.gauge === 'player.health' ? 'health' : 'stress';
 			const { value, applied } = applyGauge(player[key], resolved.delta);
@@ -253,6 +259,7 @@ function applyAutomaticEffects(
 		world,
 		characters,
 		relationships,
+		career,
 		rng,
 		politics,
 		people,
@@ -366,6 +373,7 @@ export interface FrontierInput {
 	readonly world: WorldState;
 	readonly characters: Readonly<Record<string, Character>>;
 	readonly relationships: Readonly<Record<string, Relationship>>;
+	readonly career: CareerParts;
 }
 
 export interface FrontierResult {
@@ -374,6 +382,7 @@ export interface FrontierResult {
 	readonly world: WorldState;
 	readonly characters: Readonly<Record<string, Character>>;
 	readonly relationships: Readonly<Record<string, Relationship>>;
+	readonly career: CareerParts;
 	readonly rng: RngState;
 	readonly nextInstanceNumber: number;
 	readonly events: EventsState;
@@ -382,7 +391,8 @@ export interface FrontierResult {
 }
 
 export function resolveEventFrontier(input: FrontierInput, content: Content): FrontierResult {
-	let { player, resources, rng, nextInstanceNumber, world, characters, relationships } = input;
+	let { player, resources, rng, nextInstanceNumber, world, characters, relationships, career } =
+		input;
 	const pool = (): CastPool => ({ characters, relationships });
 	const turn = input.turn;
 	const pending: EventInstance[] = [...input.events.pending];
@@ -397,7 +407,9 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		player,
 		resources,
 		upgrades: input.upgrades,
-		world
+		world,
+		mandates: career.mandates,
+		institutions: career.institutions
 	});
 
 	const create = (definition: EventDefinition, actors: Record<string, string>): void => {
@@ -437,12 +449,12 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		const outcome = applyAutomaticEffects(
 			definition.effects,
 			[],
-			{ resources, player, world, characters, relationships, rng },
+			{ resources, player, world, characters, relationships, career, rng },
 			actors,
 			turn,
 			content
 		);
-		({ resources, player, rng, world, characters, relationships } = outcome);
+		({ resources, player, rng, world, characters, relationships, career } = outcome);
 		records.push({
 			eventId: definition.id,
 			instanceId: instance.instanceId,
@@ -550,6 +562,7 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		world,
 		characters,
 		relationships,
+		career,
 		rng,
 		nextInstanceNumber,
 		events: {
@@ -571,7 +584,11 @@ export interface ChoiceAvailability {
 	readonly reason: string | null;
 }
 
-export function choiceAvailability(choice: EventChoice, state: GameState): ChoiceAvailability {
+export function choiceAvailability(
+	choice: EventChoice,
+	state: GameState,
+	content?: Content
+): ChoiceAvailability {
 	if (choice.requires && !evaluateCondition(state, choice.requires)) {
 		return {
 			available: false,
@@ -581,6 +598,16 @@ export function choiceAvailability(choice: EventChoice, state: GameState): Choic
 	const uncovered = choice.costs.find((cost) => state.resources[cost.resource] < cost.amount);
 	if (uncovered) {
 		return { available: false, reason: 'Ressources insuffisantes pour ce choix.' };
+	}
+	// Un mandat proposé doit respecter les règles du cumul en vigueur.
+	const career: CareerParts = {
+		mandates: state.mandates,
+		ballots: state.ballots,
+		institutions: state.institutions
+	};
+	for (const effect of choice.effects) {
+		const issue = careerEffectIssue(effect, career, content ?? null);
+		if (issue) return { available: false, reason: issue };
 	}
 	return { available: true, reason: null };
 }
@@ -614,7 +641,7 @@ export function chooseEvent(
 	}
 	const choice = definition.choices.find((candidate) => candidate.id === command.choiceId);
 	if (!choice) return reject(state, 'unknown_choice', 'Ce choix n’existe pas pour cet événement.');
-	const availability = choiceAvailability(choice, state);
+	const availability = choiceAvailability(choice, state, content);
 	if (!availability.available) {
 		return reject(state, 'choice_unavailable', availability.reason ?? 'Choix indisponible.');
 	}
@@ -628,6 +655,11 @@ export function chooseEvent(
 			world: state.world,
 			characters: state.characters,
 			relationships: state.relationships,
+			career: {
+				mandates: state.mandates,
+				ballots: state.ballots,
+				institutions: state.institutions
+			},
 			rng: state.rng
 		},
 		instance.actors,
@@ -662,7 +694,9 @@ export function chooseEvent(
 		player: outcome.player,
 		resources: outcome.resources,
 		upgrades: state.upgrades,
-		world: outcome.world
+		world: outcome.world,
+		mandates: outcome.career.mandates,
+		institutions: outcome.career.institutions
 	};
 	const cancelled: { instanceId: string; reason: string }[] = [];
 	const remaining = state.events.pending.slice(1).filter((other) => {
@@ -705,6 +739,9 @@ export function chooseEvent(
 			world: outcome.world,
 			characters: outcome.characters,
 			relationships: outcome.relationships,
+			mandates: outcome.career.mandates,
+			ballots: outcome.career.ballots,
+			institutions: outcome.career.institutions,
 			rng: outcome.rng,
 			phase: deathCause ? 'ended' : remaining.length > 0 ? 'decision' : 'planning',
 			end: deathCause ? { turn: state.turn, reason: 'death', cause: deathCause } : null,
@@ -774,7 +811,7 @@ export function describePendingEvent(state: GameState, content: Content): Pendin
 			label: render(choice.label),
 			hints: choice.hints.map(render),
 			costs: choice.costs,
-			...choiceAvailability(choice, state)
+			...choiceAvailability(choice, state, content)
 		})),
 		remaining: state.events.pending.length - 1
 	};

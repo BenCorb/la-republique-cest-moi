@@ -8,6 +8,7 @@
 	import Journal from '#lib/components/journal/Journal.svelte';
 	import Organisation from '#lib/components/organisation/Organisation.svelte';
 	import WorldPanel from '#lib/components/world/WorldPanel.svelte';
+	import CareerPanel from '#lib/components/career/CareerPanel.svelte';
 	import RelationsPanel from '#lib/components/people/RelationsPanel.svelte';
 	import GameLayout from '#lib/components/shell/GameLayout.svelte';
 	import GameShell from '#lib/components/shell/GameShell.svelte';
@@ -77,6 +78,8 @@
 			<Dashboard {session} />
 		{:else if tab === 'agenda'}
 			<Agenda {session} />
+		{:else if tab === 'career'}
+			<CareerPanel {session} />
 		{:else if tab === 'world'}
 			<WorldPanel {session} />
 		{:else if tab === 'relations'}

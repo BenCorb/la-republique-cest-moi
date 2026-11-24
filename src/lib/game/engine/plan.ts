@@ -43,6 +43,14 @@ import type {
 	WorldState
 } from './state.ts';
 import { applyPoliticalEffect, isPoliticalEffect } from './world.ts';
+import {
+	activeMandates,
+	applyCareerEffect,
+	isCareerEffect,
+	mandateIncome,
+	reservedTime,
+	type CareerParts
+} from './career.ts';
 
 export type PlanIssueCode =
 	| 'invalid_plan'
@@ -101,6 +109,8 @@ export interface PlanStepPreview {
 export interface PlanPreview {
 	readonly valid: boolean;
 	readonly timeAvailable: number;
+	/** Temps réservé par les mandats en cours (déjà retiré du temps disponible). */
+	readonly timeReserved: number;
 	/** Temps des étapes valides du plan. */
 	readonly timeUsed: number;
 	readonly timeRemaining: number;
@@ -145,36 +155,43 @@ function targetOf(step: PlanStep): string | null {
 	return step.kind === 'action' ? (step.target ?? null) : null;
 }
 
+/** Parties de l'état modifiées par les effets politiques et de carrière d'une action. */
+interface StateParts {
+	readonly player: PlayerState;
+	readonly world: WorldState;
+	readonly career: CareerParts;
+}
+
 /**
- * Applique les effets politiques (certains) d'une action sur un état de travail.
- * Utilisé à l'identique par la prévision et l'exécution.
+ * Applique les effets certains d'une action (adhésion, monde, mandats) sur un
+ * état de travail. Utilisé à l'identique par la prévision et l'exécution.
  */
-function applyPolitics(
+function applyStateEffects(
 	effects: readonly Effect[],
-	player: PlayerState,
-	world: WorldState,
+	parts: StateParts,
 	turn: number,
 	target: string | null,
 	content: Content
-): { player: PlayerState; world: WorldState; changes: PoliticalChange[] } {
-	let currentPlayer = player;
-	let currentWorld = world;
+): StateParts & { changes: PoliticalChange[] } {
+	let { player, world, career } = parts;
 	const changes: PoliticalChange[] = [];
 	for (const effect of effects) {
-		if (!isPoliticalEffect(effect)) continue;
-		const outcome = applyPoliticalEffect(
-			effect,
-			currentPlayer,
-			currentWorld,
-			turn,
-			target,
-			content
-		);
-		currentPlayer = outcome.player;
-		currentWorld = outcome.world;
-		changes.push(...outcome.changes);
+		if (isPoliticalEffect(effect)) {
+			const outcome = applyPoliticalEffect(effect, player, world, turn, target, content);
+			player = outcome.player;
+			world = outcome.world;
+			changes.push(...outcome.changes);
+		} else if (isCareerEffect(effect)) {
+			const outcome = applyCareerEffect(effect, career, turn, target, content);
+			career = outcome.parts;
+			changes.push(...outcome.changes);
+		}
 	}
-	return { player: currentPlayer, world: currentWorld, changes };
+	return { player, world, career, changes };
+}
+
+function careerOf(state: GameState): CareerParts {
+	return { mandates: state.mandates, ballots: state.ballots, institutions: state.institutions };
 }
 
 function definitionOf<T>(catalog: Readonly<Record<string, T>>, id: string): T | undefined {
@@ -187,7 +204,9 @@ export function instanceIdFor(number: number): string {
 
 /** Validation et prévision pures d'un plan, sans tirage aléatoire. */
 export function previewPlan(state: GameState, plan: TurnPlan, content: Content): PlanPreview {
-	const timeAvailable = content.balance.timeBudgetPerTurn;
+	// Les mandats en cours réservent une part du temps du trimestre.
+	const reserved = reservedTime(state.mandates, content);
+	const timeAvailable = Math.max(0, content.balance.timeBudgetPerTurn - reserved);
 	const stepPreviews: PlanStepPreview[] = [];
 	const issues: PlanIssue[] = [];
 	const totals = zeroRanges();
@@ -198,6 +217,7 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 		return {
 			valid: false,
 			timeAvailable,
+			timeReserved: reserved,
 			timeUsed: 0,
 			timeRemaining: timeAvailable,
 			steps: [],
@@ -211,7 +231,7 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			],
 			producers: economy.producers,
 			warnings: [],
-			wellbeing: forecastWellbeing(state.player, 0, state.turn, content.balance.wellbeing),
+			wellbeing: forecastWellbeing(state.player, reserved, state.turn, content.balance.wellbeing),
 			resourceChanges: totals
 		};
 	}
@@ -220,6 +240,7 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 	const working: Record<ResourceId, number> = { ...state.resources };
 	let workingPlayer: PlayerState = state.player;
 	let workingWorld: WorldState = state.world;
+	let workingCareer: CareerParts = careerOf(state);
 	const upgrades: OwnedUpgrade[] = [...state.upgrades];
 	let nextInstanceNumber = state.nextInstanceNumber;
 	const actionCounts = new Map<string, number>();
@@ -277,6 +298,11 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 				if (target === null || !Object.hasOwn(content.parties, target)) {
 					fail('invalid_target', `« ${label} » : choisissez un parti existant.`);
 				}
+			} else if (definition.target === 'mandate') {
+				const held = activeMandates(workingCareer.mandates).some(
+					(mandate) => mandate.instanceId === target
+				);
+				if (!held) fail('invalid_target', `« ${label} » : choisissez un mandat en cours.`);
 			} else if (target !== null) {
 				fail('invalid_target', `« ${label} » ne porte sur aucune cible.`);
 			}
@@ -309,7 +335,9 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			player: workingPlayer,
 			resources: working,
 			upgrades,
-			world: workingWorld
+			world: workingWorld,
+			mandates: workingCareer.mandates,
+			institutions: workingCareer.institutions
 		};
 		if (requires && !evaluateCondition(context, requires)) {
 			fail('condition_not_met', unavailableReason ?? `« ${label} » n’est pas disponible.`);
@@ -374,11 +402,14 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			totals[range.resource].min += range.min;
 			totals[range.resource].max += range.max;
 		}
-		// Effets politiques certains : adhésion et monde, visibles des étapes suivantes.
-		({ player: workingPlayer, world: workingWorld } = applyPolitics(
+		// Effets certains (adhésion, monde, mandats), visibles des étapes suivantes.
+		({
+			player: workingPlayer,
+			world: workingWorld,
+			career: workingCareer
+		} = applyStateEffects(
 			actionEffects,
-			workingPlayer,
-			workingWorld,
+			{ player: workingPlayer, world: workingWorld, career: workingCareer },
 			state.turn,
 			target,
 			content
@@ -404,10 +435,19 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			message: `Charges de « ${content.upgrades[producer.upgradeId]?.label ?? producer.upgradeId} » non couvertes : production suspendue ce trimestre si la trésorerie reste insuffisante.`
 		}));
 
+	// Revenus et stress des mandats encore en cours à la fin du trimestre.
+	const mandates = mandateIncome(workingCareer.mandates, state.turn, content);
+	for (const amount of mandates.income) {
+		totals[amount.resource].min += amount.amount;
+		totals[amount.resource].max += amount.amount;
+	}
+	const stressed = applyGaugeEffect(workingPlayer, 'player.stress', mandates.stress).player;
+
 	// Santé et stress à la frontière du trimestre (partie certaine uniquement).
+	// Le temps réservé par les mandats compte dans la charge de travail.
 	const wellbeing = forecastWellbeing(
-		workingPlayer,
-		timeUsed,
+		stressed,
+		timeUsed + reserved,
 		state.turn,
 		content.balance.wellbeing
 	);
@@ -423,6 +463,7 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 	return {
 		valid: issues.length === 0,
 		timeAvailable,
+		timeReserved: reserved,
 		timeUsed,
 		timeRemaining: timeAvailable - timeUsed,
 		steps: stepPreviews,
@@ -438,6 +479,7 @@ export interface PlanExecution {
 	readonly resources: Resources;
 	readonly player: PlayerState;
 	readonly world: WorldState;
+	readonly career: CareerParts;
 	/** Temps consommé par le plan, qui détermine la charge de travail. */
 	readonly timeUsed: number;
 	readonly rng: RngState;
@@ -460,6 +502,7 @@ export function executePlan(
 	const current: Record<ResourceId, number> = { ...state.resources };
 	let player = state.player;
 	let world = state.world;
+	let career = careerOf(state);
 	let timeUsed = 0;
 	let rng = state.rng;
 	const upgrades: OwnedUpgrade[] = [...state.upgrades];
@@ -494,15 +537,14 @@ export function executePlan(
 				} else if (resolved.kind === 'people') {
 					throw new Error(`Effet sur un personnage hors événement : ${step.id}`);
 				} else {
-					const applied = applyPolitics(
+					const applied = applyStateEffects(
 						[resolved.effect],
-						player,
-						world,
+						{ player, world, career },
 						state.turn,
 						target,
 						content
 					);
-					({ player, world } = applied);
+					({ player, world, career } = applied);
 					politics.push(...applied.changes);
 				}
 			}
@@ -531,6 +573,7 @@ export function executePlan(
 		resources: current,
 		player,
 		world,
+		career,
 		timeUsed,
 		rng,
 		upgrades,

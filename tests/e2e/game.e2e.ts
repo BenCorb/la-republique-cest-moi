@@ -71,6 +71,18 @@ test.describe('parcours de jeu', () => {
 		expect(errors).toEqual([]);
 	});
 
+	test('affiche le calendrier électoral et la fonction principale', async ({ page }) => {
+		await startCareer(page, 'e2e-carriere');
+		await expect(page.getByTestId('header-function')).toHaveText('Fonction Sans mandat');
+		await page.getByRole('button', { name: 'Carrière', exact: true }).click();
+		await expect(page.getByTestId('main-function')).toHaveText('Fonction principale : Sans mandat');
+		const municipal = page.getByTestId('ballot-ballot.1');
+		await expect(municipal).toContainText('Élections municipales');
+		await expect(municipal).toContainText('T1 2001');
+		await expect(municipal).toContainText('Candidatures closes au T3 2000');
+		await expect(page.getByText('Cumul : 3 mandats au plus.')).toBeVisible();
+	});
+
 	test('adhère à un parti depuis le monde politique', async ({ page }) => {
 		await startCareer(page, 'e2e-parti');
 		await expect(page.getByTestId('header-party')).toHaveText('Étiquette aucune');
@@ -252,6 +264,7 @@ test.describe('parcours de jeu', () => {
 		for (const tab of [
 			'Tableau de bord',
 			'Agenda',
+			'Carrière',
 			'Monde politique',
 			'Relations',
 			'Organisation',

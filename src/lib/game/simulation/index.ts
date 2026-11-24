@@ -34,7 +34,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 3;
+export const SIMULATION_REPORT_VERSION = 4;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -89,6 +89,12 @@ export interface SimulationRun {
 	readonly charactersMet: number;
 	readonly characterDepartures: number;
 	readonly traitsRevealed: number;
+	/** Mandats exercés au fil de la carrière et plus haute fonction (rang le plus élevé). */
+	readonly mandatesHeld: number;
+	readonly highestMandate: string | null;
+	/** Scrutins tenus et alternances au gouvernement pendant la carrière. */
+	readonly ballotsHeld: number;
+	readonly governmentChanges: number;
 	/** Plus bas et plus haut atteints par chaque indicateur national. */
 	readonly indicatorRanges: Readonly<
 		Record<IndicatorId, { readonly min: number; readonly max: number }>
@@ -154,6 +160,10 @@ export interface SimulationAggregate {
 	readonly charactersMet: Distribution;
 	readonly characterDepartures: Distribution;
 	readonly traitsRevealed: Distribution;
+	readonly mandatesHeld: Distribution;
+	readonly governmentChanges: Distribution;
+	/** Plus haute fonction atteinte, `none` pour les carrières sans mandat. */
+	readonly highestMandates: Readonly<Record<string, number>>;
 	/** Parti en fin de carrière, `none` pour les carrières sans étiquette. */
 	readonly finalParties: Readonly<Record<string, number>>;
 	readonly indicatorExtremes: Readonly<
@@ -170,7 +180,7 @@ export interface SimulationReport {
 	readonly contentVersion: string;
 	readonly config: SimulationConfig;
 	/** Systèmes absents du prototype, donc volontairement non simulés. */
-	readonly unavailableMetrics: readonly ['mandates', 'promises'];
+	readonly unavailableMetrics: readonly ['promises'];
 	readonly aggregate: SimulationAggregate;
 	readonly runs: readonly SimulationRun[];
 }
@@ -371,6 +381,24 @@ function finalizeRun(
 			(total, character) =>
 				total +
 				character.knownTraits.filter((trait) => content.traits[trait]?.hidden === true).length,
+			0
+		),
+		mandatesHeld: state.mandates.length,
+		highestMandate:
+			[...state.mandates].sort(
+				(left, right) =>
+					(content.mandates[right.mandateId]?.rank ?? 0) -
+					(content.mandates[left.mandateId]?.rank ?? 0)
+			)[0]?.mandateId ?? null,
+		ballotsHeld: state.ballots.filter((ballot) => ballot.status === 'held').length,
+		governmentChanges: state.history.reduce(
+			(total, entry) =>
+				total +
+				(entry.type === 'turn.resolved'
+					? (entry.deadlines?.ballots.filter(
+							(ballot) => ballot.governingAfter !== ballot.governingBefore
+						).length ?? 0)
+					: 0),
 			0
 		),
 		invariantViolations,
@@ -581,6 +609,13 @@ function aggregateRuns(runs: readonly SimulationRun[]): SimulationAggregate {
 		charactersMet: distribution(runs.map((run) => run.charactersMet)),
 		characterDepartures: distribution(runs.map((run) => run.characterDepartures)),
 		traitsRevealed: distribution(runs.map((run) => run.traitsRevealed)),
+		mandatesHeld: distribution(runs.map((run) => run.mandatesHeld)),
+		governmentChanges: distribution(runs.map((run) => run.governmentChanges)),
+		highestMandates: runs.reduce<Record<string, number>>((totals, run) => {
+			const key = run.highestMandate ?? 'none';
+			totals[key] = (totals[key] ?? 0) + 1;
+			return totals;
+		}, {}),
 		finalParties: runs.reduce<Record<string, number>>((totals, run) => {
 			const key = run.finalParty ?? 'none';
 			totals[key] = (totals[key] ?? 0) + 1;
@@ -651,7 +686,7 @@ export function simulateBatch(config: SimulationConfig, content: Content): Simul
 		rulesVersion: RULES_VERSION,
 		contentVersion: content.version,
 		config,
-		unavailableMetrics: ['mandates', 'promises'],
+		unavailableMetrics: ['promises'],
 		aggregate: aggregateRuns(runs),
 		runs
 	};
@@ -692,6 +727,10 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'charactersMet',
 		'characterDepartures',
 		'traitsRevealed',
+		'mandatesHeld',
+		'highestMandate',
+		'ballotsHeld',
+		'governmentChanges',
 		'indicatorRanges',
 		'invariantViolations',
 		'error'
@@ -724,6 +763,10 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.charactersMet,
 		run.characterDepartures,
 		run.traitsRevealed,
+		run.mandatesHeld,
+		run.highestMandate,
+		run.ballotsHeld,
+		run.governmentChanges,
 		JSON.stringify(run.indicatorRanges),
 		JSON.stringify(run.invariantViolations),
 		run.error

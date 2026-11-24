@@ -31,6 +31,12 @@ import {
 	type CharactersRecord,
 	displayName,
 	type PoliticalChange,
+	type Ballot,
+	type DeadlinesRecord,
+	type MandateEndReason,
+	activeMandates,
+	mainMandate,
+	reservedTime,
 	type WellbeingSource,
 	type WorldRecord
 } from '../engine/index.ts';
@@ -71,6 +77,8 @@ export interface PlanStepView {
 export interface PlanView {
 	readonly steps: readonly PlanStepView[];
 	readonly timeAvailable: number;
+	/** Temps réservé par les mandats, déjà retiré du temps disponible. */
+	readonly timeReserved: number;
 	readonly timeUsed: number;
 	readonly timeRemaining: number;
 	readonly valid: boolean;
@@ -133,7 +141,7 @@ export interface DecisionView {
 
 export interface JournalLine {
 	readonly kind:
-		'step' | 'economy' | 'wellbeing' | 'world' | 'people' | 'event' | 'decision' | 'end';
+		'step' | 'economy' | 'wellbeing' | 'world' | 'people' | 'career' | 'event' | 'decision' | 'end';
 	readonly text: string;
 }
 
@@ -218,6 +226,52 @@ export interface PersonView {
 	readonly memories: readonly { readonly dateLabel: string; readonly text: string }[];
 }
 
+export interface MandateView {
+	readonly instanceId: string;
+	readonly label: string;
+	readonly since: string;
+	/** Échéance du mandat, en clair. */
+	readonly ends: string;
+	readonly timePerTurn: number;
+	readonly income: readonly string[];
+	readonly stressPerTurn: number;
+	readonly resignPlanned: boolean;
+	readonly resignable: boolean;
+	readonly resignReason: string | null;
+}
+
+export interface BallotView {
+	readonly ballotId: string;
+	readonly label: string;
+	readonly dateLabel: string;
+	readonly turnsLeft: number;
+	readonly filing: string;
+	readonly early: boolean;
+	/** Le joueur exerce un mandat qui prend fin à ce scrutin. */
+	readonly endsMandate: boolean;
+}
+
+export interface CareerView {
+	/** Fonction principale (mandat de rang le plus élevé) ou « Sans mandat ». */
+	readonly mainFunction: string;
+	readonly mandates: readonly MandateView[];
+	readonly reservedTime: number;
+	readonly resignActionId: string | null;
+	readonly maxMandates: number;
+	readonly incompatibilities: readonly string[];
+	readonly prerequisites: readonly string[];
+	readonly calendar: readonly BallotView[];
+	readonly results: readonly {
+		readonly ballotId: string;
+		readonly label: string;
+		readonly dateLabel: string;
+		readonly winner: string;
+		readonly shares: string;
+		readonly early: boolean;
+	}[];
+	readonly pastMandates: readonly { readonly label: string; readonly period: string }[];
+}
+
 export interface PlayerView {
 	readonly dateLabel: string;
 	readonly age: number;
@@ -241,6 +295,7 @@ export interface PlayerView {
 	readonly world: WorldView;
 	/** Personnages rencontrés : actifs d'abord, puis par date de rencontre. */
 	readonly people: readonly PersonView[];
+	readonly career: CareerView;
 }
 
 const FAMILY_LABELS: Readonly<Record<string, string>> = {
@@ -298,6 +353,14 @@ function describeEffect(range: EffectRange, content: Content): string {
 				: 'Départ de votre parti';
 		case 'people':
 			return 'Relation avec un personnage';
+		case 'mandate':
+			return range.change === 'grant'
+				? `Mandat : ${content.mandates[range.mandate]?.label ?? range.mandate}`
+				: range.mandate === 'target'
+					? 'Fin du mandat choisi'
+					: `Fin du mandat : ${content.mandates[range.mandate]?.label ?? range.mandate}`;
+		case 'earlyElection':
+			return `Élection anticipée : ${content.elections[range.election]?.label ?? range.election}`;
 	}
 }
 
@@ -313,9 +376,59 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 					return `adhésion au ${content.parties[change.partyId]?.name ?? change.partyId}`;
 				case 'left':
 					return `départ du ${content.parties[change.partyId]?.name ?? change.partyId}`;
+				case 'mandateStarted':
+					return `entrée en fonction : ${content.mandates[change.mandateId]?.label ?? change.mandateId}`;
+				case 'mandateEnded':
+					return `fin de mandat (${MANDATE_END_LABELS[change.reason]}) : ${content.mandates[change.mandateId]?.label ?? change.mandateId}`;
+				case 'earlyElection':
+					return `${content.elections[change.electionId]?.label ?? change.electionId} anticipées au ${formatTurn(change.turn)}`;
 			}
 		})
 		.join(', ');
+}
+
+const MANDATE_END_LABELS: { readonly [K in MandateEndReason]: string } = {
+	term: 'fin du terme',
+	resigned: 'démission',
+	government_change: 'changement de gouvernement',
+	replaced: 'remplacé par une fonction incompatible',
+	removed: 'retrait'
+};
+
+/** Résultat d'un scrutin en une ligne : trois premières parts. */
+function sharesText(ballot: Ballot, content: Content): string {
+	return (ballot.shares ?? [])
+		.slice(0, 3)
+		.map(
+			(share) => `${content.parties[share.partyId]?.acronym ?? share.partyId} ${share.percent} %`
+		)
+		.join(' · ');
+}
+
+function deadlineLines(
+	record: DeadlinesRecord | null,
+	state: GameState,
+	content: Content
+): JournalLine[] {
+	if (!record) return [];
+	const lines: JournalLine[] = [];
+	const ended = politicsText(record.mandates, content);
+	if (ended)
+		lines.push({ kind: 'career', text: ended.charAt(0).toUpperCase() + ended.slice(1) + '.' });
+	for (const result of record.ballots) {
+		const ballot = state.ballots.find((entry) => entry.ballotId === result.ballotId);
+		const label = content.elections[result.electionId]?.label ?? result.electionId;
+		const winner = content.parties[result.winnerPartyId]?.name ?? result.winnerPartyId;
+		const alternance =
+			result.governingAfter !== result.governingBefore
+				? ` Alternance : le ${content.parties[result.governingAfter]?.name ?? result.governingAfter} forme le gouvernement.`
+				: '';
+		lines.push({
+			kind: 'career',
+			text: `${label} : le ${winner} arrive en tête${ballot ? ` (${sharesText(ballot, content)})` : ''}.${alternance}`
+		});
+	}
+	return lines;
 }
 
 /** Départs et successions des personnages déjà rencontrés (les dirigeants : voir le monde). */
@@ -444,6 +557,13 @@ function journalOfQuarter(entry: HistoryEntry, state: GameState, content: Conten
 		lines.push({ kind: 'wellbeing', text: `${name} ${parts.join(', ')}` });
 	lines.push(...characterLines(entry.characters, state));
 	lines.push(...worldLines(entry.world, state, content));
+	lines.push(...deadlineLines(entry.deadlines, state, content));
+	if (entry.mandates.changes.length > 0) {
+		lines.push({
+			kind: 'career',
+			text: `Indemnités et moyens des mandats — ${changesText(entry.mandates.changes)}`
+		});
+	}
 	for (const event of entry.events) {
 		const title = eventTitle(event.eventId, event.actors, state, content);
 		if (event.outcome === 'queued')
@@ -702,6 +822,96 @@ function buildPeople(state: GameState, content: Content): PersonView[] {
 		.map((entry) => entry.view);
 }
 
+function buildCareer(state: GameState, plan: readonly PlanStep[], content: Content): CareerView {
+	const label = (mandateId: string): string => content.mandates[mandateId]?.label ?? mandateId;
+	const resignActionId =
+		content.actionIds.find((id) => content.actions[id]?.target === 'mandate') ?? null;
+	const scheduled = state.ballots
+		.filter((ballot) => ballot.status === 'scheduled')
+		.sort((a, b) => a.turn - b.turn);
+	const active = activeMandates(state.mandates);
+	const main = mainMandate(state.mandates, content);
+	return {
+		mainFunction: main ? label(main.mandateId) : 'Sans mandat',
+		mandates: active.map((mandate) => {
+			const definition = content.mandates[mandate.mandateId];
+			const election = definition?.election ? content.elections[definition.election] : undefined;
+			const next = definition?.election
+				? scheduled.find((ballot) => ballot.electionId === definition.election)
+				: undefined;
+			const resign = resignActionId
+				? addability(
+						state,
+						plan,
+						{ kind: 'action', id: resignActionId, target: mandate.instanceId },
+						content
+					)
+				: { addable: false, reason: null };
+			return {
+				instanceId: mandate.instanceId,
+				label: label(mandate.mandateId),
+				since: formatTurn(mandate.startTurn),
+				ends:
+					election && next
+						? `Terme : ${election.label.toLowerCase()} du ${formatTurn(next.turn)}`
+						: 'Prend fin avec le gouvernement',
+				timePerTurn: definition?.timePerTurn ?? 0,
+				income: amounts(definition?.income ?? [], 1),
+				stressPerTurn: definition?.stressPerTurn ?? 0,
+				resignPlanned: plan.some(
+					(step) =>
+						step.kind === 'action' &&
+						step.id === resignActionId &&
+						step.target === mandate.instanceId
+				),
+				resignable: resign.addable,
+				resignReason: resign.reason
+			};
+		}),
+		reservedTime: reservedTime(state.mandates, content),
+		resignActionId,
+		maxMandates: state.institutions.maxMandates,
+		incompatibilities: state.institutions.incompatibilities.map(
+			([left, right]) => `${label(left)} et ${label(right)}`
+		),
+		prerequisites: Object.entries(state.institutions.prerequisites).map(
+			([mandateId, required]) => `${label(mandateId)} : ${required.map(label).join(', ')}`
+		),
+		calendar: scheduled.map((ballot) => {
+			const definition = content.elections[ballot.electionId];
+			return {
+				ballotId: ballot.ballotId,
+				label: definition?.label ?? ballot.electionId,
+				dateLabel: formatTurn(ballot.turn),
+				turnsLeft: ballot.turn - state.turn,
+				filing: `Candidatures closes au ${formatTurn(ballot.filingClosesTurn)}`,
+				early: ballot.early,
+				endsMandate: active.some(
+					(mandate) => content.mandates[mandate.mandateId]?.election === ballot.electionId
+				)
+			};
+		}),
+		results: state.ballots
+			.filter((ballot) => ballot.status === 'held')
+			.slice(-6)
+			.reverse()
+			.map((ballot) => ({
+				ballotId: ballot.ballotId,
+				label: content.elections[ballot.electionId]?.label ?? ballot.electionId,
+				dateLabel: formatTurn(ballot.turn),
+				winner: content.parties[ballot.winnerPartyId ?? '']?.name ?? '—',
+				shares: sharesText(ballot, content),
+				early: ballot.early
+			})),
+		pastMandates: state.mandates
+			.filter((mandate) => mandate.status === 'ended')
+			.map((mandate) => ({
+				label: label(mandate.mandateId),
+				period: `${formatTurn(mandate.startTurn)} – ${formatTurn(mandate.endTurn ?? mandate.startTurn)} (${MANDATE_END_LABELS[mandate.endReason ?? 'term']})`
+			}))
+	};
+}
+
 export function projectView(
 	state: GameState,
 	plan: readonly PlanStep[],
@@ -735,7 +945,7 @@ export function projectView(
 	const planned = (kind: PlanStep['kind'], id: string): number =>
 		plan.filter((step) => step.kind === kind && step.id === id).length;
 
-	// Les actions ciblées (adhésion) se planifient depuis l'écran Monde politique.
+	// Les actions ciblées se planifient depuis les écrans Monde politique et Carrière.
 	const actions: CatalogItemView[] = content.actionIds.flatMap((id) => {
 		const action = content.actions[id]!;
 		if (action.target) return [];
@@ -813,6 +1023,20 @@ export function projectView(
 		for (const warning of preview.warnings)
 			alerts.push({ level: 'warning', text: warning.message });
 	}
+	const lead = content.balance.elections.alertLeadTurns;
+	for (const ballot of state.ballots) {
+		const left = ballot.turn - state.turn;
+		if (ballot.status !== 'scheduled' || left < 0 || left > lead || state.phase === 'ended')
+			continue;
+		const label = content.elections[ballot.electionId]?.label ?? ballot.electionId;
+		alerts.push({
+			level: 'info',
+			text:
+				left === 0
+					? `${label} à la fin de ce trimestre.`
+					: `${label} au ${formatTurn(ballot.turn)}, dans ${left} trimestre${left > 1 ? 's' : ''}.`
+		});
+	}
 	if (health.tone === 'danger' || health.tone === 'warning') {
 		alerts.push({
 			level: health.tone,
@@ -835,6 +1059,7 @@ export function projectView(
 		plan: {
 			steps,
 			timeAvailable: preview.timeAvailable,
+			timeReserved: preview.timeReserved,
 			timeUsed: preview.timeUsed,
 			timeRemaining: preview.timeRemaining,
 			valid: preview.valid,
@@ -856,6 +1081,7 @@ export function projectView(
 		alerts,
 		summary: buildSummary(state, content),
 		world: buildWorld(state, plan, content),
-		people: buildPeople(state, content)
+		people: buildPeople(state, content),
+		career: buildCareer(state, plan, content)
 	};
 }

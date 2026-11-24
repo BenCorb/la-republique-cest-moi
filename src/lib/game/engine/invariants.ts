@@ -16,6 +16,7 @@ import {
 	type Content
 } from '../content/types.ts';
 import { RNG_ALGORITHM, validateSeed } from './random.ts';
+import { activeMandates, conflictingMandates } from './career.ts';
 import { START_TURN, STATE_SCHEMA_VERSION, type GameState } from './state.ts';
 
 const PHASES = new Set(['planning', 'decision', 'ended']);
@@ -117,6 +118,7 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
 
 	violations.push(...checkEventInvariants(state, instanceIds));
 	violations.push(...checkWorldInvariants(state));
+	violations.push(...checkCareerInvariants(state));
 	if (content) violations.push(...checkContentReferences(state, content));
 	return violations;
 }
@@ -280,6 +282,82 @@ function checkWorldInvariants(state: GameState): string[] {
 	return violations;
 }
 
+const TERM_ID = /^term\.([1-9][0-9]*)$/;
+const BALLOT_ID = /^ballot\.([1-9][0-9]*)$/;
+
+/** Mandats et calendrier électoral (P2-02) : cumul respecté, échéances cohérentes. */
+function checkCareerInvariants(state: GameState): string[] {
+	const violations: string[] = [];
+	const { mandates, ballots, institutions } = state;
+
+	mandates.forEach((mandate, index) => {
+		const match = TERM_ID.exec(mandate.instanceId);
+		if (!match || Number(match[1]) !== index + 1) {
+			violations.push(`identifiant de mandat invalide : ${mandate.instanceId}`);
+		}
+		if (mandate.startTurn > state.turn) violations.push(`mandat futur : ${mandate.instanceId}`);
+		if ((mandate.status === 'active') !== (mandate.endTurn === null)) {
+			violations.push(`fin de mandat incohérente : ${mandate.instanceId}`);
+		}
+		if ((mandate.endTurn === null) !== (mandate.endReason === null)) {
+			violations.push(`motif de fin de mandat incohérent : ${mandate.instanceId}`);
+		}
+		if (mandate.endTurn !== null && mandate.endTurn < mandate.startTurn) {
+			violations.push(`mandat terminé avant d’avoir commencé : ${mandate.instanceId}`);
+		}
+	});
+	const active = activeMandates(mandates);
+	if (active.length > institutions.maxMandates) {
+		violations.push(`cumul dépassé : ${active.length} > ${institutions.maxMandates}`);
+	}
+	if (new Set(active.map((mandate) => mandate.mandateId)).size !== active.length) {
+		violations.push('le même mandat est exercé deux fois');
+	}
+	for (const mandate of active) {
+		if (conflictingMandates(mandate.mandateId, mandates, institutions).length > 0) {
+			violations.push(`mandats incompatibles exercés ensemble : ${mandate.mandateId}`);
+		}
+		for (const required of institutions.prerequisites[mandate.mandateId] ?? []) {
+			if (!active.some((other) => other.mandateId === required)) {
+				violations.push(`prérequis absent pour ${mandate.mandateId} : ${required}`);
+			}
+		}
+	}
+
+	ballots.forEach((ballot, index) => {
+		const match = BALLOT_ID.exec(ballot.ballotId);
+		if (!match || Number(match[1]) !== index + 1) {
+			violations.push(`identifiant d’échéance invalide : ${ballot.ballotId}`);
+		}
+		// Après un décès en cours de trimestre, l'échéance de ce trimestre n'est jamais tenue.
+		if (ballot.status === 'scheduled' && ballot.turn < state.turn && state.phase !== 'ended') {
+			violations.push(`échéance passée non tenue : ${ballot.ballotId}`);
+		}
+		if (
+			ballot.status === 'held' &&
+			(ballot.turn >= state.turn || !ballot.shares || !ballot.winnerPartyId)
+		) {
+			violations.push(`scrutin tenu incohérent : ${ballot.ballotId}`);
+		}
+		if (ballot.shares && ballot.shares.reduce((total, share) => total + share.percent, 0) !== 100) {
+			violations.push(`parts de voix dont la somme diffère de 100 : ${ballot.ballotId}`);
+		}
+		if ((ballot.status === 'cancelled') !== (ballot.cancelReason !== null)) {
+			violations.push(`annulation incohérente : ${ballot.ballotId}`);
+		}
+		if (ballot.filingClosesTurn > ballot.turn) {
+			violations.push(`clôture des candidatures après le scrutin : ${ballot.ballotId}`);
+		}
+	});
+	const scheduledTypes = ballots
+		.filter((ballot) => ballot.status === 'scheduled')
+		.map((ballot) => ballot.electionId);
+	if (new Set(scheduledTypes).size !== scheduledTypes.length) {
+		violations.push('plusieurs échéances programmées pour un même type d’élection');
+	}
+	return violations;
+}
+
 /**
  * Références de l'état vers le catalogue : améliorations, événements en attente
  * ou programmés, occurrences, acteurs et nombres maximaux d'exemplaires. Une
@@ -347,6 +425,24 @@ export function checkContentReferences(state: GameState, content: Content): stri
 	for (const [characterId, relationship] of Object.entries(state.relationships)) {
 		if (relationship.memories.length > content.balance.characters.maxMemories) {
 			violations.push(`trop de souvenirs : ${characterId}`);
+		}
+	}
+	for (const mandate of state.mandates) {
+		if (!Object.hasOwn(content.mandates, mandate.mandateId)) {
+			violations.push(`mandat inconnu du catalogue : ${mandate.mandateId}`);
+		}
+	}
+	for (const electionId of content.electionIds) {
+		const scheduled = state.ballots.filter(
+			(ballot) => ballot.electionId === electionId && ballot.status === 'scheduled'
+		);
+		if (scheduled.length !== 1) {
+			violations.push(`échéance programmée manquante ou multiple : ${electionId}`);
+		}
+	}
+	for (const ballot of state.ballots) {
+		if (!Object.hasOwn(content.elections, ballot.electionId)) {
+			violations.push(`élection inconnue du catalogue : ${ballot.electionId}`);
 		}
 	}
 	const partyIds = Object.keys(state.world.parties).sort();

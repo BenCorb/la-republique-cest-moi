@@ -57,9 +57,11 @@ describe('scénario : passage du temps', () => {
 				turn: 0,
 				steps: [],
 				economy: { producers: [], changes: [] },
+				mandates: { changes: [], stress: 0 },
 				wellbeing: { contributions: [], deathCause: null },
 				characters: { departures: [], arrivals: [] },
 				world: { indicators: [], parties: [], leaderChanges: [] },
+				deadlines: { mandates: [], ballots: [] },
 				events: []
 			}
 		]);

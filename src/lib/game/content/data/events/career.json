@@ -1,0 +1,394 @@
+{
+	"events": [
+		{
+			"id": "career.council_vacancy",
+			"category": "career",
+			"title": "Un siège se libère",
+			"text": "Le suivant de liste a déménagé, la suivante est partie en retraite au soleil : le conseil municipal cherche quelqu’un pour occuper le siège vacant. On murmure votre nom, à condition de ne pas faire de vagues.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 5,
+			"priority": 8,
+			"availableFromTurn": 5,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "canHoldMandate",
+						"mandate": "mandate.municipal_councillor"
+					},
+					{
+						"op": "gte",
+						"stat": "resources.influence",
+						"value": 15
+					}
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "accept",
+					"label": "Accepter le siège",
+					"hints": ["Un premier mandat", "Des soirées en commission"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "grantMandate",
+							"mandate": "mandate.municipal_councillor"
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": "decline",
+					"label": "Laisser la place",
+					"hints": ["Liberté préservée"],
+					"costs": [],
+					"effects": []
+				}
+			]
+		},
+		{
+			"id": "career.mayor_succession",
+			"category": "career",
+			"title": "La mairie se libère",
+			"text": "En cours de mandat, la mairie se libère : son titulaire part présider le syndicat intercommunal des eaux, poste réputé « plus calme ». Le conseil municipal doit désigner un successeur.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.municipal_councillor"
+					},
+					{
+						"op": "canHoldMandate",
+						"mandate": "mandate.mayor"
+					},
+					{
+						"op": "gte",
+						"stat": "resources.influence",
+						"value": 30
+					}
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "run",
+					"label": "Briguer le fauteuil de maire",
+					"hints": ["Fonction prestigieuse", "Agenda saturé"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "grantMandate",
+							"mandate": "mandate.mayor"
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": "kingmaker",
+					"label": "Soutenir un collègue, contre une délégation",
+					"hints": ["Un allié reconnaissant"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": "stay",
+					"label": "Garder votre seul siège au conseil",
+					"hints": ["Rien ne change"],
+					"costs": [],
+					"effects": []
+				}
+			]
+		},
+		{
+			"id": "career.regional_list",
+			"category": "career",
+			"title": "Une place sur la liste régionale",
+			"text": "Un élu régional démissionne pour « raisons personnelles », c’est-à-dire une meilleure place ailleurs. Votre parti vous propose de reprendre son siège au conseil régional.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 8,
+			"availableFromTurn": 17,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "eq",
+						"stat": "player.affiliated",
+						"value": 1
+					},
+					{
+						"op": "canHoldMandate",
+						"mandate": "mandate.regional_councillor"
+					},
+					{
+						"op": "gte",
+						"stat": "resources.influence",
+						"value": 40
+					}
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "accept",
+					"label": "Reprendre le siège",
+					"hints": ["Un mandat de plus", "Des trajets jusqu’au chef-lieu"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "grantMandate",
+							"mandate": "mandate.regional_councillor"
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": "decline",
+					"label": "Décliner",
+					"hints": ["Votre agenda vous remercie"],
+					"costs": [],
+					"effects": []
+				}
+			]
+		},
+		{
+			"id": "career.ministry_call",
+			"category": "career",
+			"title": "Un coup de fil un dimanche soir",
+			"text": "Le téléphone sonne un dimanche soir : {governing_leader} vous propose d’entrer au gouvernement, au ministère délégué aux Petites Choses Importantes. Il faudrait répondre avant le journal de 20 heures.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 8,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "eq",
+						"stat": "player.partyGoverning",
+						"value": 1
+					},
+					{
+						"op": "gte",
+						"stat": "resources.influence",
+						"value": 60
+					},
+					{
+						"op": "not",
+						"condition": {
+							"op": "holdsMandate",
+							"mandate": "mandate.minister"
+						}
+					}
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "accept",
+					"label": "Accepter le portefeuille",
+					"hints": [
+						"Prestige national",
+						"Plus une minute à vous",
+						"Les mandats incompatibles passent à vos suppléants"
+					],
+					"costs": [],
+					"effects": [
+						{
+							"op": "grantMandate",
+							"mandate": "mandate.minister",
+							"replaceIncompatible": true
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 5
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 5
+						}
+					]
+				},
+				{
+					"id": "decline",
+					"label": "Décliner avec gratitude",
+					"hints": ["On s’en souviendra, en bien ou en mal"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -2
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "career.minister_reshuffled",
+			"category": "career",
+			"title": "Remaniement : un portefeuille en moins",
+			"text": "Le remaniement tombe un lundi matin : votre ministère délégué aux Petites Choses Importantes est supprimé, « par souci d’efficacité ». Vous l’apprenez par la radio.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 6,
+			"priority": 0,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.minister"
+					},
+					{
+						"op": "lte",
+						"stat": "world.stability",
+						"value": 60
+					}
+				]
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "endMandate",
+					"mandate": "mandate.minister"
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 3
+				}
+			]
+		},
+		{
+			"id": "career.cumul_overload",
+			"category": "career",
+			"title": "Le don d’ubiquité",
+			"text": "Trois réunions se tiennent à la même heure dans trois villes différentes. Votre agenda a cessé de fonctionner ; votre secrétariat envisage de faire de même.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "gte",
+				"stat": "player.mandates",
+				"value": 2
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "delegate",
+					"label": "Déléguer largement à vos adjoints",
+					"hints": ["Moins de stress", "Moins d’emprise"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -4
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -2
+						}
+					]
+				},
+				{
+					"id": "hold",
+					"label": "Tenir bon et courir d’une salle à l’autre",
+					"hints": ["Épuisant"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 4
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 1
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "national.dissolution",
+			"category": "national",
+			"title": "Dissolution !",
+			"text": "Le chef de l’État dissout l’Assemblée nationale pour « clarifier la situation ». Personne n’est sûr de ce qui doit être clarifié, mais tout le monde repart en campagne.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 0,
+			"availableFromTurn": 10,
+			"cooldownTurns": 24,
+			"unique": false,
+			"when": {
+				"op": "lte",
+				"stat": "world.stability",
+				"value": 35
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "callEarlyElection",
+					"election": "election.legislative",
+					"delayTurns": 1
+				},
+				{
+					"op": "addIndicator",
+					"indicator": "stability",
+					"value": 5
+				}
+			]
+		}
+	]
+}
