@@ -2,79 +2,155 @@
  * Transition d'état (ARCHITECTURE.md §5) : fonction pure, sans effet sur ses
  * arguments. Une commande rejetée renvoie l'état d'entrée inchangé, PRNG compris.
  *
- * Ordre de résolution d'un trimestre (§5.1). En P1-01, seules les étapes 1 et 6–7
- * existent ; les autres sont ajoutées par les tâches qui les introduisent :
+ * Ordre de résolution d'un trimestre (§5.1) et tâches qui le complètent :
  *   1. validation de la phase et du plan ........................ P1-01, P1-02
- *   2. actions planifiées, achats et recrutements ............... P1-02, P1-03
- *   3. production, revenus, charges ............................. P1-03
- *   4. stress, santé, vieillissement, fins ...................... P1-04
+ *   2. étapes du plan dans l'ordre (actions, achats) ............ P1-02, P1-03
+ *   3. charges puis production des améliorations actives ........ P1-03
+ *   4. stress, santé, vieillissement, décès ..................... P1-04
  *   5. échéances ................................................ alpha
- *   6. passage à T+1 (une seule fois) et journal du trimestre T . P1-01 ; événements P1-05
- *   7. phase `decision` si choix bloquant, sinon `planning` ..... P1-01 ; P1-05
+ *   6. passage à T+1 (une seule fois), journal du trimestre T,
+ *      suites dues et tirage des événements ......................... P1-01, P1-05
+ *   7. phase `decision` si un choix bloquant attend, sinon `planning`  P1-01, P1-05
+ *
+ * Fin de partie : un décès à l'étape 4 clôt la carrière au trimestre T (`end.turn
+ * = T`) ; aucun événement n'est tiré. Un décès causé par un événement de la
+ * frontière est daté de T+1. Le compteur passe toujours à T+1 pour clore T, et
+ * toute commande est ensuite refusée. `chooseEvent` est traité dans `events.ts`.
  */
+import type { Content } from '../content/types.ts';
+import { economyRecords, resolveEconomy } from './economy.ts';
+import { chooseEvent, resolveEventFrontier } from './events.ts';
+import { resolveWellbeing } from './health.ts';
+import { executePlan, previewPlan } from './plan.ts';
 import type { CommandError, CommitTurnCommand, GameCommand, TransitionResult } from './commands.ts';
-import type { GameState, HistoryEntry } from './state.ts';
+import type { EndState, GameState, HistoryEntry } from './state.ts';
 
 function reject(state: GameState, error: CommandError): TransitionResult {
 	return { ok: false, state, error };
 }
 
-function validateCommitTurn(state: GameState, command: CommitTurnCommand): CommandError | null {
+function phaseError(state: GameState): CommandError | null {
 	switch (state.phase) {
 		case 'planning':
-			break;
+			return null;
 		case 'ended':
-			return { code: 'game_ended', message: 'La carrière est terminée.' };
+			return { code: 'game_ended', message: 'La carrière est terminée.', issues: [] };
 		case 'decision':
 			return {
 				code: 'decision_pending',
-				message: 'Une décision doit être prise avant de passer au trimestre suivant.'
+				message: 'Une décision doit être prise avant de passer au trimestre suivant.',
+				issues: []
 			};
 		default:
-			return { code: 'invalid_phase', message: 'La partie est dans une phase inconnue.' };
+			return {
+				code: 'invalid_phase',
+				message: 'La partie est dans une phase inconnue.',
+				issues: []
+			};
 	}
-
-	const actions: unknown = command.plan?.actions;
-	if (!Array.isArray(actions)) {
-		return { code: 'invalid_plan', message: 'Le plan du trimestre est mal formé.' };
-	}
-	// Aucun catalogue d'actions avant P1-02 : seul un plan vide est valide.
-	if (actions.length > 0) {
-		const actionId = (actions[0] as { actionId?: unknown } | null)?.actionId;
-		return {
-			code: 'unknown_action',
-			message: `Action inconnue : ${typeof actionId === 'string' ? actionId : '(sans identifiant)'}.`
-		};
-	}
-	return null;
 }
 
-function resolveCommitTurn(state: GameState): TransitionResult {
+function commitTurn(
+	state: GameState,
+	command: CommitTurnCommand,
+	content: Content
+): TransitionResult {
+	const blocked = phaseError(state);
+	if (blocked) return reject(state, blocked);
+
+	// 1. Validation complète, identique à la prévision affichée au joueur.
+	const preview = previewPlan(state, command.plan, content);
+	if (!preview.valid) {
+		return reject(state, {
+			code: 'invalid_plan',
+			message: 'Le plan du trimestre n’est pas valide.',
+			issues: preview.issues
+		});
+	}
+
+	// 2. Étapes dans l'ordre annoncé ; effets aléatoires tirés ici, achats en attente.
+	const execution = executePlan(state, command.plan.steps, content);
+
+	// 3. Charges puis production des améliorations acquises avant T.
 	const resolvedTurn = state.turn;
-	const entry: HistoryEntry = { type: 'turn.resolved', turn: resolvedTurn };
+	const economy = resolveEconomy(execution.resources, execution.upgrades, resolvedTurn, content);
+
+	// 4. Stress, santé, vieillissement et décès à la frontière T/T+1.
+	const wellbeing = resolveWellbeing(
+		execution.player,
+		execution.timeUsed,
+		resolvedTurn,
+		execution.rng,
+		content.balance.wellbeing
+	);
+	const nextTurn = resolvedTurn + 1;
+
+	// 6. Passage à T+1, puis suites dues et tirage des événements (sauf décès en 4).
+	const frontier = wellbeing.record.deathCause
+		? null
+		: resolveEventFrontier(
+				{
+					turn: nextTurn,
+					player: wellbeing.player,
+					resources: economy.resources,
+					upgrades: execution.upgrades,
+					rng: wellbeing.rng,
+					nextInstanceNumber: execution.nextInstanceNumber,
+					events: state.events
+				},
+				content
+			);
+
+	const entry: HistoryEntry = {
+		type: 'turn.resolved',
+		turn: resolvedTurn,
+		steps: execution.records,
+		economy: { producers: economyRecords(economy), changes: economy.changes },
+		wellbeing: wellbeing.record,
+		events: frontier?.records ?? []
+	};
+
+	// 7. Phase suivante.
+	const end: EndState | null = wellbeing.record.deathCause
+		? { turn: resolvedTurn, reason: 'death', cause: wellbeing.record.deathCause }
+		: frontier?.deathCause
+			? { turn: nextTurn, reason: 'death', cause: frontier.deathCause }
+			: null;
+	const events = frontier?.events ?? { ...state.events, pending: [], scheduled: [] };
 	return {
 		ok: true,
 		state: {
 			...state,
-			turn: resolvedTurn + 1,
-			phase: 'planning',
+			turn: nextTurn,
+			phase: end ? 'ended' : events.pending.length > 0 ? 'decision' : 'planning',
+			end,
+			rng: frontier?.rng ?? wellbeing.rng,
+			player: frontier?.player ?? wellbeing.player,
+			resources: frontier?.resources ?? economy.resources,
+			upgrades: execution.upgrades,
+			nextInstanceNumber: frontier?.nextInstanceNumber ?? execution.nextInstanceNumber,
+			events,
 			history: [...state.history, entry]
 		},
-		resolvedTurn,
 		log: [entry]
 	};
 }
 
-export function transition(state: GameState, command: GameCommand): TransitionResult {
+export function transition(
+	state: GameState,
+	command: GameCommand,
+	content: Content
+): TransitionResult {
 	switch (command.type) {
-		case 'commitTurn': {
-			const error = validateCommitTurn(state, command);
-			return error ? reject(state, error) : resolveCommitTurn(state);
-		}
+		case 'commitTurn':
+			return commitTurn(state, command, content);
+		case 'chooseEvent':
+			return chooseEvent(state, command, content);
 		default:
 			return reject(state, {
 				code: 'unknown_command',
-				message: `Commande inconnue : ${String((command as { type?: unknown }).type)}.`
+				message: `Commande inconnue : ${String((command as { type?: unknown }).type)}.`,
+				issues: []
 			});
 	}
 }

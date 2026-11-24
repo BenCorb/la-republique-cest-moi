@@ -1,0 +1,69 @@
+{
+	"timeBudgetPerTurn": 100,
+	"startingResources": {
+		"influence": 0,
+		"politicalBudgetCents": 10000,
+		"personalCashCents": 300000
+	},
+	"wellbeing": {
+		"startingHealth": 85,
+		"startingStress": 10,
+		"workloadThreshold": 60,
+		"workloadStressPer10Points": 2,
+		"stressRecoveryPerTurn": 5,
+		"highStressThreshold": 70,
+		"highStressHealthLoss": 1,
+		"calmStressThreshold": 30,
+		"calmHealthGain": 1,
+		"fragileHealthThreshold": 30,
+		"fragileMortalityMultiplier": 3,
+		"ageBands": [
+			{
+				"fromAge": 0,
+				"maxHealth": 95,
+				"ageingChance": 0,
+				"ageingHealthLoss": 0,
+				"mortalityChance": 0.0003
+			},
+			{
+				"fromAge": 45,
+				"maxHealth": 90,
+				"ageingChance": 0.25,
+				"ageingHealthLoss": 1,
+				"mortalityChance": 0.001
+			},
+			{
+				"fromAge": 60,
+				"maxHealth": 80,
+				"ageingChance": 0.5,
+				"ageingHealthLoss": 1,
+				"mortalityChance": 0.003
+			},
+			{
+				"fromAge": 70,
+				"maxHealth": 65,
+				"ageingChance": 0.75,
+				"ageingHealthLoss": 1,
+				"mortalityChance": 0.008
+			},
+			{
+				"fromAge": 80,
+				"maxHealth": 50,
+				"ageingChance": 0.8,
+				"ageingHealthLoss": 2,
+				"mortalityChance": 0.025
+			},
+			{
+				"fromAge": 90,
+				"maxHealth": 35,
+				"ageingChance": 1,
+				"ageingHealthLoss": 3,
+				"mortalityChance": 0.08
+			}
+		]
+	},
+	"events": {
+		"ordinaryDrawsPerTurn": 1,
+		"ordinaryEventChance": 0.3
+	}
+}

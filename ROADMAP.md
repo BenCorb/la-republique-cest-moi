@@ -1,7 +1,8 @@
 # La République, c’est moi ! — Feuille de route
 
 **Version 0.1 — 24 novembre 2026**  
-**Statut :** phase 0 terminée (P0-01 à P0-06). Phase 1 en cours : P1-01 réalisée et vérifiée le 24 novembre 2026 (✅ = tâche terminée dans les tableaux).  
+**Statut :** phases 0 et 1 terminées : P0-01 à P0-06 et P1-01 à P1-10 réalisées et vérifiées le 24 novembre 2026 (✅ = tâche terminée dans les tableaux). La branche `feat/p1-prototype` doit encore être intégrée par une PR unique vers `main`. Reprise : voir §9.
+
 **Références :** [GAME_DESIGN.md](GAME_DESIGN.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN.md](DESIGN.md), [AGENTS.md](AGENTS.md).
 
 ## 1. Stratégie de livraison
@@ -34,15 +35,15 @@ Dépendances : P0-01 précède les autres ; P0-02 et P0-03 peuvent être traité
 | ID | Tâche | Dépendances | Critère d’acceptation |
 |---|---|---|---|
 | P1-01 ✅ | État, calendrier, seed, PRNG et commandes | P0 | Profil fixe de 25 ans, T1 2000 ; 4 tours = 1 an ; état sérialisable ; même seed et commandes reproduisent le même résultat |
-| P1-02 | Catalogue d’actions, conditions et effets | P1-01 | Schéma validé ; temps trimestriel et coûts vérifiés ; preview pure ; plan rejeté sans modification |
-| P1-03 | Économie, producteurs et améliorations | P1-02 | Budget politique séparé des finances personnelles ; charges explicites ; achat T produit en T+1 ; invariants testés |
-| P1-04 | Santé, stress, vieillissement et fin | P1-03 | Effets du repos et de la charge testés ; décès et bilan atteignables ; aucune commande de tour après fin |
-| P1-05 | Moteur d’événements | P1-04 | Tirage conditionnel, acteurs pertinents, choix, répétition et au moins une suite différée ; choix bloquant appliqué une seule fois |
-| P1-06 | Premier catalogue narratif | P1-05 | 20–30 événements écrits et paramétrables ; aucun texte non résolu ; aucun choix sans issue ; validation automatisée |
-| P1-07 | Sauvegarde locale | P1-05 | Enveloppe versionnée, reprise à l’identique y compris décision en attente, export/import et erreurs traitées ; pas de progression hors ligne |
-| P1-08 | Interface jouable | P1-03 à 07 | Agenda, tableau de bord, producteurs simples, événements, journal et bilan accessibles ; coûts et erreurs lisibles |
-| P1-09 | Accélération minimale et tests de scénarios | P1-08 | Tours multiples identiques aux tours unitaires ; arrêt sur choix/alerte/fin, annulation possible ; E2E complet |
-| P1-10 | Simulateur et réglages initiaux | P1-09 | Exécution de lots seedés ; rapport JSON/CSV ; invariants et fins analysés ; playtest humain effectué et documenté |
+| P1-02 ✅ | Catalogue d’actions, conditions et effets | P1-01 | Schéma validé ; temps trimestriel et coûts vérifiés ; preview pure ; plan rejeté sans modification |
+| P1-03 ✅ | Économie, producteurs et améliorations | P1-02 | Budget politique séparé des finances personnelles ; charges explicites ; achat T produit en T+1 ; invariants testés |
+| P1-04 ✅ | Santé, stress, vieillissement et fin | P1-03 | Effets du repos et de la charge testés ; décès et bilan atteignables ; aucune commande de tour après fin |
+| P1-05 ✅ | Moteur d’événements | P1-04 | Tirage conditionnel, acteurs pertinents, choix, répétition et au moins une suite différée ; choix bloquant appliqué une seule fois |
+| P1-06 ✅ | Premier catalogue narratif | P1-05 | 20–30 événements écrits et paramétrables ; aucun texte non résolu ; aucun choix sans issue ; validation automatisée |
+| P1-07 ✅ | Sauvegarde locale | P1-05 | Enveloppe versionnée, reprise à l’identique y compris décision en attente, export/import et erreurs traitées ; pas de progression hors ligne |
+| P1-08 ✅ | Interface jouable | P1-03 à 07 | Agenda, tableau de bord, producteurs simples, événements, journal et bilan accessibles ; coûts et erreurs lisibles |
+| P1-09 ✅ | Accélération minimale et tests de scénarios | P1-08 | Tours multiples identiques aux tours unitaires ; arrêt sur choix/alerte/fin, annulation possible ; E2E complet |
+| P1-10 ✅ | Simulateur et réglages initiaux | P1-09 | Exécution de lots seedés ; rapport JSON/CSV ; invariants et fins analysés ; playtest humain effectué et documenté |
 
 ### Contenu minimal
 
@@ -83,7 +84,7 @@ Actions de militantisme, rencontres, recrutement générique, organisation, repo
 | P3-05 | Institutions modifiables | P3-01/04 | Réformes limitées aux fonctions autorisées, règles persistantes, activation à date fixe, conséquences aussi pour adversaires |
 | P3-06 | Âges de départ et passé | P2-08 | Trois familles de profils et passé cohérent ; bagage contre horizon de vie ; pas d’avantage interparties |
 | P3-07 | Époques, chaînes et contenu | P3-01 à 06 | Événements et technologies disponibles selon dates ; références fictives ; répétitions contrôlées ; catalogue enrichi et validé |
-| P3-08 | Interface et bilan définitifs V1 | P3-07 | Écrans intégrés, nécrologies diversifiées, distinctions fondées sur historique, pas de sous-système de prestige |
+| P3-08 | Interface et bilan définitifs V1 | P3-07 | Interface allégée et plus graphique ; plan cohérent entre avance manuelle et accélération ; écrans intégrés, nécrologies diversifiées, distinctions fondées sur historique, pas de sous-système de prestige |
 | P3-09 | Équilibrage et tests | P3-08 | Lots de simulations par stratégie, playtests, corrections documentées ; cible de durée évaluée ; aucune anomalie critique connue |
 | P3-10 | Livraison statique | P3-09 | Build, vérification locale et sous-chemin GitHub Pages ; procédure de déploiement/rollback (workflow manuel) éprouvée ; publication seulement sur demande |
 
@@ -110,3 +111,13 @@ Les deux assistants doivent lire `AGENTS.md`, puis les documents concernés et c
 > Lis `AGENTS.md`, `GAME_DESIGN.md`, `ARCHITECTURE.md`, `DESIGN.md` et `ROADMAP.md`. Vérifie l’état actuel du dépôt et conserve les documents existants. Implémente uniquement la phase 0 de la feuille de route (P0-01 à P0-04), en commençant par P0-01. Initialise SvelteKit statique avec TypeScript strict, Tailwind CSS, Lucide et npm ; verrouille la version Node et les dépendances. Configure les outils de vérification et les tests de démarrage, une coque desktop minimale et un README de démarrage. Ne développe pas encore le moteur de carrière, les élections, la justice ou les événements. Pas de backend, de service externe ni de dépendance IA au runtime. Vérifie les scripts effectivement disponibles et le build statique. Mets à jour les cases des tâches uniquement lorsqu’elles sont vérifiées. Termine avec un récapitulatif des fichiers modifiés, des tests réellement exécutés, des éventuelles limites et de la prochaine tâche P1-01. Ne publie pas et ne pousse pas le dépôt sans demande.
 
 Les tâches de phase 0 peuvent également être confiées une par une pour faciliter la revue. Après le bootstrap, commencer P1-01, pas une implémentation globale de la V1.
+
+## 9. Reprise du travail — passage de relais (24 novembre 2026)
+
+- **Branche :** `feat/p1-prototype` (poussée), basée sur `main` (`2b1ab80`), un commit par tâche P1-02 à P1-09 ; une seule pull request vers `main` en fin de phase 1 (exception documentée dans `AGENTS.md`). Le site publié montre encore la phase 0.
+- **État :** phases 0 et 1 terminées et vérifiées. P1-10 fournit le simulateur, les rapports JSON/CSV, le lot CI et un premier réglage ; le playtest humain a mené une carrière complète jusqu’au bilan sans bug fonctionnel. Retours détaillés dans `PLAYTEST.md`.
+- **Où lire :** décisions de chaque tâche dans `ARCHITECTURE.md` (§5.2 bis, §6.1, §7.1 bis, §7.3, §7.4, §8.1 bis, §8.2 bis, §9.1, §10.1, §11.1 bis, §12.1–12.3) ; protocole humain dans `PLAYTEST.md` ; limites, dette et règles provisoires au §15.
+- **Prochaine étape :** vérifier et committer P1-10, pousser la branche, ouvrir la PR unique de phase 1 et attendre une CI verte avant fusion. La prochaine tâche de développement après intégration est P2-01. Ne pas déployer sans demande explicite.
+- **Décisions attendues du créateur :** règle de version de sauvegarde (§15.1) ; coût de la vie personnel ; relecture éditoriale des 30 événements ; déplacement du dépôt hors d’iCloud (§15.4).
+- **Avant de commencer :** `git fetch --prune`, `git status`, rechercher les copies de synchronisation (`find . -path ./node_modules -prune -o -name '* [0-9].*' -print`), `npm ci`, puis la vérification complète ci-dessus.
+

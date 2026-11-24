@@ -1,0 +1,54 @@
+{
+	"cast": [
+		{ "id": "cast.dr_mercier", "name": "la docteure Hélène Mercier", "tags": ["medical"] },
+		{ "id": "cast.dr_benali", "name": "le docteur Karim Benali", "tags": ["medical"] },
+		{
+			"id": "cast.sophie_roux",
+			"name": "Sophie Roux, du Courrier du Bocage",
+			"tags": ["journalist", "local_press"]
+		},
+		{
+			"id": "cast.antoine_vasseur",
+			"name": "Antoine Vasseur, de Radio Bocage FM",
+			"tags": ["journalist", "radio"]
+		},
+		{
+			"id": "cast.lucie_fontaine",
+			"name": "Lucie Fontaine, de La Gazette fouineuse",
+			"tags": ["journalist", "investigative"]
+		},
+		{ "id": "cast.aunt_odette", "name": "tante Odette", "tags": ["family"] },
+		{ "id": "cast.cousin_regis", "name": "le cousin Régis", "tags": ["family", "job_seeker"] },
+		{ "id": "cast.nephew_kevin", "name": "le neveu Kévin", "tags": ["family", "job_seeker"] },
+		{ "id": "cast.julien_morel", "name": "Julien, votre ami de lycée", "tags": ["friend"] },
+		{ "id": "cast.nadia_haddad", "name": "Nadia, votre ancienne colocataire", "tags": ["friend"] },
+		{
+			"id": "cast.bernard_lagarde",
+			"name": "Bernard Lagarde, promoteur immobilier",
+			"tags": ["business", "donor"]
+		},
+		{
+			"id": "cast.claire_dumas",
+			"name": "Claire Dumas, héritière d’une biscuiterie",
+			"tags": ["business", "donor"]
+		},
+		{
+			"id": "cast.gerard_duclos",
+			"name": "Gérard Duclos, conseiller sortant",
+			"tags": ["politician", "rival"]
+		},
+		{
+			"id": "cast.martine_vidal",
+			"name": "Martine Vidal, élue d’opposition",
+			"tags": ["politician", "rival"]
+		},
+		{
+			"id": "cast.pierre_lambert",
+			"name": "Pierre Lambert, secrétaire de section",
+			"tags": ["party_official"]
+		},
+		{ "id": "cast.jordan_petit", "name": "Jordan, militant infatigable", "tags": ["volunteer"] },
+		{ "id": "cast.mireille_blanc", "name": "Mireille, militante retraitée", "tags": ["volunteer"] },
+		{ "id": "cast.yann_le_goff", "name": "Yann, militant graphiste", "tags": ["volunteer"] }
+	]
+}

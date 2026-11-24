@@ -2,7 +2,18 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { validateContentDirectory } from '../../scripts/validate-content.ts';
+import {
+	DEFAULT_CONTENT_DIR,
+	validateContentDirectory,
+	validateGameContent
+} from '../../scripts/validate-content.ts';
+import {
+	fixtureActions,
+	fixtureBalance,
+	fixtureCast,
+	fixtureEvents,
+	fixtureUpgrades
+} from '../fixtures/content.ts';
 
 const temporaryDirs: string[] = [];
 
@@ -41,5 +52,41 @@ describe('validation de contenu', () => {
 		const report = validateContentDirectory(dir);
 		expect(report.issues).toHaveLength(1);
 		expect(report.issues[0]?.file).toBe('broken.json');
+	});
+
+	it('valide le catalogue réel du jeu', () => {
+		const report = validateGameContent(DEFAULT_CONTENT_DIR);
+		expect(report.issues).toEqual([]);
+		expect(report.files).toEqual(
+			expect.arrayContaining(['actions.json', 'upgrades.json', 'balance.json', 'cast.json'])
+		);
+	});
+
+	it('signale un catalogue obligatoire manquant', () => {
+		const dir = makeTempDir();
+		writeFileSync(join(dir, 'balance.json'), JSON.stringify(fixtureBalance));
+		expect(validateGameContent(dir).issues).toEqual([
+			{ file: 'actions.json', message: 'catalogue obligatoire manquant' },
+			{ file: 'upgrades.json', message: 'catalogue obligatoire manquant' },
+			{ file: 'cast.json', message: 'catalogue obligatoire manquant' }
+		]);
+	});
+
+	it('applique la validation complète, pas seulement la syntaxe', () => {
+		const dir = makeTempDir();
+		const broken = structuredClone(fixtureActions);
+		const first = broken.actions[0];
+		if (first) first.timeCost = 500;
+		writeFileSync(join(dir, 'actions.json'), JSON.stringify(broken));
+		writeFileSync(join(dir, 'balance.json'), JSON.stringify(fixtureBalance));
+		writeFileSync(join(dir, 'upgrades.json'), JSON.stringify(fixtureUpgrades));
+		writeFileSync(join(dir, 'cast.json'), JSON.stringify(fixtureCast));
+		mkdirSync(join(dir, 'events'));
+		for (const [file, catalog] of Object.entries(fixtureEvents)) {
+			writeFileSync(join(dir, file), JSON.stringify(catalog));
+		}
+		const report = validateGameContent(dir);
+		expect(report.issues).toHaveLength(1);
+		expect(report.issues[0]?.message).toContain('actions[0].timeCost');
 	});
 });

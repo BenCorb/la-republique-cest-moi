@@ -1,0 +1,200 @@
+{
+	"events": [
+		{
+			"id": "finance.generous_donor",
+			"category": "finance",
+			"title": "Un donateur très généreux",
+			"text": "{donor} souhaite soutenir « les jeunes talents de la démocratie locale », par un chèque d’un montant inhabituel. Il insiste : il ne demande rien en retour, naturellement.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 10,
+			"cooldownTurns": 24,
+			"unique": false,
+			"when": {
+				"op": "gte",
+				"stat": "resources.influence",
+				"value": 15
+			},
+			"actors": [
+				{
+					"role": "donor",
+					"tags": ["donor"]
+				}
+			],
+			"choices": [
+				{
+					"id": "accept",
+					"label": "Accepter le chèque",
+					"hints": ["Budget politique en forte hausse", "Une amitié qui pourrait coûter cher"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "politicalBudgetCents",
+							"value": 80000
+						}
+					],
+					"followUp": {
+						"eventId": "finance.donor_favour",
+						"delayTurns": 3
+					}
+				},
+				{
+					"id": "declare",
+					"label": "Accepter une somme plafonnée, rendue publique",
+					"hints": ["Budget en hausse", "Transparence appréciée"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "politicalBudgetCents",
+							"value": 30000
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": "refuse",
+					"label": "Refuser poliment",
+					"hints": ["Rien ne change", "{donor} s’en souviendra"],
+					"costs": [],
+					"effects": []
+				}
+			]
+		},
+		{
+			"id": "finance.donor_favour",
+			"category": "finance",
+			"title": "Un petit service",
+			"text": "{donor} vous rappelle. Un permis de construire « parfaitement banal » attend une signature à la mairie, et vous connaissez du monde. Il ne s’agirait que de passer un coup de fil.",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 15,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [
+				{
+					"role": "donor",
+					"tags": ["donor"]
+				}
+			],
+			"choices": [
+				{
+					"id": "call",
+					"label": "Passer le coup de fil",
+					"hints": ["La générosité continue", "Un dossier qui pourrait intéresser la presse"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "politicalBudgetCents",
+							"value": 30000
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 4
+						}
+					],
+					"followUp": {
+						"eventId": "press.donor_investigation",
+						"delayTurns": 4
+					}
+				},
+				{
+					"id": "refuse",
+					"label": "Refuser fermement",
+					"hints": ["Conscience tranquille", "Plus de chèque"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "finance.expense_report",
+			"category": "finance",
+			"title": "Une note de frais créative",
+			"text": "Le trésorier bénévole vous fait remarquer, l’air de rien, que votre dîner d’anniversaire « ressemblait beaucoup à une réunion de travail ». Il suffirait de le classer comme tel.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 0,
+			"cooldownTurns": 24,
+			"unique": false,
+			"when": {
+				"op": "gte",
+				"stat": "resources.politicalBudgetCents",
+				"value": 20000
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "charge",
+					"label": "Le passer en frais de campagne",
+					"hints": ["Argent personnel préservé", "Les comptes ont parfois de la mémoire"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "politicalBudgetCents",
+							"value": -15000
+						},
+						{
+							"op": "addResource",
+							"resource": "personalCashCents",
+							"value": 15000
+						}
+					],
+					"followUp": {
+						"eventId": "press.expense_leak",
+						"delayTurns": 6
+					}
+				},
+				{
+					"id": "pay",
+					"label": "Le régler soi-même",
+					"hints": ["Comptes irréprochables"],
+					"costs": [],
+					"effects": []
+				}
+			]
+		},
+		{
+			"id": "finance.bank_error",
+			"category": "finance",
+			"title": "Une erreur de la banque",
+			"text": "Votre banque vous crédite par erreur des frais qu’elle vous avait prélevés deux fois. Elle s’en excuse par courrier, en vous facturant l’envoi.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 2,
+			"priority": 0,
+			"cooldownTurns": 0,
+			"unique": true,
+			"actors": [],
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "personalCashCents",
+					"value": 12000
+				}
+			]
+		}
+	]
+}

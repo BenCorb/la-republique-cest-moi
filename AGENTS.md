@@ -37,6 +37,7 @@ Le dépôt Git et les documents constituent la mémoire commune. Ne pas dépendr
 - Dépôt : `github.com/BenCorb/la-republique-cest-moi`, branche principale `main`. `ROADMAP.md` est la source de vérité de l’avancement : une case n’est cochée que lorsque son critère est vérifié.
 - Une branche par tâche, créée depuis `main` à jour : `<type>/<id>-<sujet-court>` en minuscules et tirets, par exemple `feat/p1-01-etat-calendrier`, `fix/p1-07-import-sauvegarde`, `docs/conventions-git`. L’identifiant de tâche est omis s’il n’y en a pas. Pas de préfixe propre à un assistant.
 - Commits au format [Conventional Commits](https://www.conventionalcommits.org/fr/) : `<type>(<portée facultative>): <description>` ; types `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`, `build`, `perf`, `style`. Description en français, à l’impératif, sans point final ; corps facultatif pour le « pourquoi » ; pied `Refs: P1-01` pour relier une tâche. Exemple : `feat(engine): ajouter le calendrier trimestriel`.
+- Exception décidée par le créateur pour la phase 1 : une branche de phase unique `feat/p1-prototype`, un commit par tâche (`Refs: P1-0x`) poussé sur cette branche, et une seule pull request vers `main` à la fin de la phase. La reprise se fait sur cette branche ; ROADMAP.md indique les tâches terminées.
 - Intégration par pull request vers `main` après CI verte ; fusion « squash » avec un titre au format Conventional Commits. Pas de push forcé sur `main`, pas de réécriture d’un historique publié.
 - Le déploiement GitHub Pages est manuel (workflow « CI et GitHub Pages », option `deploy`) et n’est lancé que sur demande explicite du créateur.
 
@@ -45,6 +46,7 @@ Le dépôt Git et les documents constituent la mémoire commune. Ne pas dépendr
 1. **Avant de passer la main** : terminer une étape cohérente ou la documenter ; vérifier les scripts concernés ; committer sur la branche de la tâche et la pousser. Dans la description de la pull request (ouverte en brouillon si nécessaire), tenir une section « Reprise » : tâche, état, commandes exécutées et résultats, décisions, points ouverts, prochaine étape. Ne laisser aucune modification non commitée dont l’autre assistant aurait besoin.
 2. **En reprenant** : `git fetch --prune`, `git status`, puis lire `AGENTS.md`, `ROADMAP.md` et la section « Reprise » de la pull request en cours (`gh pr list`, `gh pr view`) ; vérifier l’état de la CI (`gh run list`). Poursuivre sur la même branche ; ne jamais travailler simultanément sur la même branche ou les mêmes fichiers.
 3. Les décisions durables vont dans les documents du dépôt, pas dans la mémoire privée d’un assistant.
+4. Le dépôt ne doit pas se trouver dans un dossier synchronisé (iCloud Drive, Dropbox…) : la synchronisation crée des copies « nom 2.ext » qui cassent les vérifications et peuvent corrompre `.git`. Si c’est le cas, chercher ces copies avant chaque tâche et ne jamais les versionner (ARCHITECTURE.md §15.4).
 
 `CLAUDE.md` se limite à importer ce fichier (`@AGENTS.md`) ; Codex lit `AGENTS.md` directement. Toute nouvelle consigne commune s’ajoute ici.
 

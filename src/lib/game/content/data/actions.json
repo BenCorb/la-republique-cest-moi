@@ -1,0 +1,174 @@
+{
+	"actions": [
+		{
+			"id": "activism.leaflets",
+			"label": "Distribuer des tracts",
+			"description": "Un samedi matin au marché, entre le fromager et un militant adverse qui distribue exactement le même tract avec un autre logo.",
+			"timeCost": 15,
+			"maxPerTurn": 2,
+			"costs": [
+				{
+					"resource": "politicalBudgetCents",
+					"amount": 2000
+				}
+			],
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "influence",
+					"min": 1,
+					"max": 3
+				}
+			]
+		},
+		{
+			"id": "network.meet_officials",
+			"label": "Rencontrer des élus locaux",
+			"description": "Serrer des mains, écouter longuement les anecdotes de mandats passés et rire au bon moment.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 3
+				}
+			]
+		},
+		{
+			"id": "activism.public_meeting",
+			"label": "Organiser une réunion publique",
+			"description": "Louer une salle des fêtes, installer cent chaises et espérer en occuper plus de douze.",
+			"timeCost": 50,
+			"maxPerTurn": 1,
+			"costs": [
+				{
+					"resource": "politicalBudgetCents",
+					"amount": 30000
+				}
+			],
+			"requires": {
+				"op": "gte",
+				"stat": "resources.influence",
+				"value": 10
+			},
+			"unavailableReason": "Il faut au moins 10 points d’influence pour espérer remplir une salle.",
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "influence",
+					"min": 5,
+					"max": 12
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 6
+				}
+			]
+		},
+		{
+			"id": "organization.fundraising",
+			"label": "Organiser une collecte",
+			"description": "Un dîner-débat à prix libre, dont le prix s’avère étonnamment peu libre.",
+			"timeCost": 25,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "gte",
+				"stat": "resources.influence",
+				"value": 5
+			},
+			"unavailableReason": "Il faut au moins 5 points d’influence pour que quelqu’un se déplace.",
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "politicalBudgetCents",
+					"min": 10000,
+					"max": 40000
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				}
+			]
+		},
+		{
+			"id": "personal.freelance",
+			"label": "Accepter des missions en free-lance",
+			"description": "Il faut bien payer le loyer : quelques missions de conseil, réalisées entre deux réunions.",
+			"timeCost": 30,
+			"maxPerTurn": 2,
+			"costs": [],
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "personalCashCents",
+					"value": 80000
+				}
+			]
+		},
+		{
+			"id": "personal.donate",
+			"label": "Verser un don à son organisation",
+			"description": "Transférer une partie de ses économies au budget politique. Le geste est noble, le compte en banque moins enthousiaste.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [
+				{
+					"resource": "personalCashCents",
+					"amount": 50000
+				}
+			],
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "politicalBudgetCents",
+					"value": 50000
+				}
+			]
+		},
+		{
+			"id": "personal.rest",
+			"label": "Prendre du repos",
+			"description": "Éteindre son téléphone, ne pas lire la presse, et constater que le monde politique continue de tourner sans vous, ce qui est à la fois rassurant et vexant.",
+			"timeCost": 25,
+			"maxPerTurn": 2,
+			"costs": [],
+			"effects": [
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": -12
+				}
+			]
+		},
+		{
+			"id": "personal.vacation",
+			"label": "Partir en vacances",
+			"description": "Une semaine au bord de la mer, avec un livre que vous ne finirez pas et une crème solaire que vous oublierez.",
+			"timeCost": 40,
+			"maxPerTurn": 1,
+			"costs": [
+				{
+					"resource": "personalCashCents",
+					"amount": 80000
+				}
+			],
+			"effects": [
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": -25
+				},
+				{
+					"op": "addStat",
+					"stat": "player.health",
+					"value": 2
+				}
+			]
+		}
+	]
+}

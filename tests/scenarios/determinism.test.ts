@@ -10,6 +10,7 @@ import {
 	type GameCommand,
 	type GameState
 } from '../../src/lib/game/engine/index.ts';
+import { fixtureContent, quarters as quarterEntries } from '../fixtures/content.ts';
 
 function deepFreeze<T>(value: T): T {
 	if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -21,13 +22,13 @@ function deepFreeze<T>(value: T): T {
 
 /** Rejoue une partie et vérifie les invariants et l'immuabilité après chaque commande. */
 function play(seed: string, commands: readonly GameCommand[]): GameState {
-	let state = deepFreeze(createGame({ seed }));
-	assertInvariants(state);
+	let state = deepFreeze(createGame({ seed }, fixtureContent));
+	assertInvariants(state, fixtureContent);
 	for (const command of commands) {
-		const result = transition(state, command);
+		const result = transition(state, command, fixtureContent);
 		if (!result.ok) throw new Error(`${result.error.code} : ${result.error.message}`);
 		state = deepFreeze(result.state);
-		assertInvariants(state);
+		assertInvariants(state, fixtureContent);
 	}
 	return state;
 }
@@ -45,13 +46,21 @@ describe('scénario : passage du temps', () => {
 	});
 
 	it('avance exactement d’un trimestre par validation et le journalise', () => {
-		const state = createGame({ seed: 'un-tour' });
-		const result = transition(state, commitTurn());
+		const state = createGame({ seed: 'un-tour' }, fixtureContent);
+		const result = transition(state, commitTurn(), fixtureContent);
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
 		expect(result.state.turn).toBe(1);
-		expect(result.resolvedTurn).toBe(0);
-		expect(result.log).toEqual([{ type: 'turn.resolved', turn: 0 }]);
+		expect(result.log).toEqual([
+			{
+				type: 'turn.resolved',
+				turn: 0,
+				steps: [],
+				economy: { producers: [], changes: [] },
+				wellbeing: { contributions: [], deathCause: null },
+				events: []
+			}
+		]);
 		expect(result.state.history).toEqual(result.log);
 		expect(state.turn).toBe(0);
 	});
@@ -77,11 +86,74 @@ describe('scénario : reproductibilité', () => {
 		const halfway = JSON.parse(JSON.stringify(play('reprise', quarters(5)))) as GameState;
 		let resumed = halfway;
 		for (const command of quarters(3)) {
-			const result = transition(resumed, command);
+			const result = transition(resumed, command, fixtureContent);
 			if (!result.ok) throw new Error(result.error.message);
 			resumed = result.state;
 		}
 		expect(resumed).toStrictEqual(direct);
+	});
+
+	it('rejoue à l’identique des trimestres avec effets aléatoires', () => {
+		const busy = commitTurn({
+			steps: [
+				{ kind: 'action', id: 'test.random' },
+				{ kind: 'action', id: 'test.random' },
+				{ kind: 'action', id: 'test.random_budget' }
+			]
+		});
+		const commands = Array.from({ length: 12 }, () => busy);
+		const first = play('aléatoire', commands);
+		const second = play('aléatoire', commands);
+		expect(second).toStrictEqual(first);
+		// Les tirages ont réellement eu lieu et diffèrent d'une seed à l'autre.
+		expect(first.rng.state).not.toBe(createGame({ seed: 'aléatoire' }, fixtureContent).rng.state);
+		expect(play('autre-seed', commands).resources).not.toEqual(first.resources);
+	});
+
+	it('une partie avec aléa rechargée depuis JSON se poursuit à l’identique', () => {
+		const busy = commitTurn({
+			steps: [
+				{ kind: 'action', id: 'test.random' },
+				{ kind: 'action', id: 'test.random_budget' }
+			]
+		});
+		const direct = play(
+			'reprise-aléa',
+			Array.from({ length: 6 }, () => busy)
+		);
+		let resumed = JSON.parse(
+			JSON.stringify(
+				play(
+					'reprise-aléa',
+					Array.from({ length: 3 }, () => busy)
+				)
+			)
+		) as GameState;
+		for (let index = 0; index < 3; index += 1) {
+			const result = transition(resumed, busy, fixtureContent);
+			if (!result.ok) throw new Error(result.error.message);
+			resumed = result.state;
+		}
+		expect(resumed).toStrictEqual(direct);
+	});
+
+	it('rejoue à l’identique achats, charges et production', () => {
+		const buyAndAct = commitTurn({
+			steps: [
+				{ kind: 'purchase', id: 'test.volunteer' },
+				{ kind: 'action', id: 'test.random_budget' },
+				{ kind: 'action', id: 'test.random' }
+			]
+		});
+		const actOnly = commitTurn({ steps: [{ kind: 'action', id: 'test.random_budget' }] });
+		const commands = [buyAndAct, buyAndAct, ...Array.from({ length: 10 }, () => actOnly)];
+		const first = play('économie', commands);
+		expect(play('économie', commands)).toStrictEqual(first);
+		expect(first.upgrades).toHaveLength(2);
+		const statuses = quarterEntries(first.history).flatMap((entry) =>
+			entry.economy.producers.map((producer) => producer.status)
+		);
+		expect(statuses.length).toBeGreaterThan(0);
 	});
 
 	it('des seeds différentes produisent des générateurs différents', () => {
@@ -90,14 +162,14 @@ describe('scénario : reproductibilité', () => {
 });
 
 describe('scénario : commandes rejetées', () => {
-	const base = deepFreeze(createGame({ seed: 'rejets' }));
+	const base = deepFreeze(createGame({ seed: 'rejets' }, fixtureContent));
 
 	it.each<[string, GameState, GameCommand, string]>([
 		[
 			'action inconnue',
 			base,
-			commitTurn({ actions: [{ actionId: 'action.inexistante' }] }),
-			'unknown_action'
+			commitTurn({ steps: [{ kind: 'action', id: 'action.inexistante' }] }),
+			'invalid_plan'
 		],
 		[
 			'plan mal formé',
@@ -114,13 +186,17 @@ describe('scénario : commandes rejetées', () => {
 		],
 		[
 			'partie terminée',
-			deepFreeze({ ...base, phase: 'ended', end: { turn: 0, reason: 'test' } }),
+			deepFreeze({
+				...base,
+				phase: 'ended',
+				end: { turn: 0, reason: 'death', cause: 'natural_causes' }
+			}),
 			commitTurn(),
 			'game_ended'
 		]
 	])('%s : refus sans modifier l’état ni le générateur', (_label, state, command, code) => {
 		const before = JSON.stringify(state);
-		const result = transition(state, command);
+		const result = transition(state, command, fixtureContent);
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
 		expect(result.error.code).toBe(code);

@@ -13,8 +13,20 @@ compte, aucune IA au runtime ; les sauvegardes restent dans le navigateur.
 - **Jouer :** <https://bencorb.github.io/la-republique-cest-moi/>
 - **Code source :** <https://github.com/BenCorb/la-republique-cest-moi>
 
-> **État actuel : phase 0 terminée (fondations techniques et hébergement).** Aucune partie n’est
-> encore jouable. L’avancement fait foi dans [ROADMAP.md](ROADMAP.md).
+> **État actuel : prototype terminé (phase 1).** Une carrière se joue de bout en bout et le premier
+> playtest humain est validé sur la branche `feat/p1-prototype` ; la PR de phase reste à intégrer et
+> le site publié montre encore la phase 0. L’avancement fait foi dans [ROADMAP.md](ROADMAP.md).
+
+## Jouer (prototype)
+
+Une carrière commence à 25 ans, au premier trimestre 2000. À chaque trimestre : composer le plan
+dans l’**Agenda** (actions) et l’**Organisation** (achats), vérifier la prévision, puis valider avec
+« Trimestre suivant ». Les décisions bloquantes s’affichent dans une fenêtre et doivent être
+tranchées. « Année suivante » répète le plan pendant au plus quatre trimestres ; « Jusqu’à une
+alerte » accélère jusqu’à une décision, une alerte, une fin ou un plan devenu invalide, et peut être
+interrompu entre deux trimestres. La partie est sauvegardée automatiquement dans le navigateur ;
+« Exporter » produit un fichier JSON réimportable depuis l’accueil. Paramètre d’essai :
+`?seed=texte` dans l’adresse impose la seed d’une nouvelle carrière.
 
 ## Documents de référence
 
@@ -25,6 +37,7 @@ compte, aucune IA au runtime ; les sauvegardes restent dans le navigateur.
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Contrats techniques, ordre du tour, tests, sauvegarde |
 | [DESIGN.md](DESIGN.md)             | Direction artistique et interface                     |
 | [ROADMAP.md](ROADMAP.md)           | Phases, tâches et critères d’acceptation              |
+| [PLAYTEST.md](PLAYTEST.md)         | Protocoles et résultats des essais humains            |
 
 ## Prérequis
 
@@ -54,6 +67,7 @@ npm run test:e2e:install
 | `npm run lint`             | Formatage Prettier vérifié puis ESLint                             |
 | `npm run format`           | Reformate les fichiers (hors documents de conception)              |
 | `npm run content:validate` | Valide les catalogues JSON de `src/lib/game/content/data/`         |
+| `npm run simulate`         | Simule des lots seedés et produit un rapport JSON ou CSV           |
 | `npm run test`             | Tests unitaires et de scénarios (Vitest, environnement Node)       |
 | `npm run test:e2e`         | Construit le site puis lance Playwright sur le build statique      |
 | `npm run build`            | Build statique prérendu dans `build/`                              |
@@ -62,6 +76,17 @@ npm run test:e2e:install
 
 Toutes les commandes de build, d’aperçu et de test respectent la variable `BASE_PATH` (voir
 « Hébergement GitHub Pages »).
+
+Exemple de simulation reproductible :
+
+```bash
+npm run simulate -- --runs 100 --seed 42 --strategy all --max-turns 400 --format json --output rapport.json
+npm run simulate -- --runs 100 --seed 42 --strategy all --max-turns 400 --format csv --output rapport.csv
+```
+
+Les stratégies disponibles sont `prudent`, `ambitious`, `patrimonial`, `mixed`, `random-valid` et
+`all`. Une carrière arrêtée par le plafond technique, une erreur ou une violation d’invariant est
+signalée dans `problemSeeds` et fait échouer la commande.
 
 Vérification complète avant de rendre une tâche :
 
@@ -138,7 +163,10 @@ src/
   routes/                 # +layout.svelte, +page.svelte (coque d’accueil), layout.css (tokens)
   lib/
     game/engine/          # moteur TypeScript pur (sans Svelte, DOM, stockage, réseau, hasard réel)
-    components/shell/     # coque desktop (GameShell)
+    game/content/         # types, schémas Zod, validation et catalogues JSON (data/, data/events/)
+    game/persistence/     # enveloppe de sauvegarde, migrations, stockage local, export/import
+    game/app/             # projection PlayerView, contrôleur, session Svelte, frontière navigateur
+    components/           # écrans : shell, dashboard, agenda, organisation, journal, events, common
 static/                   # fichiers copiés tels quels (favicon.svg, .nojekyll)
 scripts/
   base-path.ts            # normalisation de BASE_PATH (Vite, Playwright, serveur statique)
@@ -147,6 +175,8 @@ scripts/
 .github/workflows/        # CI et déploiement GitHub Pages
 tests/
   unit/                   # Vitest (Node)
+  scenarios/              # scénarios moteur sur plusieurs trimestres (Vitest)
+  fixtures/               # contenu de test figé, indépendant du tuning
   e2e/                    # Playwright (*.e2e.ts), contre le build statique
 ```
 

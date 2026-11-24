@@ -1,0 +1,268 @@
+{
+	"events": [
+		{
+			"id": "press.local_portrait",
+			"category": "press",
+			"title": "Un portrait dans la presse locale",
+			"text": "{journalist} souhaite consacrer un portrait à « la nouvelle génération qui monte ». Vous ignorez encore si c’est vous qui montez ou la génération.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 6,
+			"priority": 10,
+			"cooldownTurns": 0,
+			"unique": true,
+			"when": {
+				"op": "gte",
+				"stat": "resources.influence",
+				"value": 8
+			},
+			"actors": [
+				{
+					"role": "journalist",
+					"tags": ["local_press"]
+				}
+			],
+			"choices": [
+				{
+					"id": "accept",
+					"label": "Accepter l’entretien",
+					"hints": ["Visibilité à venir", "Une soirée de plus au téléphone"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 3
+						}
+					],
+					"followUp": {
+						"eventId": "press.portrait_published",
+						"delayTurns": 2
+					}
+				},
+				{
+					"id": "advertise",
+					"label": "Proposer plutôt un encart publicitaire",
+					"hints": ["Visibilité immédiate", "Le journal s’en souviendra"],
+					"costs": [
+						{
+							"resource": "politicalBudgetCents",
+							"amount": 20000
+						}
+					],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": "decline",
+					"label": "Décliner poliment",
+					"hints": ["Rien ne change, en apparence"],
+					"costs": [],
+					"effects": []
+				}
+			]
+		},
+		{
+			"id": "press.portrait_published",
+			"category": "press",
+			"title": "Le portrait paraît",
+			"text": "Le portrait signé {journalist} paraît en page 7, entre la fête de la châtaigne et les résultats du club de pétanque. Il est plutôt flatteur, la photo beaucoup moins.",
+			"blocking": false,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 0,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [
+				{
+					"role": "journalist",
+					"tags": ["local_press"]
+				}
+			],
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "influence",
+					"min": 2,
+					"max": 6
+				}
+			]
+		},
+		{
+			"id": "press.radio_debate",
+			"category": "press",
+			"title": "Un débat à la radio locale",
+			"text": "{journalist} vous invite à débattre en direct avec {rival} sur « l’avenir du rond-point des Tilleuls ». Le sujet passionne au moins trois auditeurs, tous au standard.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 5,
+			"priority": 10,
+			"cooldownTurns": 20,
+			"unique": false,
+			"when": {
+				"op": "gte",
+				"stat": "resources.influence",
+				"value": 20
+			},
+			"actors": [
+				{
+					"role": "journalist",
+					"tags": ["radio"]
+				},
+				{
+					"role": "rival",
+					"tags": ["rival"]
+				}
+			],
+			"choices": [
+				{
+					"id": "prepare",
+					"label": "Préparer le débat toute la nuit",
+					"hints": ["Prestation solide", "Nuit blanche"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 6
+						},
+						{
+							"op": "addResourceRandom",
+							"resource": "influence",
+							"min": 2,
+							"max": 8
+						}
+					]
+				},
+				{
+					"id": "improvise",
+					"label": "Improviser avec aplomb",
+					"hints": ["Coup d’éclat ou faux pas", "Aucune préparation"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResourceRandom",
+							"resource": "influence",
+							"min": -4,
+							"max": 6
+						}
+					]
+				},
+				{
+					"id": "decline",
+					"label": "Laisser la place à {rival}",
+					"hints": ["Pas de risque", "Le micro est à l’adversaire"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -1
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "press.unflattering_photo",
+			"category": "press",
+			"title": "Une photo malheureuse",
+			"text": "Un photographe vous a saisi la bouche pleine, à l’inauguration d’un salon du terroir. La légende parle d’« appétit politique ». Toute la ville a compris.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 24,
+			"unique": false,
+			"when": {
+				"op": "gte",
+				"stat": "resources.influence",
+				"value": 10
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": -2
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				}
+			]
+		},
+		{
+			"id": "press.donor_investigation",
+			"category": "press",
+			"title": "La Gazette fouineuse enquête",
+			"text": "{journalist} publie une enquête sur « les amitiés immobilières » de la vie politique locale. Votre nom apparaît dans un encadré, à côté de celui de {donor}, avec un point d’interrogation très appuyé.",
+			"blocking": false,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 0,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [
+				{
+					"role": "journalist",
+					"tags": ["investigative"]
+				},
+				{
+					"role": "donor",
+					"tags": ["donor"]
+				}
+			],
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "influence",
+					"min": -10,
+					"max": -4
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 8
+				}
+			]
+		},
+		{
+			"id": "press.expense_leak",
+			"category": "press",
+			"title": "Un comptable bavard",
+			"text": "Lors d’un pot de départ, un bénévole chargé de la comptabilité évoque, un verre à la main, « des dîners très politiques chez le traiteur ». {journalist} prend des notes sur une serviette en papier.",
+			"blocking": false,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 0,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [
+				{
+					"role": "journalist",
+					"tags": ["journalist"]
+				}
+			],
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "influence",
+					"min": -8,
+					"max": -1
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 4
+				}
+			]
+		}
+	]
+}

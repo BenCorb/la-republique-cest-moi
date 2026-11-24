@@ -23,6 +23,11 @@ const FORBIDDEN_PATTERNS: Array<[string, RegExp]> = [
 	['import Svelte', /from\s+['"]svelte(\/[^'"]*)?['"]/],
 	['import SvelteKit ($app)', /from\s+['"]\$app\//],
 	['import interface/application', /from\s+['"][^'"]*(components|\/app\/|persistence)[^'"]*['"]/],
+	['import Zod (validation hors moteur)', /from\s+['"]zod['"]/],
+	[
+		'import de contenu autre que content/types.ts',
+		/from\s+['"][^'"]*\/content\/(?!types\.ts['"])[^'"]*['"]/
+	],
 	['Math.random()', /Math\.random\s*\(/],
 	['Date.now()', /Date\.now\s*\(/],
 	['new Date()', /new\s+Date\s*\(/],

@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.1.0';
+export const RULES_VERSION = '0.7.0';
 
 export {
 	START_YEAR,
@@ -44,20 +44,99 @@ export {
 	type GamePhase,
 	type GameState,
 	type HistoryEntry,
+	type ChoiceRecord,
+	type DeathCause,
+	type EventInstance,
+	type EventOccurrence,
+	type EventRecord,
+	type EventsState,
+	type JournalEntry,
+	type ScheduledEvent,
+	type EconomyRecord,
+	type GaugeChange,
 	type NewGameConfig,
-	type PlayerState
+	type OwnedUpgrade,
+	type PlayerState,
+	type ProducerRecord,
+	type ResourceChange,
+	type StepRecord,
+	type WellbeingContribution,
+	type WellbeingRecord,
+	type WellbeingSource
 } from './state.ts';
 export {
+	chooseEventCommand,
 	commitTurn,
+	type ChooseEventCommand,
 	type CommandError,
 	type CommandErrorCode,
 	type CommitTurnCommand,
 	type GameCommand,
-	type PlannedAction,
+	type PlanStep,
 	type TransitionFailure,
 	type TransitionResult,
 	type TransitionSuccess,
 	type TurnPlan
 } from './commands.ts';
+export {
+	RESOURCE_LABELS,
+	executePlan,
+	instanceIdFor,
+	previewPlan,
+	type PlanExecution,
+	type PlanIssue,
+	type PlanIssueCode,
+	type PlanPreview,
+	type PlanStepPreview,
+	type PlanWarning,
+	type ResourceRange,
+	type ResourceRanges
+} from './plan.ts';
+export {
+	economyRecords,
+	isProducing,
+	resolveEconomy,
+	type EconomyResult,
+	type ProducerForecast,
+	type ProducerStatus
+} from './economy.ts';
+export { evaluateCondition, readStat, type ConditionContext } from './conditions.ts';
+export {
+	applyGauge,
+	clampGauge,
+	effectRange,
+	resolveEffect,
+	type EffectRange,
+	type ResolvedEffect
+} from './effects.ts';
+export {
+	ageBandFor,
+	forecastWellbeing,
+	resolveWellbeing,
+	workloadStress,
+	type WellbeingForecast,
+	type WellbeingResolution
+} from './health.ts';
+export { careerSummary, type CareerSummary } from './selectors.ts';
+export {
+	choiceAvailability,
+	describePendingEvent,
+	eventInstanceId,
+	renderTemplate,
+	resolveEventFrontier,
+	type ChoiceAvailability,
+	type EventChoiceView,
+	type FrontierInput,
+	type FrontierResult,
+	type PendingEventView
+} from './events.ts';
 export { transition } from './turn.ts';
-export { assertInvariants, checkInvariants } from './invariants.ts';
+export {
+	accelerate,
+	accelerationAlerts,
+	type AccelerationAlert,
+	type AccelerationRequest,
+	type AccelerationResult,
+	type AccelerationStopReason
+} from './acceleration.ts';
+export { assertInvariants, checkContentReferences, checkInvariants } from './invariants.ts';
