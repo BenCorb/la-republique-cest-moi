@@ -295,6 +295,8 @@ describe('calendrier électoral', () => {
 					world: base.world,
 					player: base.player,
 					resources: base.resources,
+					characters: base.characters,
+					relationships: base.relationships,
 					career: {
 						mandates: [],
 						ballots: base.ballots.map((ballot) => ({ ...ballot, turn: 0 })),

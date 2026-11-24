@@ -389,6 +389,15 @@ function checkCareerInvariants(state: GameState): string[] {
 			violations.push(`score de campagne incohérent : ${campaign.campaignId}`);
 		}
 	});
+	for (const campaign of state.campaigns) {
+		if (campaign.opponentId === null) continue;
+		const opponent = state.characters[campaign.opponentId];
+		if (!opponent) {
+			violations.push(`adversaire inconnu : ${campaign.campaignId}`);
+		} else if (campaign.status === 'running' && opponent.status !== 'active') {
+			violations.push(`adversaire parti encore en campagne : ${campaign.campaignId}`);
+		}
+	}
 	const running = state.campaigns.filter((campaign) => campaign.status === 'running');
 	if (new Set(running.map((campaign) => campaign.ballotId)).size !== running.length) {
 		violations.push('deux campagnes en cours pour une même échéance');

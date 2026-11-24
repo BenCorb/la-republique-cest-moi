@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.12.0';
+export const RULES_VERSION = '0.13.0';
 
 export {
 	START_YEAR,
@@ -102,7 +102,9 @@ export {
 	campaignScore,
 	candidacyIssue,
 	careerEffectIssue,
+	opponentStrength,
 	partyPollShare,
+	rivalWins,
 	runningCampaigns,
 	conflictingMandates,
 	createCalendar,

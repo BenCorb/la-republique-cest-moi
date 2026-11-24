@@ -96,6 +96,8 @@ test.describe('parcours de jeu', () => {
 		await page.getByRole('button', { name: 'Carrière', exact: true }).click();
 		await expect(page.getByTestId('campaign-campaign.1')).toContainText('Candidature déposée');
 		await expect(page.getByTestId('poll-campaign.1')).toContainText('Sondage : entre');
+		await expect(page.getByTestId('opponent-campaign.1')).toContainText('Adversaire : ');
+		await expect(page.getByTestId('opponent-campaign.1')).not.toContainText('prochain trimestre');
 	});
 
 	test('adhère à un parti depuis le monde politique', async ({ page }) => {

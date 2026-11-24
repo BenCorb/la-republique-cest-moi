@@ -15,7 +15,7 @@
 				"minPercent": 55
 			},
 			"requiresAnyMandate": [],
-			"rivalStrength": 32
+			"rivalStrength": 30
 		},
 		{
 			"id": "election.senatorial",
@@ -32,7 +32,7 @@
 				"mandate.mayor",
 				"mandate.regional_councillor"
 			],
-			"rivalStrength": 38
+			"rivalStrength": 36
 		},
 		{
 			"id": "election.legislative",
@@ -45,7 +45,7 @@
 			"minAge": 23,
 			"grants": "mandate.deputy",
 			"requiresAnyMandate": [],
-			"rivalStrength": 42
+			"rivalStrength": 40
 		},
 		{
 			"id": "election.regional",
@@ -58,7 +58,7 @@
 			"minAge": 18,
 			"grants": "mandate.regional_councillor",
 			"requiresAnyMandate": [],
-			"rivalStrength": 35
+			"rivalStrength": 33
 		}
 	],
 	"mandates": [

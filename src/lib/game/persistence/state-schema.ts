@@ -131,11 +131,13 @@ const turnEntry = z.strictObject({
 			campaigns: z.array(
 				z.strictObject({
 					campaignId: id,
+					opponentId: id.nullable(),
 					status: z.enum(['won', 'lost', 'disqualified']),
 					playerPercent: int.nullable(),
 					reason: text.nullable()
 				})
-			)
+			),
+			people: z.array(peopleChange)
 		})
 		.nullable(),
 	events: z.array(
@@ -261,6 +263,7 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 			partyId: id.nullable(),
 			invested: z.boolean(),
 			preparation: int,
+			opponentId: id.nullable(),
 			status: z.enum(['running', 'won', 'lost', 'disqualified']),
 			playerPercent: int.nullable(),
 			reason: text.nullable()

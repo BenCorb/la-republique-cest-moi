@@ -141,6 +141,9 @@
 								<p class="text-xs text-muted">
 									{ballot.campaign.declared} · Préparation : {ballot.campaign.preparation}
 								</p>
+								<p class="text-xs" data-testid="opponent-{ballot.campaign.campaignId}">
+									Adversaire : {ballot.campaign.opponent ?? 'connu au prochain trimestre'}
+								</p>
 								{#if ballot.campaign.poll}
 									<p class="text-xs" data-testid="poll-{ballot.campaign.campaignId}">
 										Sondage : entre {ballot.campaign.poll.min} % et {ballot.campaign.poll.max} % face

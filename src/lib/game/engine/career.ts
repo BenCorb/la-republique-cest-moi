@@ -22,13 +22,17 @@ import {
 	type ResourceId,
 	type Resources
 } from '../content/types.ts';
-import { ageAt, type Turn } from './calendar.ts';
+import { ageAt, formatTurn, type Turn } from './calendar.ts';
+import { addRelation, generatePerson, meet, sortedIds } from './characters.ts';
 import { nextInt, type RngState } from './random.ts';
 import type {
 	Ballot,
 	BallotShare,
 	Campaign,
+	Character,
+	PeopleChange,
 	PlayerState,
+	Relationship,
 	DeadlinesRecord,
 	InstitutionsState,
 	MandateEndReason,
@@ -304,6 +308,7 @@ export function applyCareerEffect(
 				invested:
 					player.partyId !== null && apparatus >= content.balance.campaigns.investitureMinApparatus,
 				preparation: 0,
+				opponentId: null,
 				status: 'running',
 				playerPercent: null,
 				reason: null
@@ -559,15 +564,151 @@ function percentOf(player: number, rival: number): number {
  * Sondage publié : fourchette de score (en %) face à l'adversaire principal,
  * sans aléa ni information cachée. L'aléa du scrutin réel peut en sortir.
  */
+// ---------------------------------------------------------------------------
+// Adversaires nommés (P2-06)
+// ---------------------------------------------------------------------------
+
+/** Victoires passées de cet adversaire contre le joueur. */
+export function rivalWins(opponentId: string, campaigns: readonly Campaign[]): number {
+	return campaigns.filter(
+		(campaign) => campaign.opponentId === opponentId && campaign.status === 'lost'
+	).length;
+}
+
+/**
+ * Score de l'adversaire avant aléa : force de base de l'élection, expérience
+ * (victoires passées contre le joueur, plafonnées) et bonus de ses traits.
+ * `knownOnly` limite les traits à ceux connus du joueur (sondage publié).
+ */
+export function opponentStrength(
+	campaign: Campaign,
+	characters: Readonly<Record<string, Character>>,
+	campaigns: readonly Campaign[],
+	content: Content,
+	knownOnly = false
+): number {
+	const definition = content.elections[campaign.electionId];
+	if (!definition) return 0;
+	const opponent = campaign.opponentId ? characters[campaign.opponentId] : undefined;
+	if (!opponent) return definition.rivalStrength;
+	const balance = content.balance.campaigns;
+	const experience =
+		Math.min(balance.rivalExperienceCap, rivalWins(opponent.id, campaigns)) *
+		balance.rivalExperienceBonus;
+	const traits = (knownOnly ? opponent.knownTraits : opponent.traits).reduce(
+		(total, trait) => total + (content.traits[trait]?.campaignBonus ?? 0),
+		0
+	);
+	return definition.rivalStrength + experience + traits;
+}
+
+/** Un personnage peut-il affronter le joueur à cette échéance ? */
+function canOppose(
+	character: Character,
+	ballot: Ballot,
+	player: PlayerState,
+	engaged: ReadonlySet<string>,
+	content: Content
+): boolean {
+	const definition = content.elections[ballot.electionId];
+	if (!definition || character.status !== 'active' || engaged.has(character.id)) return false;
+	if (player.partyId !== null && character.partyId === player.partyId) return false;
+	const age = ageAt(character.birthTurn, ballot.turn);
+	return age >= definition.minAge && age <= content.balance.campaigns.opponentMaxAge;
+}
+
+/**
+ * Attribue un adversaire à une campagne qui n'en a pas (ou plus) : d'abord
+ * celui déjà affronté au même type d'élection s'il est toujours éligible
+ * (rival récurrent), sinon un personnage portant l'étiquette `rival` tiré au
+ * sort, sinon un nouveau personnage politique généré. Jamais un personnage
+ * parti, retraité ou décédé.
+ */
+function assignOpponent(
+	campaign: Campaign,
+	career: CareerParts,
+	characters: Readonly<Record<string, Character>>,
+	player: PlayerState,
+	world: WorldState,
+	turn: Turn,
+	rng: RngState,
+	content: Content
+): { opponentId: string; characters: Readonly<Record<string, Character>>; rng: RngState } {
+	const ballot = career.ballots.find((entry) => entry.ballotId === campaign.ballotId);
+	if (!ballot) throw new Error(`Échéance inconnue : ${campaign.ballotId}`);
+	const engaged = new Set(
+		runningCampaigns(career.campaigns).flatMap((other) =>
+			other.campaignId !== campaign.campaignId && other.opponentId ? [other.opponentId] : []
+		)
+	);
+	const fits = (id: string | null): boolean => {
+		const character = id ? characters[id] : undefined;
+		return character !== undefined && canOppose(character, ballot, player, engaged, content);
+	};
+	const previous = [...career.campaigns]
+		.reverse()
+		.find(
+			(entry) =>
+				entry.electionId === campaign.electionId &&
+				entry.status !== 'running' &&
+				entry.opponentId !== null
+		);
+	if (previous?.opponentId && fits(previous.opponentId)) {
+		return { opponentId: previous.opponentId, characters, rng };
+	}
+	const rivals = sortedIds(characters).filter(
+		(id) => characters[id]?.tags.includes('rival') === true && fits(id)
+	);
+	if (rivals.length > 0) {
+		const draw = nextInt(rng, 0, rivals.length - 1);
+		return { opponentId: rivals[draw.value]!, characters, rng: draw.rng };
+	}
+	const definition = content.elections[campaign.electionId]!;
+	const partyId =
+		[...content.partyIds]
+			.filter((id) => id !== player.partyId)
+			.sort(
+				(left, right) =>
+					(world.parties[right]?.strength ?? 0) - (world.parties[left]?.strength ?? 0)
+			)[0] ?? null;
+	// Âgé d'au moins l'âge requis dès aujourd'hui, et assez jeune pour rester éligible au scrutin.
+	const minAge = Math.min(definition.minAge + 2, content.balance.campaigns.opponentMaxAge - 12);
+	const maxAge = Math.max(minAge, Math.min(60, content.balance.campaigns.opponentMaxAge - 12));
+	const generated = generatePerson(
+		{
+			tags: ['politician', 'rival'],
+			epithet: null,
+			renewal: null,
+			partyId,
+			minAge,
+			maxAge,
+			successorOf: null
+		},
+		turn,
+		characters,
+		rng,
+		content
+	);
+	return {
+		opponentId: generated.character.id,
+		characters: { ...characters, [generated.character.id]: generated.character },
+		rng: generated.rng
+	};
+}
+
 export function campaignPoll(
 	campaign: Campaign,
 	player: PlayerState,
 	world: WorldState,
 	mandates: readonly MandateInstance[],
-	content: Content
+	content: Content,
+	characters: Readonly<Record<string, Character>> = {},
+	campaigns: readonly Campaign[] = []
 ): { readonly min: number; readonly max: number } {
 	const definition = content.elections[campaign.electionId];
 	if (!definition) return { min: 0, max: 0 };
+	// Le sondage ne connaît de l'adversaire que ses traits connus du joueur.
+	const rival = opponentStrength(campaign, characters, campaigns, content, true);
 	const incumbent = activeMandates(mandates).some(
 		(mandate) => mandate.mandateId === definition.grants
 	);
@@ -580,8 +721,8 @@ export function campaignPoll(
 	);
 	const { volatility } = content.balance.campaigns;
 	return {
-		min: percentOf(score - volatility, definition.rivalStrength + volatility),
-		max: percentOf(score + volatility, definition.rivalStrength - volatility)
+		min: percentOf(score - volatility, rival + volatility),
+		max: percentOf(score + volatility, rival - volatility)
 	};
 }
 
@@ -590,6 +731,8 @@ export interface DeadlineParts {
 	readonly world: WorldState;
 	readonly player: PlayerState;
 	readonly resources: Resources;
+	readonly characters: Readonly<Record<string, Character>>;
+	readonly relationships: Readonly<Record<string, Relationship>>;
 	readonly career: CareerParts;
 }
 
@@ -619,7 +762,10 @@ export function resolveDeadlines(
 	let player = parts.player;
 	const resources: Record<ResourceId, number> = { ...parts.resources };
 	let career = parts.career;
+	let characters = parts.characters;
+	let relationships = parts.relationships;
 	let currentRng = rng;
+	const people: PeopleChange[] = [];
 
 	// 0. Campagnes en cours : préparation passive et exposition (stress).
 	const running = runningCampaigns(career.campaigns);
@@ -638,6 +784,35 @@ export function resolveDeadlines(
 		};
 	}
 
+	// 0 bis. Adversaires : attribués ou remplacés si l'adversaire a quitté la vie publique.
+	for (const campaign of runningCampaigns(career.campaigns)) {
+		const current = campaign.opponentId ? characters[campaign.opponentId] : undefined;
+		if (current && current.status === 'active') continue;
+		const assigned = assignOpponent(
+			campaign,
+			career,
+			characters,
+			player,
+			currentWorld,
+			turn + 1,
+			currentRng,
+			content
+		);
+		characters = assigned.characters;
+		currentRng = assigned.rng;
+		career = {
+			...career,
+			campaigns: career.campaigns.map((entry) =>
+				entry.campaignId === campaign.campaignId
+					? { ...entry, opponentId: assigned.opponentId }
+					: entry
+			)
+		};
+		const met = meet(relationships, assigned.opponentId, turn + 1);
+		relationships = met.relationships;
+		if (met.change) people.push(met.change);
+	}
+
 	const due = content.electionIds.flatMap((electionId) => {
 		const ballot = career.ballots.find(
 			(entry) =>
@@ -651,8 +826,10 @@ export function resolveDeadlines(
 			player,
 			resources,
 			career,
+			characters,
+			relationships,
 			rng: currentRng,
-			record: { mandates: [], ballots: [], campaigns: [] }
+			record: { mandates: [], ballots: [], campaigns: [], people }
 		};
 	}
 
@@ -749,7 +926,7 @@ export function resolveDeadlines(
 					outgoing.has(definition.grants),
 					content
 				);
-				let rival = definition.rivalStrength;
+				let rival = opponentStrength(campaign, characters, career.campaigns, content);
 				if (campaignBalance.volatility > 0) {
 					const own = nextInt(currentRng, -campaignBalance.volatility, campaignBalance.volatility);
 					const other = nextInt(own.rng, -campaignBalance.volatility, campaignBalance.volatility);
@@ -786,6 +963,20 @@ export function resolveDeadlines(
 					stress: Math.min(GAUGE_MAX, player.stress + campaignBalance.defeatStress)
 				};
 			}
+			// La rivalité laisse des traces : attitude en baisse et souvenir daté.
+			const opponent = campaign.opponentId ? characters[campaign.opponentId] : undefined;
+			if (opponent && status !== 'disqualified') {
+				const outcome = addRelation(
+					relationships,
+					opponent,
+					campaignBalance.rivalryAttitude,
+					`${definition.label} (${formatTurn(turn)}) : votre ${status === 'won' ? 'victoire' : 'défaite'}.`,
+					turn + 1,
+					content
+				);
+				relationships = outcome.relationships;
+				people.push(...outcome.changes);
+			}
 			career = {
 				...career,
 				campaigns: career.campaigns.map((entry) =>
@@ -796,6 +987,7 @@ export function resolveDeadlines(
 			};
 			campaignRecords.push({
 				campaignId: campaign.campaignId,
+				opponentId: campaign.opponentId,
 				status,
 				playerPercent,
 				reason: issue
@@ -829,7 +1021,9 @@ export function resolveDeadlines(
 		player,
 		resources,
 		career,
+		characters,
+		relationships,
 		rng: currentRng,
-		record: { mandates: mandateChanges, ballots: ballotRecords, campaigns: campaignRecords }
+		record: { mandates: mandateChanges, ballots: ballotRecords, campaigns: campaignRecords, people }
 	};
 }

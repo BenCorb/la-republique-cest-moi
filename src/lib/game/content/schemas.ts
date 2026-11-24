@@ -274,7 +274,8 @@ export const traitSchema: z.ZodType<TraitDefinition> = z.strictObject({
 	description: frenchText,
 	hidden: z.boolean(),
 	positiveRelationPercent: nonNegativeInt.refine((value) => value <= 300, 'au plus 300 %'),
-	negativeRelationPercent: nonNegativeInt.refine((value) => value <= 300, 'au plus 300 %')
+	negativeRelationPercent: nonNegativeInt.refine((value) => value <= 300, 'au plus 300 %'),
+	campaignBonus: safeInt.refine((value) => Math.abs(value) <= 20, 'bonus de -20 à 20')
 });
 
 export const traitCatalogSchema = z.strictObject({
@@ -560,7 +561,11 @@ export const campaignsBalanceSchema: z.ZodType<CampaignsBalance> = z.strictObjec
 	apparatusGroup: contentId,
 	victoryInfluence: nonNegativeInt,
 	defeatInfluence: nonNegativeInt,
-	defeatStress: nonNegativeInt
+	defeatStress: nonNegativeInt,
+	rivalExperienceBonus: nonNegativeInt,
+	rivalExperienceCap: nonNegativeInt,
+	rivalryAttitude: safeInt.refine((value) => Math.abs(value) <= 100, 'variation de -100 à 100'),
+	opponentMaxAge: positiveInt
 });
 
 export const balanceSchema: z.ZodType<Balance> = z.strictObject({

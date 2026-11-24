@@ -364,6 +364,73 @@
 					]
 				}
 			]
+		},
+		{
+			"id": "relations.rival_handshake",
+			"category": "relations",
+			"title": "Une poignée de main au marché",
+			"text": "Au marché du dimanche, vous tombez nez à nez avec {rival}, votre adversaire de la dernière campagne. Les étals se taisent ; même le fromager attend la suite.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 16,
+			"unique": false,
+			"actors": [
+				{
+					"role": "rival",
+					"tags": ["rival"],
+					"met": true,
+					"maxAttitude": -5
+				}
+			],
+			"choices": [
+				{
+					"id": "reach_out",
+					"label": "Tendre la main et proposer un café",
+					"hints": ["Une rivalité peut s’apaiser", "Vos militants s’interrogent"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "rival",
+							"value": 25,
+							"memory": "Vous avez tendu la main au marché après la campagne."
+						},
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": -2
+						}
+					]
+				},
+				{
+					"id": "ignore",
+					"label": "Faire mine d’examiner les poireaux",
+					"hints": ["Rien ne change"],
+					"costs": [],
+					"effects": []
+				},
+				{
+					"id": "taunt",
+					"label": "Lancer une pique devant témoins",
+					"hints": ["Les militants adorent", "La rivalité s’envenime"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "rival",
+							"value": -10,
+							"memory": "Vous avez lancé une pique au marché, devant témoins."
+						},
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": 3
+						}
+					]
+				}
+			]
 		}
 	]
 }

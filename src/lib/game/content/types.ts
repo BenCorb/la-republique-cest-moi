@@ -393,6 +393,14 @@ export interface CampaignsBalance {
 	readonly victoryInfluence: number;
 	readonly defeatInfluence: number;
 	readonly defeatStress: number;
+	/** Points gagnés par un adversaire pour chacune de ses victoires passées contre le joueur. */
+	readonly rivalExperienceBonus: number;
+	/** Nombre maximal de victoires prises en compte. */
+	readonly rivalExperienceCap: number;
+	/** Variation d'attitude d'un adversaire après chaque affrontement. */
+	readonly rivalryAttitude: number;
+	/** Âge maximal d'un adversaire le jour du scrutin. */
+	readonly opponentMaxAge: number;
 }
 
 /** Bornes de l'attitude d'un personnage envers le joueur. */
@@ -414,6 +422,8 @@ export interface TraitDefinition {
 	readonly positiveRelationPercent: number;
 	/** Pourcentage appliqué aux variations négatives d'attitude (100 = neutre). */
 	readonly negativeRelationPercent: number;
+	/** Points ajoutés au score d'un adversaire électoral portant ce trait (P2-06). */
+	readonly campaignBonus: number;
 }
 
 /** Parti fictif du paysage initial (GDD §8.1), identique à chaque partie. */

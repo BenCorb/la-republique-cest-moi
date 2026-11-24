@@ -190,6 +190,11 @@ export interface Campaign {
 	readonly invested: boolean;
 	/** Préparation accumulée (actions de campagne et temps écoulé). */
 	readonly preparation: number;
+	/**
+	 * Adversaire principal nommé (P2-06), attribué à la frontière qui suit la
+	 * déclaration et remplacé s'il quitte la vie publique avant le scrutin.
+	 */
+	readonly opponentId: string | null;
 	readonly status: CampaignStatus;
 	/** Score du joueur face à l'adversaire principal, en %, une fois le scrutin tenu. */
 	readonly playerPercent: number | null;
@@ -242,9 +247,12 @@ export interface DeadlinesRecord {
 		readonly governingBefore: string;
 		readonly governingAfter: string;
 	}[];
+	/** Rencontres et rivalités avec les adversaires nommés. */
+	readonly people: readonly PeopleChange[];
 	/** Campagnes du joueur jugées à ces scrutins. */
 	readonly campaigns: readonly {
 		readonly campaignId: string;
+		readonly opponentId: string | null;
 		readonly status: Exclude<CampaignStatus, 'running'>;
 		readonly playerPercent: number | null;
 		readonly reason: string | null;

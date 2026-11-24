@@ -34,7 +34,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 6;
+export const SIMULATION_REPORT_VERSION = 7;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -99,6 +99,9 @@ export interface SimulationRun {
 	readonly campaigns: number;
 	readonly campaignsWon: number;
 	readonly campaignsLost: number;
+	/** Adversaires différents affrontés et plus grand nombre d'affrontements avec le même. */
+	readonly distinctOpponents: number;
+	readonly maxRivalEncounters: number;
 	/** Popularité en fin de carrière et la plus haute atteinte. */
 	readonly finalPopularity: number;
 	readonly peakPopularity: number;
@@ -171,6 +174,7 @@ export interface SimulationAggregate {
 	readonly governmentChanges: Distribution;
 	readonly campaigns: Distribution;
 	readonly campaignsWon: Distribution;
+	readonly maxRivalEncounters: Distribution;
 	readonly finalPopularity: Distribution;
 	readonly peakPopularity: Distribution;
 	/** Plus haute fonction atteinte, `none` pour les carrières sans mandat. */
@@ -445,6 +449,20 @@ function finalizeRun(
 		campaigns: state.campaigns.length,
 		campaignsWon: state.campaigns.filter((campaign) => campaign.status === 'won').length,
 		campaignsLost: state.campaigns.filter((campaign) => campaign.status === 'lost').length,
+		distinctOpponents: new Set(
+			state.campaigns.flatMap((campaign) => (campaign.opponentId ? [campaign.opponentId] : []))
+		).size,
+		maxRivalEncounters: Math.max(
+			0,
+			...Object.values(
+				state.campaigns.reduce<Record<string, number>>((counts, campaign) => {
+					if (campaign.opponentId && campaign.status !== 'running') {
+						counts[campaign.opponentId] = (counts[campaign.opponentId] ?? 0) + 1;
+					}
+					return counts;
+				}, {})
+			)
+		),
 		finalPopularity: state.player.popularity,
 		peakPopularity,
 		ballotsHeld: state.ballots.filter((ballot) => ballot.status === 'held').length,
@@ -673,6 +691,7 @@ function aggregateRuns(runs: readonly SimulationRun[]): SimulationAggregate {
 		governmentChanges: distribution(runs.map((run) => run.governmentChanges)),
 		campaigns: distribution(runs.map((run) => run.campaigns)),
 		campaignsWon: distribution(runs.map((run) => run.campaignsWon)),
+		maxRivalEncounters: distribution(runs.map((run) => run.maxRivalEncounters)),
 		finalPopularity: distribution(runs.map((run) => run.finalPopularity)),
 		peakPopularity: distribution(runs.map((run) => run.peakPopularity)),
 		highestMandates: runs.reduce<Record<string, number>>((totals, run) => {
@@ -798,6 +817,8 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'campaigns',
 		'campaignsWon',
 		'campaignsLost',
+		'distinctOpponents',
+		'maxRivalEncounters',
 		'finalPopularity',
 		'peakPopularity',
 		'indicatorRanges',
@@ -839,6 +860,8 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.campaigns,
 		run.campaignsWon,
 		run.campaignsLost,
+		run.distinctOpponents,
+		run.maxRivalEncounters,
 		run.finalPopularity,
 		run.peakPopularity,
 		JSON.stringify(run.indicatorRanges),

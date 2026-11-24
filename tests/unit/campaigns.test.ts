@@ -183,6 +183,13 @@ describe('candidature', () => {
 			declare('ballot.1')
 		]);
 		expect(invested.state.campaigns[0]?.invested).toBe(true);
+		const journal = projectView(invested.state, [], catalog).journal[0]!.lines.map(
+			(line) => line.text
+		);
+		expect(journal[0]).toMatch(/^Se présenter : Élection locale du T1 2010 — /);
+		expect(projectView(invested.state, [declare('ballot.2')], catalog).plan.steps[0]?.label).toBe(
+			'Se présenter : Élection nationale du T1 2015'
+		);
 		expect(quarterLog(invested).steps[0]?.politics).toEqual([
 			{ kind: 'candidacy', campaignId: 'campaign.1', ballotId: 'ballot.1', invested: true }
 		]);
@@ -244,6 +251,7 @@ describe('scrutin du joueur', () => {
 		expect(quarterLog(result).deadlines?.campaigns).toEqual([
 			{
 				campaignId: 'campaign.1',
+				opponentId: campaign.opponentId,
 				status: 'won',
 				playerPercent: campaign.playerPercent,
 				reason: null
@@ -261,7 +269,7 @@ describe('scrutin du joueur', () => {
 		expect(result.state.resources.influence).toBe(before.resources.influence + 1);
 		expect(result.state.player.stress).toBe(before.player.stress + 4);
 		expect(projectView(result.state, [], catalog).career.pastCampaigns[0]?.outcome).toMatch(
-			/^Défaite avec \d+ % : la carrière continue$/
+			/^Défaite avec \d+ % face à .+ : la carrière continue$/
 		);
 	});
 
@@ -347,6 +355,7 @@ describe('invariants des campagnes', () => {
 					partyId: null,
 					invested: false,
 					preparation: 0,
+					opponentId: null,
 					status: 'running',
 					playerPercent: null,
 					reason: null

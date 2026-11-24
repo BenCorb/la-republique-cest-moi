@@ -130,6 +130,8 @@ function commitTurn(
 						world: world.world,
 						player: supports.player,
 						resources: afterMandates,
+						characters: world.characters,
+						relationships: state.relationships,
 						career: execution.career
 					},
 					resolvedTurn,
@@ -150,8 +152,8 @@ function commitTurn(
 					nextInstanceNumber: execution.nextInstanceNumber,
 					events: state.events,
 					world: deadlines!.world,
-					characters: world.characters,
-					relationships: state.relationships,
+					characters: deadlines!.characters,
+					relationships: deadlines!.relationships,
 					career: deadlines!.career
 				},
 				content

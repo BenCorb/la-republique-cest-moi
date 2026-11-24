@@ -118,6 +118,10 @@
 		"apparatusGroup": "support.apparatus",
 		"victoryInfluence": 5,
 		"defeatInfluence": 1,
-		"defeatStress": 4
+		"defeatStress": 4,
+		"rivalExperienceBonus": 2,
+		"rivalExperienceCap": 2,
+		"rivalryAttitude": -8,
+		"opponentMaxAge": 72
 	}
 }

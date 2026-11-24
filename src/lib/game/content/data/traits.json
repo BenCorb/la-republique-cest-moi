@@ -6,7 +6,8 @@
 			"description": "Vise plus haut et le fait savoir.",
 			"hidden": false,
 			"positiveRelationPercent": 100,
-			"negativeRelationPercent": 100
+			"negativeRelationPercent": 100,
+			"campaignBonus": 2
 		},
 		{
 			"id": "trait.charisma",
@@ -14,7 +15,8 @@
 			"description": "Attire les regards et les micros.",
 			"hidden": false,
 			"positiveRelationPercent": 110,
-			"negativeRelationPercent": 100
+			"negativeRelationPercent": 100,
+			"campaignBonus": 4
 		},
 		{
 			"id": "trait.bluntness",
@@ -22,7 +24,8 @@
 			"description": "Dit ce qu’il pense, y compris de vous.",
 			"hidden": false,
 			"positiveRelationPercent": 100,
-			"negativeRelationPercent": 120
+			"negativeRelationPercent": 120,
+			"campaignBonus": 1
 		},
 		{
 			"id": "trait.network",
@@ -30,7 +33,8 @@
 			"description": "Connaît quelqu’un partout, surtout là où il ne faut pas.",
 			"hidden": false,
 			"positiveRelationPercent": 100,
-			"negativeRelationPercent": 100
+			"negativeRelationPercent": 100,
+			"campaignBonus": 3
 		},
 		{
 			"id": "trait.grudge",
@@ -38,7 +42,8 @@
 			"description": "N’oublie rien, et surtout pas les affronts.",
 			"hidden": true,
 			"positiveRelationPercent": 80,
-			"negativeRelationPercent": 200
+			"negativeRelationPercent": 200,
+			"campaignBonus": 0
 		},
 		{
 			"id": "trait.loyalty",
@@ -46,7 +51,8 @@
 			"description": "Reste fidèle quand d’autres retournent leur veste.",
 			"hidden": true,
 			"positiveRelationPercent": 130,
-			"negativeRelationPercent": 50
+			"negativeRelationPercent": 50,
+			"campaignBonus": 0
 		},
 		{
 			"id": "trait.opportunism",
@@ -54,7 +60,8 @@
 			"description": "Suit le vent, quel qu’il soit.",
 			"hidden": true,
 			"positiveRelationPercent": 120,
-			"negativeRelationPercent": 120
+			"negativeRelationPercent": 120,
+			"campaignBonus": 2
 		},
 		{
 			"id": "trait.indiscretion",
@@ -62,7 +69,8 @@
 			"description": "Les confidences ne restent jamais longtemps confidentielles.",
 			"hidden": true,
 			"positiveRelationPercent": 100,
-			"negativeRelationPercent": 100
+			"negativeRelationPercent": 100,
+			"campaignBonus": -1
 		},
 		{
 			"id": "trait.venality",
@@ -70,7 +78,8 @@
 			"description": "Tout a un prix, l’amitié comprise.",
 			"hidden": true,
 			"positiveRelationPercent": 90,
-			"negativeRelationPercent": 110
+			"negativeRelationPercent": 110,
+			"campaignBonus": -2
 		},
 		{
 			"id": "trait.kindness",
@@ -78,7 +87,8 @@
 			"description": "Pardonne facilement et rend service sans compter.",
 			"hidden": true,
 			"positiveRelationPercent": 120,
-			"negativeRelationPercent": 60
+			"negativeRelationPercent": 60,
+			"campaignBonus": 1
 		}
 	]
 }

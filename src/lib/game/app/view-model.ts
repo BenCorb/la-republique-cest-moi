@@ -268,6 +268,8 @@ export interface CampaignView {
 	readonly declared: string;
 	readonly investiture: string;
 	readonly preparation: number;
+	/** Adversaire principal nommé, son étiquette et l'historique des affrontements. */
+	readonly opponent: string | null;
 	/** Sondage : fourchette du score face à l'adversaire principal (en cours seulement). */
 	readonly poll: { readonly min: number; readonly max: number } | null;
 	readonly outcome: string | null;
@@ -473,13 +475,15 @@ function deadlineLines(
 	for (const result of record.campaigns) {
 		const campaign = state.campaigns.find((entry) => entry.campaignId === result.campaignId);
 		const label = content.elections[campaign?.electionId ?? '']?.label ?? 'Élection';
+		const rival = result.opponentId ? state.characters[result.opponentId] : undefined;
+		const against = rival ? ` face à ${displayName(rival)}` : '';
 		lines.push({
 			kind: 'career',
 			text:
 				result.status === 'won'
-					? `${label} : vous l’emportez avec ${result.playerPercent} % face à l’adversaire principal.`
+					? `${label} : vous l’emportez avec ${result.playerPercent} %${against}.`
 					: result.status === 'lost'
-						? `${label} : défaite avec ${result.playerPercent} %. La notoriété progresse, la fatigue aussi.`
+						? `${label} : défaite avec ${result.playerPercent} %${against}. La notoriété progresse, la fatigue aussi.`
 						: `${label} : candidature invalidée (${result.reason ?? 'conditions non remplies'}).`
 		});
 	}
@@ -589,10 +593,23 @@ function eventTitle(
 	return definition ? renderTemplate(definition.title, actors, content, state.characters) : eventId;
 }
 
+/** Libellé lisible de la cible d'une étape : parti, mandat exercé ou échéance électorale. */
+function targetLabel(target: string, state: GameState, content: Content): string {
+	if (Object.hasOwn(content.parties, target)) return content.parties[target]?.name ?? target;
+	const mandate = state.mandates.find((entry) => entry.instanceId === target);
+	if (mandate) return content.mandates[mandate.mandateId]?.label ?? mandate.mandateId;
+	const ballot = state.ballots.find((entry) => entry.ballotId === target);
+	if (ballot) {
+		const label = content.elections[ballot.electionId]?.label ?? ballot.electionId;
+		return `${label} du ${formatTurn(ballot.turn)}`;
+	}
+	return target;
+}
+
 function journalOfQuarter(entry: HistoryEntry, state: GameState, content: Content): JournalLine[] {
 	const lines: JournalLine[] = [];
 	for (const step of entry.steps) {
-		const target = step.target ? ` : ${content.parties[step.target]?.name ?? step.target}` : '';
+		const target = step.target ? ` : ${targetLabel(step.target, state, content)}` : '';
 		const label =
 			step.kind === 'action'
 				? `${content.actions[step.id]?.label ?? step.id}${target}`
@@ -898,11 +915,28 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 		content.actionIds.find((id) => content.actions[id]?.target === 'ballot') ?? null;
 	const campaignView = (campaign: GameState['campaigns'][number]): CampaignView => {
 		const ballot = state.ballots.find((entry) => entry.ballotId === campaign.ballotId);
+		const rival = campaign.opponentId ? state.characters[campaign.opponentId] : undefined;
+		const previous = rival
+			? state.campaigns.filter(
+					(other) =>
+						other.opponentId === rival.id &&
+						other.campaignId !== campaign.campaignId &&
+						(other.status === 'won' || other.status === 'lost') &&
+						other.declaredTurn < campaign.declaredTurn + (campaign.status === 'running' ? 1 : 0)
+				)
+			: [];
+		const opponent = rival
+			? `${displayName(rival)} (${rival.partyId ? (content.parties[rival.partyId]?.acronym ?? rival.partyId) : 'sans étiquette'})${
+					previous.length > 0
+						? ` — déjà affronté ${previous.length} fois : ${previous.filter((other) => other.status === 'won').length} victoire(s) pour vous`
+						: ''
+				}`
+			: null;
 		const outcome =
 			campaign.status === 'won'
-				? `Victoire avec ${campaign.playerPercent} % face à l’adversaire principal`
+				? `Victoire avec ${campaign.playerPercent} %${rival ? ` face à ${displayName(rival)}` : ''}`
 				: campaign.status === 'lost'
-					? `Défaite avec ${campaign.playerPercent} % : la carrière continue`
+					? `Défaite avec ${campaign.playerPercent} %${rival ? ` face à ${displayName(rival)}` : ''} : la carrière continue`
 					: campaign.status === 'disqualified'
 						? `Candidature invalidée : ${campaign.reason ?? 'conditions non remplies'}`
 						: null;
@@ -918,9 +952,18 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 						? `Investiture du ${content.parties[campaign.partyId]?.name ?? campaign.partyId}`
 						: 'Sans investiture : l’appareil du parti ne vous soutient pas',
 			preparation: campaign.preparation,
+			opponent,
 			poll:
 				campaign.status === 'running'
-					? campaignPoll(campaign, state.player, state.world, state.mandates, content)
+					? campaignPoll(
+							campaign,
+							state.player,
+							state.world,
+							state.mandates,
+							content,
+							state.characters,
+							state.campaigns
+						)
 					: null,
 			outcome
 		};
@@ -1075,7 +1118,7 @@ export function projectView(
 	const preview = previewPlan(state, { steps: plan }, content);
 	const steps: PlanStepView[] = preview.steps.map((step) => {
 		const upgrade = step.kind === 'purchase' && step.id ? content.upgrades[step.id] : undefined;
-		const target = step.target ? ` : ${content.parties[step.target]?.name ?? step.target}` : '';
+		const target = step.target ? ` : ${targetLabel(step.target, state, content)}` : '';
 		return {
 			index: step.index,
 			kind: step.kind ?? 'action',

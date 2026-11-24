@@ -67,7 +67,11 @@ export const fixtureBalance = {
 		apparatusGroup: 'support.members',
 		victoryInfluence: 5,
 		defeatInfluence: 1,
-		defeatStress: 4
+		defeatStress: 4,
+		rivalExperienceBonus: 3,
+		rivalExperienceCap: 3,
+		rivalryAttitude: -8,
+		opponentMaxAge: 72
 	}
 };
 
@@ -204,7 +208,8 @@ export const fixtureTraits = {
 			description: 'Trait public de test.',
 			hidden: false,
 			positiveRelationPercent: 100,
-			negativeRelationPercent: 100
+			negativeRelationPercent: 100,
+			campaignBonus: 2
 		},
 		{
 			id: 'trait.grudge',
@@ -212,7 +217,8 @@ export const fixtureTraits = {
 			description: 'Trait caché de test : double les rancœurs.',
 			hidden: true,
 			positiveRelationPercent: 100,
-			negativeRelationPercent: 200
+			negativeRelationPercent: 200,
+			campaignBonus: 0
 		},
 		{
 			id: 'trait.loyal',
@@ -220,7 +226,8 @@ export const fixtureTraits = {
 			description: 'Trait caché de test : amplifie la gratitude.',
 			hidden: true,
 			positiveRelationPercent: 150,
-			negativeRelationPercent: 50
+			negativeRelationPercent: 50,
+			campaignBonus: 0
 		}
 	]
 };
