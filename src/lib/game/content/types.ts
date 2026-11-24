@@ -134,7 +134,18 @@ export type Effect =
 			/** Identifiant de parti, ou `target` pour la cible choisie dans le plan. */
 			readonly party: string;
 	  }
-	| { readonly op: 'leaveParty' };
+	| { readonly op: 'leaveParty' }
+	| {
+			readonly op: 'addRelation';
+			/** Rôle de l'événement dont l'attitude envers le joueur change. */
+			readonly role: string;
+			/** Variation avant modulation par les traits, bornée ensuite à [-100, 100]. */
+			readonly value: number;
+			/** Souvenir conservé par le personnage (texte à variables), facultatif. */
+			readonly memory?: string | undefined;
+	  }
+	/** Révèle au joueur les traits cachés de l'acteur du rôle. */
+	| { readonly op: 'revealTraits'; readonly role: string };
 
 export interface ResourceAmount {
 	readonly resource: ResourceId;
@@ -226,6 +237,21 @@ export interface WellbeingBalance {
 	readonly ageBands: readonly AgeBand[];
 }
 
+/** Personnages nommés : traits, vieillissement et relations (hypothèses de tuning, P2-04). */
+export interface CharactersBalance {
+	/** Traits tirés pour chaque personnage (distincts). */
+	readonly traitsPerCharacter: number;
+	/** Âge de retraite des personnages professionnels renouvelables. */
+	readonly retirementAge: number;
+	/** Âge des remplaçants générés. */
+	readonly replacementMinAge: number;
+	readonly replacementMaxAge: number;
+	/** Probabilité de découvrir un trait caché d'un acteur à chaque décision le concernant. */
+	readonly revealChancePerEncounter: number;
+	/** Nombre maximal de souvenirs conservés par personnage (les plus anciens sont oubliés). */
+	readonly maxMemories: number;
+}
+
 /** Paramètres du tirage des événements ordinaires (hypothèses de tuning). */
 export interface EventsBalance {
 	/** Nombre maximal de tirages ordinaires par trimestre. */
@@ -273,6 +299,28 @@ export interface Balance {
 	readonly wellbeing: WellbeingBalance;
 	readonly events: EventsBalance;
 	readonly world: WorldBalance;
+	readonly characters: CharactersBalance;
+}
+
+/** Bornes de l'attitude d'un personnage envers le joueur. */
+export const ATTITUDE_MIN = -100;
+export const ATTITUDE_MAX = 100;
+
+/**
+ * Trait de personnalité (GDD §6.1). Un trait caché n'est connu du joueur
+ * qu'après révélation. Les pourcentages modulent les variations d'attitude.
+ */
+export interface TraitDefinition {
+	/** Identifiant stable, par exemple `trait.grudge`. */
+	readonly id: string;
+	/** Nom (substantif, sans accord de genre). */
+	readonly label: string;
+	readonly description: string;
+	readonly hidden: boolean;
+	/** Pourcentage appliqué aux variations positives d'attitude (100 = neutre). */
+	readonly positiveRelationPercent: number;
+	/** Pourcentage appliqué aux variations négatives d'attitude (100 = neutre). */
+	readonly negativeRelationPercent: number;
 }
 
 /** Parti fictif du paysage initial (GDD §8.1), identique à chaque partie. */
@@ -309,22 +357,37 @@ export interface WorldDefinition {
 }
 
 /**
- * Personnage secondaire fictif, mobilisable comme acteur d'un événement. Le
- * prototype n'en simule ni l'âge ni les relations (personnages complets : P2-04).
+ * Personnage initial de la distribution, placé dans l'état à la création de la
+ * partie (P2-04) : il vieillit, peut partir et garde ses relations.
  */
 export interface CastMember {
 	readonly id: string;
+	/** Nom affiché, accord et article compris (« la docteure Hélène Mercier »). */
 	readonly name: string;
 	/** Étiquettes de rôle, par exemple `medical`, `journalist`. */
 	readonly tags: readonly string[];
+	/** Âge au premier trimestre 2000. */
+	readonly age: number;
+	/**
+	 * Personnage professionnel remplacé à son départ (retraite, décès) par un
+	 * successeur généré portant les mêmes étiquettes et cette fonction.
+	 */
+	readonly renewal?: { readonly epithet: string } | undefined;
 }
 
-/** Rôle d'un événement, pourvu à la création de l'instance parmi la distribution. */
+/** Rôle d'un événement, pourvu à la création de l'instance parmi les personnages actifs. */
 export interface ActorSlot {
 	/** Nom du rôle, utilisé dans les textes sous la forme `{role}`. */
 	readonly role: string;
 	/** Étiquettes que l'acteur doit toutes posséder. */
 	readonly tags: readonly string[];
+	/** Traits réels que l'acteur doit tous posséder (connus ou non du joueur). */
+	readonly traits?: readonly string[] | undefined;
+	/** Attitude minimale ou maximale de l'acteur envers le joueur. */
+	readonly minAttitude?: number | undefined;
+	readonly maxAttitude?: number | undefined;
+	/** `true` : seulement un personnage déjà rencontré. */
+	readonly met?: boolean | undefined;
 }
 
 /** Suite différée déclenchée par un choix. */
@@ -401,6 +464,9 @@ export interface Content {
 	/** Identifiants triés : ordre stable du choix des acteurs. */
 	readonly castIds: readonly string[];
 	readonly world: WorldDefinition;
+	readonly traits: Readonly<Record<string, TraitDefinition>>;
+	/** Ordre du catalogue : ordre stable des tirages de traits. */
+	readonly traitIds: readonly string[];
 	/** Partis indexés par identifiant. */
 	readonly parties: Readonly<Record<string, PartyDefinition>>;
 	/** Ordre du catalogue : ordre stable de l'évolution autonome. */

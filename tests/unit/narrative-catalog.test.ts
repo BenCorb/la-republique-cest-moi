@@ -6,8 +6,9 @@ import { createGame, renderTemplate } from '../../src/lib/game/engine/index.ts';
 /** Catalogue narratif du prototype (P1-06) : critères vérifiés automatiquement. */
 const content = loadContent();
 const events: EventDefinition[] = content.eventIds.map((id) => content.events[id]!);
-/** Événements du prototype (P1-06), hors actualité nationale ajoutée en P2-01. */
-const prototypeEvents = events.filter((event) => event.category !== 'national');
+/** Événements du prototype (P1-06), hors catégories ajoutées par l'alpha (P2-01, P2-04). */
+const ALPHA_CATEGORIES = new Set(['national', 'relations']);
+const prototypeEvents = events.filter((event) => !ALPHA_CATEGORIES.has(event.category));
 const game = createGame({ seed: 'catalogue-narratif' }, content);
 const someParty = content.partyIds[0]!;
 /** Variables du monde liées à des valeurs plausibles (partis et dirigeants réels de l'état). */
@@ -49,6 +50,16 @@ describe('catalogue narratif du prototype', () => {
 	it('contient entre 20 et 30 événements', () => {
 		expect(prototypeEvents.length).toBeGreaterThanOrEqual(20);
 		expect(prototypeEvents.length).toBeLessThanOrEqual(30);
+	});
+
+	it('ajoute des événements de relations fondés sur la mémoire et les traits (P2-04)', () => {
+		const relations = events.filter((event) => event.category === 'relations');
+		expect(relations.length).toBeGreaterThanOrEqual(6);
+		const slots = relations.flatMap((event) => event.actors);
+		expect(slots.every((slot) => slot.met === true)).toBe(true);
+		expect(slots.some((slot) => slot.minAttitude !== undefined)).toBe(true);
+		expect(slots.some((slot) => slot.maxAttitude !== undefined)).toBe(true);
+		expect(slots.some((slot) => slot.traits !== undefined)).toBe(true);
 	});
 
 	it('ajoute une actualité nationale conditionnelle (P2-01)', () => {

@@ -34,7 +34,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 2;
+export const SIMULATION_REPORT_VERSION = 3;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -85,6 +85,10 @@ export interface SimulationRun {
 	readonly quartersAffiliated: number;
 	/** Changements de direction des partis au fil de la carrière. */
 	readonly leaderChanges: number;
+	/** Personnages rencontrés, départs (retraites et décès) et traits cachés révélés. */
+	readonly charactersMet: number;
+	readonly characterDepartures: number;
+	readonly traitsRevealed: number;
 	/** Plus bas et plus haut atteints par chaque indicateur national. */
 	readonly indicatorRanges: Readonly<
 		Record<IndicatorId, { readonly min: number; readonly max: number }>
@@ -147,6 +151,9 @@ export interface SimulationAggregate {
 	readonly resources: { readonly [K in ResourceId]: Distribution };
 	readonly endCauses: Readonly<Record<string, number>>;
 	readonly leaderChanges: Distribution;
+	readonly charactersMet: Distribution;
+	readonly characterDepartures: Distribution;
+	readonly traitsRevealed: Distribution;
 	/** Parti en fin de carrière, `none` pour les carrières sans étiquette. */
 	readonly finalParties: Readonly<Record<string, number>>;
 	readonly indicatorExtremes: Readonly<
@@ -324,7 +331,8 @@ function finalizeRun(
 	decisions: number,
 	alertEpisodes: number,
 	invariantViolations: readonly string[],
-	error: string | null
+	error: string | null,
+	content: Content
 ): SimulationRun {
 	const summary = careerSummary(state);
 	return {
@@ -355,6 +363,16 @@ function finalizeRun(
 			0
 		),
 		indicatorRanges: indicatorRanges(state),
+		charactersMet: Object.keys(state.relationships).length,
+		characterDepartures: Object.values(state.characters).filter(
+			(character) => character.status !== 'active'
+		).length,
+		traitsRevealed: Object.values(state.characters).reduce(
+			(total, character) =>
+				total +
+				character.knownTraits.filter((trait) => content.traits[trait]?.hidden === true).length,
+			0
+		),
 		invariantViolations,
 		error
 	};
@@ -450,7 +468,17 @@ export function simulateCareer(
 
 	const status: SimulationRunStatus =
 		error !== null || violations.length > 0 ? 'error' : state.end !== null ? 'ended' : 'capped';
-	return finalizeRun(state, strategy, seed, status, decisions, alertEpisodes, violations, error);
+	return finalizeRun(
+		state,
+		strategy,
+		seed,
+		status,
+		decisions,
+		alertEpisodes,
+		violations,
+		error,
+		content
+	);
 }
 
 function percentile(sorted: readonly number[], ratio: number): number {
@@ -550,6 +578,9 @@ function aggregateRuns(runs: readonly SimulationRun[]): SimulationAggregate {
 		},
 		endCauses: causes,
 		leaderChanges: distribution(runs.map((run) => run.leaderChanges)),
+		charactersMet: distribution(runs.map((run) => run.charactersMet)),
+		characterDepartures: distribution(runs.map((run) => run.characterDepartures)),
+		traitsRevealed: distribution(runs.map((run) => run.traitsRevealed)),
 		finalParties: runs.reduce<Record<string, number>>((totals, run) => {
 			const key = run.finalParty ?? 'none';
 			totals[key] = (totals[key] ?? 0) + 1;
@@ -658,6 +689,9 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'affiliations',
 		'quartersAffiliated',
 		'leaderChanges',
+		'charactersMet',
+		'characterDepartures',
+		'traitsRevealed',
 		'indicatorRanges',
 		'invariantViolations',
 		'error'
@@ -687,6 +721,9 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.affiliations,
 		run.quartersAffiliated,
 		run.leaderChanges,
+		run.charactersMet,
+		run.characterDepartures,
+		run.traitsRevealed,
 		JSON.stringify(run.indicatorRanges),
 		JSON.stringify(run.invariantViolations),
 		run.error

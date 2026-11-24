@@ -6,7 +6,8 @@
 		Flag,
 		Landmark,
 		LayoutDashboard,
-		Newspaper
+		Newspaper,
+		Users
 	} from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
 	import AlertList from '#lib/components/common/AlertList.svelte';
@@ -35,6 +36,7 @@
 		{ id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
 		{ id: 'agenda', label: 'Agenda', icon: Calendar },
 		{ id: 'world', label: 'Monde politique', icon: Flag },
+		{ id: 'relations', label: 'Relations', icon: Users },
 		{ id: 'organisation', label: 'Organisation', icon: Briefcase },
 		{ id: 'journal', label: 'Journal', icon: BookOpen }
 	];

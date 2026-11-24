@@ -33,6 +33,12 @@
 							"op": "addResource",
 							"resource": "politicalBudgetCents",
 							"value": 80000
+						},
+						{
+							"op": "addRelation",
+							"role": "donor",
+							"value": 15,
+							"memory": "Vous avez accepté son chèque sans poser de questions."
 						}
 					],
 					"followUp": {
@@ -55,6 +61,12 @@
 							"op": "addResource",
 							"resource": "influence",
 							"value": 1
+						},
+						{
+							"op": "addRelation",
+							"role": "donor",
+							"value": -5,
+							"memory": "Vous avez rendu son don public."
 						}
 					]
 				},
@@ -63,7 +75,14 @@
 					"label": "Refuser poliment",
 					"hints": ["Rien ne change", "{donor} s’en souviendra"],
 					"costs": [],
-					"effects": []
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "donor",
+							"value": -10,
+							"memory": "Vous avez refusé son chèque."
+						}
+					]
 				}
 			]
 		},
@@ -100,6 +119,12 @@
 							"op": "addStat",
 							"stat": "player.stress",
 							"value": 4
+						},
+						{
+							"op": "addRelation",
+							"role": "donor",
+							"value": 20,
+							"memory": "Vous avez passé le coup de fil pour son permis de construire."
 						}
 					],
 					"followUp": {
@@ -122,6 +147,12 @@
 							"op": "addStat",
 							"stat": "player.stress",
 							"value": 2
+						},
+						{
+							"op": "addRelation",
+							"role": "donor",
+							"value": -20,
+							"memory": "Vous avez refusé de l’aider pour son permis de construire."
 						}
 					]
 				}

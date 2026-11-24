@@ -15,6 +15,7 @@
 		economy: 'Organisation',
 		wellbeing: 'Santé',
 		world: 'Politique',
+		people: 'Relations',
 		event: 'Nouvelle',
 		decision: 'Décision',
 		end: 'Fin'

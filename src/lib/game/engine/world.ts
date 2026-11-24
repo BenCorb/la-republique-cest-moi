@@ -20,7 +20,8 @@ import {
 	type Effect,
 	type IndicatorId
 } from '../content/types.ts';
-import { TURNS_PER_YEAR, ageAt, type Turn } from './calendar.ts';
+import { ageAt, type Turn } from './calendar.ts';
+import { generatePerson } from './characters.ts';
 import { nextFloat, nextInt, type RngState } from './random.ts';
 import type {
 	Character,
@@ -31,15 +32,6 @@ import type {
 	WorldRecord,
 	WorldState
 } from './state.ts';
-
-/**
- * Identifiant du n-ième personnage créé. Les personnages ne sont jamais
- * supprimés : le suivant reçoit le rang `nombre de personnages + 1`, sans
- * compteur séparé et sans décaler les autres identifiants d'instance.
- */
-export function characterId(number: number): string {
-	return `character.${number}`;
-}
 
 /** Tirage avec une variation aléatoire symétrique ; aucun tirage si l'amplitude est nulle. */
 function jitter(rng: RngState, amplitude: number): { value: number; rng: RngState } {
@@ -52,56 +44,29 @@ function clamp(value: number, min: number, max: number): number {
 	return Math.min(max, Math.max(min, value));
 }
 
-interface Generation {
-	readonly character: Character;
-	readonly rng: RngState;
-}
-
-/**
- * Génère un dirigeant fictif : prénom et nom tirés, sans homonyme parmi les
- * personnages existants (le nom suivant du catalogue est pris en cas de doublon).
- * Si toutes les combinaisons ont servi, seul un homonyme d'un dirigeant en place
- * est exclu (le catalogue garantit plus de combinaisons que de partis).
- */
-function generateLeader(
+/** Nouveau dirigeant de parti, tiré au sort (P2-01), au modèle commun des personnages. */
+function newLeader(
 	partyId: string,
 	turn: Turn,
 	characters: Readonly<Record<string, Character>>,
-	activeLeaderIds: ReadonlySet<string>,
 	rng: RngState,
 	content: Content
-): Generation {
-	const { first, last } = content.world.names;
-	const { leaderMinAge, leaderMaxAge } = content.balance.world;
-	const firstDraw = nextInt(rng, 0, first.length - 1);
-	const lastDraw = nextInt(firstDraw.rng, 0, last.length - 1);
-	const ageDraw = nextInt(lastDraw.rng, leaderMinAge, leaderMaxAge);
-	const quarterDraw = nextInt(ageDraw.rng, 0, TURNS_PER_YEAR - 1);
-	const total = first.length * last.length;
-	const pick = (used: ReadonlySet<string>): string | null => {
-		for (let offset = 0; offset < total; offset += 1) {
-			const index = (firstDraw.value * last.length + lastDraw.value + offset) % total;
-			const candidate = `${first[Math.floor(index / last.length)]} ${last[index % last.length]}`;
-			if (!used.has(candidate)) return candidate;
-		}
-		return null;
-	};
-	const everyone = new Set(Object.values(characters).map((character) => character.name));
-	const active = new Set(
-		[...activeLeaderIds].flatMap((id) => (characters[id] ? [characters[id].name] : []))
-	);
-	const name = pick(everyone) ?? pick(active);
-	if (name === null) throw new Error('Plus aucun nom disponible pour un nouveau dirigeant.');
-	const id = characterId(Object.keys(characters).length + 1);
-	return {
-		character: {
-			id,
-			name,
-			birthTurn: turn - ageDraw.value * TURNS_PER_YEAR - quarterDraw.value,
-			partyId
+): { character: Character; rng: RngState } {
+	return generatePerson(
+		{
+			tags: ['party_leader'],
+			epithet: null,
+			renewal: null,
+			partyId,
+			minAge: content.balance.world.leaderMinAge,
+			maxAge: content.balance.world.leaderMaxAge,
+			successorOf: null
 		},
-		rng: quarterDraw.rng
-	};
+		turn,
+		characters,
+		rng,
+		content
+	);
 }
 
 export interface WorldCreation {
@@ -117,14 +82,7 @@ export function createWorld(rng: RngState, turn: Turn, content: Content): WorldC
 	for (const partyId of content.partyIds) {
 		const party = content.parties[partyId];
 		if (!party) throw new Error(`Parti inconnu : ${partyId}`);
-		const generated = generateLeader(
-			partyId,
-			turn,
-			characters,
-			new Set(Object.keys(characters)),
-			currentRng,
-			content
-		);
+		const generated = newLeader(partyId, turn, characters, currentRng, content);
 		characters[generated.character.id] = generated.character;
 		currentRng = generated.rng;
 		parties[partyId] = { strength: party.baseStrength, leaderId: generated.character.id };
@@ -234,7 +192,9 @@ export function resolveWorld(
 		if (next !== party.strength) partyChanges.push({ partyId, delta: next - party.strength });
 	}
 
-	// 3. Directions : retraite d'office, sinon renouvellement aléatoire.
+	// 3. Directions : décès (constaté par le vieillissement), retraite d'office,
+	// sinon renouvellement aléatoire. Un dirigeant remplacé garde son étiquette ;
+	// à la retraite, il quitte la vie publique.
 	const updatedCharacters: Record<string, Character> = { ...characters };
 	const leaderChanges: LeaderChange[] = [];
 	for (const partyId of content.partyIds) {
@@ -243,23 +203,21 @@ export function resolveWorld(
 		const leader = updatedCharacters[party.leaderId];
 		if (!leader) throw new Error(`Dirigeant inconnu : ${party.leaderId}`);
 		let reason: LeaderChange['reason'] | null =
-			ageAt(leader.birthTurn, turn) >= balance.leaderRetirementAge ? 'retirement' : null;
+			leader.status === 'dead'
+				? 'death'
+				: ageAt(leader.birthTurn, turn) >= balance.leaderRetirementAge
+					? 'retirement'
+					: null;
 		if (reason === null && balance.leaderChangeChance > 0) {
 			const roll = nextFloat(currentRng);
 			currentRng = roll.rng;
 			if (roll.value < balance.leaderChangeChance) reason = 'internal_vote';
 		}
 		if (reason === null) continue;
-		const activeLeaders = new Set(Object.values(parties).map((entry) => entry.leaderId));
-		activeLeaders.delete(leader.id);
-		const generated = generateLeader(
-			partyId,
-			turn,
-			updatedCharacters,
-			activeLeaders,
-			currentRng,
-			content
-		);
+		if (reason === 'retirement') {
+			updatedCharacters[leader.id] = { ...leader, status: 'retired', leftTurn: turn };
+		}
+		const generated = newLeader(partyId, turn, updatedCharacters, currentRng, content);
 		currentRng = generated.rng;
 		updatedCharacters[generated.character.id] = generated.character;
 		parties[partyId] = { ...party, leaderId: generated.character.id };

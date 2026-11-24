@@ -67,7 +67,11 @@
 		"ordinaryEventChance": 0.3
 	},
 	"world": {
-		"startingIndicators": { "economy": 58, "socialClimate": 50, "stability": 55 },
+		"startingIndicators": {
+			"economy": 58,
+			"socialClimate": 50,
+			"stability": 55
+		},
 		"indicatorBaseline": 50,
 		"indicatorReversionPercent": 5,
 		"indicatorVolatility": 4,
@@ -80,5 +84,13 @@
 		"leaderMinAge": 42,
 		"leaderMaxAge": 66,
 		"leaderRetirementAge": 77
+	},
+	"characters": {
+		"traitsPerCharacter": 2,
+		"retirementAge": 70,
+		"replacementMinAge": 26,
+		"replacementMaxAge": 55,
+		"revealChancePerEncounter": 0.3,
+		"maxMemories": 6
 	}
 }

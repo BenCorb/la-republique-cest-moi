@@ -33,6 +33,7 @@ function game(
 			steps: [],
 			economy: { producers: [], changes: [] },
 			wellbeing: { contributions: [], deathCause: null },
+			characters: null,
 			world: null,
 			events: []
 		})),

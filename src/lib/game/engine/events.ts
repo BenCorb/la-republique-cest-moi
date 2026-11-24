@@ -38,6 +38,16 @@ import type { ChooseEventCommand, CommandError, TransitionResult } from './comma
 import { evaluateCondition, type ConditionContext } from './conditions.ts';
 import { applyGauge, resolveEffect } from './effects.ts';
 import { nextFloat, nextInt, type RngState } from './random.ts';
+import {
+	addRelation,
+	completeCastingExists,
+	displayName,
+	encounterReveal,
+	fitsSlot,
+	meet,
+	revealAll,
+	sortedIds
+} from './characters.ts';
 import { applyPoliticalEffect, oppositionPartyId } from './world.ts';
 import type {
 	Character,
@@ -49,7 +59,9 @@ import type {
 	GameState,
 	GaugeChange,
 	PlayerState,
+	PeopleChange,
 	PoliticalChange,
+	Relationship,
 	ResourceChange,
 	ScheduledEvent,
 	WorldState
@@ -68,9 +80,12 @@ export function actorName(
 	characters: Readonly<Record<string, Character>>
 ): string | undefined {
 	if (id === undefined) return undefined;
-	if (Object.hasOwn(content.cast, id)) return content.cast[id]?.name;
+	if (Object.hasOwn(characters, id)) {
+		const character = characters[id];
+		return character ? displayName(character) : undefined;
+	}
 	if (Object.hasOwn(content.parties, id)) return content.parties[id]?.name;
-	if (Object.hasOwn(characters, id)) return characters[id]?.name;
+	if (Object.hasOwn(content.cast, id)) return content.cast[id]?.name;
 	return undefined;
 }
 
@@ -150,31 +165,35 @@ function bindWorldVariables(
 // Effets automatiques
 // ---------------------------------------------------------------------------
 
-interface EffectOutcome {
+/** Parties de l'état modifiables par des effets automatiques. */
+interface EffectParts {
 	readonly resources: Resources;
 	readonly player: PlayerState;
 	readonly world: WorldState;
+	readonly characters: Readonly<Record<string, Character>>;
+	readonly relationships: Readonly<Record<string, Relationship>>;
 	readonly rng: RngState;
+}
+
+interface EffectOutcome extends EffectParts {
 	readonly changes: readonly ResourceChange[];
 	readonly gauges: readonly GaugeChange[];
 	readonly politics: readonly PoliticalChange[];
+	readonly people: readonly PeopleChange[];
 }
 
 function applyAutomaticEffects(
 	effects: readonly Effect[],
 	costs: readonly ResourceAmount[],
-	resources: Resources,
-	player: PlayerState,
-	world: WorldState,
-	rng: RngState,
+	parts: EffectParts,
+	actors: Readonly<Record<string, string>>,
 	turn: Turn,
 	content: Content
 ): EffectOutcome {
-	const current: Record<ResourceId, number> = { ...resources };
-	let currentPlayer = player;
-	let currentWorld = world;
-	let currentRng = rng;
+	const current: Record<ResourceId, number> = { ...parts.resources };
+	let { player, world, characters, relationships, rng } = parts;
 	const politics: PoliticalChange[] = [];
+	const people: PeopleChange[] = [];
 	const deltas = new Map<ResourceId, number>();
 	const gaugeDeltas = new Map<GaugeChange['gauge'], number>();
 
@@ -187,36 +206,56 @@ function applyAutomaticEffects(
 
 	for (const cost of costs) addResource(cost.resource, -cost.amount);
 	for (const effect of effects) {
-		const resolved = resolveEffect(effect, currentRng);
-		currentRng = resolved.rng;
+		const resolved = resolveEffect(effect, rng);
+		rng = resolved.rng;
 		if (resolved.kind === 'resource') {
 			addResource(resolved.resource, resolved.delta);
 		} else if (resolved.kind === 'politics') {
-			const outcome = applyPoliticalEffect(
-				resolved.effect,
-				currentPlayer,
-				currentWorld,
-				turn,
-				null,
-				content
-			);
-			currentPlayer = outcome.player;
-			currentWorld = outcome.world;
+			const outcome = applyPoliticalEffect(resolved.effect, player, world, turn, null, content);
+			player = outcome.player;
+			world = outcome.world;
 			politics.push(...outcome.changes);
+		} else if (resolved.kind === 'people') {
+			// Un acteur parti entre-temps n'est plus concerné.
+			const character = characters[actors[resolved.effect.role] ?? ''];
+			if (!character || character.status !== 'active') continue;
+			if (resolved.effect.op === 'addRelation') {
+				const memory =
+					resolved.effect.memory === undefined
+						? null
+						: renderTemplate(resolved.effect.memory, actors, content, characters);
+				const outcome = addRelation(
+					relationships,
+					character,
+					resolved.effect.value,
+					memory,
+					turn,
+					content
+				);
+				relationships = outcome.relationships;
+				people.push(...outcome.changes);
+			} else {
+				const outcome = revealAll(character);
+				characters = { ...characters, [character.id]: outcome.character };
+				people.push(...outcome.changes);
+			}
 		} else {
 			const key = resolved.gauge === 'player.health' ? 'health' : 'stress';
-			const { value, applied } = applyGauge(currentPlayer[key], resolved.delta);
-			currentPlayer = { ...currentPlayer, [key]: value };
+			const { value, applied } = applyGauge(player[key], resolved.delta);
+			player = { ...player, [key]: value };
 			gaugeDeltas.set(resolved.gauge, (gaugeDeltas.get(resolved.gauge) ?? 0) + applied);
 		}
 	}
 
 	return {
 		resources: current,
-		player: currentPlayer,
-		world: currentWorld,
-		rng: currentRng,
+		player,
+		world,
+		characters,
+		relationships,
+		rng,
 		politics,
+		people,
 		changes: RESOURCE_IDS.flatMap((resource) => {
 			const delta = deltas.get(resource) ?? 0;
 			return delta === 0 ? [] : [{ resource, delta }];
@@ -226,6 +265,17 @@ function applyAutomaticEffects(
 			return delta === 0 ? [] : [{ gauge, delta }];
 		})
 	};
+}
+
+/** Acteurs de rôles (hors variables du monde) d'une instance, dans l'ordre des rôles. */
+function slotActors(
+	definition: EventDefinition,
+	actors: Readonly<Record<string, string>>
+): string[] {
+	return definition.actors.flatMap((slot) => {
+		const id = actors[slot.role];
+		return id === undefined ? [] : [id];
+	});
 }
 
 // ---------------------------------------------------------------------------
@@ -243,48 +293,54 @@ function conditionHolds(definition: EventDefinition, context: ConditionContext):
 	return definition.when === undefined || evaluateCondition(context, definition.when);
 }
 
-/** Acteurs possibles d'un rôle, dans l'ordre stable de la distribution. */
-function candidatesFor(
-	tags: readonly string[],
-	used: ReadonlySet<string>,
-	content: Content
-): string[] {
-	return content.castIds.filter((id) => {
-		const member = content.cast[id];
-		return member !== undefined && !used.has(id) && tags.every((tag) => member.tags.includes(tag));
+/** Personnages actifs et relations : vivier des acteurs d'événements. */
+interface CastPool {
+	readonly characters: Readonly<Record<string, Character>>;
+	readonly relationships: Readonly<Record<string, Relationship>>;
+}
+
+/** Acteurs possibles d'un rôle, dans l'ordre stable des identifiants. */
+function candidatesFor(slot: EventDefinition['actors'][number], pool: CastPool): string[] {
+	return sortedIds(pool.characters).filter((id) => {
+		const character = pool.characters[id];
+		return character !== undefined && fitsSlot(character, slot, pool.relationships);
 	});
 }
 
-/** Vérifie sans tirage qu'une distribution complète existe (affectation gloutonne). */
-function actorsAvailable(definition: EventDefinition, content: Content): boolean {
-	const used = new Set<string>();
-	for (const slot of definition.actors) {
-		const [first] = candidatesFor(slot.tags, used, content);
-		if (first === undefined) return false;
-		used.add(first);
-	}
-	return true;
+/** Une distribution complète existe-t-elle ? (recherche avec retour arrière, sans tirage) */
+function actorsAvailable(definition: EventDefinition, pool: CastPool): boolean {
+	return completeCastingExists(definition.actors.map((slot) => candidatesFor(slot, pool)));
 }
 
+/**
+ * Pourvoit chaque rôle dans l'ordre : un acteur hérité est gardé s'il convient
+ * encore, sinon un candidat est tiré parmi ceux qui laissent une distribution
+ * complète possible pour les rôles suivants. Aucun rôle ne peut donc échouer
+ * faute d'acteur à cause d'un choix antérieur malheureux.
+ */
 function resolveActors(
 	definition: EventDefinition,
 	inherited: Readonly<Record<string, string>>,
 	rng: RngState,
-	content: Content
+	pool: CastPool
 ): { actors: Record<string, string>; rng: RngState } | null {
+	const lists = definition.actors.map((slot) => candidatesFor(slot, pool));
 	const actors: Record<string, string> = {};
 	const used = new Set<string>();
 	let currentRng = rng;
-	for (const slot of definition.actors) {
-		const candidates = candidatesFor(slot.tags, used, content);
+	for (const [index, slot] of definition.actors.entries()) {
+		const rest = lists.slice(index + 1);
+		const options = (lists[index] ?? []).filter(
+			(id) => !used.has(id) && completeCastingExists(rest, new Set([...used, id]))
+		);
 		const kept = inherited[slot.role];
 		let chosen: string | undefined;
-		if (kept !== undefined && candidates.includes(kept)) {
+		if (kept !== undefined && options.includes(kept)) {
 			chosen = kept;
-		} else if (candidates.length > 0) {
-			const draw = nextInt(currentRng, 0, candidates.length - 1);
+		} else if (options.length > 0) {
+			const draw = nextInt(currentRng, 0, options.length - 1);
 			currentRng = draw.rng;
-			chosen = candidates[draw.value];
+			chosen = options[draw.value];
 		}
 		if (chosen === undefined) return null;
 		actors[slot.role] = chosen;
@@ -308,12 +364,16 @@ export interface FrontierInput {
 	readonly nextInstanceNumber: number;
 	readonly events: EventsState;
 	readonly world: WorldState;
+	readonly characters: Readonly<Record<string, Character>>;
+	readonly relationships: Readonly<Record<string, Relationship>>;
 }
 
 export interface FrontierResult {
 	readonly player: PlayerState;
 	readonly resources: Resources;
 	readonly world: WorldState;
+	readonly characters: Readonly<Record<string, Character>>;
+	readonly relationships: Readonly<Record<string, Relationship>>;
 	readonly rng: RngState;
 	readonly nextInstanceNumber: number;
 	readonly events: EventsState;
@@ -322,7 +382,8 @@ export interface FrontierResult {
 }
 
 export function resolveEventFrontier(input: FrontierInput, content: Content): FrontierResult {
-	let { player, resources, rng, nextInstanceNumber, world } = input;
+	let { player, resources, rng, nextInstanceNumber, world, characters, relationships } = input;
+	const pool = (): CastPool => ({ characters, relationships });
 	const turn = input.turn;
 	const pending: EventInstance[] = [...input.events.pending];
 	const occurrences: Record<string, { count: number; lastTurn: Turn }> = {
@@ -350,6 +411,14 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		const previous = occurrences[definition.id];
 		occurrences[definition.id] = { count: (previous?.count ?? 0) + 1, lastTurn: turn };
 
+		// Les acteurs de l'événement deviennent des personnages rencontrés.
+		const met: PeopleChange[] = [];
+		for (const id of slotActors(definition, actors)) {
+			const outcome = meet(relationships, id, turn);
+			relationships = outcome.relationships;
+			if (outcome.change) met.push(outcome.change);
+		}
+
 		if (definition.blocking) {
 			pending.push(instance);
 			records.push({
@@ -360,6 +429,7 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 				changes: [],
 				gauges: [],
 				politics: [],
+				people: met,
 				reason: null
 			});
 			return;
@@ -367,14 +437,12 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		const outcome = applyAutomaticEffects(
 			definition.effects,
 			[],
-			resources,
-			player,
-			world,
-			rng,
+			{ resources, player, world, characters, relationships, rng },
+			actors,
 			turn,
 			content
 		);
-		({ resources, player, rng, world } = outcome);
+		({ resources, player, rng, world, characters, relationships } = outcome);
 		records.push({
 			eventId: definition.id,
 			instanceId: instance.instanceId,
@@ -383,6 +451,7 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 			changes: outcome.changes,
 			gauges: outcome.gauges,
 			politics: outcome.politics,
+			people: [...met, ...outcome.people],
 			reason: null
 		});
 		if (player.health <= 0) death.cause = 'health_failure';
@@ -397,6 +466,7 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 			changes: [],
 			gauges: [],
 			politics: [],
+			people: [],
 			reason
 		});
 	};
@@ -412,7 +482,7 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 			cancel(entry, 'Les conditions de cette suite ne sont plus réunies.');
 			continue;
 		}
-		const resolved = resolveActors(definition, entry.actors, rng, content);
+		const resolved = resolveActors(definition, entry.actors, rng, pool());
 		const bound = bindWorldVariables(definition, entry.actors, player, world, content);
 		if (!resolved || !bound) {
 			cancel(entry, 'Aucun acteur disponible pour cette suite.');
@@ -442,7 +512,7 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 			if (occurrence && turn - occurrence.lastTurn < definition.cooldownTurns) return [];
 			if (pending.some((instance) => instance.eventId === id)) return [];
 			if (!inWindow(definition, turn) || !conditionHolds(definition, context())) return [];
-			if (!actorsAvailable(definition, content)) return [];
+			if (!actorsAvailable(definition, pool())) return [];
 			return [definition];
 		});
 		const totalWeight = candidates.reduce((total, definition) => total + definition.weight, 0);
@@ -458,7 +528,7 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 			}) ?? candidates[candidates.length - 1];
 		if (!chosen) continue;
 
-		const resolved = resolveActors(chosen, {}, rng, content);
+		const resolved = resolveActors(chosen, {}, rng, pool());
 		const bound = bindWorldVariables(chosen, {}, player, world, content);
 		if (!resolved || !bound) continue;
 		rng = resolved.rng;
@@ -478,6 +548,8 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		player,
 		resources,
 		world,
+		characters,
+		relationships,
 		rng,
 		nextInstanceNumber,
 		events: {
@@ -547,16 +619,34 @@ export function chooseEvent(
 		return reject(state, 'choice_unavailable', availability.reason ?? 'Choix indisponible.');
 	}
 
-	const outcome = applyAutomaticEffects(
+	const applied = applyAutomaticEffects(
 		choice.effects,
 		choice.costs,
-		state.resources,
-		state.player,
-		state.world,
-		state.rng,
+		{
+			resources: state.resources,
+			player: state.player,
+			world: state.world,
+			characters: state.characters,
+			relationships: state.relationships,
+			rng: state.rng
+		},
+		instance.actors,
 		state.turn,
 		content
 	);
+	// Rencontre : chaque acteur encore actif peut laisser voir un trait caché.
+	let characters = applied.characters;
+	let rng = applied.rng;
+	const people: PeopleChange[] = [...applied.people];
+	for (const id of slotActors(definition, instance.actors)) {
+		const character = characters[id];
+		if (!character || character.status !== 'active') continue;
+		const encounter = encounterReveal(character, rng, content);
+		rng = encounter.rng;
+		characters = { ...characters, [id]: encounter.character };
+		people.push(...encounter.changes);
+	}
+	const outcome = { ...applied, characters, rng, people };
 	const scheduledEntry: ScheduledEvent | null = choice.followUp
 		? {
 				eventId: choice.followUp.eventId,
@@ -600,6 +690,7 @@ export function chooseEvent(
 		changes: outcome.changes,
 		gauges: outcome.gauges,
 		politics: outcome.politics,
+		people: outcome.people,
 		scheduled: scheduledEntry,
 		cancelled,
 		deathCause
@@ -612,6 +703,8 @@ export function chooseEvent(
 			resources: outcome.resources,
 			player: outcome.player,
 			world: outcome.world,
+			characters: outcome.characters,
+			relationships: outcome.relationships,
 			rng: outcome.rng,
 			phase: deathCause ? 'ended' : remaining.length > 0 ? 'decision' : 'planning',
 			end: deathCause ? { turn: state.turn, reason: 'death', cause: deathCause } : null,

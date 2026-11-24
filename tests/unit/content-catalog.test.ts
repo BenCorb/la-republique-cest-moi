@@ -6,11 +6,17 @@ import {
 	fixtureBalance,
 	fixtureCast,
 	fixtureEvents,
+	fixtureTraits,
 	fixtureUpgrades,
 	fixtureWorld
 } from '../fixtures/content.ts';
 
-const rest = { cast: fixtureCast, events: fixtureEvents, world: fixtureWorld };
+const rest = {
+	cast: fixtureCast,
+	events: fixtureEvents,
+	world: fixtureWorld,
+	traits: fixtureTraits
+};
 
 type MutableAction = Record<string, unknown>;
 
@@ -136,6 +142,7 @@ describe('validation des catalogues', () => {
 			cast: { cast: [] },
 			events: {},
 			world: fixtureWorld,
+			traits: fixtureTraits,
 			balance: { timeBudgetPerTurn: 0, startingResources: { influence: -1 } }
 		});
 		expect(result.ok).toBe(false);
@@ -243,7 +250,8 @@ describe('validation des événements', () => {
 			balance: fixtureBalance,
 			cast: fixtureCast,
 			events,
-			world: fixtureWorld
+			world: fixtureWorld,
+			traits: fixtureTraits
 		});
 	}
 
@@ -347,14 +355,15 @@ describe('validation des événements', () => {
 		expect(messages(result)).toContain(fragment);
 	});
 
-	it.each<[string, { id: string; name: string; tags: string[] }, string]>([
+	it.each<[string, { id: string; name: string; tags: string[]; age?: number }, string]>([
 		[
 			'membre en double',
-			{ id: 'test.doc_a', name: 'Copie', tags: ['medical'] },
+			{ id: 'test.doc_a', name: 'Copie', tags: ['medical'], age: 40 },
 			'identifiant en double : test.doc_a'
 		],
-		['identifiant mal formé', { id: 'Mauvais', name: 'X', tags: ['x'] }, 'cast[4].id'],
-		['sans étiquette', { id: 'test.nobody', name: 'Personne', tags: [] }, 'cast[4].tags']
+		['identifiant mal formé', { id: 'Mauvais', name: 'X', tags: ['x'], age: 40 }, 'cast[4].id'],
+		['sans étiquette', { id: 'test.nobody', name: 'Personne', tags: [], age: 40 }, 'cast[4].tags'],
+		['sans âge', { id: 'test.ageless', name: 'Sans âge', tags: ['x'] }, 'cast[4].age']
 	])('rejette dans la distribution : %s', (_label, member, fragment) => {
 		const result = validateContent({
 			actions: fixtureActions,
@@ -362,6 +371,7 @@ describe('validation des événements', () => {
 			balance: fixtureBalance,
 			events: fixtureEvents,
 			world: fixtureWorld,
+			traits: fixtureTraits,
 			cast: { cast: [...fixtureCast.cast, member] }
 		});
 		expect(messages(result)).toContain(fragment);

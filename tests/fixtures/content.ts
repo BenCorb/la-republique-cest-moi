@@ -39,7 +39,45 @@ export const fixtureBalance = {
 	// Aucun tirage ordinaire par défaut : les tests d'événements l'activent (`withEvents`).
 	events: { ordinaryDrawsPerTurn: 0, ordinaryEventChance: 0 },
 	// Monde immobile par défaut : les tests du monde l'activent (`withWorld`).
-	world: neutralWorld()
+	world: neutralWorld(),
+	// Personnages immobiles par défaut : ni retraite, ni révélation fortuite.
+	characters: {
+		traitsPerCharacter: 2,
+		retirementAge: 150,
+		replacementMinAge: 30,
+		replacementMaxAge: 40,
+		revealChancePerEncounter: 0,
+		maxMemories: 3
+	}
+};
+
+export const fixtureTraits = {
+	traits: [
+		{
+			id: 'trait.open',
+			label: 'Franchise',
+			description: 'Trait public de test.',
+			hidden: false,
+			positiveRelationPercent: 100,
+			negativeRelationPercent: 100
+		},
+		{
+			id: 'trait.grudge',
+			label: 'Rancune',
+			description: 'Trait caché de test : double les rancœurs.',
+			hidden: true,
+			positiveRelationPercent: 100,
+			negativeRelationPercent: 200
+		},
+		{
+			id: 'trait.loyal',
+			label: 'Loyauté',
+			description: 'Trait caché de test : amplifie la gratitude.',
+			hidden: true,
+			positiveRelationPercent: 150,
+			negativeRelationPercent: 50
+		}
+	]
 };
 
 /** Évolution du monde neutre : ni retour à la référence, ni aléa, ni changement de direction. */
@@ -120,10 +158,28 @@ export const fixtureWorld = {
 
 export const fixtureCast = {
 	cast: [
-		{ id: 'test.doc_a', name: 'Docteure A', tags: ['medical'] },
-		{ id: 'test.doc_b', name: 'Docteur B', tags: ['medical'] },
-		{ id: 'test.reporter', name: 'Reporter', tags: ['journalist'] },
-		{ id: 'test.cousin', name: 'Cousin', tags: ['family'] }
+		{
+			id: 'test.doc_a',
+			name: 'Docteure A',
+			tags: ['medical'],
+			age: 50,
+			renewal: { epithet: 'médecin' }
+		},
+		{
+			id: 'test.doc_b',
+			name: 'Docteur B',
+			tags: ['medical'],
+			age: 40,
+			renewal: { epithet: 'médecin' }
+		},
+		{
+			id: 'test.reporter',
+			name: 'Reporter',
+			tags: ['journalist'],
+			age: 35,
+			renewal: { epithet: 'reporter' }
+		},
+		{ id: 'test.cousin', name: 'Cousin', tags: ['family'], age: 30 }
 	]
 };
 
@@ -428,7 +484,8 @@ function load(): Content {
 		balance: fixtureBalance,
 		cast: fixtureCast,
 		events: fixtureEvents,
-		world: fixtureWorld
+		world: fixtureWorld,
+		traits: fixtureTraits
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;
@@ -462,6 +519,17 @@ export function withEvents(
 			(id) => eventIds.includes(id) || base.events[id]?.trigger === 'followUp'
 		),
 		balance: { ...base.balance, events }
+	};
+}
+
+/** Contenu de test avec des paramètres de personnages modifiés. */
+export function withCharacters(changes: Partial<Content['balance']['characters']>): Content {
+	return {
+		...fixtureContent,
+		balance: {
+			...fixtureContent.balance,
+			characters: { ...fixtureContent.balance.characters, ...changes }
+		}
 	};
 }
 

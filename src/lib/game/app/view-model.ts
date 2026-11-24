@@ -26,7 +26,10 @@ import {
 	type EffectRange,
 	type GameState,
 	type HistoryEntry,
+	type PeopleChange,
 	type PlanStep,
+	type CharactersRecord,
+	displayName,
 	type PoliticalChange,
 	type WellbeingSource,
 	type WorldRecord
@@ -129,7 +132,8 @@ export interface DecisionView {
 }
 
 export interface JournalLine {
-	readonly kind: 'step' | 'economy' | 'wellbeing' | 'world' | 'event' | 'decision' | 'end';
+	readonly kind:
+		'step' | 'economy' | 'wellbeing' | 'world' | 'people' | 'event' | 'decision' | 'end';
 	readonly text: string;
 }
 
@@ -195,6 +199,25 @@ export interface WorldView {
 	readonly joinCosts: readonly string[];
 }
 
+export interface PersonView {
+	readonly id: string;
+	readonly name: string;
+	/** Rôle principal, d'après les étiquettes. */
+	readonly role: string;
+	readonly age: number;
+	readonly status: string;
+	readonly active: boolean;
+	/** Tendance de l'attitude envers le joueur (jamais le chiffre). */
+	readonly attitude: string;
+	readonly attitudeTone: 'good' | 'neutral' | 'warning' | 'danger';
+	readonly knownTraits: readonly { readonly label: string; readonly description: string }[];
+	/** Traits encore inconnus du joueur (leur nombre seul est visible). */
+	readonly unknownTraits: number;
+	readonly metLabel: string;
+	/** Souvenirs, du plus récent au plus ancien. */
+	readonly memories: readonly { readonly dateLabel: string; readonly text: string }[];
+}
+
 export interface PlayerView {
 	readonly dateLabel: string;
 	readonly age: number;
@@ -216,6 +239,8 @@ export interface PlayerView {
 	readonly alerts: readonly Alert[];
 	readonly summary: SummaryView | null;
 	readonly world: WorldView;
+	/** Personnages rencontrés : actifs d'abord, puis par date de rencontre. */
+	readonly people: readonly PersonView[];
 }
 
 const FAMILY_LABELS: Readonly<Record<string, string>> = {
@@ -271,6 +296,8 @@ function describeEffect(range: EffectRange, content: Content): string {
 			return range.change === 'join'
 				? `Adhésion : ${partyLabel(range.party, content)}`
 				: 'Départ de votre parti';
+		case 'people':
+			return 'Relation avec un personnage';
 	}
 }
 
@@ -291,6 +318,39 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 		.join(', ');
 }
 
+/** Départs et successions des personnages déjà rencontrés (les dirigeants : voir le monde). */
+function characterLines(record: CharactersRecord | null, state: GameState): JournalLine[] {
+	if (!record) return [];
+	const known = (id: string): boolean => Object.hasOwn(state.relationships, id);
+	return record.departures.flatMap((departure) => {
+		const character = state.characters[departure.characterId];
+		if (!character || !known(character.id)) return [];
+		const successor = record.arrivals.find((arrival) => arrival.successorOf === character.id);
+		const successorName = successor ? state.characters[successor.characterId] : undefined;
+		const what = departure.reason === 'death' ? 'Décès de' : 'Départ à la retraite de';
+		return [
+			{
+				kind: 'people' as const,
+				text: `${what} ${displayName(character)}.${successorName ? ` Relève : ${displayName(successorName)}.` : ''}`
+			}
+		];
+	});
+}
+
+function peopleText(changes: readonly PeopleChange[], state: GameState, content: Content): string {
+	return changes
+		.flatMap((change) => {
+			const character = state.characters[change.characterId];
+			if (!character) return [];
+			if (change.kind === 'revealed') {
+				const trait = content.traits[change.traitId]?.label ?? change.traitId;
+				return [`vous découvrez chez ${displayName(character)} : ${trait}`];
+			}
+			return [];
+		})
+		.join(', ');
+}
+
 function worldLines(record: WorldRecord | null, state: GameState, content: Content): JournalLine[] {
 	if (!record) return [];
 	return record.leaderChanges.map((change) => {
@@ -298,7 +358,11 @@ function worldLines(record: WorldRecord | null, state: GameState, content: Conte
 		const previous = state.characters[change.previousLeaderId]?.name ?? change.previousLeaderId;
 		const leader = state.characters[change.leaderId]?.name ?? change.leaderId;
 		const why =
-			change.reason === 'retirement' ? 'part à la retraite' : 'est renversé·e par un vote interne';
+			change.reason === 'retirement'
+				? 'part à la retraite'
+				: change.reason === 'death'
+					? 'décède'
+					: 'perd un vote interne';
 		return {
 			kind: 'world',
 			text: `${party} : ${previous} ${why} ; ${leader} prend la tête du parti.`
@@ -378,6 +442,7 @@ function journalOfQuarter(entry: HistoryEntry, state: GameState, content: Conten
 	}
 	for (const [name, parts] of byGauge)
 		lines.push({ kind: 'wellbeing', text: `${name} ${parts.join(', ')}` });
+	lines.push(...characterLines(entry.characters, state));
 	lines.push(...worldLines(entry.world, state, content));
 	for (const event of entry.events) {
 		const title = eventTitle(event.eventId, event.actors, state, content);
@@ -387,7 +452,8 @@ function journalOfQuarter(entry: HistoryEntry, state: GameState, content: Conten
 			const effects = joinParts(
 				changesText(event.changes),
 				gaugesText(event.gauges),
-				politicsText(event.politics, content)
+				politicsText(event.politics, content),
+				peopleText(event.people, state, content)
 			);
 			lines.push({ kind: 'event', text: effects ? `${title} — ${effects}` : title });
 		} else
@@ -417,7 +483,8 @@ function journalOfChoice(entry: ChoiceRecord, state: GameState, content: Content
 	const effects = joinParts(
 		changesText(entry.changes),
 		gaugesText(entry.gauges),
-		politicsText(entry.politics, content)
+		politicsText(entry.politics, content),
+		peopleText(entry.people, state, content)
 	);
 	const lines: JournalLine[] = [
 		{
@@ -565,6 +632,74 @@ function buildWorld(state: GameState, plan: readonly PlanStep[], content: Conten
 		joinTimeCost: joinAction?.timeCost ?? 0,
 		joinCosts: joinAction ? amounts(joinAction.costs, -1) : []
 	};
+}
+
+const ROLE_LABELS: Readonly<Record<string, string>> = {
+	medical: 'Santé',
+	journalist: 'Presse',
+	family: 'Famille',
+	friend: 'Amitiés',
+	business: 'Affaires',
+	donor: 'Affaires',
+	politician: 'Vie politique locale',
+	rival: 'Vie politique locale',
+	party_official: 'Parti',
+	party_leader: 'Direction de parti',
+	volunteer: 'Militants'
+};
+
+function describeAttitude(attitude: number): Pick<PersonView, 'attitude' | 'attitudeTone'> {
+	if (attitude >= 40) return { attitude: 'Très favorable', attitudeTone: 'good' };
+	if (attitude >= 10) return { attitude: 'Favorable', attitudeTone: 'good' };
+	if (attitude > -10) return { attitude: 'Neutre', attitudeTone: 'neutral' };
+	if (attitude > -40) return { attitude: 'Réservée', attitudeTone: 'warning' };
+	return { attitude: 'Hostile', attitudeTone: 'danger' };
+}
+
+function buildPeople(state: GameState, content: Content): PersonView[] {
+	const now = state.end ? state.end.turn : state.turn;
+	const people = Object.entries(state.relationships).flatMap(([id, relationship]) => {
+		const character = state.characters[id];
+		if (!character) return [];
+		const lastTurn = character.leftTurn ?? now;
+		return [
+			{
+				metTurn: relationship.metTurn,
+				view: {
+					id,
+					name: displayName(character),
+					role: ROLE_LABELS[character.tags[0] ?? ''] ?? 'Connaissance',
+					age: ageAt(character.birthTurn, lastTurn),
+					status:
+						character.status === 'active'
+							? 'En activité'
+							: character.status === 'retired'
+								? `À la retraite depuis le ${formatTurn(lastTurn)}`
+								: `Décès au ${formatTurn(lastTurn)}`,
+					active: character.status === 'active',
+					...describeAttitude(relationship.attitude),
+					knownTraits: character.knownTraits.map((traitId) => ({
+						label: content.traits[traitId]?.label ?? traitId,
+						description: content.traits[traitId]?.description ?? ''
+					})),
+					unknownTraits: character.traits.length - character.knownTraits.length,
+					metLabel: `Rencontre au ${formatTurn(relationship.metTurn)}`,
+					memories: [...relationship.memories].reverse().map((memory) => ({
+						dateLabel: formatTurn(memory.turn),
+						text: memory.text
+					}))
+				} satisfies PersonView
+			}
+		];
+	});
+	return people
+		.sort(
+			(a, b) =>
+				Number(b.view.active) - Number(a.view.active) ||
+				a.metTurn - b.metTurn ||
+				a.view.id.localeCompare(b.view.id)
+		)
+		.map((entry) => entry.view);
 }
 
 export function projectView(
@@ -720,6 +855,7 @@ export function projectView(
 		press: buildPress(state, content),
 		alerts,
 		summary: buildSummary(state, content),
-		world: buildWorld(state, plan, content)
+		world: buildWorld(state, plan, content),
+		people: buildPeople(state, content)
 	};
 }

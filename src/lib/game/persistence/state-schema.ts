@@ -27,6 +27,12 @@ const politicalChange = z.discriminatedUnion('kind', [
 	z.strictObject({ kind: z.literal('left'), partyId: id })
 ]);
 
+const peopleChange = z.discriminatedUnion('kind', [
+	z.strictObject({ kind: z.literal('met'), characterId: id }),
+	z.strictObject({ kind: z.literal('relation'), characterId: id, delta: int }),
+	z.strictObject({ kind: z.literal('revealed'), characterId: id, traitId: id })
+]);
+
 const scheduledEvent = z.strictObject({
 	eventId: id,
 	dueTurn: int,
@@ -69,6 +75,14 @@ const turnEntry = z.strictObject({
 		),
 		deathCause: deathCause.nullable()
 	}),
+	characters: z
+		.strictObject({
+			departures: z.array(
+				z.strictObject({ characterId: id, reason: z.enum(['death', 'retirement']) })
+			),
+			arrivals: z.array(z.strictObject({ characterId: id, successorOf: id }))
+		})
+		.nullable(),
 	world: z
 		.strictObject({
 			indicators: z.array(z.strictObject({ indicator, delta: int })),
@@ -78,7 +92,7 @@ const turnEntry = z.strictObject({
 					partyId: id,
 					previousLeaderId: id,
 					leaderId: id,
-					reason: z.enum(['retirement', 'internal_vote'])
+					reason: z.enum(['retirement', 'internal_vote', 'death'])
 				})
 			)
 		})
@@ -92,6 +106,7 @@ const turnEntry = z.strictObject({
 			changes: z.array(resourceChange),
 			gauges: z.array(gaugeChange),
 			politics: z.array(politicalChange),
+			people: z.array(peopleChange),
 			reason: text.nullable()
 		})
 	)
@@ -106,6 +121,7 @@ const choiceEntry = z.strictObject({
 	changes: z.array(resourceChange),
 	gauges: z.array(gaugeChange),
 	politics: z.array(politicalChange),
+	people: z.array(peopleChange),
 	scheduled: scheduledEvent.nullable(),
 	cancelled: z.array(z.strictObject({ instanceId: id, reason: text })),
 	deathCause: deathCause.nullable()
@@ -146,7 +162,28 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 	}),
 	characters: z.record(
 		id,
-		z.strictObject({ id, name: text, birthTurn: int, partyId: id.nullable() })
+		z.strictObject({
+			id,
+			name: text,
+			epithet: text.nullable(),
+			birthTurn: int,
+			partyId: id.nullable(),
+			tags: z.array(z.string().max(60)),
+			renewal: text.nullable(),
+			traits: z.array(id),
+			knownTraits: z.array(id),
+			status: z.enum(['active', 'retired', 'dead']),
+			leftTurn: int.nullable(),
+			successorOf: id.nullable()
+		})
+	),
+	relationships: z.record(
+		id,
+		z.strictObject({
+			metTurn: int,
+			attitude: int,
+			memories: z.array(z.strictObject({ turn: int, text, tone: z.enum(['positive', 'negative']) }))
+		})
 	),
 	history: z.array(z.discriminatedUnion('type', [turnEntry, choiceEntry])),
 	end: z.strictObject({ turn: int, reason: z.literal('death'), cause: deathCause }).nullable()

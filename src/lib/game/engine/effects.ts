@@ -34,7 +34,9 @@ export type EffectRange =
 			readonly kind: 'affiliation';
 			readonly change: 'join' | 'leave';
 			readonly party: string | null;
-	  };
+	  }
+	/** Effet sur un acteur d'événement : jamais chiffré pour le joueur. */
+	| { readonly kind: 'people'; readonly role: string };
 
 export type ResolvedEffect =
 	| {
@@ -50,7 +52,11 @@ export type ResolvedEffect =
 			readonly rng: RngState;
 	  }
 	/** Effet politique déterministe, appliqué par `applyPoliticalEffect`. */
-	| { readonly kind: 'politics'; readonly effect: PoliticalEffect; readonly rng: RngState };
+	| { readonly kind: 'politics'; readonly effect: PoliticalEffect; readonly rng: RngState }
+	/** Effet sur un acteur d'événement, appliqué par le moteur d'événements. */
+	| { readonly kind: 'people'; readonly effect: PeopleEffect; readonly rng: RngState };
+
+export type PeopleEffect = Extract<Effect, { op: 'addRelation' | 'revealTraits' }>;
 
 export function clampGauge(value: number): number {
 	return Math.min(GAUGE_MAX, Math.max(GAUGE_MIN, value));
@@ -78,6 +84,9 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'affiliation', change: 'join', party: effect.party };
 		case 'leaveParty':
 			return { kind: 'affiliation', change: 'leave', party: null };
+		case 'addRelation':
+		case 'revealTraits':
+			return { kind: 'people', role: effect.role };
 		default: {
 			const unknown: never = effect;
 			throw new Error(`Effet inconnu : ${JSON.stringify(unknown)}`);
@@ -100,6 +109,9 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 		case 'joinParty':
 		case 'leaveParty':
 			return { kind: 'politics', effect, rng };
+		case 'addRelation':
+		case 'revealTraits':
+			return { kind: 'people', effect, rng };
 		default: {
 			const unknown: never = effect;
 			throw new Error(`Effet inconnu : ${JSON.stringify(unknown)}`);

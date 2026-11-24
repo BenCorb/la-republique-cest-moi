@@ -24,6 +24,7 @@ import {
 	fixtureCast,
 	fixtureContent,
 	fixtureEvents,
+	fixtureTraits,
 	fixtureUpgrades,
 	fixtureWorld,
 	neutralWorld,
@@ -133,7 +134,8 @@ function political(
 		balance: fixtureBalance,
 		cast: fixtureCast,
 		events: overrides.events ?? { ...fixtureEvents, 'events/national.json': politicalEvents },
-		world: fixtureWorld
+		world: fixtureWorld,
+		traits: fixtureTraits
 	});
 }
 
@@ -280,11 +282,13 @@ describe('évolution autonome', () => {
 			{
 				partyId: 'party.small',
 				previousLeaderId: leaderId,
-				leaderId: 'character.4',
+				// Trois dirigeants et quatre membres de la distribution existent déjà.
+				leaderId: 'character.8',
 				reason: 'retirement'
 			}
 		]);
-		expect(next.world.parties['party.small']?.leaderId).toBe('character.4');
+		expect(next.world.parties['party.small']?.leaderId).toBe('character.8');
+		expect(next.characters[leaderId]?.status).toBe('retired');
 	});
 
 	it('n’évolue plus après un décès pendant le trimestre', () => {

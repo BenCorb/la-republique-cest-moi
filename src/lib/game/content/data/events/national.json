@@ -137,14 +137,14 @@
 			"text": "{opposition_party} dépose une motion de censure. Elle est repoussée à onze voix près, dont trois députés qui s’étaient trompés de bouton et un qui dormait sincèrement.",
 			"blocking": false,
 			"trigger": "random",
-			"weight": 3,
+			"weight": 4,
 			"priority": 0,
 			"cooldownTurns": 16,
 			"unique": false,
 			"when": {
 				"op": "lte",
 				"stat": "world.stability",
-				"value": 32
+				"value": 35
 			},
 			"actors": [],
 			"effects": [

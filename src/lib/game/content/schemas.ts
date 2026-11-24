@@ -25,6 +25,7 @@ import {
 	type ActionDefinition,
 	type AgeBand,
 	type AxisDefinition,
+	type CharactersBalance,
 	type Balance,
 	type Condition,
 	type CastMember,
@@ -33,6 +34,7 @@ import {
 	type EventDefinition,
 	type EventsBalance,
 	type PartyDefinition,
+	type TraitDefinition,
 	type ResourceAmount,
 	type UpgradeDefinition,
 	type WellbeingBalance,
@@ -103,7 +105,20 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 		value: nonZeroGaugeDelta
 	}),
 	z.strictObject({ op: z.literal('joinParty'), party: partyReference }),
-	z.strictObject({ op: z.literal('leaveParty') })
+	z.strictObject({ op: z.literal('leaveParty') }),
+	z.strictObject({
+		op: z.literal('addRelation'),
+		role: z.string().regex(/^[a-z][a-z0-9_]*$/, 'rôle en minuscules'),
+		value: safeInt.refine(
+			(value) => value !== 0 && Math.abs(value) <= 200,
+			'variation non nulle, au plus 200'
+		),
+		memory: z.string().trim().min(1).optional()
+	}),
+	z.strictObject({
+		op: z.literal('revealTraits'),
+		role: z.string().regex(/^[a-z][a-z0-9_]*$/, 'rôle en minuscules')
+	})
 ]);
 
 export const resourceAmountSchema: z.ZodType<ResourceAmount> = z.strictObject({
@@ -213,7 +228,22 @@ const shortId = z.string().regex(/^[a-z][a-z0-9_]*$/, 'identifiant en minuscules
 export const castMemberSchema: z.ZodType<CastMember> = z.strictObject({
 	id: contentId,
 	name: frenchText,
-	tags: z.array(shortId).min(1)
+	tags: z.array(shortId).min(1),
+	age: positiveInt.refine((value) => value <= 110, 'âge de 1 à 110 ans'),
+	renewal: z.strictObject({ epithet: frenchText }).optional()
+});
+
+export const traitSchema: z.ZodType<TraitDefinition> = z.strictObject({
+	id: contentId.refine((value) => value.startsWith('trait.'), 'identifiant « trait.nom »'),
+	label: frenchText,
+	description: frenchText,
+	hidden: z.boolean(),
+	positiveRelationPercent: nonNegativeInt.refine((value) => value <= 300, 'au plus 300 %'),
+	negativeRelationPercent: nonNegativeInt.refine((value) => value <= 300, 'au plus 300 %')
+});
+
+export const traitCatalogSchema = z.strictObject({
+	traits: z.array(traitSchema).min(1)
 });
 
 export const castCatalogSchema = z.strictObject({
@@ -257,7 +287,24 @@ const eventBaseShape = {
 	cooldownTurns: nonNegativeInt,
 	unique: z.boolean(),
 	when: conditionSchema.optional(),
-	actors: z.array(z.strictObject({ role: shortId, tags: z.array(shortId).min(1) }))
+	actors: z.array(
+		z
+			.strictObject({
+				role: shortId,
+				tags: z.array(shortId).min(1),
+				traits: z.array(contentId).min(1).optional(),
+				minAttitude: safeInt.optional(),
+				maxAttitude: safeInt.optional(),
+				met: z.literal(true).optional()
+			})
+			.refine(
+				(slot) =>
+					slot.minAttitude === undefined ||
+					slot.maxAttitude === undefined ||
+					slot.minAttitude <= slot.maxAttitude,
+				{ message: 'attitude minimale supérieure à la maximale', path: ['maxAttitude'] }
+			)
+	)
 };
 
 export const eventSchema: z.ZodType<EventDefinition> = z
@@ -361,6 +408,24 @@ export const worldSchema: z.ZodType<WorldDefinition> = z.strictObject({
 	})
 });
 
+export const charactersBalanceSchema: z.ZodType<CharactersBalance> = z
+	.strictObject({
+		traitsPerCharacter: nonNegativeInt,
+		retirementAge: positiveInt,
+		replacementMinAge: positiveInt,
+		replacementMaxAge: positiveInt,
+		revealChancePerEncounter: probability,
+		maxMemories: positiveInt
+	})
+	.refine((balance) => balance.replacementMinAge <= balance.replacementMaxAge, {
+		message: 'âge minimal des remplaçants supérieur à l’âge maximal',
+		path: ['replacementMaxAge']
+	})
+	.refine((balance) => balance.replacementMaxAge < balance.retirementAge, {
+		message: 'un remplaçant doit être plus jeune que l’âge de retraite',
+		path: ['replacementMaxAge']
+	});
+
 export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	timeBudgetPerTurn: positiveInt,
 	startingResources: z.strictObject({
@@ -370,5 +435,6 @@ export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	}),
 	wellbeing: wellbeingSchema,
 	events: eventsBalanceSchema,
-	world: worldBalanceSchema
+	world: worldBalanceSchema,
+	characters: charactersBalanceSchema
 });

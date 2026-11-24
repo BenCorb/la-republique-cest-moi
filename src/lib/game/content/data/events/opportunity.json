@@ -52,6 +52,12 @@
 							"op": "addStat",
 							"stat": "player.stress",
 							"value": 3
+						},
+						{
+							"op": "addRelation",
+							"role": "official",
+							"value": 10,
+							"memory": "Vous avez accepté son invitation à rejoindre la section."
 						}
 					]
 				},
@@ -70,6 +76,12 @@
 							"op": "addStat",
 							"stat": "player.stress",
 							"value": 2
+						},
+						{
+							"op": "addRelation",
+							"role": "official",
+							"value": -5,
+							"memory": "Vous avez marchandé votre adhésion."
 						}
 					]
 				},
@@ -83,6 +95,12 @@
 							"op": "addResource",
 							"resource": "influence",
 							"value": 1
+						},
+						{
+							"op": "addRelation",
+							"role": "official",
+							"value": -5,
+							"memory": "Vous avez décliné son invitation."
 						}
 					]
 				}

@@ -6,6 +6,8 @@
  * Avec le contenu, vérifie aussi les références vers le catalogue.
  */
 import {
+	ATTITUDE_MAX,
+	ATTITUDE_MIN,
 	GAUGE_MAX,
 	GAUGE_MIN,
 	INDICATOR_IDS,
@@ -25,6 +27,9 @@ function isUint32(value: unknown): boolean {
 const INSTANCE_ID = /^upgrade\.([1-9][0-9]*)$/;
 const EVENT_INSTANCE_ID = /^event\.([1-9][0-9]*)$/;
 const CHARACTER_ID = /^character\.([1-9][0-9]*)$/;
+/** Personnage initial : identifiant de la distribution (`cast.x`), contrôlé avec le contenu. */
+const CAST_ID = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
+const STATUSES = new Set(['active', 'retired', 'dead']);
 
 export function checkInvariants(state: GameState, content?: Content): string[] {
 	const violations: string[] = [];
@@ -178,8 +183,27 @@ function checkWorldInvariants(state: GameState): string[] {
 	for (const [key, character] of Object.entries(characters)) {
 		// Rangs de création 1..N, sans trou : aucun personnage n'est supprimé.
 		const match = CHARACTER_ID.exec(character.id);
-		if (key !== character.id || !match || Number(match[1]) > characterCount) {
+		const valid = match ? Number(match[1]) <= characterCount : CAST_ID.test(character.id);
+		if (key !== character.id || !valid) {
 			violations.push(`identifiant de personnage invalide : ${key}`);
+		}
+		if (!STATUSES.has(character.status)) {
+			violations.push(`statut de personnage inconnu : ${character.id}`);
+		}
+		if ((character.status === 'active') !== (character.leftTurn === null)) {
+			violations.push(`départ incohérent avec le statut : ${character.id}`);
+		}
+		if (character.leftTurn !== null && character.leftTurn > state.turn) {
+			violations.push(`départ futur : ${character.id}`);
+		}
+		if (new Set(character.traits).size !== character.traits.length) {
+			violations.push(`trait en double : ${character.id}`);
+		}
+		if (character.knownTraits.some((trait) => !character.traits.includes(trait))) {
+			violations.push(`trait connu absent des traits réels : ${character.id}`);
+		}
+		if (character.successorOf !== null && !Object.hasOwn(characters, character.successorOf)) {
+			violations.push(`prédécesseur inconnu : ${character.id}`);
 		}
 		if (!Number.isSafeInteger(character.birthTurn) || character.birthTurn > state.turn) {
 			violations.push(`naissance de personnage invalide : ${character.id}`);
@@ -198,11 +222,36 @@ function checkWorldInvariants(state: GameState): string[] {
 			violations.push(`dirigeant inconnu pour ${partyId} : ${party.leaderId}`);
 		} else if (leader.partyId !== partyId) {
 			violations.push(`dirigeant d’un autre parti à la tête de ${partyId} : ${leader.id}`);
+		} else if (leader.status !== 'active') {
+			violations.push(`dirigeant parti à la tête de ${partyId} : ${leader.id}`);
 		}
 		if (leaders.has(party.leaderId)) {
 			violations.push(`dirigeant à la tête de deux partis : ${party.leaderId}`);
 		}
 		leaders.add(party.leaderId);
+	}
+
+	for (const [characterId, relationship] of Object.entries(state.relationships)) {
+		if (!Object.hasOwn(characters, characterId)) {
+			violations.push(`relation avec un personnage inconnu : ${characterId}`);
+		}
+		const { attitude, metTurn, memories } = relationship;
+		if (!Number.isSafeInteger(attitude) || attitude < ATTITUDE_MIN || attitude > ATTITUDE_MAX) {
+			violations.push(`attitude invalide : ${characterId} = ${attitude}`);
+		}
+		if (!Number.isSafeInteger(metTurn) || metTurn > state.turn) {
+			violations.push(`rencontre future : ${characterId}`);
+		}
+		memories.forEach((memory, index) => {
+			const previous = memories[index - 1];
+			if (
+				memory.turn < metTurn ||
+				memory.turn > state.turn ||
+				(previous && memory.turn < previous.turn)
+			) {
+				violations.push(`souvenir hors chronologie : ${characterId}`);
+			}
+		});
 	}
 
 	// Adhésions : chronologiques, une seule en cours, cohérente avec le parti actuel.
@@ -278,8 +327,26 @@ export function checkContentReferences(state: GameState, content: Content): stri
 		for (const [role, actorId] of Object.entries(actors)) {
 			const known = worldVariables.has(role)
 				? Object.hasOwn(content.parties, actorId) || Object.hasOwn(state.characters, actorId)
-				: Object.hasOwn(content.cast, actorId);
+				: Object.hasOwn(state.characters, actorId);
 			if (!known) violations.push(`acteur inconnu : ${role} = ${actorId}`);
+		}
+	}
+	for (const castId of content.castIds) {
+		if (!Object.hasOwn(state.characters, castId)) {
+			violations.push(`membre de la distribution absent de l’état : ${castId}`);
+		}
+	}
+	for (const character of Object.values(state.characters)) {
+		if (!CHARACTER_ID.test(character.id) && !Object.hasOwn(content.cast, character.id)) {
+			violations.push(`personnage inconnu de la distribution : ${character.id}`);
+		}
+		for (const trait of character.traits) {
+			if (!Object.hasOwn(content.traits, trait)) violations.push(`trait inconnu : ${trait}`);
+		}
+	}
+	for (const [characterId, relationship] of Object.entries(state.relationships)) {
+		if (relationship.memories.length > content.balance.characters.maxMemories) {
+			violations.push(`trop de souvenirs : ${characterId}`);
 		}
 	}
 	const partyIds = Object.keys(state.world.parties).sort();

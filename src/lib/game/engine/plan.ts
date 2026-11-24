@@ -491,6 +491,8 @@ export function executePlan(
 					const applied = applyGaugeEffect(player, resolved.gauge, resolved.delta);
 					player = applied.player;
 					if (applied.delta !== 0) gauges.push({ gauge: resolved.gauge, delta: applied.delta });
+				} else if (resolved.kind === 'people') {
+					throw new Error(`Effet sur un personnage hors événement : ${step.id}`);
 				} else {
 					const applied = applyPolitics(
 						[resolved.effect],

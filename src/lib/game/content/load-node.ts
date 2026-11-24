@@ -24,6 +24,7 @@ export function loadContentFromFiles(directory = DEFAULT_CONTENT_DATA_DIR): Cont
 		balance: read('balance.json'),
 		cast: read('cast.json'),
 		world: read('world.json'),
+		traits: read('traits.json'),
 		events
 	});
 	if (!result.ok) {

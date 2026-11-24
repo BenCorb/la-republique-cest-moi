@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.8.0';
+export const RULES_VERSION = '0.9.0';
 
 export {
 	START_YEAR,
@@ -65,6 +65,11 @@ export {
 	type WellbeingSource,
 	type Affiliation,
 	type Character,
+	type CharacterStatus,
+	type CharactersRecord,
+	type Memory,
+	type PeopleChange,
+	type Relationship,
 	type LeaderChange,
 	type PartyState,
 	type PoliticalChange,
@@ -72,8 +77,24 @@ export {
 	type WorldState
 } from './state.ts';
 export {
-	applyPoliticalEffect,
+	addRelation,
 	characterId,
+	completeCastingExists,
+	createCast,
+	displayName,
+	encounterReveal,
+	fitsSlot,
+	generatePerson,
+	meet,
+	modulatedDelta,
+	resolveCharacters,
+	revealAll,
+	sortedIds,
+	type FrontierCharacters,
+	type PersonSpec
+} from './characters.ts';
+export {
+	applyPoliticalEffect,
 	createWorld,
 	isPoliticalEffect,
 	oppositionPartyId,

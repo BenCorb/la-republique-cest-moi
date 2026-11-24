@@ -14,6 +14,7 @@ import {
 	balanceSchema,
 	castCatalogSchema,
 	eventCatalogSchema,
+	traitCatalogSchema,
 	upgradeCatalogSchema,
 	worldSchema
 } from './schemas.ts';
@@ -30,6 +31,7 @@ import {
 	type EventDefinition,
 	type PartyDefinition,
 	type ResourceAmount,
+	type TraitDefinition,
 	type UpgradeDefinition,
 	type WorldDefinition
 } from './types.ts';
@@ -55,6 +57,8 @@ export interface RawContent {
 	readonly events: Readonly<Record<string, unknown>>;
 	/** Partis, axes et noms du monde (`world.json`). */
 	readonly world: unknown;
+	/** Traits de personnalité (`traits.json`). */
+	readonly traits: unknown;
 }
 
 export type ContentValidation =
@@ -251,10 +255,26 @@ function effectIssues(
 	parties: ReadonlySet<string>,
 	allowTarget: boolean,
 	source: string,
-	path: string
+	path: string,
+	roles: ReadonlySet<string> | null = null
 ): ContentIssue[] {
 	const issues: ContentIssue[] = [];
 	effects.forEach((effect, index) => {
+		if (effect.op === 'addRelation' || effect.op === 'revealTraits') {
+			if (roles === null) {
+				issues.push({
+					source,
+					path: `${path}[${index}].role`,
+					message: 'effet sur un personnage réservé aux événements'
+				});
+			} else if (!roles.has(effect.role)) {
+				issues.push({
+					source,
+					path: `${path}[${index}].role`,
+					message: `rôle inconnu de l’événement : ${effect.role}`
+				});
+			}
+		}
 		const at = `${path}[${index}].party`;
 		if (effect.op === 'addPartyStrength') {
 			const relative = (PARTY_REFERENCES as readonly string[]).includes(effect.party);
@@ -330,16 +350,17 @@ function crossCheckPolitics(
 	for (const { source, index, event } of events) {
 		const path = `events[${index}]`;
 		issues.push(...conditionIssues(event.when, parties, source, `${path}.when`));
+		const roles = new Set(event.actors.map((slot) => slot.role));
 		if (event.blocking) {
 			event.choices.forEach((choice, choiceIndex) => {
 				const choicePath = `${path}.choices[${choiceIndex}]`;
 				issues.push(...conditionIssues(choice.requires, parties, source, `${choicePath}.requires`));
 				issues.push(
-					...effectIssues(choice.effects, parties, false, source, `${choicePath}.effects`)
+					...effectIssues(choice.effects, parties, false, source, `${choicePath}.effects`, roles)
 				);
 			});
 		} else {
-			issues.push(...effectIssues(event.effects, parties, false, source, `${path}.effects`));
+			issues.push(...effectIssues(event.effects, parties, false, source, `${path}.effects`, roles));
 		}
 	}
 	return issues;
@@ -351,10 +372,56 @@ interface SourcedEvent {
 	readonly event: EventDefinition;
 }
 
+/**
+ * Existe-t-il une distribution complète (un acteur distinct par rôle) ?
+ * Recherche avec retour arrière : les petits effectifs la rendent immédiate.
+ */
+function matchingExists(
+	candidates: readonly (readonly string[])[],
+	used = new Set<string>()
+): boolean {
+	const [first, ...rest] = candidates;
+	if (first === undefined) return true;
+	return first.some((id) => {
+		if (used.has(id)) return false;
+		used.add(id);
+		const found = matchingExists(rest, used);
+		used.delete(id);
+		return found;
+	});
+}
+
+function crossCheckTraits(
+	traits: readonly TraitDefinition[],
+	balance: Balance,
+	knownIds: Set<string>
+): ContentIssue[] {
+	const issues: ContentIssue[] = [];
+	traits.forEach((trait, index) => {
+		if (knownIds.has(trait.id)) {
+			issues.push({
+				source: 'traits.json',
+				path: `traits[${index}].id`,
+				message: `identifiant en double : ${trait.id}`
+			});
+		}
+		knownIds.add(trait.id);
+	});
+	if (balance.characters.traitsPerCharacter > traits.length) {
+		issues.push({
+			source: 'balance.json',
+			path: 'characters.traitsPerCharacter',
+			message: `plus de traits par personnage (${balance.characters.traitsPerCharacter}) que de traits au catalogue (${traits.length})`
+		});
+	}
+	return issues;
+}
+
 function crossCheckEvents(
 	events: readonly SourcedEvent[],
 	cast: readonly CastMember[],
-	knownIds: Set<string>
+	knownIds: Set<string>,
+	traitIds: ReadonlySet<string> = new Set()
 ): ContentIssue[] {
 	const issues: ContentIssue[] = [];
 	const eventIds = new Set(events.map(({ event }) => event.id));
@@ -405,12 +472,37 @@ function crossCheckEvents(
 					message: `aucun membre de la distribution ne porte les étiquettes ${slot.tags.join(', ')}`
 				});
 			}
+			(slot.traits ?? []).forEach((trait, traitIndex) => {
+				if (!traitIds.has(trait)) {
+					issues.push({
+						source,
+						path: `${path}.actors[${slotIndex}].traits[${traitIndex}]`,
+						message: `trait inconnu : ${trait}`
+					});
+				}
+			});
 		});
 		if (event.actors.length > cast.length) {
 			issues.push({
 				source,
 				path: `${path}.actors`,
 				message: 'plus de rôles que de membres de la distribution'
+			});
+		} else if (
+			// Distribution complète possible avec les personnages initiaux (étiquettes seules :
+			// traits et attitudes évoluent en cours de partie).
+			!matchingExists(
+				event.actors.map((slot) =>
+					cast
+						.filter((member) => slot.tags.every((tag) => member.tags.includes(tag)))
+						.map((member) => member.id)
+				)
+			)
+		) {
+			issues.push({
+				source,
+				path: `${path}.actors`,
+				message: 'aucune distribution complète possible avec des acteurs distincts'
 			});
 		}
 
@@ -457,6 +549,11 @@ function crossCheckEvents(
 				}
 				choiceIds.add(choice.id);
 				checkText(choice.label, `${choicePath}.label`);
+				choice.effects.forEach((effect, effectIndex) => {
+					if (effect.op === 'addRelation' && effect.memory !== undefined) {
+						checkText(effect.memory, `${choicePath}.effects[${effectIndex}].memory`);
+					}
+				});
 				choice.hints.forEach((hint, hintIndex) =>
 					checkText(hint, `${choicePath}.hints[${hintIndex}]`)
 				);
@@ -508,6 +605,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	const upgradeCatalog = upgradeCatalogSchema.safeParse(raw.upgrades);
 	const castCatalog = castCatalogSchema.safeParse(raw.cast);
 	const world = worldSchema.safeParse(raw.world);
+	const traitCatalog = traitCatalogSchema.safeParse(raw.traits);
 	const eventFiles = Object.keys(raw.events)
 		.sort()
 		.map((source) => ({ source, parsed: eventCatalogSchema.safeParse(raw.events[source]) }));
@@ -518,6 +616,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	if (!upgradeCatalog.success) issues.push(...zodIssues('upgrades.json', upgradeCatalog.error));
 	if (!castCatalog.success) issues.push(...zodIssues('cast.json', castCatalog.error));
 	if (!world.success) issues.push(...zodIssues('world.json', world.error));
+	if (!traitCatalog.success) issues.push(...zodIssues('traits.json', traitCatalog.error));
 	for (const { source, parsed } of eventFiles) {
 		if (!parsed.success) issues.push(...zodIssues(source, parsed.error));
 	}
@@ -527,6 +626,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 		!upgradeCatalog.success ||
 		!castCatalog.success ||
 		!world.success ||
+		!traitCatalog.success ||
 		eventFiles.some(({ parsed }) => !parsed.success)
 	) {
 		return { ok: false, issues };
@@ -540,7 +640,16 @@ export function validateContent(raw: RawContent): ContentValidation {
 	);
 	issues.push(...crossCheck(actionList, upgradeList, balance.data.timeBudgetPerTurn));
 	const knownIds = new Set([...actionList.map((a) => a.id), ...upgradeList.map((u) => u.id)]);
-	issues.push(...crossCheckEvents(sourcedEvents, castList, knownIds));
+	const traitList = traitCatalog.data.traits;
+	issues.push(...crossCheckTraits(traitList, balance.data, knownIds));
+	issues.push(
+		...crossCheckEvents(
+			sourcedEvents,
+			castList,
+			knownIds,
+			new Set(traitList.map((trait) => trait.id))
+		)
+	);
 	issues.push(...crossCheckWorld(world.data, balance.data, knownIds));
 	const partyIdSet = new Set(world.data.parties.map((party) => party.id));
 	issues.push(...crossCheckPolitics(actionList, upgradeList, sourcedEvents, partyIdSet));
@@ -554,6 +663,8 @@ export function validateContent(raw: RawContent): ContentValidation {
 	for (const { event } of sourcedEvents) events[event.id] = event;
 	const cast: Record<string, CastMember> = {};
 	for (const member of castList) cast[member.id] = member;
+	const traits: Record<string, TraitDefinition> = {};
+	for (const trait of traitList) traits[trait.id] = trait;
 	const parties: Record<string, PartyDefinition> = {};
 	for (const party of world.data.parties) parties[party.id] = party;
 	return {
@@ -565,6 +676,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 				balance: balance.data,
 				cast: castCatalog.data,
 				world: world.data,
+				traits: traitCatalog.data,
 				events: Object.fromEntries(eventFiles.map(({ source, parsed }) => [source, parsed.data]))
 			}),
 			balance: balance.data,
@@ -577,6 +689,8 @@ export function validateContent(raw: RawContent): ContentValidation {
 			cast,
 			castIds: Object.keys(cast).sort(),
 			world: world.data,
+			traits,
+			traitIds: traitList.map((trait) => trait.id),
 			parties,
 			partyIds: world.data.parties.map((party) => party.id)
 		}

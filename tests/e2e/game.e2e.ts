@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
-import { createGame, turnOf } from '../../src/lib/game/engine/index.ts';
+import { commitTurn, createGame, transition, turnOf } from '../../src/lib/game/engine/index.ts';
+import { formatResource } from '../../src/lib/game/app/format.ts';
 import { createEnvelope, exportSave } from '../../src/lib/game/persistence/index.ts';
 import { loadContentFromFiles } from './support/content.ts';
 
@@ -47,7 +48,22 @@ test.describe('parcours de jeu', () => {
 		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
 		await expect(page.getByTestId('game-date')).toHaveText('T2 2000 · 25 ans');
 		await expect(page.getByTestId('resource-influence')).toHaveText('3');
-		await expect(page.getByTestId('resource-personalCashCents')).toContainText('5 300');
+		// Gain aléatoire du free-lance : valeur attendue calculée par le même moteur et la même seed.
+		const content = loadContentFromFiles();
+		const expected = transition(
+			createGame({ seed: 'e2e' }, content),
+			commitTurn({
+				steps: [
+					{ kind: 'action', id: 'network.meet_officials' },
+					{ kind: 'action', id: 'personal.freelance' }
+				]
+			}),
+			content
+		);
+		if (!expected.ok) throw new Error(expected.error.message);
+		await expect(page.getByTestId('resource-personalCashCents')).toHaveText(
+			formatResource('personalCashCents', expected.state.resources.personalCashCents)
+		);
 
 		await page.getByRole('button', { name: 'Journal', exact: true }).click();
 		await expect(page.getByRole('heading', { name: 'T1 2000' })).toBeVisible();
@@ -185,6 +201,40 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 25 ans');
 	});
 
+	test('montre les relations sans dévoiler les traits cachés', async ({ page }, testInfo) => {
+		const content = loadContentFromFiles();
+		const base = createGame({ seed: 'e2e-relations' }, content);
+		const sophie = base.characters['cast.sophie_roux']!;
+		const hidden = sophie.traits.filter((trait) => !sophie.knownTraits.includes(trait));
+		const state = {
+			...base,
+			relationships: {
+				'cast.sophie_roux': {
+					metTurn: 0,
+					attitude: 15,
+					memories: [
+						{ turn: 0, text: 'Vous lui avez accordé un entretien.', tone: 'positive' as const }
+					]
+				}
+			}
+		};
+		const exported = exportSave(createEnvelope(state, content, '2026-11-24T10:00:00.000Z'));
+		const file = testInfo.outputPath(exported.fileName);
+		writeFileSync(file, exported.text);
+
+		await page.goto('./');
+		await page.getByTestId('import-input').setInputFiles(file);
+		await page.getByRole('button', { name: 'Relations', exact: true }).click();
+		const card = page.getByTestId('person-cast.sophie_roux');
+		await expect(card).toContainText('Sophie Roux, du Courrier du Bocage');
+		await expect(card).toContainText('Attitude : favorable');
+		await expect(card).toContainText('Vous lui avez accordé un entretien.');
+		for (const trait of hidden) {
+			await expect(card).not.toContainText(content.traits[trait]!.label);
+		}
+		if (hidden.length > 0) await expect(card).toContainText('encore à découvrir');
+	});
+
 	test('refuse un fichier qui n’est pas une sauvegarde, avec un message lisible', async ({
 		page
 	}, testInfo) => {
@@ -199,7 +249,14 @@ test.describe('parcours de jeu', () => {
 
 	test('reste lisible sans défilement horizontal en cours de partie', async ({ page }) => {
 		await startCareer(page);
-		for (const tab of ['Tableau de bord', 'Agenda', 'Monde politique', 'Organisation', 'Journal']) {
+		for (const tab of [
+			'Tableau de bord',
+			'Agenda',
+			'Monde politique',
+			'Relations',
+			'Organisation',
+			'Journal'
+		]) {
 			await page.getByRole('button', { name: tab, exact: true }).click();
 			const overflow = await page.evaluate(
 				() => document.documentElement.scrollWidth - document.documentElement.clientWidth

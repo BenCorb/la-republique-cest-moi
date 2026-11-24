@@ -7,6 +7,7 @@
 import type { Content, GaugeId, IndicatorId, ResourceId, Resources } from '../content/types.ts';
 import { TURNS_PER_YEAR, type Turn } from './calendar.ts';
 import { createRng, type RngState } from './random.ts';
+import { createCast } from './characters.ts';
 import { createWorld } from './world.ts';
 
 /** Version du format de l'état, à incrémenter avec une migration explicite. */
@@ -42,17 +43,71 @@ export interface PlayerState {
 	readonly affiliations: readonly Affiliation[];
 }
 
+export type CharacterStatus = 'active' | 'retired' | 'dead';
+
 /**
- * Personnage nommé généré par le moteur (dirigeants de parti en P2-01). Modèle
- * volontairement minimal, enrichi par P2-04 (traits, relations, mémoire).
- * Un personnage remplacé reste dans l'état : les textes déjà figés le citent.
+ * Personnage nommé (GDD §6.1, P2-04) : modèle commun aux membres de la
+ * distribution initiale, aux dirigeants de parti et aux successeurs générés.
+ * Un personnage parti reste dans l'état : textes figés, souvenirs et bilan le citent.
  */
 export interface Character {
-	/** Identifiant `character.N`, N étant le rang de création (personnages jamais supprimés). */
+	/**
+	 * Identifiant de la distribution (`cast.x`) pour un personnage initial, sinon
+	 * `character.N`, N étant le rang de création (personnages jamais supprimés).
+	 */
 	readonly id: string;
 	readonly name: string;
+	/** Fonction affichée après le nom (successeurs générés), sinon `null`. */
+	readonly epithet: string | null;
 	readonly birthTurn: Turn;
 	readonly partyId: string | null;
+	/** Étiquettes de rôle (`journalist`, `party_leader`…) utilisées par les événements. */
+	readonly tags: readonly string[];
+	/** Fonction transmise au successeur à son départ ; `null` : pas de remplacement. */
+	readonly renewal: string | null;
+	/** Traits réels : jamais exposés tels quels au joueur. */
+	readonly traits: readonly string[];
+	/** Traits connus du joueur (publics dès le départ, cachés une fois révélés). */
+	readonly knownTraits: readonly string[];
+	readonly status: CharacterStatus;
+	/** Trimestre de départ (retraite ou décès), `null` tant qu'il est actif. */
+	readonly leftTurn: Turn | null;
+	/** Personnage auquel il succède, le cas échéant. */
+	readonly successorOf: string | null;
+}
+
+/** Souvenir d'un acte important du joueur, gardé par un personnage. */
+export interface Memory {
+	readonly turn: Turn;
+	/** Texte déjà résolu, en français. */
+	readonly text: string;
+	/** Sens de la variation d'attitude associée. */
+	readonly tone: 'positive' | 'negative';
+}
+
+/** Relation orientée : attitude d'un personnage envers le joueur et ses souvenirs. */
+export interface Relationship {
+	/** Trimestre de la première rencontre. */
+	readonly metTurn: Turn;
+	/** Attitude envers le joueur, de -100 à 100 (cachée : seule une tendance est montrée). */
+	readonly attitude: number;
+	/** Souvenirs, du plus ancien au plus récent, en nombre borné. */
+	readonly memories: readonly Memory[];
+}
+
+/** Variation concernant un personnage, produite par un effet ou une rencontre. */
+export type PeopleChange =
+	| { readonly kind: 'met'; readonly characterId: string }
+	| { readonly kind: 'relation'; readonly characterId: string; readonly delta: number }
+	| { readonly kind: 'revealed'; readonly characterId: string; readonly traitId: string };
+
+/** Vieillissement des personnages à la frontière du trimestre. */
+export interface CharactersRecord {
+	readonly departures: readonly {
+		readonly characterId: string;
+		readonly reason: 'death' | 'retirement';
+	}[];
+	readonly arrivals: readonly { readonly characterId: string; readonly successorOf: string }[];
 }
 
 export interface PartyState {
@@ -81,7 +136,7 @@ export interface LeaderChange {
 	readonly partyId: string;
 	readonly previousLeaderId: string;
 	readonly leaderId: string;
-	readonly reason: 'retirement' | 'internal_vote';
+	readonly reason: 'retirement' | 'internal_vote' | 'death';
 }
 
 /** Évolution autonome du monde à la frontière du trimestre. */
@@ -206,6 +261,7 @@ export interface EventRecord {
 	readonly changes: readonly ResourceChange[];
 	readonly gauges: readonly GaugeChange[];
 	readonly politics: readonly PoliticalChange[];
+	readonly people: readonly PeopleChange[];
 	/** Motif d'annulation, en français. */
 	readonly reason: string | null;
 }
@@ -220,6 +276,8 @@ export interface HistoryEntry {
 	readonly economy: EconomyRecord;
 	/** Charge de travail, récupération, vieillissement et éventuel décès. */
 	readonly wellbeing: WellbeingRecord;
+	/** Vieillissement, départs et successions, `null` si la carrière s'est terminée avant. */
+	readonly characters: CharactersRecord | null;
 	/** Évolution autonome du monde, `null` si la carrière s'est terminée avant. */
 	readonly world: WorldRecord | null;
 	/** Événements créés (ou suites annulées) au passage à T+1. */
@@ -237,6 +295,7 @@ export interface ChoiceRecord {
 	readonly changes: readonly ResourceChange[];
 	readonly gauges: readonly GaugeChange[];
 	readonly politics: readonly PoliticalChange[];
+	readonly people: readonly PeopleChange[];
 	readonly scheduled: ScheduledEvent | null;
 	/** Événements en attente annulés parce que devenus impossibles. */
 	readonly cancelled: readonly { readonly instanceId: string; readonly reason: string }[];
@@ -266,8 +325,10 @@ export interface GameState {
 	readonly nextInstanceNumber: number;
 	readonly events: EventsState;
 	readonly world: WorldState;
-	/** Personnages nommés générés, par identifiant (jamais supprimés). */
+	/** Personnages nommés, par identifiant (jamais supprimés). */
 	readonly characters: Readonly<Record<string, Character>>;
+	/** Relations des personnages rencontrés envers le joueur. */
+	readonly relationships: Readonly<Record<string, Relationship>>;
 	/** Journal : trimestres résolus et choix, dans l'ordre chronologique. */
 	readonly history: readonly JournalEntry[];
 	readonly end: EndState | null;
@@ -284,10 +345,11 @@ export interface NewGameConfig {
 export function createGame(config: NewGameConfig, content: Content): GameState {
 	// Paysage initial fixe ; seuls les dirigeants sont tirés (GDD §8.1).
 	const world = createWorld(createRng(config.seed), START_TURN, content);
+	const cast = createCast(world.characters, world.rng, START_TURN, content);
 	return {
 		schemaVersion: STATE_SCHEMA_VERSION,
 		turn: START_TURN,
-		rng: world.rng,
+		rng: cast.rng,
 		phase: 'planning',
 		player: {
 			birthTurn: START_TURN - PROTOTYPE_STARTING_AGE * TURNS_PER_YEAR,
@@ -301,7 +363,8 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		nextInstanceNumber: 1,
 		events: { pending: [], scheduled: [], occurrences: {} },
 		world: world.world,
-		characters: world.characters,
+		characters: cast.characters,
+		relationships: {},
 		history: [],
 		end: null
 	};
