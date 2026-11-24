@@ -1,7 +1,7 @@
 # La République, c’est moi ! — Feuille de route
 
 **Version 0.1 — 24 novembre 2026**  
-**Statut :** phase 0 réalisée et vérifiée le 24 novembre 2026 (P0-01 à P0-05, dont l’extension GitHub Pages), en attente de validation du créateur avant la phase 1.  
+**Statut :** phase 0 réalisée et vérifiée le 24 novembre 2026 (P0-01 à P0-06 : fondations, hébergement GitHub Pages, dépôt public et premier déploiement), en attente de validation du créateur avant la phase 1.  
 **Références :** [GAME_DESIGN.md](GAME_DESIGN.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN.md](DESIGN.md), [AGENTS.md](AGENTS.md).
 
 ## 1. Stratégie de livraison
@@ -25,7 +25,7 @@ Chaque tâche a un identifiant stable, des dépendances et un critère observabl
 - [x] **P0-04 — Build et documentation.** Build prérendu dans `build/`, vérification par serveur statique, README des commandes, CI simple si dépôt adapté. Critère : le site ne nécessite aucun serveur Node en production et les commandes sont reproductibles.
 
 - [x] **P0-05 — Hébergement GitHub Pages** (extension de phase 0 demandée le 24 novembre 2026). Base path configurable (sous-répertoire ou domaine personnalisé), chemins des ressources relatifs, workflow GitHub Actions de tests, build et déploiement manuel. Critère : build et E2E réussis à la racine et sous un sous-répertoire ; workflow valide ; aucun déploiement effectué sans validation.
-- [ ] **P0-06 — Dépôt GitHub et collaboration.** Dépôt public `BenCorb/la-republique-cest-moi` sur `main`, ignore et attributs Git, absence de secrets, conventions de branches et Conventional Commits, procédure de reprise Codex/Claude Code dans `AGENTS.md`, Pages configuré en source GitHub Actions et premier déploiement manuel. Critère : CI verte sur `main`, site accessible sur `https://bencorb.github.io/la-republique-cest-moi/` avec toutes ses ressources, dépôts local et distant synchronisés.
+- [x] **P0-06 — Dépôt GitHub et collaboration.** Dépôt public `BenCorb/la-republique-cest-moi` sur `main`, ignore et attributs Git, absence de secrets, conventions de branches et Conventional Commits, procédure de reprise Codex/Claude Code dans `AGENTS.md`, Pages configuré en source GitHub Actions et premier déploiement manuel. Critère : CI verte sur `main`, site accessible sur `https://bencorb.github.io/la-republique-cest-moi/` avec toutes ses ressources, dépôts local et distant synchronisés.
 
 Dépendances : P0-01 précède les autres ; P0-02 et P0-03 peuvent être traitées séparément ; P0-05 dépend de P0-04 ; P0-06 dépend de P0-05. Ne pas ajouter de modèle de carrière complet, de contenu politique ou de backend à cette phase.
 
