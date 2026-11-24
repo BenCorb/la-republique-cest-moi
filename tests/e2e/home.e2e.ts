@@ -17,6 +17,7 @@ test.describe('coque d’accueil (build statique)', () => {
 
 	test('tient dans la fenêtre sans défilement horizontal', async ({ page }) => {
 		await page.goto('./');
+		await expect(page.getByRole('heading', { name: 'Votre carrière politique' })).toBeVisible();
 		const overflow = await page.evaluate(
 			() => document.documentElement.scrollWidth - document.documentElement.clientWidth
 		);
@@ -25,8 +26,9 @@ test.describe('coque d’accueil (build statique)', () => {
 		await expect(page.getByRole('contentinfo')).toBeInViewport();
 	});
 
-	test('se parcourt au clavier', async ({ page }) => {
+	test('se parcourt au clavier jusqu’au lancement d’une carrière', async ({ page }) => {
 		await page.goto('./');
+		await expect(page.getByRole('heading', { name: 'Votre carrière politique' })).toBeVisible();
 
 		await page.keyboard.press('Tab');
 		const skipLink = page.getByRole('link', { name: 'Aller au contenu principal' });
@@ -37,10 +39,9 @@ test.describe('coque d’accueil (build statique)', () => {
 		await expect(page.locator('main')).toBeFocused();
 
 		await page.keyboard.press('Tab');
-		const about = page.getByText('À propos de cette version');
-		await expect(about).toBeFocused();
+		await expect(page.getByRole('button', { name: 'Nouvelle carrière' })).toBeFocused();
 		await page.keyboard.press('Enter');
-		await expect(page.getByText('Aucune partie n’est encore jouable')).toBeVisible();
+		await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 25 ans');
 	});
 
 	test('charge toutes ses ressources sous le base path, sans erreur', async ({ page, baseURL }) => {

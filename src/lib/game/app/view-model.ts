@@ -1,0 +1,508 @@
+/**
+ * Projection publique de la partie (`PlayerView`, ARCHITECTURE.md §9).
+ *
+ * Seule source de données de l'interface. Elle ne contient que ce que le joueur
+ * peut savoir : valeurs courantes, coûts et effets certains, fourchettes,
+ * tendances rédigées, statut des producteurs. Jamais le PRNG, les probabilités,
+ * les effets des choix d'événements ni leurs suites. Fonction pure : la calculer
+ * n'avance pas le PRNG et ne modifie rien.
+ */
+import {
+	RESOURCE_IDS,
+	type Content,
+	type ResourceAmount,
+	type ResourceId
+} from '../content/types.ts';
+import {
+	ageAt,
+	careerSummary,
+	describePendingEvent,
+	effectRange,
+	formatTurn,
+	previewPlan,
+	renderTemplate,
+	type ChoiceRecord,
+	type EffectRange,
+	type GameState,
+	type HistoryEntry,
+	type PlanStep,
+	type WellbeingSource
+} from '../engine/index.ts';
+import {
+	GAUGE_NAMES,
+	RESOURCE_NAMES,
+	describeHealth,
+	describeStress,
+	formatDelta,
+	formatGaugeDelta,
+	formatRange,
+	formatResource,
+	type GaugeDescription
+} from './format.ts';
+
+export interface ResourceView {
+	readonly id: ResourceId;
+	readonly name: string;
+	readonly value: string;
+	/** Variation prévue sur le trimestre (plan, charges et production). */
+	readonly forecast: string;
+}
+
+export interface PlanStepView {
+	readonly index: number;
+	readonly kind: PlanStep['kind'];
+	readonly label: string;
+	readonly timeCost: number;
+	readonly details: readonly string[];
+	readonly issues: readonly string[];
+	/** Achat : rappel que la production commence au trimestre suivant. */
+	readonly note: string | null;
+}
+
+export interface PlanView {
+	readonly steps: readonly PlanStepView[];
+	readonly timeAvailable: number;
+	readonly timeUsed: number;
+	readonly timeRemaining: number;
+	readonly valid: boolean;
+	readonly issues: readonly string[];
+	readonly warnings: readonly string[];
+	readonly changes: readonly { readonly name: string; readonly text: string }[];
+	readonly stressAfter: GaugeDescription;
+	readonly healthAfter: { readonly min: number; readonly max: number };
+}
+
+export interface CatalogItemView {
+	readonly kind: PlanStep['kind'];
+	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	readonly timeCost: number;
+	readonly costs: readonly string[];
+	readonly effects: readonly string[];
+	/** Occurrences déjà dans le plan. */
+	readonly planned: number;
+	readonly addable: boolean;
+	/** Raison pour laquelle l'élément ne peut pas être ajouté au plan. */
+	readonly reason: string | null;
+}
+
+export interface UpgradeView extends CatalogItemView {
+	readonly family: string;
+	readonly treasury: string;
+	readonly upkeep: readonly string[];
+	readonly owned: number;
+	readonly maxOwned: number;
+}
+
+export interface ProducerView {
+	readonly instanceId: string;
+	readonly label: string;
+	readonly status: 'active' | 'suspended' | 'pending';
+	readonly statusLabel: string;
+	readonly upkeep: readonly string[];
+	readonly production: readonly string[];
+}
+
+export interface ChoiceView {
+	readonly id: string;
+	readonly label: string;
+	readonly hints: readonly string[];
+	readonly costs: readonly string[];
+	readonly available: boolean;
+	readonly reason: string | null;
+}
+
+export interface DecisionView {
+	readonly instanceId: string;
+	readonly title: string;
+	readonly text: string;
+	readonly category: string;
+	readonly choices: readonly ChoiceView[];
+	readonly remaining: number;
+}
+
+export interface JournalLine {
+	readonly kind: 'step' | 'economy' | 'wellbeing' | 'event' | 'decision' | 'end';
+	readonly text: string;
+}
+
+export interface JournalTurnView {
+	readonly key: string;
+	readonly label: string;
+	readonly lines: readonly JournalLine[];
+}
+
+export interface Alert {
+	readonly level: 'danger' | 'warning' | 'info';
+	readonly text: string;
+}
+
+export interface SummaryView {
+	readonly title: string;
+	readonly cause: string;
+	readonly lines: readonly { readonly label: string; readonly value: string }[];
+}
+
+export interface PlayerView {
+	readonly dateLabel: string;
+	readonly age: number;
+	readonly phase: GameState['phase'];
+	readonly resources: readonly ResourceView[];
+	readonly health: GaugeDescription;
+	readonly stress: GaugeDescription;
+	readonly plan: PlanView;
+	readonly actions: readonly CatalogItemView[];
+	readonly upgrades: readonly UpgradeView[];
+	readonly producers: readonly ProducerView[];
+	readonly decision: DecisionView | null;
+	readonly journal: readonly JournalTurnView[];
+	readonly press: readonly {
+		readonly key: string;
+		readonly dateLabel: string;
+		readonly title: string;
+	}[];
+	readonly alerts: readonly Alert[];
+	readonly summary: SummaryView | null;
+}
+
+const FAMILY_LABELS: Readonly<Record<string, string>> = {
+	organization: 'Organisation',
+	communication: 'Communication',
+	network: 'Réseau',
+	personal: 'Vie personnelle'
+};
+
+const SOURCE_LABELS: { readonly [K in WellbeingSource]: string } = {
+	workload: 'charge de travail',
+	recovery: 'récupération',
+	high_stress: 'stress élevé',
+	calm: 'calme retrouvé',
+	ageing: 'âge'
+};
+
+const CAUSE_LABELS = {
+	health_failure: 'Épuisement : la santé a fini par céder.',
+	natural_causes: 'Mort naturelle.'
+} as const;
+
+function amounts(list: readonly ResourceAmount[], sign: 1 | -1): string[] {
+	return list.map(
+		(amount) =>
+			`${RESOURCE_NAMES[amount.resource]} ${formatDelta(amount.resource, sign * amount.amount)}`
+	);
+}
+
+function describeEffect(range: EffectRange): string {
+	if (range.kind === 'resource') {
+		return `${RESOURCE_NAMES[range.resource]} ${formatRange(range.resource, range.min, range.max)}`;
+	}
+	return `${GAUGE_NAMES[range.gauge]} ${formatGaugeDelta(range.min)}`;
+}
+
+function changesText(changes: readonly { resource: ResourceId; delta: number }[]): string {
+	return changes
+		.map(
+			(change) => `${RESOURCE_NAMES[change.resource]} ${formatDelta(change.resource, change.delta)}`
+		)
+		.join(', ');
+}
+
+function gaugesText(gauges: readonly { gauge: keyof typeof GAUGE_NAMES; delta: number }[]): string {
+	return gauges
+		.map((change) => `${GAUGE_NAMES[change.gauge]} ${formatGaugeDelta(change.delta)}`)
+		.join(', ');
+}
+
+function joinParts(...parts: string[]): string {
+	return parts.filter((part) => part.length > 0).join(' ; ');
+}
+
+/** Disponibilité d'une étape supplémentaire, évaluée par la prévision du moteur. */
+function addability(state: GameState, plan: readonly PlanStep[], step: PlanStep, content: Content) {
+	if (state.phase !== 'planning')
+		return { addable: false, reason: 'Aucune planification possible pour le moment.' };
+	const preview = previewPlan(state, { steps: [...plan, step] }, content);
+	const last = preview.steps.at(-1);
+	const issue = last?.issues[0];
+	return issue ? { addable: false, reason: issue.message } : { addable: true, reason: null };
+}
+
+function eventTitle(
+	eventId: string,
+	actors: Readonly<Record<string, string>>,
+	content: Content
+): string {
+	const definition = content.events[eventId];
+	return definition ? renderTemplate(definition.title, actors, content) : eventId;
+}
+
+function journalOfQuarter(entry: HistoryEntry, content: Content): JournalLine[] {
+	const lines: JournalLine[] = [];
+	for (const step of entry.steps) {
+		const label =
+			step.kind === 'action'
+				? (content.actions[step.id]?.label ?? step.id)
+				: `Achat : ${content.upgrades[step.id]?.label ?? step.id}`;
+		const effects = joinParts(changesText(step.changes), gaugesText(step.gauges));
+		lines.push({ kind: 'step', text: effects ? `${label} — ${effects}` : label });
+	}
+	for (const producer of entry.economy.producers) {
+		const label = content.upgrades[producer.upgradeId]?.label ?? producer.upgradeId;
+		lines.push({
+			kind: 'economy',
+			text:
+				producer.status === 'suspended'
+					? `${label} : charges impayées, production suspendue`
+					: `${label} — ${changesText(producer.changes) || 'aucune variation'}`
+		});
+	}
+	const byGauge = new Map<string, string[]>();
+	for (const contribution of entry.wellbeing.contributions) {
+		const name = GAUGE_NAMES[contribution.gauge];
+		const list = byGauge.get(name) ?? [];
+		list.push(`${formatGaugeDelta(contribution.delta)} (${SOURCE_LABELS[contribution.source]})`);
+		byGauge.set(name, list);
+	}
+	for (const [name, parts] of byGauge)
+		lines.push({ kind: 'wellbeing', text: `${name} ${parts.join(', ')}` });
+	for (const event of entry.events) {
+		const title = eventTitle(event.eventId, event.actors, content);
+		if (event.outcome === 'queued')
+			lines.push({ kind: 'event', text: `${title} — décision attendue` });
+		else if (event.outcome === 'applied') {
+			const effects = joinParts(changesText(event.changes), gaugesText(event.gauges));
+			lines.push({ kind: 'event', text: effects ? `${title} — ${effects}` : title });
+		} else
+			lines.push({ kind: 'event', text: `${title} — sans suite : ${event.reason ?? 'annulé'}` });
+	}
+	if (entry.wellbeing.deathCause) lines.push({ kind: 'end', text: 'Fin de carrière.' });
+	if (lines.length === 0) lines.push({ kind: 'step', text: 'Trimestre calme : rien à signaler.' });
+	return lines;
+}
+
+function journalOfChoice(entry: ChoiceRecord, state: GameState, content: Content): JournalLine[] {
+	const definition = content.events[entry.eventId];
+	const quarter = state.history.find(
+		(candidate): candidate is HistoryEntry =>
+			candidate.type === 'turn.resolved' &&
+			candidate.events.some((event) => event.instanceId === entry.instanceId)
+	);
+	const actors =
+		quarter?.events.find((event) => event.instanceId === entry.instanceId)?.actors ?? {};
+	const title = definition ? renderTemplate(definition.title, actors, content) : entry.eventId;
+	const choice =
+		definition?.blocking === true
+			? definition.choices.find((candidate) => candidate.id === entry.choiceId)
+			: undefined;
+	const label = choice ? renderTemplate(choice.label, actors, content) : entry.choiceId;
+	const effects = joinParts(changesText(entry.changes), gaugesText(entry.gauges));
+	const lines: JournalLine[] = [
+		{
+			kind: 'decision',
+			text: `Décision — ${title} : « ${label} »${effects ? ` (${effects})` : ''}`
+		}
+	];
+	if (entry.deathCause) lines.push({ kind: 'end', text: 'Fin de carrière.' });
+	return lines;
+}
+
+function buildJournal(state: GameState, content: Content): JournalTurnView[] {
+	const groups = new Map<number, JournalLine[]>();
+	const add = (turn: number, lines: JournalLine[]): void => {
+		groups.set(turn, [...(groups.get(turn) ?? []), ...lines]);
+	};
+	for (const entry of state.history) {
+		if (entry.type === 'turn.resolved') add(entry.turn, journalOfQuarter(entry, content));
+		else add(entry.turn, journalOfChoice(entry, state, content));
+	}
+	return [...groups.entries()]
+		.sort(([a], [b]) => b - a)
+		.map(([turn, lines]) => ({ key: `t${turn}`, label: formatTurn(turn), lines }));
+}
+
+function buildPress(state: GameState, content: Content): PlayerView['press'] {
+	const items: { key: string; dateLabel: string; title: string }[] = [];
+	for (const entry of state.history) {
+		if (entry.type !== 'turn.resolved') continue;
+		for (const event of entry.events) {
+			if (event.outcome === 'cancelled' || !event.instanceId) continue;
+			items.push({
+				key: event.instanceId,
+				dateLabel: formatTurn(entry.turn + 1),
+				title: eventTitle(event.eventId, event.actors, content)
+			});
+		}
+	}
+	return items.reverse().slice(0, 6);
+}
+
+function buildSummary(state: GameState, content: Content): SummaryView | null {
+	if (!state.end) return null;
+	const summary = careerSummary(state);
+	const born = formatTurn(state.player.birthTurn);
+	return {
+		title: `Fin de carrière à ${summary.age} ans`,
+		cause: CAUSE_LABELS[state.end.cause],
+		lines: [
+			{ label: 'Né au', value: born },
+			{ label: 'Décédé au', value: formatTurn(summary.lastTurn) },
+			{ label: 'Âge', value: `${summary.age} ans` },
+			{ label: 'Trimestres de carrière', value: String(summary.quartersPlayed) },
+			...RESOURCE_IDS.map((id) => ({
+				label: RESOURCE_NAMES[id],
+				value: formatResource(id, summary.resources[id])
+			})),
+			{ label: 'Actions menées', value: String(summary.actionsPerformed) },
+			{ label: 'Améliorations acquises', value: String(summary.upgradesOwned) },
+			{ label: 'Événements vécus', value: String(summary.eventsExperienced) },
+			{
+				label: 'Catalogue',
+				value: `${content.eventIds.length} événements possibles`
+			}
+		]
+	};
+}
+
+export function projectView(
+	state: GameState,
+	plan: readonly PlanStep[],
+	content: Content
+): PlayerView {
+	const preview = previewPlan(state, { steps: plan }, content);
+	const steps: PlanStepView[] = preview.steps.map((step) => {
+		const upgrade = step.kind === 'purchase' && step.id ? content.upgrades[step.id] : undefined;
+		return {
+			index: step.index,
+			kind: step.kind ?? 'action',
+			label: step.label ?? step.id ?? 'Étape inconnue',
+			timeCost: step.timeCost,
+			details: [...amounts(step.costs, -1), ...step.effects.map(describeEffect)],
+			issues: step.issues.map((issue) => issue.message),
+			note: upgrade ? 'Actif à partir du trimestre prochain.' : null
+		};
+	});
+
+	const planned = (kind: PlanStep['kind'], id: string): number =>
+		plan.filter((step) => step.kind === kind && step.id === id).length;
+
+	const actions: CatalogItemView[] = content.actionIds.map((id) => {
+		const action = content.actions[id]!;
+		return {
+			kind: 'action',
+			id,
+			label: action.label,
+			description: action.description,
+			timeCost: action.timeCost,
+			costs: amounts(action.costs, -1),
+			effects: action.effects.map((effect) => describeEffect(effectRange(effect))),
+			planned: planned('action', id),
+			...addability(state, plan, { kind: 'action', id }, content)
+		};
+	});
+
+	const upgrades: UpgradeView[] = content.upgradeIds.map((id) => {
+		const upgrade = content.upgrades[id]!;
+		return {
+			kind: 'purchase',
+			id,
+			label: upgrade.label,
+			description: upgrade.description,
+			family: FAMILY_LABELS[upgrade.family] ?? upgrade.family,
+			treasury: RESOURCE_NAMES[upgrade.treasury],
+			timeCost: upgrade.timeCost,
+			costs: amounts(upgrade.price, -1),
+			upkeep: amounts(upgrade.upkeep, -1),
+			effects: amounts(upgrade.production, 1),
+			owned: state.upgrades.filter((owned) => owned.upgradeId === id).length,
+			maxOwned: upgrade.maxOwned,
+			planned: planned('purchase', id),
+			...addability(state, plan, { kind: 'purchase', id }, content)
+		};
+	});
+
+	const producers: ProducerView[] = preview.producers.map((producer) => ({
+		instanceId: producer.instanceId,
+		label: content.upgrades[producer.upgradeId]?.label ?? producer.upgradeId,
+		status: producer.status,
+		statusLabel:
+			producer.status === 'active'
+				? 'Actif ce trimestre'
+				: producer.status === 'pending'
+					? 'Actif à partir du trimestre prochain'
+					: 'Suspendu : charges non couvertes',
+		upkeep: amounts(producer.upkeep, -1),
+		production: amounts(producer.production, 1)
+	}));
+
+	const pending = describePendingEvent(state, content);
+	const decision: DecisionView | null = pending
+		? {
+				instanceId: pending.instanceId,
+				title: pending.title,
+				text: pending.text,
+				category: pending.category,
+				remaining: pending.remaining,
+				choices: pending.choices.map((choice) => ({
+					id: choice.id,
+					label: choice.label,
+					hints: choice.hints,
+					costs: amounts(choice.costs, -1),
+					available: choice.available,
+					reason: choice.reason
+				}))
+			}
+		: null;
+
+	const health = describeHealth(state.player.health);
+	const stress = describeStress(state.player.stress);
+	const alerts: Alert[] = [];
+	if (decision) alerts.push({ level: 'danger', text: `Décision attendue : ${decision.title}` });
+	if (state.phase === 'planning') {
+		for (const warning of preview.warnings)
+			alerts.push({ level: 'warning', text: warning.message });
+	}
+	if (health.tone === 'danger' || health.tone === 'warning') {
+		alerts.push({
+			level: health.tone,
+			text: `Santé ${health.label.toLowerCase()} : pensez au repos.`
+		});
+	}
+
+	return {
+		dateLabel: formatTurn(state.end ? state.end.turn : state.turn),
+		age: ageAt(state.player.birthTurn, state.end ? state.end.turn : state.turn),
+		phase: state.phase,
+		resources: RESOURCE_IDS.map((id) => ({
+			id,
+			name: RESOURCE_NAMES[id],
+			value: formatResource(id, state.resources[id]),
+			forecast: formatRange(id, preview.resourceChanges[id].min, preview.resourceChanges[id].max)
+		})),
+		health,
+		stress,
+		plan: {
+			steps,
+			timeAvailable: preview.timeAvailable,
+			timeUsed: preview.timeUsed,
+			timeRemaining: preview.timeRemaining,
+			valid: preview.valid,
+			issues: preview.issues.filter((issue) => issue.index === null).map((issue) => issue.message),
+			warnings: preview.warnings.map((warning) => warning.message),
+			changes: RESOURCE_IDS.map((id) => ({
+				name: RESOURCE_NAMES[id],
+				text: formatRange(id, preview.resourceChanges[id].min, preview.resourceChanges[id].max)
+			})),
+			stressAfter: describeStress(preview.wellbeing.stress),
+			healthAfter: preview.wellbeing.health
+		},
+		actions,
+		upgrades,
+		producers,
+		decision,
+		journal: buildJournal(state, content),
+		press: buildPress(state, content),
+		alerts,
+		summary: buildSummary(state, content)
+	};
+}

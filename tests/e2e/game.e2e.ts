@@ -1,0 +1,145 @@
+import { writeFileSync } from 'node:fs';
+import { expect, test, type Page } from '@playwright/test';
+import { createGame, turnOf } from '../../src/lib/game/engine/index.ts';
+import { createEnvelope, exportSave } from '../../src/lib/game/persistence/index.ts';
+import { loadContentFromFiles } from './support/content.ts';
+
+/** Ouvre le jeu avec une seed imposée (paramètre d'essai `?seed=`) et lance une carrière. */
+async function startCareer(page: Page, seed = 'e2e'): Promise<void> {
+	await page.goto(`./?seed=${seed}`);
+	await page.getByRole('button', { name: 'Nouvelle carrière' }).click();
+	await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 25 ans');
+}
+
+/** Valide des trimestres vides jusqu'à l'apparition d'une décision (au plus `limit`). */
+async function advanceUntilDecision(page: Page, limit = 40): Promise<void> {
+	const next = page.getByRole('button', { name: 'Trimestre suivant' });
+	for (let index = 0; index < limit; index += 1) {
+		if (await page.getByRole('dialog').isVisible()) return;
+		await next.click();
+	}
+	await expect(page.getByRole('dialog')).toBeVisible();
+}
+
+test.describe('parcours de jeu', () => {
+	test('planifie, valide un trimestre et le retrouve au journal', async ({ page }) => {
+		const errors: string[] = [];
+		page.on('pageerror', (error) => errors.push(error.message));
+		await startCareer(page);
+
+		await expect(page.getByTestId('save-status')).toContainText('Sauvegardé');
+		await page
+			.getByRole('button', { name: 'Ajouter « Rencontrer des élus locaux » au plan' })
+			.click();
+		await page
+			.getByRole('button', { name: 'Ajouter « Accepter des missions en free-lance » au plan' })
+			.click();
+		await expect(page.getByTestId('time-used')).toHaveText('50/100');
+
+		// Coûts et indisponibilités lisibles.
+		const meeting = page.getByTestId('action-activism.public_meeting');
+		await expect(meeting).toContainText('Coût : Budget politique − 300 €');
+		await expect(meeting).toContainText('Il faut au moins 10 points d’influence');
+		await expect(
+			page.getByRole('button', { name: 'Ajouter « Organiser une réunion publique » au plan' })
+		).toBeDisabled();
+
+		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await expect(page.getByTestId('game-date')).toHaveText('T2 2000 · 25 ans');
+		await expect(page.getByTestId('resource-influence')).toHaveText('3');
+		await expect(page.getByTestId('resource-personalCashCents')).toContainText('3 800');
+
+		await page.getByRole('button', { name: 'Journal', exact: true }).click();
+		await expect(page.getByRole('heading', { name: 'T1 2000' })).toBeVisible();
+		await expect(page.getByText('Rencontrer des élus locaux — Influence + 3')).toBeVisible();
+		expect(errors).toEqual([]);
+	});
+
+	test('planifie un achat qui ne produit qu’au trimestre suivant', async ({ page }) => {
+		await startCareer(page);
+		await page.getByRole('button', { name: 'Organisation', exact: true }).click();
+		await page
+			.getByRole('button', { name: 'Planifier l’achat « Recruter un militant bénévole »' })
+			.click();
+		await expect(page.getByText('Actif à partir du trimestre prochain.').first()).toBeVisible();
+		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await page.getByRole('button', { name: 'Organisation', exact: true }).click();
+		await expect(page.getByText('Actif ce trimestre')).toBeVisible();
+	});
+
+	test('conserve une décision en attente au rechargement et l’applique une fois', async ({
+		page
+	}) => {
+		await startCareer(page, 'e2e-decision');
+		await advanceUntilDecision(page);
+		const dialog = page.getByRole('dialog');
+		const title = await dialog.getByRole('heading').textContent();
+		const date = await page.getByTestId('game-date').textContent();
+		await expect(page.getByRole('button', { name: 'Trimestre suivant' })).toBeDisabled();
+
+		await page.reload();
+		await page.getByRole('button', { name: 'Reprendre la carrière' }).click();
+		await expect(page.getByRole('dialog').getByRole('heading')).toHaveText(title ?? '');
+		await expect(page.getByTestId('game-date')).toHaveText(date ?? '');
+
+		// La fenêtre de décision ne se ferme pas avec Échap ; le choix se fait au clavier.
+		await page.keyboard.press('Escape');
+		await expect(page.getByRole('dialog')).toBeVisible();
+		await page.keyboard.press('Enter');
+		await expect(page.getByRole('dialog')).toBeHidden();
+
+		await page.getByRole('button', { name: 'Journal', exact: true }).click();
+		await expect(page.getByText(/^Décision — /)).toHaveCount(1);
+	});
+
+	test('importe une sauvegarde et mène au bilan de fin de carrière', async ({ page }, testInfo) => {
+		// Personnage très âgé à la santé minimale : le prochain trimestre est le dernier.
+		const content = loadContentFromFiles();
+		const base = createGame({ seed: 'e2e-fin' }, content);
+		const state = { ...base, player: { ...base.player, birthTurn: turnOf(1875, 1), health: 1 } };
+		const exported = exportSave(createEnvelope(state, content, '2026-11-24T10:00:00.000Z'));
+		const file = testInfo.outputPath(exported.fileName);
+		writeFileSync(file, exported.text);
+
+		await page.goto('./');
+		await page.getByTestId('import-input').setInputFiles(file);
+		await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 125 ans');
+		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+
+		await expect(page.getByRole('heading', { name: 'Fin de carrière à 125 ans' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Trimestre suivant' })).toBeDisabled();
+		await expect(page.getByText('La carrière est terminée.')).toBeVisible();
+
+		// Une nouvelle carrière demande confirmation avant de remplacer la sauvegarde.
+		await page.getByRole('main').getByRole('button', { name: 'Nouvelle carrière' }).click();
+		await expect(
+			page.getByRole('dialog', { name: 'Commencer une nouvelle carrière ?' })
+		).toBeVisible();
+		await page.getByRole('button', { name: 'Remplacer et commencer' }).click();
+		await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 25 ans');
+	});
+
+	test('refuse un fichier qui n’est pas une sauvegarde, avec un message lisible', async ({
+		page
+	}, testInfo) => {
+		const file = testInfo.outputPath('pas-une-sauvegarde.json');
+		writeFileSync(file, '{"format":"autre-jeu"}');
+		await page.goto('./');
+		await page.getByTestId('import-input').setInputFiles(file);
+		await expect(page.getByRole('alert')).toContainText(
+			'Ce fichier n’est pas une sauvegarde du jeu.'
+		);
+	});
+
+	test('reste lisible sans défilement horizontal en cours de partie', async ({ page }) => {
+		await startCareer(page);
+		for (const tab of ['Tableau de bord', 'Agenda', 'Organisation', 'Journal']) {
+			await page.getByRole('button', { name: tab, exact: true }).click();
+			const overflow = await page.evaluate(
+				() => document.documentElement.scrollWidth - document.documentElement.clientWidth
+			);
+			expect(overflow, tab).toBeLessThanOrEqual(0);
+			await expect(page.getByRole('button', { name: 'Trimestre suivant' })).toBeInViewport();
+		}
+	});
+});

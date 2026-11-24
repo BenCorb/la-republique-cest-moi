@@ -13,8 +13,18 @@ compte, aucune IA au runtime ; les sauvegardes restent dans le navigateur.
 - **Jouer :** <https://bencorb.github.io/la-republique-cest-moi/>
 - **Code source :** <https://github.com/BenCorb/la-republique-cest-moi>
 
-> **État actuel : phase 0 terminée (fondations techniques et hébergement).** Aucune partie n’est
-> encore jouable. L’avancement fait foi dans [ROADMAP.md](ROADMAP.md).
+> **État actuel : prototype en cours (phase 1).** Une carrière se joue de bout en bout dans
+> l’environnement de développement (branche `feat/p1-prototype`) ; le site publié montre encore la
+> phase 0. L’avancement fait foi dans [ROADMAP.md](ROADMAP.md).
+
+## Jouer (prototype)
+
+Une carrière commence à 25 ans, au premier trimestre 2000. À chaque trimestre : composer le plan
+dans l’**Agenda** (actions) et l’**Organisation** (achats), vérifier la prévision, puis valider avec
+« Trimestre suivant ». Les décisions bloquantes s’affichent dans une fenêtre et doivent être
+tranchées. La partie est sauvegardée automatiquement dans le navigateur ; « Exporter » produit un
+fichier JSON réimportable depuis l’accueil. Paramètre d’essai : `?seed=texte` dans l’adresse impose
+la seed d’une nouvelle carrière.
 
 ## Documents de référence
 
@@ -140,7 +150,8 @@ src/
     game/engine/          # moteur TypeScript pur (sans Svelte, DOM, stockage, réseau, hasard réel)
     game/content/         # types, schémas Zod, validation et catalogues JSON (data/, data/events/)
     game/persistence/     # enveloppe de sauvegarde, migrations, stockage local, export/import
-    components/shell/     # coque desktop (GameShell)
+    game/app/             # projection PlayerView, contrôleur, session Svelte, frontière navigateur
+    components/           # écrans : shell, dashboard, agenda, organisation, journal, events, common
 static/                   # fichiers copiés tels quels (favicon.svg, .nojekyll)
 scripts/
   base-path.ts            # normalisation de BASE_PATH (Vite, Playwright, serveur statique)
