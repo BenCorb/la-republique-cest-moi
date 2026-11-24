@@ -26,6 +26,7 @@ const politicalChange = z.discriminatedUnion('kind', [
 	z.strictObject({ kind: z.literal('partyStrength'), partyId: id, delta: int }),
 	z.strictObject({ kind: z.literal('joined'), partyId: id }),
 	z.strictObject({ kind: z.literal('left'), partyId: id }),
+	z.strictObject({ kind: z.literal('support'), groupId: id, delta: int }),
 	z.strictObject({ kind: z.literal('mandateStarted'), instanceId: id, mandateId: id }),
 	z.strictObject({
 		kind: z.literal('mandateEnded'),
@@ -107,6 +108,7 @@ const turnEntry = z.strictObject({
 			)
 		})
 		.nullable(),
+	supports: z.array(z.strictObject({ groupId: id, delta: int })).nullable(),
 	deadlines: z
 		.strictObject({
 			mandates: z.array(politicalChange),
@@ -165,7 +167,9 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 		health: int,
 		stress: int,
 		partyId: id.nullable(),
-		affiliations: z.array(z.strictObject({ partyId: id, fromTurn: int, toTurn: int.nullable() }))
+		affiliations: z.array(z.strictObject({ partyId: id, fromTurn: int, toTurn: int.nullable() })),
+		supports: z.record(id, int),
+		popularity: int
 	}),
 	resources: z.strictObject({
 		influence: int,

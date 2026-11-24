@@ -25,6 +25,7 @@ import {
 	fixtureContent,
 	fixtureEvents,
 	fixtureCareer,
+	fixtureSupports,
 	fixtureTraits,
 	fixtureUpgrades,
 	fixtureWorld,
@@ -137,7 +138,8 @@ function political(
 		events: overrides.events ?? { ...fixtureEvents, 'events/national.json': politicalEvents },
 		world: fixtureWorld,
 		traits: fixtureTraits,
-		career: fixtureCareer
+		career: fixtureCareer,
+		supports: fixtureSupports
 	});
 }
 

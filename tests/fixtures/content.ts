@@ -50,7 +50,51 @@ export const fixtureBalance = {
 		maxMemories: 3
 	},
 	// Scrutins sans aléa par défaut : le parti le plus fort l'emporte.
-	elections: { voteVolatility: 0, momentum: 1, newGovernmentStability: 60, alertLeadTurns: 2 }
+	elections: { voteVolatility: 0, momentum: 1, newGovernmentStability: 60, alertLeadTurns: 2 },
+	// Soutiens immobiles par défaut : les tests de soutiens activent le retour à la référence.
+	supports: { reversionPercent: 0, partyAlignmentMax: 10, influencePerPoint: 10, notorietyMax: 20 }
+};
+
+/** Deux groupes électoraux (poids 3 et 1) et un groupe d'influence. */
+export const fixtureSupports = {
+	groups: [
+		{
+			id: 'support.workers',
+			label: 'Travailleurs',
+			description: 'Groupe électoral de test, plutôt interventionniste.',
+			kind: 'electoral',
+			weight: 3,
+			startingSupport: 20,
+			preferences: { economy: -50, society: 0, sovereignty: 0 },
+			judgesParty: true,
+			affiliationBonus: 0,
+			mandateBonus: 2
+		},
+		{
+			id: 'support.owners',
+			label: 'Possédants',
+			description: 'Groupe électoral de test, plutôt libéral.',
+			kind: 'electoral',
+			weight: 1,
+			startingSupport: 40,
+			preferences: { economy: 50, society: 0, sovereignty: 0 },
+			judgesParty: true,
+			affiliationBonus: 0,
+			mandateBonus: 0
+		},
+		{
+			id: 'support.members',
+			label: 'Militants',
+			description: 'Groupe d’influence de test.',
+			kind: 'influence',
+			weight: 0,
+			startingSupport: 0,
+			preferences: { economy: 0, society: 0, sovereignty: 0 },
+			judgesParty: false,
+			affiliationBonus: 20,
+			mandateBonus: 0
+		}
+	]
 };
 
 /** Calendrier et mandats de test : scrutins éloignés pour ne pas gêner les autres tests. */
@@ -562,7 +606,8 @@ function load(): Content {
 		events: fixtureEvents,
 		world: fixtureWorld,
 		traits: fixtureTraits,
-		career: fixtureCareer
+		career: fixtureCareer,
+		supports: fixtureSupports
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;
@@ -606,6 +651,17 @@ export function withCharacters(changes: Partial<Content['balance']['characters']
 		balance: {
 			...fixtureContent.balance,
 			characters: { ...fixtureContent.balance.characters, ...changes }
+		}
+	};
+}
+
+/** Contenu de test avec une évolution des soutiens modifiée. */
+export function withSupports(changes: Partial<Content['balance']['supports']>): Content {
+	return {
+		...fixtureContent,
+		balance: {
+			...fixtureContent.balance,
+			supports: { ...fixtureContent.balance.supports, ...changes }
 		}
 	};
 }

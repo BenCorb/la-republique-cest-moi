@@ -140,6 +140,8 @@ Une échelle de 0 à 100 est une hypothèse de prototype pour ces jauges. Les so
 
 Deux catégories sont distinguées : les groupes électoraux et les groupes d’influence. Exemples de groupes à tester : classes populaires, classes moyennes, électeurs aisés ; militants, cadres de parti, acteurs économiques et réseaux fortunés. La popularité générale est une synthèse électorale ; les soutiens internes, médiatiques ou économiques ne sont pas directement des voix.
 
+**Hypothèses provisoires de l’alpha (P2-07, 24 novembre 2026, choix délégués) :** trois groupes électoraux pondérés (classes populaires 40 %, classes moyennes 40 %, électeurs aisés 20 %) forment la popularité ; trois appuis d’influence (militants, appareil du parti, milieux d’affaires) ne comptent pas dans les voix. Chaque soutien tend vers une référence qui dépend de l’affinité entre le parti du joueur et les attentes du groupe, de l’adhésion, des mandats et de la notoriété ; actions et décisions l’en écartent temporairement.
+
 Une décision peut renforcer certains groupes et fragiliser d’autres, selon leurs attentes dans la partie. Une personnalité peu populaire peut conserver des appuis institutionnels ; une personnalité populaire peut rester isolée dans son parti. Le détail est consultable à la demande, sans encombrer le tableau de bord principal. Les groupes ne doivent pas être traités comme des blocs parfaitement homogènes.
 
 ### 4.5 Santé, stress et confort

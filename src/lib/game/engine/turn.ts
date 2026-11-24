@@ -9,6 +9,7 @@
  *   4. stress, santé, vieillissement, décès ..................... P1-04
  *      puis vieillissement et départs des personnages ........... P2-04
  *      puis évolution autonome du monde (indicateurs, partis) ... P2-01
+ *      puis retour des soutiens vers leur référence ............. P2-07
  *   3 bis. revenus et stress des mandats ......................... P2-02
  *   5. échéances : fins de mandat, scrutins, calendrier ........... P2-02
  *   6. passage à T+1 (une seule fois), journal du trimestre T,
@@ -30,6 +31,7 @@ import { mandateIncome, reservedTime, resolveDeadlines } from './career.ts';
 import { applyGauge } from './effects.ts';
 import { RESOURCE_IDS, type ResourceId } from '../content/types.ts';
 import { resolveWorld } from './world.ts';
+import { resolveSupports } from './supports.ts';
 import type { CommandError, CommitTurnCommand, GameCommand, TransitionResult } from './commands.ts';
 import type { EndState, GameState, HistoryEntry } from './state.ts';
 
@@ -115,6 +117,11 @@ function commitTurn(
 		? resolveWorld(execution.world, people.characters, nextTurn, people.rng, content)
 		: null;
 
+	// 4 ter. Soutiens : retour partiel vers leur référence (parti, mandats en cours).
+	const supports = world
+		? resolveSupports(wellbeing.player, execution.career.mandates, afterMandates.influence, content)
+		: null;
+
 	// 5. Échéances de la fin de T : fins de mandat, scrutins, échéances suivantes.
 	const deadlines = world
 		? resolveDeadlines(
@@ -132,7 +139,7 @@ function commitTurn(
 		? resolveEventFrontier(
 				{
 					turn: nextTurn,
-					player: wellbeing.player,
+					player: supports!.player,
 					resources: afterMandates,
 					upgrades: execution.upgrades,
 					rng: deadlines!.rng,
@@ -160,6 +167,7 @@ function commitTurn(
 		wellbeing: wellbeing.record,
 		characters: people?.record ?? null,
 		world: world?.record ?? null,
+		supports: supports?.record ?? null,
 		deadlines: deadlines?.record ?? null,
 		events: frontier?.records ?? []
 	};

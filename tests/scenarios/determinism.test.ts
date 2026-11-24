@@ -61,6 +61,7 @@ describe('scénario : passage du temps', () => {
 				wellbeing: { contributions: [], deathCause: null },
 				characters: { departures: [], arrivals: [] },
 				world: { indicators: [], parties: [], leaderChanges: [] },
+				supports: [],
 				deadlines: { mandates: [], ballots: [] },
 				events: []
 			}

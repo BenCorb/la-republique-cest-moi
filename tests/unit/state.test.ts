@@ -76,6 +76,7 @@ describe('contrôle des invariants', () => {
 						wellbeing: { contributions: [], deathCause: null },
 						characters: null,
 						world: null,
+						supports: null,
 						deadlines: null,
 						events: []
 					},
@@ -88,6 +89,7 @@ describe('contrôle des invariants', () => {
 						wellbeing: { contributions: [], deathCause: null },
 						characters: null,
 						world: null,
+						supports: null,
 						deadlines: null,
 						events: []
 					}

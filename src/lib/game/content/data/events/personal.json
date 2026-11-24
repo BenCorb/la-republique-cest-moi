@@ -283,6 +283,16 @@
 							"role": "relative",
 							"value": 20,
 							"memory": "Vous lui avez offert un poste."
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": -3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": -3
 						}
 					],
 					"followUp": {

@@ -22,6 +22,7 @@ import {
 } from '../content/types.ts';
 import { ageAt, type Turn } from './calendar.ts';
 import { generatePerson } from './characters.ts';
+import { withPopularity } from './supports.ts';
 import { nextFloat, nextInt, type RngState } from './random.ts';
 import type {
 	Character,
@@ -239,7 +240,7 @@ export function resolveWorld(
 
 export type PoliticalEffect = Extract<
 	Effect,
-	{ op: 'addIndicator' | 'addPartyStrength' | 'joinParty' | 'leaveParty' }
+	{ op: 'addIndicator' | 'addPartyStrength' | 'joinParty' | 'leaveParty' | 'addSupport' }
 >;
 
 export function isPoliticalEffect(effect: Effect): effect is PoliticalEffect {
@@ -247,7 +248,8 @@ export function isPoliticalEffect(effect: Effect): effect is PoliticalEffect {
 		effect.op === 'addIndicator' ||
 		effect.op === 'addPartyStrength' ||
 		effect.op === 'joinParty' ||
-		effect.op === 'leaveParty'
+		effect.op === 'leaveParty' ||
+		effect.op === 'addSupport'
 	);
 }
 
@@ -328,6 +330,19 @@ export function applyPoliticalEffect(
 				player: left.player,
 				world,
 				changes: left.left ? [{ kind: 'left', partyId: left.left }] : []
+			};
+		}
+		case 'addSupport': {
+			const value = player.supports[effect.group] ?? 0;
+			const next = clamp(value + effect.value, GAUGE_MIN, GAUGE_MAX);
+			if (next === value) return { player, world, changes: [] };
+			return {
+				player: withPopularity(
+					{ ...player, supports: { ...player.supports, [effect.group]: next } },
+					content
+				),
+				world,
+				changes: [{ kind: 'support', groupId: effect.group, delta: next - value }]
 			};
 		}
 		default: {

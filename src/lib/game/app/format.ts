@@ -101,6 +101,24 @@ export function describeIndicator(indicator: IndicatorId, value: number): GaugeD
 	return { value, label: labels[0], tone: 'danger' };
 }
 
+/** Popularité : synthèse publique des soutiens électoraux. */
+export function describePopularity(value: number): GaugeDescription {
+	if (value >= 65) return { value, label: 'Éclatante', tone: 'good' };
+	if (value >= 50) return { value, label: 'Solide', tone: 'good' };
+	if (value >= 35) return { value, label: 'Honorable', tone: 'neutral' };
+	if (value >= 20) return { value, label: 'Discrète', tone: 'warning' };
+	return { value, label: 'Confidentielle', tone: 'danger' };
+}
+
+/** Soutien d'un groupe, d'après les sondages publics. */
+export function describeSupport(value: number): GaugeDescription {
+	if (value >= 60) return { value, label: 'Très fort', tone: 'good' };
+	if (value >= 40) return { value, label: 'Fort', tone: 'good' };
+	if (value >= 25) return { value, label: 'Moyen', tone: 'neutral' };
+	if (value >= 10) return { value, label: 'Faible', tone: 'warning' };
+	return { value, label: 'Très faible', tone: 'danger' };
+}
+
 /** Position qualitative d'un parti sur un axe, sans chiffre (GDD §3.2). */
 export function describeAxisPosition(value: number, negative: string, positive: string): string {
 	if (value <= -60) return `très ${negative}`;

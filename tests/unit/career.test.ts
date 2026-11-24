@@ -23,6 +23,7 @@ import {
 	fixtureActions,
 	fixtureBalance,
 	fixtureCareer,
+	fixtureSupports,
 	fixtureCast,
 	fixtureEvents,
 	fixtureTraits,
@@ -107,7 +108,8 @@ function load(
 		events: { ...fixtureEvents, 'events/career.json': overrides.events ?? careerEvents },
 		world: fixtureWorld,
 		traits: fixtureTraits,
-		career: fixtureCareer
+		career: fixtureCareer,
+		supports: fixtureSupports
 	});
 }
 

@@ -162,6 +162,16 @@
 							"role": "donor",
 							"value": 15,
 							"memory": "Vous avez soutenu son projet de lotissement."
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 6
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": -4
 						}
 					]
 				},

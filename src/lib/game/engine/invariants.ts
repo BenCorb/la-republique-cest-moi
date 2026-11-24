@@ -17,6 +17,7 @@ import {
 } from '../content/types.ts';
 import { RNG_ALGORITHM, validateSeed } from './random.ts';
 import { activeMandates, conflictingMandates } from './career.ts';
+import { computePopularity } from './supports.ts';
 import { START_TURN, STATE_SCHEMA_VERSION, type GameState } from './state.ts';
 
 const PHASES = new Set(['planning', 'decision', 'ended']);
@@ -256,6 +257,19 @@ function checkWorldInvariants(state: GameState): string[] {
 		});
 	}
 
+	for (const [groupId, value] of Object.entries(player.supports)) {
+		if (!Number.isSafeInteger(value) || value < GAUGE_MIN || value > GAUGE_MAX) {
+			violations.push(`soutien invalide : ${groupId} = ${value}`);
+		}
+	}
+	if (
+		!Number.isSafeInteger(player.popularity) ||
+		player.popularity < GAUGE_MIN ||
+		player.popularity > GAUGE_MAX
+	) {
+		violations.push(`popularité invalide : ${player.popularity}`);
+	}
+
 	// Adhésions : chronologiques, une seule en cours, cohérente avec le parti actuel.
 	let previousEnd = -Infinity;
 	player.affiliations.forEach((affiliation, index) => {
@@ -426,6 +440,13 @@ export function checkContentReferences(state: GameState, content: Content): stri
 		if (relationship.memories.length > content.balance.characters.maxMemories) {
 			violations.push(`trop de souvenirs : ${characterId}`);
 		}
+	}
+	const groups = Object.keys(state.player.supports).sort().join(',');
+	if (groups !== [...content.supportGroupIds].sort().join(',')) {
+		violations.push('groupes de soutien de l’état différents de ceux du catalogue');
+	}
+	if (state.player.popularity !== computePopularity(state.player.supports, content)) {
+		violations.push(`popularité incohérente avec les soutiens : ${state.player.popularity}`);
 	}
 	for (const mandate of state.mandates) {
 		if (!Object.hasOwn(content.mandates, mandate.mandateId)) {

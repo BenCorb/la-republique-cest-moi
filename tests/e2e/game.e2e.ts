@@ -81,6 +81,11 @@ test.describe('parcours de jeu', () => {
 		await expect(municipal).toContainText('T1 2001');
 		await expect(municipal).toContainText('Candidatures closes au T3 2000');
 		await expect(page.getByText('Cumul : 3 mandats au plus.')).toBeVisible();
+		await expect(page.getByTestId('support-support.working_class')).toContainText(
+			'Classes populaires (40 % de l’électorat)'
+		);
+		await expect(page.getByTestId('support-support.apparatus')).toContainText('Appareil du parti');
+		await expect(page.getByRole('meter', { name: 'Popularité' }).first()).toBeVisible();
 	});
 
 	test('adhère à un parti depuis le monde politique', async ({ page }) => {

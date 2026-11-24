@@ -28,6 +28,7 @@ export type EffectRange =
 	  }
 	| { readonly kind: 'gauge'; readonly gauge: GaugeId; readonly min: number; readonly max: number }
 	| { readonly kind: 'indicator'; readonly indicator: IndicatorId; readonly value: number }
+	| { readonly kind: 'support'; readonly group: string; readonly value: number }
 	/** `party` : identifiant ou référence relative, résolu à l'application. */
 	| { readonly kind: 'partyStrength'; readonly party: string; readonly value: number }
 	/** `party` : identifiant, `target` (cible du plan) ou `null` pour un départ. */
@@ -83,6 +84,8 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'gauge', gauge: effect.stat, min: effect.value, max: effect.value };
 		case 'addIndicator':
 			return { kind: 'indicator', indicator: effect.indicator, value: effect.value };
+		case 'addSupport':
+			return { kind: 'support', group: effect.group, value: effect.value };
 		case 'addPartyStrength':
 			return { kind: 'partyStrength', party: effect.party, value: effect.value };
 		case 'joinParty':
@@ -116,6 +119,7 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 		case 'addStat':
 			return { kind: 'gauge', gauge: effect.stat, delta: effect.value, rng };
 		case 'addIndicator':
+		case 'addSupport':
 		case 'addPartyStrength':
 		case 'joinParty':
 		case 'leaveParty':

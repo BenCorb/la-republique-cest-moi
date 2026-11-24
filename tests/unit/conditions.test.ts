@@ -16,7 +16,9 @@ const context: ConditionContext = {
 		health: 64,
 		stress: 37,
 		partyId: null,
-		affiliations: []
+		affiliations: [],
+		supports: {},
+		popularity: 0
 	},
 	world: createGame({ seed: 'conditions' }, fixtureContent).world,
 	mandates: [],

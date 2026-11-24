@@ -16,6 +16,7 @@ import {
 	eventCatalogSchema,
 	traitCatalogSchema,
 	careerCatalogSchema,
+	supportCatalogSchema,
 	upgradeCatalogSchema,
 	worldSchema
 } from './schemas.ts';
@@ -33,6 +34,7 @@ import {
 	type EventDefinition,
 	type InstitutionsDefinition,
 	type MandateDefinition,
+	type SupportGroupDefinition,
 	type PartyDefinition,
 	type ResourceAmount,
 	type TraitDefinition,
@@ -65,6 +67,8 @@ export interface RawContent {
 	readonly traits: unknown;
 	/** Élections, mandats et règles du cumul (`career.json`). */
 	readonly career: unknown;
+	/** Groupes de soutien (`supports.json`). */
+	readonly supports: unknown;
 }
 
 export type ContentValidation =
@@ -235,6 +239,7 @@ interface Refs {
 	readonly parties: ReadonlySet<string>;
 	readonly mandates: ReadonlySet<string>;
 	readonly elections: ReadonlySet<string>;
+	readonly groups: ReadonlySet<string>;
 }
 
 /** Vérifie les partis et mandats cités par une condition. */
@@ -257,6 +262,16 @@ function conditionIssues(
 			return refs.parties.has(condition.party)
 				? []
 				: [{ source, path: `${path}.party`, message: `parti inconnu : ${condition.party}` }];
+		case 'support':
+			return refs.groups.has(condition.group)
+				? []
+				: [
+						{
+							source,
+							path: `${path}.group`,
+							message: `groupe de soutien inconnu : ${condition.group}`
+						}
+					];
 		case 'holdsMandate':
 		case 'canHoldMandate':
 			return refs.mandates.has(condition.mandate)
@@ -318,6 +333,15 @@ function effectIssues(
 					}
 				} else if (!refs.parties.has(effect.party)) {
 					issues.push({ source, path: `${at}.party`, message: `parti inconnu : ${effect.party}` });
+				}
+				break;
+			case 'addSupport':
+				if (!refs.groups.has(effect.group)) {
+					issues.push({
+						source,
+						path: `${at}.group`,
+						message: `groupe de soutien inconnu : ${effect.group}`
+					});
 				}
 				break;
 			case 'grantMandate':
@@ -442,6 +466,31 @@ function crossCheckPolitics(
 		} else {
 			issues.push(...effectIssues(event.effects, refs, null, source, `${path}.effects`, roles));
 		}
+	}
+	return issues;
+}
+
+function crossCheckSupports(
+	groups: readonly SupportGroupDefinition[],
+	knownIds: Set<string>
+): ContentIssue[] {
+	const issues: ContentIssue[] = [];
+	groups.forEach((group, index) => {
+		if (knownIds.has(group.id)) {
+			issues.push({
+				source: 'supports.json',
+				path: `groups[${index}].id`,
+				message: `identifiant en double : ${group.id}`
+			});
+		}
+		knownIds.add(group.id);
+	});
+	if (!groups.some((group) => group.kind === 'electoral')) {
+		issues.push({
+			source: 'supports.json',
+			path: 'groups',
+			message: 'au moins un groupe électoral est nécessaire à la popularité'
+		});
 	}
 	return issues;
 }
@@ -760,6 +809,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	const world = worldSchema.safeParse(raw.world);
 	const traitCatalog = traitCatalogSchema.safeParse(raw.traits);
 	const careerCatalog = careerCatalogSchema.safeParse(raw.career);
+	const supportCatalog = supportCatalogSchema.safeParse(raw.supports);
 	const eventFiles = Object.keys(raw.events)
 		.sort()
 		.map((source) => ({ source, parsed: eventCatalogSchema.safeParse(raw.events[source]) }));
@@ -772,6 +822,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	if (!world.success) issues.push(...zodIssues('world.json', world.error));
 	if (!traitCatalog.success) issues.push(...zodIssues('traits.json', traitCatalog.error));
 	if (!careerCatalog.success) issues.push(...zodIssues('career.json', careerCatalog.error));
+	if (!supportCatalog.success) issues.push(...zodIssues('supports.json', supportCatalog.error));
 	for (const { source, parsed } of eventFiles) {
 		if (!parsed.success) issues.push(...zodIssues(source, parsed.error));
 	}
@@ -783,6 +834,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 		!world.success ||
 		!traitCatalog.success ||
 		!careerCatalog.success ||
+		!supportCatalog.success ||
 		eventFiles.some(({ parsed }) => !parsed.success)
 	) {
 		return { ok: false, issues };
@@ -817,7 +869,10 @@ export function validateContent(raw: RawContent): ContentValidation {
 			knownIds
 		)
 	);
+	const groupList = supportCatalog.data.groups;
+	issues.push(...crossCheckSupports(groupList, knownIds));
 	const refs: Refs = {
+		groups: new Set(groupList.map((group) => group.id)),
 		parties: new Set(world.data.parties.map((party) => party.id)),
 		mandates: new Set(career.mandates.map((mandate) => mandate.id)),
 		elections: new Set(career.elections.map((election) => election.id))
@@ -839,6 +894,8 @@ export function validateContent(raw: RawContent): ContentValidation {
 	for (const election of career.elections) elections[election.id] = election;
 	const mandates: Record<string, MandateDefinition> = {};
 	for (const mandate of career.mandates) mandates[mandate.id] = mandate;
+	const supportGroups: Record<string, SupportGroupDefinition> = {};
+	for (const group of groupList) supportGroups[group.id] = group;
 	const parties: Record<string, PartyDefinition> = {};
 	for (const party of world.data.parties) parties[party.id] = party;
 	return {
@@ -852,6 +909,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 				world: world.data,
 				traits: traitCatalog.data,
 				career,
+				supports: supportCatalog.data,
 				events: Object.fromEntries(eventFiles.map(({ source, parsed }) => [source, parsed.data]))
 			}),
 			balance: balance.data,
@@ -871,6 +929,11 @@ export function validateContent(raw: RawContent): ContentValidation {
 			mandates,
 			mandateIds: career.mandates.map((mandate) => mandate.id),
 			institutions: career.institutions,
+			supportGroups,
+			supportGroupIds: [
+				...groupList.filter((group) => group.kind === 'electoral'),
+				...groupList.filter((group) => group.kind === 'influence')
+			].map((group) => group.id),
 			parties,
 			partyIds: world.data.parties.map((party) => party.id)
 		}

@@ -55,6 +55,8 @@ export function readStat(context: ConditionContext, stat: StatId): number {
 				: 0;
 		case 'player.mandates':
 			return activeMandates(context.mandates).length;
+		case 'player.popularity':
+			return context.player.popularity;
 		default: {
 			const unknown: never = stat;
 			throw new Error(`Statistique inconnue : ${String(unknown)}`);
@@ -82,6 +84,14 @@ export function evaluateCondition(context: ConditionContext, condition: Conditio
 			return activeMandates(context.mandates).some(
 				(mandate) => mandate.mandateId === condition.mandate
 			);
+		case 'support': {
+			const value = context.player.supports[condition.group] ?? 0;
+			return condition.cmp === 'gte'
+				? value >= condition.value
+				: condition.cmp === 'lte'
+					? value <= condition.value
+					: value === condition.value;
+		}
 		case 'canHoldMandate':
 			return holdIssue(condition.mandate, context.mandates, context.institutions, null) === null;
 		default: {

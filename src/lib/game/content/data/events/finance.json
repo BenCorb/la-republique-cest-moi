@@ -39,6 +39,16 @@
 							"role": "donor",
 							"value": 15,
 							"memory": "Vous avez accepté son chèque sans poser de questions."
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 5
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": -2
 						}
 					],
 					"followUp": {
@@ -67,6 +77,11 @@
 							"role": "donor",
 							"value": -5,
 							"memory": "Vous avez rendu son don public."
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 2
 						}
 					]
 				},
@@ -125,6 +140,11 @@
 							"role": "donor",
 							"value": 20,
 							"memory": "Vous avez passé le coup de fil pour son permis de construire."
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 5
 						}
 					],
 					"followUp": {
@@ -153,6 +173,16 @@
 							"role": "donor",
 							"value": -20,
 							"memory": "Vous avez refusé de l’aider pour son permis de construire."
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": -3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 1
 						}
 					]
 				}

@@ -98,5 +98,11 @@
 		"momentum": 1,
 		"newGovernmentStability": 62,
 		"alertLeadTurns": 4
+	},
+	"supports": {
+		"reversionPercent": 6,
+		"partyAlignmentMax": 12,
+		"influencePerPoint": 5,
+		"notorietyMax": 30
 	}
 }

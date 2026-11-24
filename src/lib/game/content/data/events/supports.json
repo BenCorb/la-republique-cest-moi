@@ -1,0 +1,165 @@
+{
+	"events": [
+		{
+			"id": "supports.flattering_poll",
+			"category": "supports",
+			"title": "Un sondage flatteur",
+			"text": "Un institut vous place parmi « les personnalités qui montent ». L’échantillon compte 412 personnes, dont votre tante, mais l’article est encadré en page 3.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 20,
+			"unique": false,
+			"when": {
+				"op": "gte",
+				"stat": "player.popularity",
+				"value": 50
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 3
+				}
+			]
+		},
+		{
+			"id": "supports.business_dinner",
+			"category": "supports",
+			"title": "Un dîner du patronat local",
+			"text": "Le club des entrepreneurs vous invite à un dîner « informel », c’est-à-dire avec plan de table. On attend de vous quelques mots rassurants sur la fiscalité.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "support",
+				"group": "support.business",
+				"cmp": "gte",
+				"value": 30
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "reassure",
+					"label": "Rassurer sur la fiscalité",
+					"hints": ["Les affaires apprécient", "Les classes populaires moins"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 5
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": -3
+						},
+						{
+							"op": "addResource",
+							"resource": "politicalBudgetCents",
+							"value": 20000
+						}
+					]
+				},
+				{
+					"id": "lecture",
+					"label": "Parler de justice sociale au dessert",
+					"hints": ["Ambiance glaciale", "Réputation de franchise"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": -6
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": "vague",
+					"label": "Rester dans le flou",
+					"hints": ["Rien ne change"],
+					"costs": [],
+					"effects": []
+				}
+			]
+		},
+		{
+			"id": "supports.restless_base",
+			"category": "supports",
+			"title": "La base gronde",
+			"text": "À la réunion de section, les militants comptent les affiches qu’ils ont collées pour vous et vos visites. Le second chiffre est nettement plus court.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "eq",
+						"stat": "player.affiliated",
+						"value": 1
+					},
+					{
+						"op": "support",
+						"group": "support.activists",
+						"cmp": "lte",
+						"value": 15
+					}
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "apologize",
+					"label": "Venir s’excuser avec des croissants",
+					"hints": ["Les militants se radoucissent", "Une matinée de perdue"],
+					"costs": [
+						{
+							"resource": "personalCashCents",
+							"amount": 3000
+						}
+					],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": 6
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": "ignore",
+					"label": "Expliquer que l’agenda est chargé",
+					"hints": ["La base se refroidit"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": -4
+						}
+					]
+				}
+			]
+		}
+	]
+}

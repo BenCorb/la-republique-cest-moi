@@ -27,6 +27,7 @@ import {
 	fixtureContent,
 	fixtureEvents,
 	fixtureCareer,
+	fixtureSupports,
 	fixtureTraits,
 	fixtureUpgrades,
 	fixtureWorld,
@@ -103,7 +104,8 @@ function load(): Content {
 		events: { ...fixtureEvents, 'events/relations.json': relationEvents },
 		world: fixtureWorld,
 		traits: fixtureTraits,
-		career: fixtureCareer
+		career: fixtureCareer,
+		supports: fixtureSupports
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;

@@ -88,7 +88,9 @@ export const STAT_IDS = [
 	/** 1 si le parti du joueur conduit le gouvernement, sinon 0. */
 	'player.partyGoverning',
 	/** Nombre de mandats en cours du joueur (P2-02). */
-	'player.mandates'
+	'player.mandates',
+	/** Popularité : synthèse pondérée des soutiens électoraux, de 0 à 100 (P2-07). */
+	'player.popularity'
 ] as const;
 export type StatId = (typeof STAT_IDS)[number];
 
@@ -105,7 +107,14 @@ export type Condition =
 	/** Le joueur exerce un mandat de cette définition. */
 	| { readonly op: 'holdsMandate'; readonly mandate: string }
 	/** Le joueur pourrait recevoir ce mandat sans en quitter aucun (cumul et incompatibilités). */
-	| { readonly op: 'canHoldMandate'; readonly mandate: string };
+	| { readonly op: 'canHoldMandate'; readonly mandate: string }
+	/** Soutien d'un groupe comparé à une valeur. */
+	| {
+			readonly op: 'support';
+			readonly group: string;
+			readonly cmp: ComparisonOp;
+			readonly value: number;
+	  };
 
 export type Effect =
 	| { readonly op: 'addResource'; readonly resource: ResourceId; readonly value: number }
@@ -141,6 +150,8 @@ export type Effect =
 			readonly party: string;
 	  }
 	| { readonly op: 'leaveParty' }
+	/** Variation du soutien d'un groupe, maintenue dans [0, 100]. */
+	| { readonly op: 'addSupport'; readonly group: string; readonly value: number }
 	| {
 			readonly op: 'addRelation';
 			/** Rôle de l'événement dont l'attitude envers le joueur change. */
@@ -323,6 +334,7 @@ export interface Balance {
 	readonly world: WorldBalance;
 	readonly characters: CharactersBalance;
 	readonly elections: ElectionsBalance;
+	readonly supports: SupportsBalance;
 }
 
 /** Paramètres des scrutins et du gouvernement (hypothèses de tuning, P2-02). */
@@ -335,6 +347,18 @@ export interface ElectionsBalance {
 	readonly newGovernmentStability: number;
 	/** Trimestres avant une échéance où une alerte est affichée. */
 	readonly alertLeadTurns: number;
+}
+
+/** Évolution des soutiens à chaque frontière (hypothèses de tuning, P2-07). */
+export interface SupportsBalance {
+	/** Part de l'écart à la référence résorbée chaque trimestre, en %. */
+	readonly reversionPercent: number;
+	/** Bonus ou malus maximal de l'affinité entre parti et groupe. */
+	readonly partyAlignmentMax: number;
+	/** Notoriété : un point de référence électorale par tranche d'influence de cette taille. */
+	readonly influencePerPoint: number;
+	/** Plafond du bonus de notoriété. */
+	readonly notorietyMax: number;
 }
 
 /** Bornes de l'attitude d'un personnage envers le joueur. */
@@ -434,6 +458,31 @@ export interface InstitutionsDefinition {
 	readonly incompatibilities: readonly (readonly [string, string])[];
 	/** Nombre maximal de mandats simultanés. */
 	readonly maxMandates: number;
+}
+
+/**
+ * Groupe de soutien (GDD §4.4). Les groupes électoraux forment la popularité,
+ * pondérés par leur poids ; les groupes d'influence (militants, appareil,
+ * milieux d'affaires) n'apportent pas de voix.
+ */
+export interface SupportGroupDefinition {
+	/** Identifiant stable, par exemple `support.working_class`. */
+	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	readonly kind: 'electoral' | 'influence';
+	/** Poids dans la popularité (groupes électoraux), 0 pour un groupe d'influence. */
+	readonly weight: number;
+	/** Soutien de départ, et niveau de référence d'un inconnu sans étiquette ni mandat. */
+	readonly startingSupport: number;
+	/** Attentes sur les axes, comparées aux positions du parti du joueur. */
+	readonly preferences: { readonly [K in AxisId]: number };
+	/** Ce groupe juge l'étiquette du joueur selon ses attentes (affinité avec le parti). */
+	readonly judgesParty: boolean;
+	/** Bonus de référence quand le joueur est encarté (militants, appareil). */
+	readonly affiliationBonus: number;
+	/** Bonus de référence par mandat exercé (visibilité locale ou nationale). */
+	readonly mandateBonus: number;
 }
 
 /** Catalogue du monde : partis, axes et noms des personnages générés. */
@@ -561,6 +610,9 @@ export interface Content {
 	readonly mandates: Readonly<Record<string, MandateDefinition>>;
 	readonly mandateIds: readonly string[];
 	readonly institutions: InstitutionsDefinition;
+	readonly supportGroups: Readonly<Record<string, SupportGroupDefinition>>;
+	/** Ordre du catalogue : électoraux puis influence, ordre stable d'évolution. */
+	readonly supportGroupIds: readonly string[];
 	/** Ordre du catalogue : ordre stable des tirages de traits. */
 	readonly traitIds: readonly string[];
 	/** Partis indexés par identifiant. */

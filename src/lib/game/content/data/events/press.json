@@ -39,6 +39,11 @@
 							"role": "journalist",
 							"value": 10,
 							"memory": "Vous lui avez accordé un entretien."
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 3
 						}
 					],
 					"followUp": {

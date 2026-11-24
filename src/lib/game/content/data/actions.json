@@ -18,6 +18,11 @@
 					"resource": "influence",
 					"min": 1,
 					"max": 3
+				},
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": 1
 				}
 			]
 		},
@@ -33,6 +38,11 @@
 					"op": "addResource",
 					"resource": "influence",
 					"value": 3
+				},
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
+					"value": 1
 				}
 			]
 		},
@@ -65,6 +75,16 @@
 					"op": "addStat",
 					"stat": "player.stress",
 					"value": 6
+				},
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": 2
+				},
+				{
+					"op": "addSupport",
+					"group": "support.middle_class",
+					"value": 1
 				}
 			]
 		},
@@ -92,6 +112,11 @@
 					"op": "addStat",
 					"stat": "player.stress",
 					"value": 2
+				},
+				{
+					"op": "addSupport",
+					"group": "support.business",
+					"value": 1
 				}
 			]
 		},
@@ -197,6 +222,16 @@
 					"op": "addResource",
 					"resource": "influence",
 					"value": 2
+				},
+				{
+					"op": "addSupport",
+					"group": "support.activists",
+					"value": 5
+				},
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
+					"value": 3
 				}
 			],
 			"target": "party"
@@ -225,6 +260,16 @@
 					"op": "addStat",
 					"stat": "player.stress",
 					"value": 1
+				},
+				{
+					"op": "addSupport",
+					"group": "support.activists",
+					"value": 2
+				},
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
+					"value": 1
 				}
 			]
 		},
@@ -249,6 +294,16 @@
 					"op": "addStat",
 					"stat": "player.stress",
 					"value": 3
+				},
+				{
+					"op": "addSupport",
+					"group": "support.activists",
+					"value": -10
+				},
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
+					"value": -10
 				}
 			]
 		},

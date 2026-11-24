@@ -34,7 +34,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 4;
+export const SIMULATION_REPORT_VERSION = 5;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -95,6 +95,9 @@ export interface SimulationRun {
 	/** Scrutins tenus et alternances au gouvernement pendant la carrière. */
 	readonly ballotsHeld: number;
 	readonly governmentChanges: number;
+	/** Popularité en fin de carrière et la plus haute atteinte. */
+	readonly finalPopularity: number;
+	readonly peakPopularity: number;
 	/** Plus bas et plus haut atteints par chaque indicateur national. */
 	readonly indicatorRanges: Readonly<
 		Record<IndicatorId, { readonly min: number; readonly max: number }>
@@ -162,6 +165,8 @@ export interface SimulationAggregate {
 	readonly traitsRevealed: Distribution;
 	readonly mandatesHeld: Distribution;
 	readonly governmentChanges: Distribution;
+	readonly finalPopularity: Distribution;
+	readonly peakPopularity: Distribution;
 	/** Plus haute fonction atteinte, `none` pour les carrières sans mandat. */
 	readonly highestMandates: Readonly<Record<string, number>>;
 	/** Parti en fin de carrière, `none` pour les carrières sans étiquette. */
@@ -342,7 +347,8 @@ function finalizeRun(
 	alertEpisodes: number,
 	invariantViolations: readonly string[],
 	error: string | null,
-	content: Content
+	content: Content,
+	peakPopularity: number
 ): SimulationRun {
 	const summary = careerSummary(state);
 	return {
@@ -390,6 +396,8 @@ function finalizeRun(
 					(content.mandates[right.mandateId]?.rank ?? 0) -
 					(content.mandates[left.mandateId]?.rank ?? 0)
 			)[0]?.mandateId ?? null,
+		finalPopularity: state.player.popularity,
+		peakPopularity,
 		ballotsHeld: state.ballots.filter((ballot) => ballot.status === 'held').length,
 		governmentChanges: state.history.reduce(
 			(total, entry) =>
@@ -448,6 +456,7 @@ export function simulateCareer(
 	}
 	let state = createGame({ seed }, content);
 	let decisions = 0;
+	let peakPopularity = state.player.popularity;
 	let alertEpisodes = 0;
 	let activeAlertIds = new Set<string>();
 	let error: string | null = null;
@@ -470,6 +479,7 @@ export function simulateCareer(
 			break;
 		}
 		state = advanced.state;
+		peakPopularity = Math.max(peakPopularity, state.player.popularity);
 		violations = checkInvariants(state, content);
 
 		while (state.phase === 'decision' && error === null && violations.length === 0) {
@@ -505,7 +515,8 @@ export function simulateCareer(
 		alertEpisodes,
 		violations,
 		error,
-		content
+		content,
+		peakPopularity
 	);
 }
 
@@ -611,6 +622,8 @@ function aggregateRuns(runs: readonly SimulationRun[]): SimulationAggregate {
 		traitsRevealed: distribution(runs.map((run) => run.traitsRevealed)),
 		mandatesHeld: distribution(runs.map((run) => run.mandatesHeld)),
 		governmentChanges: distribution(runs.map((run) => run.governmentChanges)),
+		finalPopularity: distribution(runs.map((run) => run.finalPopularity)),
+		peakPopularity: distribution(runs.map((run) => run.peakPopularity)),
 		highestMandates: runs.reduce<Record<string, number>>((totals, run) => {
 			const key = run.highestMandate ?? 'none';
 			totals[key] = (totals[key] ?? 0) + 1;
@@ -731,6 +744,8 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'highestMandate',
 		'ballotsHeld',
 		'governmentChanges',
+		'finalPopularity',
+		'peakPopularity',
 		'indicatorRanges',
 		'invariantViolations',
 		'error'
@@ -767,6 +782,8 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.highestMandate,
 		run.ballotsHeld,
 		run.governmentChanges,
+		run.finalPopularity,
+		run.peakPopularity,
 		JSON.stringify(run.indicatorRanges),
 		JSON.stringify(run.invariantViolations),
 		run.error

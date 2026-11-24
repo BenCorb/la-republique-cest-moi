@@ -16,6 +16,7 @@ import { TURNS_PER_YEAR, type Turn } from './calendar.ts';
 import { createRng, type RngState } from './random.ts';
 import { createCalendar } from './career.ts';
 import { createCast } from './characters.ts';
+import { computePopularity, startingSupports } from './supports.ts';
 import { createWorld } from './world.ts';
 
 /** Version du format de l'état, à incrémenter avec une migration explicite. */
@@ -49,6 +50,10 @@ export interface PlayerState {
 	readonly partyId: string | null;
 	/** Historique des adhésions, dans l'ordre ; seule la dernière peut être en cours. */
 	readonly affiliations: readonly Affiliation[];
+	/** Soutien de chaque groupe envers le joueur, de 0 à 100 (public : sondages). */
+	readonly supports: Readonly<Record<string, number>>;
+	/** Popularité : synthèse pondérée des soutiens électoraux, toujours recalculée. */
+	readonly popularity: number;
 }
 
 export type CharacterStatus = 'active' | 'retired' | 'dead';
@@ -183,6 +188,7 @@ export type PoliticalChange =
 	| { readonly kind: 'partyStrength'; readonly partyId: string; readonly delta: number }
 	| { readonly kind: 'joined'; readonly partyId: string }
 	| { readonly kind: 'left'; readonly partyId: string }
+	| { readonly kind: 'support'; readonly groupId: string; readonly delta: number }
 	| { readonly kind: 'mandateStarted'; readonly instanceId: string; readonly mandateId: string }
 	| {
 			readonly kind: 'mandateEnded';
@@ -360,6 +366,8 @@ export interface HistoryEntry {
 	readonly characters: CharactersRecord | null;
 	/** Évolution autonome du monde, `null` si la carrière s'est terminée avant. */
 	readonly world: WorldRecord | null;
+	/** Retour des soutiens vers leur référence, `null` si la carrière s'est terminée avant. */
+	readonly supports: readonly { readonly groupId: string; readonly delta: number }[] | null;
 	/** Échéances (fins de mandat, scrutins), `null` si la carrière s'est terminée avant. */
 	readonly deadlines: DeadlinesRecord | null;
 	/** Événements créés (ou suites annulées) au passage à T+1. */
@@ -443,7 +451,9 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 			health: content.balance.wellbeing.startingHealth,
 			stress: content.balance.wellbeing.startingStress,
 			partyId: null,
-			affiliations: []
+			affiliations: [],
+			supports: startingSupports(content),
+			popularity: computePopularity(startingSupports(content), content)
 		},
 		resources: { ...content.balance.startingResources },
 		upgrades: [],

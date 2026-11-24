@@ -26,6 +26,7 @@ export function loadContentFromFiles(directory = DEFAULT_CONTENT_DATA_DIR): Cont
 		world: read('world.json'),
 		traits: read('traits.json'),
 		career: read('career.json'),
+		supports: read('supports.json'),
 		events
 	});
 	if (!result.ok) {

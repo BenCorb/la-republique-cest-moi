@@ -45,6 +45,8 @@ import {
 	INDICATOR_NAMES,
 	RESOURCE_NAMES,
 	describeAxisPosition,
+	describePopularity,
+	describeSupport,
 	describeHealth,
 	describeIndicator,
 	describeStress,
@@ -272,6 +274,21 @@ export interface CareerView {
 	readonly pastMandates: readonly { readonly label: string; readonly period: string }[];
 }
 
+export interface SupportGroupView {
+	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	readonly gauge: GaugeDescription;
+	/** Part du groupe dans la popularité, en % (groupes électoraux). */
+	readonly share: number | null;
+}
+
+export interface SupportsView {
+	readonly popularity: GaugeDescription;
+	readonly electoral: readonly SupportGroupView[];
+	readonly influence: readonly SupportGroupView[];
+}
+
 export interface PlayerView {
 	readonly dateLabel: string;
 	readonly age: number;
@@ -296,6 +313,7 @@ export interface PlayerView {
 	/** Personnages rencontrés : actifs d'abord, puis par date de rencontre. */
 	readonly people: readonly PersonView[];
 	readonly career: CareerView;
+	readonly supports: SupportsView;
 }
 
 const FAMILY_LABELS: Readonly<Record<string, string>> = {
@@ -345,6 +363,8 @@ function describeEffect(range: EffectRange, content: Content): string {
 			return `${GAUGE_NAMES[range.gauge]} ${formatGaugeDelta(range.min)}`;
 		case 'indicator':
 			return `${INDICATOR_NAMES[range.indicator]} ${formatGaugeDelta(range.value)}`;
+		case 'support':
+			return `Soutien : ${content.supportGroups[range.group]?.label ?? range.group} ${formatGaugeDelta(range.value)}`;
 		case 'partyStrength':
 			return `Intentions de vote (${partyLabel(range.party, content)}) ${formatGaugeDelta(range.value)}`;
 		case 'affiliation':
@@ -376,6 +396,8 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 					return `adhésion au ${content.parties[change.partyId]?.name ?? change.partyId}`;
 				case 'left':
 					return `départ du ${content.parties[change.partyId]?.name ?? change.partyId}`;
+				case 'support':
+					return `${content.supportGroups[change.groupId]?.label ?? change.groupId} ${formatGaugeDelta(change.delta)}`;
 				case 'mandateStarted':
 					return `entrée en fonction : ${content.mandates[change.mandateId]?.label ?? change.mandateId}`;
 				case 'mandateEnded':
@@ -912,6 +934,37 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 	};
 }
 
+function buildSupports(state: GameState, content: Content): SupportsView {
+	const totalWeight = content.supportGroupIds.reduce(
+		(total, id) => total + (content.supportGroups[id]?.weight ?? 0),
+		0
+	);
+	const groups = content.supportGroupIds.flatMap((id) => {
+		const group = content.supportGroups[id];
+		if (!group) return [];
+		return [
+			{
+				kind: group.kind,
+				view: {
+					id,
+					label: group.label,
+					description: group.description,
+					gauge: describeSupport(state.player.supports[id] ?? 0),
+					share:
+						group.kind === 'electoral' && totalWeight > 0
+							? Math.round((group.weight * 100) / totalWeight)
+							: null
+				}
+			}
+		];
+	});
+	return {
+		popularity: describePopularity(state.player.popularity),
+		electoral: groups.filter((group) => group.kind === 'electoral').map((group) => group.view),
+		influence: groups.filter((group) => group.kind === 'influence').map((group) => group.view)
+	};
+}
+
 export function projectView(
 	state: GameState,
 	plan: readonly PlanStep[],
@@ -1082,6 +1135,7 @@ export function projectView(
 		summary: buildSummary(state, content),
 		world: buildWorld(state, plan, content),
 		people: buildPeople(state, content),
-		career: buildCareer(state, plan, content)
+		career: buildCareer(state, plan, content),
+		supports: buildSupports(state, content)
 	};
 }

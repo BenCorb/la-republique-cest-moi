@@ -36,6 +36,7 @@ function game(
 			wellbeing: { contributions: [], deathCause: null },
 			characters: null,
 			world: null,
+			supports: null,
 			deadlines: null,
 			events: []
 		})),

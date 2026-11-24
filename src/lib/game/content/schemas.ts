@@ -30,6 +30,8 @@ import {
 	type ElectionsBalance,
 	type InstitutionsDefinition,
 	type MandateDefinition,
+	type SupportGroupDefinition,
+	type SupportsBalance,
 	type Balance,
 	type Condition,
 	type CastMember,
@@ -64,7 +66,13 @@ export const conditionSchema: z.ZodType<Condition> = z.lazy(() =>
 		z.strictObject({ op: z.enum(COMPARISON_OPS), stat: z.enum(STAT_IDS), value: safeInt }),
 		z.strictObject({ op: z.literal('memberOf'), party: contentId }),
 		z.strictObject({ op: z.literal('holdsMandate'), mandate: contentId }),
-		z.strictObject({ op: z.literal('canHoldMandate'), mandate: contentId })
+		z.strictObject({ op: z.literal('canHoldMandate'), mandate: contentId }),
+		z.strictObject({
+			op: z.literal('support'),
+			group: contentId,
+			cmp: z.enum(COMPARISON_OPS),
+			value: safeInt
+		})
 	])
 );
 
@@ -112,6 +120,7 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 	}),
 	z.strictObject({ op: z.literal('joinParty'), party: partyReference }),
 	z.strictObject({ op: z.literal('leaveParty') }),
+	z.strictObject({ op: z.literal('addSupport'), group: contentId, value: nonZeroGaugeDelta }),
 	z.strictObject({
 		op: z.literal('addRelation'),
 		role: z.string().regex(/^[a-z][a-z0-9_]*$/, 'rôle en minuscules'),
@@ -491,6 +500,42 @@ export const careerCatalogSchema = z.strictObject({
 	institutions: institutionsSchema
 });
 
+export const supportsBalanceSchema: z.ZodType<SupportsBalance> = z.strictObject({
+	reversionPercent: percent,
+	partyAlignmentMax: gaugeValue,
+	influencePerPoint: positiveInt,
+	notorietyMax: gaugeValue
+});
+
+export const supportGroupSchema: z.ZodType<SupportGroupDefinition> = z
+	.strictObject({
+		id: contentId.refine((value) => value.startsWith('support.'), 'identifiant « support.nom »'),
+		label: frenchText,
+		description: frenchText,
+		kind: z.enum(['electoral', 'influence']),
+		weight: nonNegativeInt,
+		startingSupport: gaugeValue,
+		preferences: z.strictObject({
+			economy: axisPosition,
+			society: axisPosition,
+			sovereignty: axisPosition
+		}),
+		judgesParty: z.boolean(),
+		affiliationBonus: safeInt.refine(
+			(value) => Math.abs(value) <= GAUGE_MAX,
+			'bonus de -100 à 100'
+		),
+		mandateBonus: safeInt.refine((value) => Math.abs(value) <= GAUGE_MAX, 'bonus de -100 à 100')
+	})
+	.refine((group) => (group.kind === 'electoral') === group.weight > 0, {
+		message: 'seuls les groupes électoraux ont un poids (strictement positif)',
+		path: ['weight']
+	});
+
+export const supportCatalogSchema = z.strictObject({
+	groups: z.array(supportGroupSchema).min(1)
+});
+
 export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	timeBudgetPerTurn: positiveInt,
 	startingResources: z.strictObject({
@@ -502,5 +547,6 @@ export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	events: eventsBalanceSchema,
 	world: worldBalanceSchema,
 	characters: charactersBalanceSchema,
-	elections: electionsBalanceSchema
+	elections: electionsBalanceSchema,
+	supports: supportsBalanceSchema
 });

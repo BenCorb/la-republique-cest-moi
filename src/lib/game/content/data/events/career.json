@@ -247,6 +247,16 @@
 							"op": "addStat",
 							"stat": "player.stress",
 							"value": 5
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": 4
 						}
 					]
 				},

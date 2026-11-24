@@ -83,6 +83,7 @@
 					{/each}
 				</dl>
 				<div class="ml-auto flex gap-5">
+					<Gauge name="Popularité" gauge={view.supports.popularity} compact />
 					<Gauge name="Santé" gauge={view.health} compact />
 					<Gauge name="Stress" gauge={view.stress} compact />
 				</div>

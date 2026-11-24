@@ -9,6 +9,7 @@ import balance from './data/balance.json';
 import cast from './data/cast.json';
 import upgrades from './data/upgrades.json';
 import career from './data/career.json';
+import supports from './data/supports.json';
 import traits from './data/traits.json';
 import world from './data/world.json';
 import type { Content } from './types.ts';
@@ -32,7 +33,8 @@ export function loadContent(): Content {
 		events,
 		world,
 		traits,
-		career
+		career,
+		supports
 	});
 	if (!result.ok) {
 		const details = result.issues

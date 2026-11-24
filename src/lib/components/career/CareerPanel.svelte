@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { CalendarClock, LogOut, Vote } from '@lucide/svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
+	import SupportsCard from './SupportsCard.svelte';
 
 	/**
 	 * Carrière (P2-02) : mandats en cours et leur coût en temps, règles du cumul,
@@ -12,11 +13,15 @@
 
 	let { session }: Props = $props();
 	const career = $derived(session.snapshot.view?.career ?? null);
+	const supports = $derived(session.snapshot.view?.supports ?? null);
 	const accelerating = $derived(session.snapshot.acceleration?.running === true);
 </script>
 
 {#if career}
 	<div class="grid gap-5 xl:grid-cols-2">
+		{#if supports}
+			<SupportsCard {supports} />
+		{/if}
 		<section class="card flex flex-col gap-3" aria-labelledby="mandats-title">
 			<h2 id="mandats-title" class="section-title">Mandats</h2>
 			<p class="text-sm" data-testid="main-function">
