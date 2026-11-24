@@ -144,7 +144,7 @@
 			"when": {
 				"op": "lte",
 				"stat": "world.stability",
-				"value": 35
+				"value": 38
 			},
 			"actors": [],
 			"effects": [

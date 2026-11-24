@@ -17,6 +17,7 @@ import {
 } from '../content/types.ts';
 import { nextInt, type RngState } from './random.ts';
 import type { CareerEffect } from './career.ts';
+import type { StaffEffect } from './staff.ts';
 import type { PoliticalEffect } from './world.ts';
 
 export type EffectRange =
@@ -42,6 +43,7 @@ export type EffectRange =
 	| { readonly kind: 'mandate'; readonly change: 'grant' | 'end'; readonly mandate: string }
 	| { readonly kind: 'earlyElection'; readonly election: string; readonly delayTurns: number }
 	| { readonly kind: 'candidacy' }
+	| { readonly kind: 'staff'; readonly change: 'hire' | 'dismiss' | 'leave' }
 	| { readonly kind: 'preparation'; readonly value: number };
 
 export type ResolvedEffect =
@@ -62,9 +64,11 @@ export type ResolvedEffect =
 	/** Effet sur un acteur d'événement, appliqué par le moteur d'événements. */
 	| { readonly kind: 'people'; readonly effect: PeopleEffect; readonly rng: RngState }
 	/** Effet de carrière déterministe, appliqué par `applyCareerEffect`. */
-	| { readonly kind: 'career'; readonly effect: CareerEffect; readonly rng: RngState };
+	| { readonly kind: 'career'; readonly effect: CareerEffect; readonly rng: RngState }
+	/** Embauche ou renvoi ciblé, appliqué par `applyStaffEffect`. */
+	| { readonly kind: 'staffAction'; readonly effect: StaffEffect; readonly rng: RngState };
 
-export type PeopleEffect = Extract<Effect, { op: 'addRelation' | 'revealTraits' }>;
+export type PeopleEffect = Extract<Effect, { op: 'addRelation' | 'revealTraits' | 'staffLeaves' }>;
 
 export function clampGauge(value: number): number {
 	return Math.min(GAUGE_MAX, Math.max(GAUGE_MIN, value));
@@ -105,6 +109,12 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'earlyElection', election: effect.election, delayTurns: effect.delayTurns };
 		case 'declareCandidacy':
 			return { kind: 'candidacy' };
+		case 'hireStaff':
+			return { kind: 'staff', change: 'hire' };
+		case 'dismissStaff':
+			return { kind: 'staff', change: 'dismiss' };
+		case 'staffLeaves':
+			return { kind: 'staff', change: 'leave' };
 		case 'prepareCampaign':
 			return { kind: 'preparation', value: effect.value };
 		default: {
@@ -139,6 +149,11 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 		case 'declareCandidacy':
 		case 'prepareCampaign':
 			return { kind: 'career', effect, rng };
+		case 'hireStaff':
+		case 'dismissStaff':
+			return { kind: 'staffAction', effect, rng };
+		case 'staffLeaves':
+			return { kind: 'people', effect, rng };
 		default: {
 			const unknown: never = effect;
 			throw new Error(`Effet inconnu : ${JSON.stringify(unknown)}`);

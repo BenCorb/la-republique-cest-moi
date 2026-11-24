@@ -123,5 +123,16 @@
 		"rivalExperienceCap": 2,
 		"rivalryAttitude": -8,
 		"opponentMaxAge": 72
+	},
+	"entourage": {
+		"candidatesPerPost": 3,
+		"competenceReference": 60,
+		"hireAttitude": 10,
+		"unpaidAttitude": -5,
+		"dismissAttitude": -20,
+		"resignAttitude": -30,
+		"preciseAdviceCompetence": 70,
+		"fairAdviceCompetence": 45,
+		"poorAdviceErrorChance": 0.35
 	}
 }

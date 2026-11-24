@@ -1,7 +1,7 @@
 # La République, c’est moi ! — Feuille de route
 
 **Version 0.1 — 24 novembre 2026**  
-**Statut :** phases 0 et 1 terminées et intégrées à `main` (PR #4, CI verte, 24 novembre 2026) ; P0-01 à P0-06 et P1-01 à P1-10 réalisées et vérifiées (✅ = tâche terminée dans les tableaux). Phase 2 en cours sur `feat/p2-alpha` (§4.1) : P2-01 à P2-04, P2-06 et P2-07 réalisées et vérifiées. Le site publié montre encore la phase 0. Reprise : voir §9.
+**Statut :** phases 0 et 1 terminées et intégrées à `main` (PR #4, CI verte, 24 novembre 2026) ; P0-01 à P0-06 et P1-01 à P1-10 réalisées et vérifiées (✅ = tâche terminée dans les tableaux). Phase 2 en cours sur `feat/p2-alpha` (§4.1) : P2-01 à P2-07 réalisées et vérifiées. Le site publié montre encore la phase 0. Reprise : voir §9.
 
 **Références :** [GAME_DESIGN.md](GAME_DESIGN.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN.md](DESIGN.md), [AGENTS.md](AGENTS.md).
 
@@ -64,7 +64,7 @@ Actions de militantisme, rencontres, recrutement générique, organisation, repo
 | P2-02 ✅ | Calendrier électoral et mandats | P2-01 | Échéances visibles, durée et incompatibilités vérifiées ; élections anticipées possibles via événement |
 | P2-03 ✅ | Candidatures et campagne | P2-02 | Candidature libre sous conditions d’éligibilité ; arbitrage tôt/tard ; sondages, scrutin et échec non nécessairement terminal |
 | P2-04 ✅ | Personnages nommés et relations | P2-01 | Acteurs persistants, traits partiellement cachés, vieillissement, départs et mémoire d’actes importants |
-| P2-05 | Entourage et délégation | P2-04 | Recrutement sur postes clés ; missions persistantes, production et événements autonomes ; qualité des conseils variable |
+| P2-05 ✅ | Entourage et délégation | P2-04 | Recrutement sur postes clés ; missions persistantes, production et événements autonomes ; qualité des conseils variable |
 | P2-06 ✅ | Adversaires récurrents | P2-03/04 | Un rival peut réapparaître, évoluer et changer de relation ; pas de personnage décédé candidat |
 | P2-07 ✅ | Groupes de soutien | P2-03/04 | Soutiens électoraux distincts des appuis internes et économiques ; détail public sans fuite de traits cachés |
 | P2-08 | Origines, professions, famille | P2-04 | Profils initiaux cohérents ; famille légère par statistiques, relations et événements ; âge fixe encore possible |
@@ -152,6 +152,6 @@ Les tâches de phase 0 peuvent également être confiées une par une pour facil
 - **Branche :** `feat/p2-alpha`, créée depuis `main` (`0a59481`, fusion « squash » de la phase 1 via la PR #4, CI verte). La branche distante `feat/p1-prototype` a été supprimée ; la copie locale peut l’être aussi. Le site publié montre encore la phase 0 (aucun déploiement demandé).
 - **État :** phases 0 et 1 terminées et intégrées. Phase 2 planifiée au §4.1 (ordre des lots, préalables techniques, décisions retenues).
 - **Où lire :** décisions de chaque tâche de phase 1 dans `ARCHITECTURE.md` (§5.2 bis, §6.1, §7.1 bis, §7.3, §7.4, §8.1 bis, §8.2 bis, §9.1, §10.1, §11.1 bis, §12.1–12.3) ; protocole humain dans `PLAYTEST.md` ; limites, dette et règles provisoires au §15.
-- **Prochaine étape :** P2-01 à P2-04, P2-06 et P2-07 terminées (décisions : ARCHITECTURE §8.3 bis à septies). Suite : P2-05 (entourage et délégation), puis P2-08 (origines, professions, famille). Ne pas déployer sans demande explicite.
+- **Prochaine étape :** P2-01 à P2-07 terminées (décisions : ARCHITECTURE §8.3 bis à octies). Suite : P2-08 (origines, professions, famille), puis P2-09 (accélération et interface) et P2-10 (contenu et tests alpha). Ne pas déployer sans demande explicite.
 - **Décisions attendues du créateur :** relecture des hypothèses provisoires du §4.1 ; coût de la vie personnel ; relecture éditoriale des 30 événements ; déplacement du dépôt hors d’iCloud (§15.4).
 - **Avant de commencer :** `git fetch --prune`, `git status`, rechercher les copies de synchronisation (`find . -path ./node_modules -prune -o -name '* [0-9].*' -print`), `npm ci`, puis `npm run check`, `npm run lint`, `npm run content:validate`, `npm run test` et `npm run build`.

@@ -78,6 +78,8 @@ export interface Character {
 	readonly tags: readonly string[];
 	/** Fonction transmise au successeur à son départ ; `null` : pas de remplacement. */
 	readonly renewal: string | null;
+	/** Compétence générale, de 0 à 100, visible sur le CV d'un candidat (P2-05). */
+	readonly competence: number;
 	/** Traits réels : jamais exposés tels quels au joueur. */
 	readonly traits: readonly string[];
 	/** Traits connus du joueur (publics dès le départ, cachés une fois révélés). */
@@ -202,6 +204,51 @@ export interface Campaign {
 	readonly reason: string | null;
 }
 
+export type StaffLeaveReason = 'resigned' | 'dismissed' | 'poached' | 'retired' | 'died';
+
+/** Collaborateur sur un poste clé (P2-05) ; un départ est conservé pour l'historique. */
+export interface StaffMember {
+	readonly characterId: string;
+	readonly postId: string;
+	/** Trimestre d'embauche : la production commence au trimestre suivant. */
+	readonly hiredTurn: Turn;
+	/** Mission persistante, modifiable hors tour. */
+	readonly missionId: string;
+	readonly status: 'active' | 'left';
+	readonly leftTurn: Turn | null;
+	readonly leaveReason: StaffLeaveReason | null;
+}
+
+/** Candidat présélectionné pour un poste vacant, avec le profil qui l'a fait proposer. */
+export interface ShortlistEntry {
+	readonly characterId: string;
+	readonly profileId: string;
+}
+
+/** Production d'un collaborateur au trimestre résolu. */
+export interface StaffProductionRecord {
+	readonly characterId: string;
+	readonly missionId: string;
+	/** `unpaid` : salaire impayé faute de budget, aucune production. */
+	readonly status: 'active' | 'unpaid';
+	readonly changes: readonly ResourceChange[];
+	readonly politics: readonly PoliticalChange[];
+	readonly stress: number;
+}
+
+/** Entourage à la fin du trimestre : salaires, production, départs et présélections. */
+export interface StaffRecord {
+	readonly payroll: readonly ResourceChange[];
+	readonly production: readonly StaffProductionRecord[];
+	readonly departures: readonly {
+		readonly characterId: string;
+		readonly postId: string;
+		readonly reason: StaffLeaveReason;
+	}[];
+	/** Postes pour lesquels une nouvelle présélection a été proposée. */
+	readonly shortlisted: readonly string[];
+}
+
 /** Règles du cumul en vigueur, copiées du catalogue (modifiables par réforme, P3-05). */
 export interface InstitutionsState extends InstitutionsDefinition {
 	/** Mandats à détenir pour en obtenir un autre, par définition (copie de `requires`). */
@@ -229,6 +276,13 @@ export type PoliticalChange =
 			readonly invested: boolean;
 	  }
 	| { readonly kind: 'preparation'; readonly delta: number }
+	| { readonly kind: 'hired'; readonly characterId: string; readonly postId: string }
+	| {
+			readonly kind: 'staffLeft';
+			readonly characterId: string;
+			readonly postId: string;
+			readonly reason: StaffLeaveReason;
+	  }
 	| {
 			readonly kind: 'earlyElection';
 			readonly ballotId: string;
@@ -403,6 +457,8 @@ export interface HistoryEntry {
 	readonly economy: EconomyRecord;
 	/** Revenus et stress des mandats exercés au trimestre T. */
 	readonly mandates: { readonly changes: readonly ResourceChange[]; readonly stress: number };
+	/** Entourage : salaires et missions du trimestre T, départs et présélections à la frontière. */
+	readonly staff: StaffRecord | null;
 	/** Charge de travail, récupération, vieillissement et éventuel décès. */
 	readonly wellbeing: WellbeingRecord;
 	/** Vieillissement, départs et successions, `null` si la carrière s'est terminée avant. */
@@ -469,6 +525,10 @@ export interface GameState {
 	/** Candidatures du joueur, en cours et passées, dans l'ordre de déclaration. */
 	readonly campaigns: readonly Campaign[];
 	readonly institutions: InstitutionsState;
+	/** Entourage : collaborateurs en poste et partis, dans l'ordre d'embauche. */
+	readonly staff: readonly StaffMember[];
+	/** Présélections ouvertes, par poste vacant. */
+	readonly shortlists: Readonly<Record<string, readonly ShortlistEntry[]>>;
 	/** Journal : trimestres résolus et choix, dans l'ordre chronologique. */
 	readonly history: readonly JournalEntry[];
 	readonly end: EndState | null;
@@ -510,6 +570,8 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		mandates: [],
 		ballots: createCalendar(START_TURN, content),
 		campaigns: [],
+		staff: [],
+		shortlists: {},
 		institutions: {
 			incompatibilities: content.institutions.incompatibilities.map(
 				([left, right]) => [left, right] as const

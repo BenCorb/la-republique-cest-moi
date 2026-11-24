@@ -12,6 +12,14 @@ async function startCareer(page: Page, seed = 'e2e'): Promise<void> {
 	await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 25 ans');
 }
 
+/** Tranche les décisions éventuelles en prenant le premier choix disponible. */
+async function settleDecisions(page: Page): Promise<void> {
+	const dialog = page.getByRole('dialog');
+	for (let index = 0; index < 5 && (await dialog.isVisible()); index += 1) {
+		await dialog.getByRole('button').and(page.locator(':enabled')).first().click();
+	}
+}
+
 /** Valide des trimestres vides jusqu'à l'apparition d'une décision (au plus `limit`). */
 async function advanceUntilDecision(page: Page, limit = 40): Promise<void> {
 	const next = page.getByRole('button', { name: 'Trimestre suivant' });
@@ -93,11 +101,20 @@ test.describe('parcours de jeu', () => {
 			.click();
 		await expect(municipal).toContainText('Candidature prévue ce trimestre.');
 		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		// Un événement peut survenir : il ne fait pas partie de ce parcours.
+		await expect(page.getByTestId('game-date')).toHaveText('T2 2000 · 25 ans');
+		await settleDecisions(page);
 		await page.getByRole('button', { name: 'Carrière', exact: true }).click();
 		await expect(page.getByTestId('campaign-campaign.1')).toContainText('Candidature déposée');
 		await expect(page.getByTestId('poll-campaign.1')).toContainText('Sondage : entre');
 		await expect(page.getByTestId('opponent-campaign.1')).toContainText('Adversaire : ');
 		await expect(page.getByTestId('opponent-campaign.1')).not.toContainText('prochain trimestre');
+
+		// Entourage : postes verrouillés tant que l'influence manque.
+		await page.getByRole('button', { name: 'Entourage', exact: true }).click();
+		await expect(page.getByTestId('post-post.chief_of_staff')).toContainText(
+			'Il faut au moins 15 points d’influence'
+		);
 	});
 
 	test('adhère à un parti depuis le monde politique', async ({ page }) => {
@@ -283,6 +300,7 @@ test.describe('parcours de jeu', () => {
 			'Agenda',
 			'Carrière',
 			'Monde politique',
+			'Entourage',
 			'Relations',
 			'Organisation',
 			'Journal'

@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.13.0';
+export const RULES_VERSION = '0.14.0';
 
 export {
 	START_YEAR,
@@ -68,6 +68,11 @@ export {
 	type BallotShare,
 	type Campaign,
 	type CampaignStatus,
+	type ShortlistEntry,
+	type StaffLeaveReason,
+	type StaffMember,
+	type StaffProductionRecord,
+	type StaffRecord,
 	type DeadlinesRecord,
 	type InstitutionsState,
 	type MandateEndReason,
@@ -84,6 +89,25 @@ export {
 	type WorldRecord,
 	type WorldState
 } from './state.ts';
+export {
+	activeStaff,
+	applyStaffEffect,
+	dismissIssue,
+	hireIssue,
+	isStaffEffect,
+	missionIssue,
+	occupantOf,
+	pollingCompetence,
+	postUnlocked,
+	resolveStaffFrontier,
+	resolveStaffProduction,
+	scaledValue,
+	staffLeavesByEvent,
+	staffTimeBonus,
+	type EntourageParts,
+	type ProductionParts,
+	type StaffEffect
+} from './staff.ts';
 export {
 	computePopularity,
 	partyAffinity,
@@ -123,6 +147,8 @@ export {
 } from './career.ts';
 export {
 	addRelation,
+	COMPETENCE_MAX,
+	COMPETENCE_MIN,
 	characterId,
 	completeCastingExists,
 	createCast,
@@ -151,8 +177,10 @@ export {
 	type WorldCreation
 } from './world.ts';
 export {
+	assignMissionCommand,
 	chooseEventCommand,
 	commitTurn,
+	type AssignMissionCommand,
 	type ChooseEventCommand,
 	type CommandError,
 	type CommandErrorCode,

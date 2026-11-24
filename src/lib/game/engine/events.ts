@@ -50,6 +50,7 @@ import {
 } from './characters.ts';
 import { applyPoliticalEffect, oppositionPartyId } from './world.ts';
 import { applyCareerEffect, careerEffectIssue, type CareerParts } from './career.ts';
+import { staffLeavesByEvent } from './staff.ts';
 import type {
 	Character,
 	ChoiceRecord,
@@ -174,6 +175,9 @@ interface EffectParts {
 	readonly characters: Readonly<Record<string, Character>>;
 	readonly relationships: Readonly<Record<string, Relationship>>;
 	readonly career: CareerParts;
+	/** Collaborateurs et présélections (P2-05). */
+	readonly staff: GameState['staff'];
+	readonly shortlists: GameState['shortlists'];
 	readonly rng: RngState;
 }
 
@@ -193,7 +197,8 @@ function applyAutomaticEffects(
 	content: Content
 ): EffectOutcome {
 	const current: Record<ResourceId, number> = { ...parts.resources };
-	let { player, world, characters, relationships, career, rng } = parts;
+	let { player, world, characters, relationships, career, staff, rng } = parts;
+	const { shortlists } = parts;
 	const politics: PoliticalChange[] = [];
 	const people: PeopleChange[] = [];
 	const deltas = new Map<ResourceId, number>();
@@ -221,7 +226,15 @@ function applyAutomaticEffects(
 			// Un acteur parti entre-temps n'est plus concerné.
 			const character = characters[actors[resolved.effect.role] ?? ''];
 			if (!character || character.status !== 'active') continue;
-			if (resolved.effect.op === 'addRelation') {
+			if (resolved.effect.op === 'staffLeaves') {
+				const outcome = staffLeavesByEvent(
+					{ staff, shortlists, characters, relationships },
+					character.id,
+					turn
+				);
+				staff = outcome.parts.staff;
+				politics.push(...outcome.changes);
+			} else if (resolved.effect.op === 'addRelation') {
 				const memory =
 					resolved.effect.memory === undefined
 						? null
@@ -245,6 +258,8 @@ function applyAutomaticEffects(
 			const outcome = applyCareerEffect(resolved.effect, career, turn, null, content, player);
 			career = outcome.parts;
 			politics.push(...outcome.changes);
+		} else if (resolved.kind === 'staffAction') {
+			throw new Error(`Embauche ou renvoi hors du plan : ${resolved.effect.op}`);
 		} else {
 			const key = resolved.gauge === 'player.health' ? 'health' : 'stress';
 			const { value, applied } = applyGauge(player[key], resolved.delta);
@@ -260,6 +275,8 @@ function applyAutomaticEffects(
 		characters,
 		relationships,
 		career,
+		staff,
+		shortlists,
 		rng,
 		politics,
 		people,
@@ -374,6 +391,8 @@ export interface FrontierInput {
 	readonly characters: Readonly<Record<string, Character>>;
 	readonly relationships: Readonly<Record<string, Relationship>>;
 	readonly career: CareerParts;
+	readonly staff: GameState['staff'];
+	readonly shortlists: GameState['shortlists'];
 }
 
 export interface FrontierResult {
@@ -383,6 +402,8 @@ export interface FrontierResult {
 	readonly characters: Readonly<Record<string, Character>>;
 	readonly relationships: Readonly<Record<string, Relationship>>;
 	readonly career: CareerParts;
+	readonly staff: GameState['staff'];
+	readonly shortlists: GameState['shortlists'];
 	readonly rng: RngState;
 	readonly nextInstanceNumber: number;
 	readonly events: EventsState;
@@ -391,8 +412,18 @@ export interface FrontierResult {
 }
 
 export function resolveEventFrontier(input: FrontierInput, content: Content): FrontierResult {
-	let { player, resources, rng, nextInstanceNumber, world, characters, relationships, career } =
-		input;
+	let {
+		player,
+		resources,
+		rng,
+		nextInstanceNumber,
+		world,
+		characters,
+		relationships,
+		career,
+		staff
+	} = input;
+	const { shortlists } = input;
 	const pool = (): CastPool => ({ characters, relationships });
 	const turn = input.turn;
 	const pending: EventInstance[] = [...input.events.pending];
@@ -410,6 +441,7 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		world,
 		mandates: career.mandates,
 		campaigns: career.campaigns,
+		staff,
 		institutions: career.institutions
 	});
 
@@ -450,12 +482,12 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		const outcome = applyAutomaticEffects(
 			definition.effects,
 			[],
-			{ resources, player, world, characters, relationships, career, rng },
+			{ resources, player, world, characters, relationships, career, staff, shortlists, rng },
 			actors,
 			turn,
 			content
 		);
-		({ resources, player, rng, world, characters, relationships, career } = outcome);
+		({ resources, player, rng, world, characters, relationships, career, staff } = outcome);
 		records.push({
 			eventId: definition.id,
 			instanceId: instance.instanceId,
@@ -564,6 +596,8 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		characters,
 		relationships,
 		career,
+		staff,
+		shortlists,
 		rng,
 		nextInstanceNumber,
 		events: {
@@ -663,6 +697,8 @@ export function chooseEvent(
 				campaigns: state.campaigns,
 				institutions: state.institutions
 			},
+			staff: state.staff,
+			shortlists: state.shortlists,
 			rng: state.rng
 		},
 		instance.actors,
@@ -700,7 +736,8 @@ export function chooseEvent(
 		world: outcome.world,
 		mandates: outcome.career.mandates,
 		campaigns: outcome.career.campaigns,
-		institutions: outcome.career.institutions
+		institutions: outcome.career.institutions,
+		staff: outcome.staff
 	};
 	const cancelled: { instanceId: string; reason: string }[] = [];
 	const remaining = state.events.pending.slice(1).filter((other) => {
@@ -747,6 +784,7 @@ export function chooseEvent(
 			ballots: outcome.career.ballots,
 			campaigns: outcome.career.campaigns,
 			institutions: outcome.career.institutions,
+			staff: outcome.staff,
 			rng: outcome.rng,
 			phase: deathCause ? 'ended' : remaining.length > 0 ? 'decision' : 'planning',
 			end: deathCause ? { turn: state.turn, reason: 'death', cause: deathCause } : null,

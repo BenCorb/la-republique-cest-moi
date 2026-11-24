@@ -411,6 +411,39 @@
 					"value": 1
 				}
 			]
+		},
+		{
+			"id": "staff.hire",
+			"label": "Recruter un collaborateur",
+			"description": "Un entretien, une poignée de main et une promesse de « missions passionnantes ». Le salaire, lui, est bien réel.",
+			"timeCost": 10,
+			"maxPerTurn": 2,
+			"costs": [],
+			"effects": [
+				{
+					"op": "hireStaff"
+				}
+			],
+			"target": "candidate"
+		},
+		{
+			"id": "staff.dismiss",
+			"label": "Se séparer d’un collaborateur",
+			"description": "Un entretien pénible, un pot de départ gêné et quelqu’un qui se souviendra longtemps de vous.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [],
+			"effects": [
+				{
+					"op": "dismissStaff"
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				}
+			],
+			"target": "staff"
 		}
 	]
 }

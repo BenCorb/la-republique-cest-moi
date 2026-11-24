@@ -26,6 +26,10 @@ import {
 	type AgeBand,
 	type AxisDefinition,
 	type CampaignsBalance,
+	type CandidateProfileDefinition,
+	type EntourageBalance,
+	type MissionDefinition,
+	type PostDefinition,
 	type CharactersBalance,
 	type ElectionDefinition,
 	type ElectionsBalance,
@@ -145,6 +149,12 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 		mandate: z.union([contentId, z.literal('target')])
 	}),
 	z.strictObject({ op: z.literal('declareCandidacy') }),
+	z.strictObject({ op: z.literal('hireStaff') }),
+	z.strictObject({ op: z.literal('dismissStaff') }),
+	z.strictObject({
+		op: z.literal('staffLeaves'),
+		role: z.string().regex(/^[a-z][a-z0-9_]*$/, 'rôle en minuscules')
+	}),
 	z.strictObject({
 		op: z.literal('prepareCampaign'),
 		value: safeInt.refine((value) => value > 0 && value <= 100, 'préparation de 1 à 100')
@@ -172,7 +182,7 @@ export const actionSchema: z.ZodType<ActionDefinition> = z
 		requires: conditionSchema.optional(),
 		unavailableReason: frenchText.optional(),
 		effects: z.array(effectSchema).min(1),
-		target: z.enum(['party', 'mandate', 'ballot']).optional()
+		target: z.enum(['party', 'mandate', 'ballot', 'candidate', 'staff']).optional()
 	})
 	.refine(
 		(action) => (action.requires === undefined) === (action.unavailableReason === undefined),
@@ -568,6 +578,67 @@ export const campaignsBalanceSchema: z.ZodType<CampaignsBalance> = z.strictObjec
 	opponentMaxAge: positiveInt
 });
 
+export const entourageBalanceSchema: z.ZodType<EntourageBalance> = z
+	.strictObject({
+		candidatesPerPost: positiveInt.refine((value) => value <= 6, 'au plus 6 candidats'),
+		competenceReference: positiveInt,
+		hireAttitude: safeInt,
+		unpaidAttitude: safeInt,
+		dismissAttitude: safeInt,
+		resignAttitude: safeInt.refine((value) => value >= -100 && value <= 0, 'seuil de -100 à 0'),
+		preciseAdviceCompetence: gaugeValue,
+		fairAdviceCompetence: gaugeValue,
+		poorAdviceErrorChance: probability
+	})
+	.refine((balance) => balance.fairAdviceCompetence <= balance.preciseAdviceCompetence, {
+		message: 'le seuil du conseil indicatif dépasse celui du conseil précis',
+		path: ['fairAdviceCompetence']
+	});
+
+const missionSchema: z.ZodType<MissionDefinition> = z.strictObject({
+	id: contentId.refine((value) => value.startsWith('mission.'), 'identifiant « mission.nom »'),
+	label: frenchText,
+	description: frenchText,
+	effects: z.array(effectSchema),
+	timeBonus: nonNegativeInt,
+	pollPrecision: z.boolean()
+});
+
+export const postSchema: z.ZodType<PostDefinition> = z
+	.strictObject({
+		id: contentId.refine((value) => value.startsWith('post.'), 'identifiant « post.nom »'),
+		label: frenchText,
+		description: frenchText,
+		tag: shortId,
+		salaryCents: nonNegativeInt,
+		requires: conditionSchema.optional(),
+		unavailableReason: frenchText.optional(),
+		adviceCategories: z.array(shortId),
+		missions: z.array(missionSchema).min(1)
+	})
+	.refine((post) => (post.requires === undefined) === (post.unavailableReason === undefined), {
+		message: '« requires » et « unavailableReason » vont ensemble',
+		path: ['unavailableReason']
+	});
+
+const candidateProfileSchema: z.ZodType<CandidateProfileDefinition> = z
+	.strictObject({
+		id: contentId.refine((value) => value.startsWith('profile.'), 'identifiant « profile.nom »'),
+		label: frenchText,
+		minCompetence: gaugeValue,
+		maxCompetence: gaugeValue,
+		traits: z.array(contentId)
+	})
+	.refine((profile) => profile.minCompetence <= profile.maxCompetence, {
+		message: 'compétence minimale supérieure à la maximale',
+		path: ['maxCompetence']
+	});
+
+export const entourageCatalogSchema = z.strictObject({
+	posts: z.array(postSchema).min(1),
+	profiles: z.array(candidateProfileSchema).min(1)
+});
+
 export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	timeBudgetPerTurn: positiveInt,
 	startingResources: z.strictObject({
@@ -581,5 +652,6 @@ export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	characters: charactersBalanceSchema,
 	elections: electionsBalanceSchema,
 	supports: supportsBalanceSchema,
-	campaigns: campaignsBalanceSchema
+	campaigns: campaignsBalanceSchema,
+	entourage: entourageBalanceSchema
 });

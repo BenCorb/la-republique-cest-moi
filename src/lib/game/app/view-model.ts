@@ -11,6 +11,7 @@ import {
 	INDICATOR_IDS,
 	RESOURCE_IDS,
 	type Content,
+	type Effect,
 	type ResourceAmount,
 	type ResourceId
 } from '../content/types.ts';
@@ -34,8 +35,14 @@ import {
 	type Ballot,
 	type DeadlinesRecord,
 	type MandateEndReason,
+	type StaffLeaveReason,
 	activeMandates,
+	activeStaff,
 	campaignPoll,
+	pollingCompetence,
+	postUnlocked,
+	staffTimeBonus,
+	hashSeed,
 	mainMandate,
 	reservedTime,
 	type WellbeingSource,
@@ -46,6 +53,7 @@ import {
 	INDICATOR_NAMES,
 	RESOURCE_NAMES,
 	describeAxisPosition,
+	describeCompetence,
 	describePopularity,
 	describeSupport,
 	describeHealth,
@@ -133,6 +141,18 @@ export interface ChoiceView {
 	readonly reason: string | null;
 }
 
+/**
+ * Avis d'un collaborateur sur une décision (GDD §6.3) : précis s'il est très
+ * compétent, indicatif sinon, et parfois faux s'il est médiocre. Il ne porte que
+ * sur des effets chiffrables, jamais sur les relations ni les traits cachés.
+ */
+export interface AdviceView {
+	readonly adviser: string;
+	readonly quality: 'precise' | 'fair' | 'poor';
+	/** Lignes d'avis par identifiant de choix. */
+	readonly choices: Readonly<Record<string, readonly string[]>>;
+}
+
 export interface DecisionView {
 	readonly instanceId: string;
 	readonly title: string;
@@ -140,6 +160,7 @@ export interface DecisionView {
 	readonly category: string;
 	readonly choices: readonly ChoiceView[];
 	readonly remaining: number;
+	readonly advice: AdviceView | null;
 }
 
 export interface JournalLine {
@@ -314,6 +335,59 @@ export interface SupportsView {
 	readonly influence: readonly SupportGroupView[];
 }
 
+export interface StaffPersonView {
+	readonly characterId: string;
+	readonly name: string;
+	readonly age: number;
+	readonly competence: GaugeDescription;
+	readonly knownTraits: readonly string[];
+	readonly unknownTraits: number;
+}
+
+export interface PostView {
+	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	readonly salary: string;
+	readonly lockedReason: string | null;
+	readonly occupant:
+		| (StaffPersonView & {
+				readonly since: string;
+				readonly attitude: string;
+				readonly attitudeTone: PersonView['attitudeTone'];
+				readonly missions: readonly {
+					readonly id: string;
+					readonly label: string;
+					readonly description: string;
+					readonly active: boolean;
+				}[];
+				readonly producing: boolean;
+				readonly dismissPlanned: boolean;
+				readonly dismissable: boolean;
+				readonly dismissReason: string | null;
+		  })
+		| null;
+	readonly candidates: readonly (StaffPersonView & {
+		readonly profile: string;
+		readonly planned: boolean;
+		readonly hireable: boolean;
+		readonly reason: string | null;
+	})[];
+}
+
+export interface EntourageView {
+	readonly posts: readonly PostView[];
+	readonly hireActionId: string | null;
+	readonly dismissActionId: string | null;
+	/** Temps rendu ce trimestre par les missions qui tiennent l'agenda. */
+	readonly timeBonus: number;
+	readonly former: readonly {
+		readonly name: string;
+		readonly post: string;
+		readonly period: string;
+	}[];
+}
+
 export interface PlayerView {
 	readonly dateLabel: string;
 	readonly age: number;
@@ -339,6 +413,7 @@ export interface PlayerView {
 	readonly people: readonly PersonView[];
 	readonly career: CareerView;
 	readonly supports: SupportsView;
+	readonly entourage: EntourageView;
 }
 
 const FAMILY_LABELS: Readonly<Record<string, string>> = {
@@ -408,6 +483,12 @@ function describeEffect(range: EffectRange, content: Content): string {
 			return `Élection anticipée : ${content.elections[range.election]?.label ?? range.election}`;
 		case 'candidacy':
 			return 'Candidature déposée';
+		case 'staff':
+			return range.change === 'hire'
+				? 'Embauche'
+				: range.change === 'dismiss'
+					? 'Renvoi'
+					: 'Départ d’un collaborateur';
 		case 'preparation':
 			return `Préparation de campagne + ${range.value}`;
 	}
@@ -437,12 +518,24 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 						: 'candidature déposée sans investiture';
 				case 'preparation':
 					return `préparation de campagne + ${change.delta}`;
+				case 'hired':
+					return `embauche au poste « ${content.posts[change.postId]?.label ?? change.postId} »`;
+				case 'staffLeft':
+					return `départ du poste « ${content.posts[change.postId]?.label ?? change.postId} » (${STAFF_LEAVE_LABELS[change.reason]})`;
 				case 'earlyElection':
 					return `${content.elections[change.electionId]?.label ?? change.electionId} anticipées au ${formatTurn(change.turn)}`;
 			}
 		})
 		.join(', ');
 }
+
+const STAFF_LEAVE_LABELS: { readonly [K in StaffLeaveReason]: string } = {
+	resigned: 'démission',
+	dismissed: 'renvoi',
+	poached: 'débauchage',
+	retired: 'retraite',
+	died: 'décès'
+};
 
 const MANDATE_END_LABELS: { readonly [K in MandateEndReason]: string } = {
 	term: 'fin du terme',
@@ -865,7 +958,8 @@ function buildPeople(state: GameState, content: Content): PersonView[] {
 	const now = state.end ? state.end.turn : state.turn;
 	const people = Object.entries(state.relationships).flatMap(([id, relationship]) => {
 		const character = state.characters[id];
-		if (!character) return [];
+		// Les candidats non retenus ne sont que des CV : ils n'entrent pas dans vos relations.
+		if (!character || character.tags.includes('candidate')) return [];
 		const lastTurn = character.leftTurn ?? now;
 		return [
 			{
@@ -962,7 +1056,8 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 							state.mandates,
 							content,
 							state.characters,
-							state.campaigns
+							state.campaigns,
+							pollingCompetence(state.staff, state.characters, state.turn, content)
 						)
 					: null,
 			outcome
@@ -1110,6 +1205,194 @@ function buildSupports(state: GameState, content: Content): SupportsView {
 	};
 }
 
+function personOf(state: GameState, characterId: string, content: Content): StaffPersonView {
+	const character = state.characters[characterId]!;
+	return {
+		characterId,
+		name: displayName(character),
+		age: ageAt(character.birthTurn, state.turn),
+		competence: describeCompetence(character.competence),
+		knownTraits: character.knownTraits.map((trait) => content.traits[trait]?.label ?? trait),
+		unknownTraits: character.traits.length - character.knownTraits.length
+	};
+}
+
+function buildEntourage(
+	state: GameState,
+	plan: readonly PlanStep[],
+	content: Content
+): EntourageView {
+	const hireActionId =
+		content.actionIds.find((id) => content.actions[id]?.target === 'candidate') ?? null;
+	const dismissActionId =
+		content.actionIds.find((id) => content.actions[id]?.target === 'staff') ?? null;
+	const planned = (actionId: string | null, target: string): boolean =>
+		actionId !== null &&
+		plan.some((step) => step.kind === 'action' && step.id === actionId && step.target === target);
+	const posts: PostView[] = content.postIds.map((postId) => {
+		const post = content.posts[postId]!;
+		const member = activeStaff(state.staff).find((entry) => entry.postId === postId);
+		const unlocked = postUnlocked(postId, state, content);
+		const occupant = member
+			? (() => {
+					const relationship = state.relationships[member.characterId];
+					const dismiss = dismissActionId
+						? addability(
+								state,
+								plan,
+								{ kind: 'action', id: dismissActionId, target: member.characterId },
+								content
+							)
+						: { addable: false, reason: null };
+					return {
+						...personOf(state, member.characterId, content),
+						since: `En poste depuis le ${formatTurn(member.hiredTurn)}`,
+						...describeAttitude(relationship?.attitude ?? 0),
+						missions: post.missions.map((mission) => ({
+							id: mission.id,
+							label: mission.label,
+							description: mission.description,
+							active: mission.id === member.missionId
+						})),
+						producing: member.hiredTurn < state.turn,
+						dismissPlanned: planned(dismissActionId, member.characterId),
+						dismissable: dismiss.addable,
+						dismissReason: dismiss.reason
+					};
+				})()
+			: null;
+		const candidates = member
+			? []
+			: (state.shortlists[postId] ?? []).flatMap((entry) => {
+					const character = state.characters[entry.characterId];
+					if (!character || character.status !== 'active') return [];
+					const hire = hireActionId
+						? addability(
+								state,
+								plan,
+								{ kind: 'action', id: hireActionId, target: entry.characterId },
+								content
+							)
+						: { addable: false, reason: null };
+					return [
+						{
+							...personOf(state, entry.characterId, content),
+							profile:
+								content.candidateProfiles.find((profile) => profile.id === entry.profileId)
+									?.label ?? '',
+							planned: planned(hireActionId, entry.characterId),
+							hireable: hire.addable,
+							reason: hire.reason
+						}
+					];
+				});
+		return {
+			id: postId,
+			label: post.label,
+			description: post.description,
+			salary: `${formatResource('politicalBudgetCents', post.salaryCents)} par trimestre`,
+			lockedReason: unlocked ? null : (post.unavailableReason ?? 'Poste pas encore accessible.'),
+			occupant,
+			candidates
+		};
+	});
+	return {
+		posts,
+		hireActionId,
+		dismissActionId,
+		timeBonus: staffTimeBonus(state.staff, state.characters, state.turn, content),
+		former: state.staff
+			.filter((member) => member.status === 'left')
+			.map((member) => ({
+				name: displayName(state.characters[member.characterId]!),
+				post: content.posts[member.postId]?.label ?? member.postId,
+				period: `${formatTurn(member.hiredTurn)} – ${formatTurn(member.leftTurn ?? member.hiredTurn)} (${STAFF_LEAVE_LABELS[member.leaveReason ?? 'resigned']})`
+			}))
+			.reverse()
+	};
+}
+
+/** Effets d'un choix que peut chiffrer un conseiller (ni relations, ni traits, ni carrière). */
+function advisableRanges(effects: readonly Effect[]): EffectRange[] {
+	return effects
+		.map(effectRange)
+		.filter((range) =>
+			['resource', 'gauge', 'support', 'indicator', 'partyStrength'].includes(range.kind)
+		);
+}
+
+function rangeDirection(range: EffectRange): number {
+	switch (range.kind) {
+		case 'resource':
+		case 'gauge':
+			return Math.sign(range.min + range.max);
+		case 'support':
+		case 'indicator':
+		case 'partyStrength':
+			return Math.sign(range.value);
+		default:
+			return 0;
+	}
+}
+
+function rangeName(range: EffectRange, content: Content): string {
+	switch (range.kind) {
+		case 'resource':
+			return RESOURCE_NAMES[range.resource];
+		case 'gauge':
+			return GAUGE_NAMES[range.gauge];
+		case 'support':
+			return `Soutien : ${content.supportGroups[range.group]?.label ?? range.group}`;
+		case 'indicator':
+			return INDICATOR_NAMES[range.indicator];
+		case 'partyStrength':
+			return `Intentions de vote (${partyLabel(range.party, content)})`;
+		default:
+			return '';
+	}
+}
+
+function buildAdvice(
+	state: GameState,
+	instanceId: string,
+	eventId: string,
+	content: Content
+): AdviceView | null {
+	const definition = content.events[eventId];
+	if (!definition?.blocking) return null;
+	let best: { name: string; post: string; competence: number } | null = null;
+	for (const member of activeStaff(state.staff)) {
+		const post = content.posts[member.postId];
+		const character = state.characters[member.characterId];
+		if (!post || !character || !post.adviceCategories.includes(definition.category)) continue;
+		if (!best || character.competence > best.competence) {
+			best = { name: displayName(character), post: post.label, competence: character.competence };
+		}
+	}
+	if (!best) return null;
+	const balance = content.balance.entourage;
+	const quality: AdviceView['quality'] =
+		best.competence >= balance.preciseAdviceCompetence
+			? 'precise'
+			: best.competence >= balance.fairAdviceCompetence
+				? 'fair'
+				: 'poor';
+	const choices: Record<string, string[]> = {};
+	for (const choice of definition.choices) {
+		choices[choice.id] = advisableRanges(choice.effects).map((range, index) => {
+			if (quality === 'precise') return describeEffect(range, content);
+			let direction = rangeDirection(range);
+			// Un conseil médiocre se trompe parfois de sens, toujours de la même façon pour ce choix.
+			if (quality === 'poor') {
+				const roll = hashSeed(`${instanceId}:${choice.id}:${index}`) % 1000;
+				if (roll < balance.poorAdviceErrorChance * 1000) direction = -direction;
+			}
+			return `${rangeName(range, content)} : ${direction > 0 ? 'en hausse' : direction < 0 ? 'en baisse' : 'stable'}`;
+		});
+	}
+	return { adviser: `${best.name} (${best.post})`, quality, choices };
+}
+
 export function projectView(
 	state: GameState,
 	plan: readonly PlanStep[],
@@ -1209,7 +1492,8 @@ export function projectView(
 					costs: amounts(choice.costs, -1),
 					available: choice.available,
 					reason: choice.reason
-				}))
+				})),
+				advice: buildAdvice(state, pending.instanceId, pending.eventId, content)
 			}
 		: null;
 
@@ -1295,6 +1579,7 @@ export function projectView(
 		world: buildWorld(state, plan, content),
 		people: buildPeople(state, content),
 		career: buildCareer(state, plan, content),
-		supports: buildSupports(state, content)
+		supports: buildSupports(state, content),
+		entourage: buildEntourage(state, plan, content)
 	};
 }

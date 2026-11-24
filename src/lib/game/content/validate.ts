@@ -17,6 +17,7 @@ import {
 	traitCatalogSchema,
 	careerCatalogSchema,
 	supportCatalogSchema,
+	entourageCatalogSchema,
 	upgradeCatalogSchema,
 	worldSchema
 } from './schemas.ts';
@@ -34,6 +35,8 @@ import {
 	type EventDefinition,
 	type InstitutionsDefinition,
 	type MandateDefinition,
+	type MissionDefinition,
+	type PostDefinition,
 	type SupportGroupDefinition,
 	type PartyDefinition,
 	type ResourceAmount,
@@ -69,6 +72,8 @@ export interface RawContent {
 	readonly career: unknown;
 	/** Groupes de soutien (`supports.json`). */
 	readonly supports: unknown;
+	/** Postes clés et missions de l'entourage (`entourage.json`). */
+	readonly entourage: unknown;
 }
 
 export type ContentValidation =
@@ -290,7 +295,7 @@ function conditionIssues(
 function effectIssues(
 	effects: readonly Effect[],
 	refs: Refs,
-	targetKind: 'party' | 'mandate' | 'ballot' | null,
+	targetKind: 'party' | 'mandate' | 'ballot' | 'candidate' | 'staff' | null,
 	source: string,
 	path: string,
 	roles: ReadonlySet<string> | null = null
@@ -333,6 +338,33 @@ function effectIssues(
 					}
 				} else if (!refs.parties.has(effect.party)) {
 					issues.push({ source, path: `${at}.party`, message: `parti inconnu : ${effect.party}` });
+				}
+				break;
+			case 'hireStaff':
+				if (targetKind !== 'candidate') {
+					issues.push({
+						source,
+						path: at,
+						message: 'embauche réservée aux actions ciblant un candidat'
+					});
+				}
+				break;
+			case 'dismissStaff':
+				if (targetKind !== 'staff') {
+					issues.push({
+						source,
+						path: at,
+						message: 'renvoi réservé aux actions ciblant un collaborateur'
+					});
+				}
+				break;
+			case 'staffLeaves':
+				if (roles === null || !roles.has(effect.role)) {
+					issues.push({
+						source,
+						path: `${at}.role`,
+						message: `rôle inconnu de l’événement : ${effect.role}`
+					});
 				}
 				break;
 			case 'declareCandidacy':
@@ -446,7 +478,9 @@ function crossCheckPolitics(
 			(effect) =>
 				(effect.op === 'joinParty' && effect.party === 'target') ||
 				(effect.op === 'endMandate' && effect.mandate === 'target') ||
-				effect.op === 'declareCandidacy'
+				effect.op === 'declareCandidacy' ||
+				effect.op === 'hireStaff' ||
+				effect.op === 'dismissStaff'
 		);
 		if (targetKind !== null && !usesTarget) {
 			issues.push({
@@ -502,6 +536,53 @@ function crossCheckSupports(
 			message: 'au moins un groupe électoral est nécessaire à la popularité'
 		});
 	}
+	return issues;
+}
+
+/** Effets permis dans une mission (production déterministe, proportionnelle à la compétence). */
+const MISSION_EFFECTS = new Set(['addResource', 'addSupport', 'addStat', 'prepareCampaign']);
+
+function crossCheckEntourage(
+	posts: readonly PostDefinition[],
+	refs: Refs,
+	knownIds: Set<string>
+): ContentIssue[] {
+	const issues: ContentIssue[] = [];
+	const source = 'entourage.json';
+	const tags = new Set<string>();
+	posts.forEach((post, index) => {
+		const path = `posts[${index}]`;
+		if (knownIds.has(post.id)) {
+			issues.push({ source, path: `${path}.id`, message: `identifiant en double : ${post.id}` });
+		}
+		knownIds.add(post.id);
+		if (tags.has(post.tag)) {
+			issues.push({ source, path: `${path}.tag`, message: `étiquette en double : ${post.tag}` });
+		}
+		tags.add(post.tag);
+		issues.push(...conditionIssues(post.requires, refs, source, `${path}.requires`));
+		post.missions.forEach((mission, missionIndex) => {
+			const missionPath = `${path}.missions[${missionIndex}]`;
+			if (knownIds.has(mission.id)) {
+				issues.push({
+					source,
+					path: `${missionPath}.id`,
+					message: `identifiant en double : ${mission.id}`
+				});
+			}
+			knownIds.add(mission.id);
+			mission.effects.forEach((effect, effectIndex) => {
+				if (!MISSION_EFFECTS.has(effect.op)) {
+					issues.push({
+						source,
+						path: `${missionPath}.effects[${effectIndex}]`,
+						message: `effet non permis dans une mission : ${effect.op}`
+					});
+				}
+			});
+			issues.push(...effectIssues(mission.effects, refs, null, source, `${missionPath}.effects`));
+		});
+	});
 	return issues;
 }
 
@@ -650,10 +731,14 @@ function crossCheckEvents(
 	events: readonly SourcedEvent[],
 	cast: readonly CastMember[],
 	knownIds: Set<string>,
-	traitIds: ReadonlySet<string> = new Set()
+	traitIds: ReadonlySet<string> = new Set(),
+	dynamicTags: ReadonlySet<string> = new Set()
 ): ContentIssue[] {
 	const issues: ContentIssue[] = [];
 	const eventIds = new Set(events.map(({ event }) => event.id));
+	// Un rôle qui exige une étiquette attribuée en cours de partie (collaborateur,
+	// dirigeant) n'a pas d'acteur dans la distribution initiale.
+	const isDynamic = (tags: readonly string[]): boolean => tags.some((tag) => dynamicTags.has(tag));
 
 	const castIds = new Set<string>();
 	cast.forEach((member, index) => {
@@ -694,7 +779,7 @@ function crossCheckEvents(
 			const candidates = cast.filter((member) =>
 				slot.tags.every((tag) => member.tags.includes(tag))
 			);
-			if (candidates.length === 0) {
+			if (candidates.length === 0 && !isDynamic(slot.tags)) {
 				issues.push({
 					source,
 					path: `${path}.actors[${slotIndex}].tags`,
@@ -711,7 +796,9 @@ function crossCheckEvents(
 				}
 			});
 		});
-		if (event.actors.length > cast.length) {
+		if (event.actors.some((slot) => isDynamic(slot.tags))) {
+			// Acteurs pourvus en cours de partie : pas de distribution initiale à vérifier.
+		} else if (event.actors.length > cast.length) {
 			issues.push({
 				source,
 				path: `${path}.actors`,
@@ -837,6 +924,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	const traitCatalog = traitCatalogSchema.safeParse(raw.traits);
 	const careerCatalog = careerCatalogSchema.safeParse(raw.career);
 	const supportCatalog = supportCatalogSchema.safeParse(raw.supports);
+	const entourageCatalog = entourageCatalogSchema.safeParse(raw.entourage);
 	const eventFiles = Object.keys(raw.events)
 		.sort()
 		.map((source) => ({ source, parsed: eventCatalogSchema.safeParse(raw.events[source]) }));
@@ -850,6 +938,9 @@ export function validateContent(raw: RawContent): ContentValidation {
 	if (!traitCatalog.success) issues.push(...zodIssues('traits.json', traitCatalog.error));
 	if (!careerCatalog.success) issues.push(...zodIssues('career.json', careerCatalog.error));
 	if (!supportCatalog.success) issues.push(...zodIssues('supports.json', supportCatalog.error));
+	if (!entourageCatalog.success) {
+		issues.push(...zodIssues('entourage.json', entourageCatalog.error));
+	}
 	for (const { source, parsed } of eventFiles) {
 		if (!parsed.success) issues.push(...zodIssues(source, parsed.error));
 	}
@@ -862,6 +953,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 		!traitCatalog.success ||
 		!careerCatalog.success ||
 		!supportCatalog.success ||
+		!entourageCatalog.success ||
 		eventFiles.some(({ parsed }) => !parsed.success)
 	) {
 		return { ok: false, issues };
@@ -882,7 +974,13 @@ export function validateContent(raw: RawContent): ContentValidation {
 			sourcedEvents,
 			castList,
 			knownIds,
-			new Set(traitList.map((trait) => trait.id))
+			new Set(traitList.map((trait) => trait.id)),
+			new Set([
+				'staff',
+				'candidate',
+				'party_leader',
+				...(entourageCatalog.data.posts ?? []).map((post) => post.tag)
+			])
 		)
 	);
 	issues.push(...crossCheckWorld(world.data, balance.data, knownIds));
@@ -912,6 +1010,28 @@ export function validateContent(raw: RawContent): ContentValidation {
 		elections: new Set(career.elections.map((election) => election.id))
 	};
 	issues.push(...crossCheckPolitics(actionList, upgradeList, sourcedEvents, refs));
+	const postList = entourageCatalog.data.posts;
+	issues.push(...crossCheckEntourage(postList, refs, knownIds));
+	const traitIdSet = new Set(traitList.map((trait) => trait.id));
+	entourageCatalog.data.profiles.forEach((profile, index) => {
+		if (knownIds.has(profile.id)) {
+			issues.push({
+				source: 'entourage.json',
+				path: `profiles[${index}].id`,
+				message: `identifiant en double : ${profile.id}`
+			});
+		}
+		knownIds.add(profile.id);
+		for (const trait of profile.traits) {
+			if (!traitIdSet.has(trait)) {
+				issues.push({
+					source: 'entourage.json',
+					path: `profiles[${index}].traits`,
+					message: `trait inconnu : ${trait}`
+				});
+			}
+		}
+	});
 	if (issues.length > 0) return { ok: false, issues };
 
 	const actions: Record<string, ActionDefinition> = {};
@@ -928,6 +1048,12 @@ export function validateContent(raw: RawContent): ContentValidation {
 	for (const election of career.elections) elections[election.id] = election;
 	const mandates: Record<string, MandateDefinition> = {};
 	for (const mandate of career.mandates) mandates[mandate.id] = mandate;
+	const posts: Record<string, PostDefinition> = {};
+	const missions: Record<string, MissionDefinition> = {};
+	for (const post of postList) {
+		posts[post.id] = post;
+		for (const mission of post.missions) missions[mission.id] = mission;
+	}
 	const supportGroups: Record<string, SupportGroupDefinition> = {};
 	for (const group of groupList) supportGroups[group.id] = group;
 	const parties: Record<string, PartyDefinition> = {};
@@ -944,6 +1070,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 				traits: traitCatalog.data,
 				career,
 				supports: supportCatalog.data,
+				entourage: entourageCatalog.data,
 				events: Object.fromEntries(eventFiles.map(({ source, parsed }) => [source, parsed.data]))
 			}),
 			balance: balance.data,
@@ -963,6 +1090,10 @@ export function validateContent(raw: RawContent): ContentValidation {
 			mandates,
 			mandateIds: career.mandates.map((mandate) => mandate.id),
 			institutions: career.institutions,
+			posts,
+			postIds: postList.map((post) => post.id),
+			candidateProfiles: entourageCatalog.data.profiles,
+			missions,
 			supportGroups,
 			supportGroupIds: [
 				...groupList.filter((group) => group.kind === 'electoral'),

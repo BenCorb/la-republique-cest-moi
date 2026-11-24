@@ -22,6 +22,7 @@ import {
 	fixtureBalance,
 	fixtureCareer,
 	fixtureCast,
+	fixtureEntourage,
 	fixtureEvents,
 	fixtureSupports,
 	fixtureTraits,
@@ -68,7 +69,8 @@ function load(
 		world: fixtureWorld,
 		traits: fixtureTraits,
 		career: fixtureCareer,
-		supports: overrides.supports ?? fixtureSupports
+		supports: overrides.supports ?? fixtureSupports,
+		entourage: fixtureEntourage
 	});
 }
 

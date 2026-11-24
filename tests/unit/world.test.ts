@@ -23,6 +23,7 @@ import {
 	fixtureBalance,
 	fixtureCast,
 	fixtureContent,
+	fixtureEntourage,
 	fixtureEvents,
 	fixtureCareer,
 	fixtureSupports,
@@ -139,7 +140,8 @@ function political(
 		world: fixtureWorld,
 		traits: fixtureTraits,
 		career: fixtureCareer,
-		supports: fixtureSupports
+		supports: fixtureSupports,
+		entourage: fixtureEntourage
 	});
 }
 

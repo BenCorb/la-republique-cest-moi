@@ -21,6 +21,7 @@ const resourceChange = z.strictObject({ resource, delta: int });
 const gaugeChange = z.strictObject({ gauge, delta: int });
 const indicator = z.enum(INDICATOR_IDS);
 const mandateEndReason = z.enum(['term', 'resigned', 'government_change', 'replaced', 'removed']);
+const staffLeaveReason = z.enum(['resigned', 'dismissed', 'poached', 'retired', 'died']);
 const politicalChange = z.discriminatedUnion('kind', [
 	z.strictObject({ kind: z.literal('indicator'), indicator, delta: int }),
 	z.strictObject({ kind: z.literal('partyStrength'), partyId: id, delta: int }),
@@ -41,7 +42,14 @@ const politicalChange = z.discriminatedUnion('kind', [
 		ballotId: id,
 		invested: z.boolean()
 	}),
-	z.strictObject({ kind: z.literal('preparation'), delta: int })
+	z.strictObject({ kind: z.literal('preparation'), delta: int }),
+	z.strictObject({ kind: z.literal('hired'), characterId: id, postId: id }),
+	z.strictObject({
+		kind: z.literal('staffLeft'),
+		characterId: id,
+		postId: id,
+		reason: staffLeaveReason
+	})
 ]);
 
 const peopleChange = z.discriminatedUnion('kind', [
@@ -83,6 +91,25 @@ const turnEntry = z.strictObject({
 		changes: z.array(resourceChange)
 	}),
 	mandates: z.strictObject({ changes: z.array(resourceChange), stress: int }),
+	staff: z
+		.strictObject({
+			payroll: z.array(resourceChange),
+			production: z.array(
+				z.strictObject({
+					characterId: id,
+					missionId: id,
+					status: z.enum(['active', 'unpaid']),
+					changes: z.array(resourceChange),
+					politics: z.array(politicalChange),
+					stress: int
+				})
+			),
+			departures: z.array(
+				z.strictObject({ characterId: id, postId: id, reason: staffLeaveReason })
+			),
+			shortlisted: z.array(id)
+		})
+		.nullable(),
 	wellbeing: z.strictObject({
 		contributions: z.array(
 			z.strictObject({
@@ -212,6 +239,7 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 			name: text,
 			epithet: text.nullable(),
 			birthTurn: int,
+			competence: int,
 			partyId: id.nullable(),
 			tags: z.array(z.string().max(60)),
 			renewal: text.nullable(),
@@ -269,6 +297,18 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 			reason: text.nullable()
 		})
 	),
+	staff: z.array(
+		z.strictObject({
+			characterId: id,
+			postId: id,
+			hiredTurn: int,
+			missionId: id,
+			status: z.enum(['active', 'left']),
+			leftTurn: int.nullable(),
+			leaveReason: staffLeaveReason.nullable()
+		})
+	),
+	shortlists: z.record(id, z.array(z.strictObject({ characterId: id, profileId: id }))),
 	institutions: z.strictObject({
 		incompatibilities: z.array(z.tuple([id, id])),
 		maxMandates: int,

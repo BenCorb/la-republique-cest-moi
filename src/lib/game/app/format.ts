@@ -119,6 +119,15 @@ export function describeSupport(value: number): GaugeDescription {
 	return { value, label: 'Très faible', tone: 'danger' };
 }
 
+/** Compétence d'un collaborateur ou d'un candidat (visible sur le CV). */
+export function describeCompetence(value: number): GaugeDescription {
+	if (value >= 75) return { value, label: 'Excellente', tone: 'good' };
+	if (value >= 60) return { value, label: 'Bonne', tone: 'good' };
+	if (value >= 40) return { value, label: 'Moyenne', tone: 'neutral' };
+	if (value >= 25) return { value, label: 'Faible', tone: 'warning' };
+	return { value, label: 'Très faible', tone: 'danger' };
+}
+
 /** Position qualitative d'un parti sur un axe, sans chiffre (GDD §3.2). */
 export function describeAxisPosition(value: number, negative: string, positive: string): string {
 	if (value <= -60) return `très ${negative}`;

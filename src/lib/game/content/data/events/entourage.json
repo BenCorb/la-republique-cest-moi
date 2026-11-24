@@ -1,0 +1,244 @@
+{
+	"events": [
+		{
+			"id": "entourage.adviser_initiative",
+			"category": "entourage",
+			"title": "Une initiative malheureuse",
+			"text": "{adviser} a promis en votre nom un soutien enthousiaste à la rocade d’un élu voisin, « pour élargir vos alliances ». Les riverains de la rocade, eux, n’ont pas été consultés.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 16,
+			"unique": false,
+			"actors": [
+				{
+					"role": "adviser",
+					"tags": ["staff_adviser"],
+					"traits": ["trait.opportunism"]
+				}
+			],
+			"choices": [
+				{
+					"id": "cover",
+					"label": "Assumer la promesse",
+					"hints": ["L’appareil apprécie", "Les riverains moins"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": "disavow",
+					"label": "Désavouer publiquement",
+					"hints": ["Votre conseil politique s’en souviendra"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "adviser",
+							"value": -15,
+							"memory": "Vous avez désavoué son initiative."
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -1
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "entourage.creative_accounting",
+			"category": "entourage",
+			"title": "Une comptabilité créative",
+			"text": "{treasurer} propose une « optimisation » : facturer les meetings comme des « séminaires de réflexion », éligibles à une subvention. Personne n’a jamais vérifié.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 16,
+			"unique": false,
+			"actors": [
+				{
+					"role": "treasurer",
+					"tags": ["staff_treasurer"],
+					"traits": ["trait.venality"]
+				}
+			],
+			"choices": [
+				{
+					"id": "accept",
+					"label": "Laisser faire",
+					"hints": ["Budget en hausse", "Mieux vaut que personne ne vérifie"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "politicalBudgetCents",
+							"value": 60000
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": "refuse",
+					"label": "Refuser",
+					"hints": ["Votre trésorerie s’en souviendra"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "treasurer",
+							"value": -5,
+							"memory": "Vous avez refusé son optimisation comptable."
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "entourage.comms_leak",
+			"category": "entourage",
+			"title": "Une confidence de trop",
+			"text": "{spin} a confié à un journaliste le surnom que vous donnez au préfet. L’article est très lu, surtout à la préfecture.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 16,
+			"unique": false,
+			"actors": [
+				{
+					"role": "spin",
+					"tags": ["staff_communication"],
+					"traits": ["trait.indiscretion"]
+				}
+			],
+			"effects": [
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				},
+				{
+					"op": "addSupport",
+					"group": "support.middle_class",
+					"value": -2
+				}
+			]
+		},
+		{
+			"id": "entourage.loyal_chief",
+			"category": "entourage",
+			"title": "Un rempart",
+			"text": "{chief} encaisse à votre place les reproches de trois délégations furieuses et vous laisse un mot : « Réglé. Prenez votre après-midi. »",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 16,
+			"unique": false,
+			"actors": [
+				{
+					"role": "chief",
+					"tags": ["staff_chief"],
+					"traits": ["trait.loyalty"],
+					"minAttitude": 10
+				}
+			],
+			"effects": [
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": -4
+				}
+			]
+		},
+		{
+			"id": "entourage.poaching",
+			"category": "entourage",
+			"title": "Une offre concurrente",
+			"text": "Un cabinet de conseil propose à {staffer} un poste mieux payé, avec voiture de fonction et horaires humains. La réponse est attendue avant vendredi.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 20,
+			"unique": false,
+			"actors": [
+				{
+					"role": "staffer",
+					"tags": ["staff"],
+					"maxAttitude": 5
+				}
+			],
+			"choices": [
+				{
+					"id": "raise",
+					"label": "Revaloriser le salaire",
+					"hints": ["Un effort budgétaire", "Une loyauté retrouvée"],
+					"costs": [
+						{
+							"resource": "politicalBudgetCents",
+							"amount": 50000
+						}
+					],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "staffer",
+							"value": 15,
+							"memory": "Vous avez revalorisé son salaire pour le garder."
+						}
+					]
+				},
+				{
+					"id": "persuade",
+					"label": "Plaider la cause commune",
+					"hints": ["Peut suffire… ou pas"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "staffer",
+							"value": 5,
+							"memory": "Vous avez plaidé la cause commune pour le garder."
+						}
+					]
+				},
+				{
+					"id": "let_go",
+					"label": "Souhaiter bonne chance",
+					"hints": ["Le poste se libère"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "staffLeaves",
+							"role": "staffer"
+						}
+					]
+				}
+			]
+		}
+	]
+}

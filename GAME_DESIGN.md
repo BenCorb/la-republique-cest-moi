@@ -195,7 +195,7 @@ Caractéristiques principales : identité, âge, parcours, compétences par doma
 | Conseiller politique | Influence, alliances et anticipation des réactions |
 | Responsable juridique | Analyse des risques et gestion des dossiers |
 
-Cinq postes constituent la base proposée ; un sixième peut être ajouté si réellement utile. Ils deviennent accessibles progressivement. Le recrutement propose plusieurs profils : une personne compétente mais indépendante, un candidat disposant d’un réseau familial important mais peu qualifié, ou un collaborateur ambitieux et brillant. Les caractéristiques doivent créer des arbitrages, pas un classement univoque.
+Cinq postes constituent la base proposée ; un sixième peut être ajouté si réellement utile. *(Alpha, P2-05 : les cinq postes ci-dessus, chacun avec un salaire, une condition de déblocage et deux missions ; trois profils de candidats contrastés ; conseils précis, indicatifs ou parfois faux selon la compétence. Hypothèses provisoires.)* Ils deviennent accessibles progressivement. Le recrutement propose plusieurs profils : une personne compétente mais indépendante, un candidat disposant d’un réseau familial important mais peu qualifié, ou un collaborateur ambitieux et brillant. Les caractéristiques doivent créer des arbitrages, pas un classement univoque.
 
 ### 6.3 Informations partielles et conseils
 

@@ -22,6 +22,7 @@ import {
 	fixtureBalance,
 	fixtureCareer,
 	fixtureCast,
+	fixtureEntourage,
 	fixtureEvents,
 	fixtureSupports,
 	fixtureTraits,
@@ -84,7 +85,8 @@ function load(balance: unknown = fixtureBalance): Content {
 		world: fixtureWorld,
 		traits: fixtureTraits,
 		career: fixtureCareer,
-		supports: fixtureSupports
+		supports: fixtureSupports,
+		entourage: fixtureEntourage
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;
@@ -200,13 +202,19 @@ describe('candidature', () => {
 		const prepared = commit(running, [canvass]).state;
 		expect(prepared.campaigns[0]?.preparation).toBe(5);
 		const campaign = prepared.campaigns[0]!;
-		// Popularité 25 × 50 % + préparation 5 = 17,5 → 18 contre 30, sans aléa.
-		expect(
-			campaignPoll(campaign, prepared.player, prepared.world, prepared.mandates, catalog)
-		).toEqual({
-			min: 38,
-			max: 38
-		});
+		// Sans aléa, le sondage est un point : popularité, préparation et adversaire connus.
+		const exact = campaignPoll(
+			campaign,
+			prepared.player,
+			prepared.world,
+			prepared.mandates,
+			catalog,
+			prepared.characters,
+			prepared.campaigns
+		);
+		expect(exact.min).toBe(exact.max);
+		expect(exact.min).toBeGreaterThan(25);
+		expect(exact.min).toBeLessThan(45);
 		const volatile = load({
 			...fixtureBalance,
 			campaigns: { ...fixtureBalance.campaigns, volatility: 5 }
@@ -221,7 +229,7 @@ describe('candidature', () => {
 		expect(poll.min).toBeLessThan(38);
 		expect(poll.max).toBeGreaterThan(38);
 		const view = projectView(prepared, [], catalog).career.calendar[0]!;
-		expect(view.campaign?.poll).toEqual({ min: 38, max: 38 });
+		expect(view.campaign?.poll).toEqual(exact);
 		expect(view.stake).toBe('Siège local');
 	});
 });

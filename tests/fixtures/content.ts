@@ -72,7 +72,83 @@ export const fixtureBalance = {
 		rivalExperienceCap: 3,
 		rivalryAttitude: -8,
 		opponentMaxAge: 72
+	},
+	entourage: {
+		candidatesPerPost: 2,
+		competenceReference: 50,
+		hireAttitude: 10,
+		unpaidAttitude: -5,
+		dismissAttitude: -20,
+		resignAttitude: -30,
+		preciseAdviceCompetence: 70,
+		fairAdviceCompetence: 40,
+		poorAdviceErrorChance: 0.5
 	}
+};
+
+/** Deux postes de test : un ouvert avec de l'influence, un réservé aux élus. */
+export const fixtureEntourage = {
+	posts: [
+		{
+			id: 'post.aide',
+			label: 'Assistance',
+			description: 'Poste de test ouvert dès 50 points d’influence.',
+			tag: 'staff_aide',
+			salaryCents: 1_000,
+			// Fermé par défaut : aucune présélection (donc aucun tirage) dans les autres tests.
+			requires: { op: 'gte', stat: 'resources.influence', value: 50 },
+			unavailableReason: 'Il faut 50 points d’influence.',
+			adviceCategories: ['personal'],
+			missions: [
+				{
+					id: 'mission.aide.budget',
+					label: 'Collecter',
+					description: 'Rapporte du budget.',
+					effects: [{ op: 'addResource', resource: 'politicalBudgetCents', value: 2_000 }],
+					timeBonus: 0,
+					pollPrecision: false
+				},
+				{
+					id: 'mission.aide.agenda',
+					label: 'Agenda',
+					description: 'Libère du temps.',
+					effects: [],
+					timeBonus: 10,
+					pollPrecision: false
+				}
+			]
+		},
+		{
+			id: 'post.lawyer',
+			label: 'Conseil juridique',
+			description: 'Poste de test réservé aux élus.',
+			tag: 'staff_lawyer',
+			salaryCents: 1_000,
+			requires: { op: 'gte', stat: 'player.mandates', value: 1 },
+			unavailableReason: 'Réservé aux élus.',
+			adviceCategories: [],
+			missions: [
+				{
+					id: 'mission.lawyer.calm',
+					label: 'Apaiser',
+					description: 'Retire du stress.',
+					effects: [{ op: 'addStat', stat: 'player.stress', value: -2 }],
+					timeBonus: 0,
+					pollPrecision: false
+				}
+			]
+		}
+	],
+	profiles: [
+		{
+			id: 'profile.expert',
+			label: 'Expert',
+			minCompetence: 80,
+			maxCompetence: 90,
+			traits: ['trait.open']
+		},
+		{ id: 'profile.novice', label: 'Novice', minCompetence: 10, maxCompetence: 20, traits: [] }
+	]
 };
 
 /** Deux groupes électoraux (poids 3 et 1) et un groupe d'influence. */
@@ -639,7 +715,8 @@ function load(): Content {
 		world: fixtureWorld,
 		traits: fixtureTraits,
 		career: fixtureCareer,
-		supports: fixtureSupports
+		supports: fixtureSupports,
+		entourage: fixtureEntourage
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;

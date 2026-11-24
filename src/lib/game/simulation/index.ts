@@ -34,7 +34,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 7;
+export const SIMULATION_REPORT_VERSION = 8;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -101,6 +101,9 @@ export interface SimulationRun {
 	readonly campaignsLost: number;
 	/** Adversaires différents affrontés et plus grand nombre d'affrontements avec le même. */
 	readonly distinctOpponents: number;
+	/** Collaborateurs recrutés et départs (démission, renvoi, débauchage…). */
+	readonly staffHired: number;
+	readonly staffDepartures: number;
 	readonly maxRivalEncounters: number;
 	/** Popularité en fin de carrière et la plus haute atteinte. */
 	readonly finalPopularity: number;
@@ -175,6 +178,7 @@ export interface SimulationAggregate {
 	readonly campaigns: Distribution;
 	readonly campaignsWon: Distribution;
 	readonly maxRivalEncounters: Distribution;
+	readonly staffHired: Distribution;
 	readonly finalPopularity: Distribution;
 	readonly peakPopularity: Distribution;
 	/** Plus haute fonction atteinte, `none` pour les carrières sans mandat. */
@@ -265,6 +269,28 @@ function candidacyWish(
 	return [];
 }
 
+/**
+ * Recrutement par politique : sauf la prudente, chaque politique recrute le
+ * candidat de meilleure compétence visible (CV) d'un poste ouvert.
+ */
+function hireWish(strategy: SimulationStrategy, state: GameState, content: Content): PlanStep[] {
+	const hireId = content.actionIds.find((id) => content.actions[id]?.target === 'candidate');
+	if (!hireId || strategy === 'prudent') return [];
+	const candidates = Object.values(state.shortlists)
+		.flat()
+		.sort(
+			(left, right) =>
+				(state.characters[right.characterId]?.competence ?? 0) -
+					(state.characters[left.characterId]?.competence ?? 0) ||
+				left.characterId.localeCompare(right.characterId)
+		);
+	for (const candidate of candidates) {
+		const step: PlanStep = { kind: 'action', id: hireId, target: candidate.characterId };
+		if (previewPlan(state, { steps: [step] }, content).valid) return [step];
+	}
+	return [];
+}
+
 const STRATEGY_WISHES: Readonly<
 	Record<Exclude<SimulationStrategy, 'random-valid'>, readonly PlanStep[]>
 > = {
@@ -324,7 +350,8 @@ function wishesFor(
 ): readonly PlanStep[] {
 	const party = [
 		...partyWish(strategy, state, seed, content),
-		...candidacyWish(strategy, state, content)
+		...candidacyWish(strategy, state, content),
+		...hireWish(strategy, state, content)
 	];
 	if (strategy === 'random-valid') return [...party, ...randomWishes(seed, state.turn, content)];
 	return [
@@ -452,6 +479,8 @@ function finalizeRun(
 		distinctOpponents: new Set(
 			state.campaigns.flatMap((campaign) => (campaign.opponentId ? [campaign.opponentId] : []))
 		).size,
+		staffHired: state.staff.length,
+		staffDepartures: state.staff.filter((member) => member.status === 'left').length,
 		maxRivalEncounters: Math.max(
 			0,
 			...Object.values(
@@ -692,6 +721,7 @@ function aggregateRuns(runs: readonly SimulationRun[]): SimulationAggregate {
 		campaigns: distribution(runs.map((run) => run.campaigns)),
 		campaignsWon: distribution(runs.map((run) => run.campaignsWon)),
 		maxRivalEncounters: distribution(runs.map((run) => run.maxRivalEncounters)),
+		staffHired: distribution(runs.map((run) => run.staffHired)),
 		finalPopularity: distribution(runs.map((run) => run.finalPopularity)),
 		peakPopularity: distribution(runs.map((run) => run.peakPopularity)),
 		highestMandates: runs.reduce<Record<string, number>>((totals, run) => {
@@ -819,6 +849,8 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'campaignsLost',
 		'distinctOpponents',
 		'maxRivalEncounters',
+		'staffHired',
+		'staffDepartures',
 		'finalPopularity',
 		'peakPopularity',
 		'indicatorRanges',
@@ -862,6 +894,8 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.campaignsLost,
 		run.distinctOpponents,
 		run.maxRivalEncounters,
+		run.staffHired,
+		run.staffDepartures,
 		run.finalPopularity,
 		run.peakPopularity,
 		JSON.stringify(run.indicatorRanges),

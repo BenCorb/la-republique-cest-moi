@@ -23,7 +23,8 @@ export const REQUIRED_CATALOGS = [
 	'world.json',
 	'traits.json',
 	'career.json',
-	'supports.json'
+	'supports.json',
+	'entourage.json'
 ] as const;
 
 /** Répertoire des catalogues d'événements, relatif au répertoire de données. */
@@ -103,6 +104,7 @@ export function validateGameContent(dir: string): ContentReport {
 		traits: read('traits.json'),
 		career: read('career.json'),
 		supports: read('supports.json'),
+		entourage: read('entourage.json'),
 		events
 	});
 	if (result.ok) return report;

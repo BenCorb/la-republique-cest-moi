@@ -19,6 +19,10 @@ import { ageBandFor } from './health.ts';
 import { nextFloat, nextInt, type RngState } from './random.ts';
 import type { Character, CharactersRecord, Memory, PeopleChange, Relationship } from './state.ts';
 
+/** Bornes de la compétence tirée pour un personnage ordinaire. */
+export const COMPETENCE_MIN = 20;
+export const COMPETENCE_MAX = 80;
+
 export function characterId(number: number): string {
 	return `character.${number}`;
 }
@@ -83,6 +87,7 @@ export function generatePerson(
 	const lastDraw = nextInt(firstDraw.rng, 0, last.length - 1);
 	const ageDraw = nextInt(lastDraw.rng, spec.minAge, spec.maxAge);
 	const quarterDraw = nextInt(ageDraw.rng, 0, TURNS_PER_YEAR - 1);
+	const competenceDraw = nextInt(quarterDraw.rng, COMPETENCE_MIN, COMPETENCE_MAX);
 	const total = first.length * last.length;
 	const pick = (used: ReadonlySet<string>): string | null => {
 		for (let offset = 0; offset < total; offset += 1) {
@@ -100,12 +105,13 @@ export function generatePerson(
 	);
 	const name = pick(everyone) ?? pick(active);
 	if (name === null) throw new Error('Plus aucun nom disponible pour un nouveau personnage.');
-	const traits = drawTraits(quarterDraw.rng, content);
+	const traits = drawTraits(competenceDraw.rng, content);
 	return {
 		character: {
 			id: characterId(Object.keys(characters).length + 1),
 			name,
 			epithet: spec.epithet,
+			competence: competenceDraw.value,
 			birthTurn: turn - ageDraw.value * TURNS_PER_YEAR - quarterDraw.value,
 			partyId: spec.partyId,
 			tags: [...spec.tags],
@@ -132,12 +138,14 @@ export function createCast(
 	for (const castId of content.castIds) {
 		const member = content.cast[castId];
 		if (!member) throw new Error(`Membre de la distribution inconnu : ${castId}`);
-		const traits = drawTraits(current, content);
+		const competence = nextInt(current, COMPETENCE_MIN, COMPETENCE_MAX);
+		const traits = drawTraits(competence.rng, content);
 		current = traits.rng;
 		characters[castId] = {
 			id: castId,
 			name: member.name,
 			epithet: null,
+			competence: competence.value,
 			birthTurn: turn - member.age * TURNS_PER_YEAR,
 			partyId: null,
 			tags: [...member.tags],

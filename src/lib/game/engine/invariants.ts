@@ -398,6 +398,44 @@ function checkCareerInvariants(state: GameState): string[] {
 			violations.push(`adversaire parti encore en campagne : ${campaign.campaignId}`);
 		}
 	}
+	const occupied = new Set<string>();
+	for (const member of state.staff) {
+		const character = state.characters[member.characterId];
+		if (!character) {
+			violations.push(`collaborateur inconnu : ${member.characterId}`);
+			continue;
+		}
+		if ((member.status === 'active') !== (member.leftTurn === null)) {
+			violations.push(`départ de collaborateur incohérent : ${member.characterId}`);
+		}
+		if (member.hiredTurn > state.turn) violations.push(`embauche future : ${member.characterId}`);
+		if (member.status !== 'active') continue;
+		if (occupied.has(member.postId)) violations.push(`poste occupé deux fois : ${member.postId}`);
+		occupied.add(member.postId);
+		if (character.status !== 'active') {
+			violations.push(`collaborateur parti encore en poste : ${member.characterId}`);
+		}
+		if (!character.tags.includes('staff')) {
+			violations.push(`collaborateur sans étiquette d’entourage : ${member.characterId}`);
+		}
+	}
+	for (const [postId, entries] of Object.entries(state.shortlists)) {
+		if (occupied.has(postId)) violations.push(`présélection pour un poste pourvu : ${postId}`);
+		for (const entry of entries) {
+			if (!state.characters[entry.characterId]) {
+				violations.push(`candidat inconnu : ${entry.characterId}`);
+			}
+		}
+	}
+	for (const character of Object.values(state.characters)) {
+		if (
+			!Number.isSafeInteger(character.competence) ||
+			character.competence < 0 ||
+			character.competence > 100
+		) {
+			violations.push(`compétence invalide : ${character.id}`);
+		}
+	}
 	const running = state.campaigns.filter((campaign) => campaign.status === 'running');
 	if (new Set(running.map((campaign) => campaign.ballotId)).size !== running.length) {
 		violations.push('deux campagnes en cours pour une même échéance');
@@ -486,6 +524,17 @@ export function checkContentReferences(state: GameState, content: Content): stri
 	}
 	if (state.player.popularity !== computePopularity(state.player.supports, content)) {
 		violations.push(`popularité incohérente avec les soutiens : ${state.player.popularity}`);
+	}
+	for (const member of state.staff) {
+		const post = content.posts[member.postId];
+		if (!post) violations.push(`poste inconnu du catalogue : ${member.postId}`);
+		else if (!post.missions.some((mission) => mission.id === member.missionId)) {
+			violations.push(`mission étrangère au poste : ${member.missionId}`);
+		}
+	}
+	for (const postId of Object.keys(state.shortlists)) {
+		if (!Object.hasOwn(content.posts, postId))
+			violations.push(`présélection pour un poste inconnu : ${postId}`);
 	}
 	for (const mandate of state.mandates) {
 		if (!Object.hasOwn(content.mandates, mandate.mandateId)) {

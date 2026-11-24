@@ -703,7 +703,8 @@ export function campaignPoll(
 	mandates: readonly MandateInstance[],
 	content: Content,
 	characters: Readonly<Record<string, Character>> = {},
-	campaigns: readonly Campaign[] = []
+	campaigns: readonly Campaign[] = [],
+	pollingCompetence: number | null = null
 ): { readonly min: number; readonly max: number } {
 	const definition = content.elections[campaign.electionId];
 	if (!definition) return { min: 0, max: 0 };
@@ -719,7 +720,11 @@ export function campaignPoll(
 		incumbent,
 		content
 	);
-	const { volatility } = content.balance.campaigns;
+	// Un collaborateur qui sonde l'électorat resserre la fourchette selon sa compétence.
+	const volatility = Math.round(
+		content.balance.campaigns.volatility *
+			(pollingCompetence === null ? 1 : Math.max(0.25, 1 - pollingCompetence / 150))
+	);
 	return {
 		min: percentOf(score - volatility, rival + volatility),
 		max: percentOf(score + volatility, rival - volatility)

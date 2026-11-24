@@ -25,9 +25,24 @@ const buy = (id: string): PlanStep => ({ kind: 'purchase', id });
 /** Marqueur : déclarer une candidature à la première échéance ouverte (P2-03). */
 const CANDIDACY = { kind: 'action', id: 'campaign.declare', target: '*' } as const;
 const declare = (target: string): PlanStep => ({ kind: 'action', id: 'campaign.declare', target });
+/** Marqueur : recruter le premier candidat présélectionné qui peut l'être (P2-05). */
+const HIRE = { kind: 'action', id: 'staff.hire', target: '*' } as const;
+const hire = (target: string): PlanStep => ({ kind: 'action', id: 'staff.hire', target });
 
 function choosePlan(state: GameState, wishes: readonly PlanStep[]): TurnPlan {
 	let candidate: PlanStep[] = wishes.flatMap((step): PlanStep[] => {
+		if (step === HIRE) {
+			// Un candidat par poste ouvert, dans l'ordre des postes, au plus deux par trimestre.
+			const picks: PlanStep[] = [];
+			for (const entries of Object.values(state.shortlists)) {
+				const pick = entries.find(
+					(entry) =>
+						previewPlan(state, { steps: [...picks, hire(entry.characterId)] }, content).valid
+				);
+				if (pick && picks.length < 2) picks.push(hire(pick.characterId));
+			}
+			return picks;
+		}
 		if (step !== CANDIDACY) return [step];
 		const open = state.ballots.find(
 			(ballot) =>
@@ -174,6 +189,7 @@ describe('scénario : catalogue réel', () => {
 				act('personal.rest')
 			],
 			[
+				HIRE,
 				buy('organization.donor_file'),
 				buy('organization.volunteer'),
 				buy('organization.local_office'),
@@ -192,6 +208,7 @@ describe('scénario : catalogue réel', () => {
 			[
 				{ kind: 'action', id: 'party.join', target: content.world.startingGoverningParty },
 				CANDIDACY,
+				HIRE,
 				act('campaign.canvass'),
 				act('party.section_meeting'),
 				act('network.meet_officials'),
@@ -202,7 +219,7 @@ describe('scénario : catalogue réel', () => {
 		];
 		const seen = new Set<string>();
 		strategies.forEach((wishes, strategy) => {
-			for (let seed = 0; seed < 20; seed += 1) {
+			for (let seed = 0; seed < 40; seed += 1) {
 				const state = career(`atteinte-${strategy}-${seed}`, wishes, 400, seed);
 				for (const entry of quarters(state.history)) {
 					for (const event of entry.events) {

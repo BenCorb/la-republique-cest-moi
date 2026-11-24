@@ -6,8 +6,15 @@ import { createGame, renderTemplate } from '../../src/lib/game/engine/index.ts';
 /** Catalogue narratif du prototype (P1-06) : critères vérifiés automatiquement. */
 const content = loadContent();
 const events: EventDefinition[] = content.eventIds.map((id) => content.events[id]!);
-/** Événements du prototype (P1-06), hors catégories ajoutées par l'alpha (P2-01 à P2-07). */
-const ALPHA_CATEGORIES = new Set(['national', 'relations', 'career', 'supports', 'campaign']);
+/** Événements du prototype (P1-06), hors catégories ajoutées par l'alpha (P2-01 à P2-07 et P2-05). */
+const ALPHA_CATEGORIES = new Set([
+	'national',
+	'relations',
+	'career',
+	'supports',
+	'campaign',
+	'entourage'
+]);
 const prototypeEvents = events.filter((event) => !ALPHA_CATEGORIES.has(event.category));
 const game = createGame({ seed: 'catalogue-narratif' }, content);
 const someParty = content.partyIds[0]!;
@@ -25,17 +32,18 @@ const worldBindings: Record<string, string> = {
 function castings(event: EventDefinition): Record<string, string>[] {
 	return event.actors.reduce<Record<string, string>[]>(
 		(partials, slot) =>
-			partials.flatMap((partial) =>
-				content.castIds
-					.filter((id) => {
-						const member = content.cast[id]!;
-						return (
-							!Object.values(partial).includes(id) &&
-							slot.tags.every((tag) => member.tags.includes(tag))
-						);
-					})
-					.map((id) => ({ ...partial, [slot.role]: id }))
-			),
+			partials.flatMap((partial) => {
+				const fits = content.castIds.filter((id) => {
+					const member = content.cast[id]!;
+					return (
+						!Object.values(partial).includes(id) &&
+						slot.tags.every((tag) => member.tags.includes(tag))
+					);
+				});
+				// Rôle pourvu en cours de partie (collaborateur) : un personnage de l'état le tient.
+				const ids = fits.length > 0 ? fits : [game.world.parties[someParty]!.leaderId];
+				return ids.map((id) => ({ ...partial, [slot.role]: id }));
+			}),
 		[{ ...worldBindings }]
 	);
 }

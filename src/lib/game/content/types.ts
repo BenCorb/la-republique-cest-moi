@@ -92,7 +92,9 @@ export const STAT_IDS = [
 	/** Popularité : synthèse pondérée des soutiens électoraux, de 0 à 100 (P2-07). */
 	'player.popularity',
 	/** Nombre de campagnes en cours du joueur (P2-03). */
-	'player.campaigning'
+	'player.campaigning',
+	/** Nombre de collaborateurs en poste (P2-05). */
+	'player.staff'
 ] as const;
 export type StatId = (typeof STAT_IDS)[number];
 
@@ -181,7 +183,13 @@ export type Effect =
 	/** Candidature à l'échéance choisie dans le plan (`target`), sous conditions d'éligibilité. */
 	| { readonly op: 'declareCandidacy' }
 	/** Préparation ajoutée à chaque campagne en cours. */
-	| { readonly op: 'prepareCampaign'; readonly value: number };
+	| { readonly op: 'prepareCampaign'; readonly value: number }
+	/** Embauche du candidat choisi dans le plan (`target`), sur son poste (P2-05). */
+	| { readonly op: 'hireStaff' }
+	/** Renvoi du collaborateur choisi dans le plan (`target`). */
+	| { readonly op: 'dismissStaff' }
+	/** Départ du collaborateur qui tient ce rôle d'événement (débauchage, démission). */
+	| { readonly op: 'staffLeaves'; readonly role: string };
 
 export interface ResourceAmount {
 	readonly resource: ResourceId;
@@ -208,7 +216,7 @@ export interface ActionDefinition {
 	 * Cible à choisir dans le plan : `party` (identifiant de parti), `mandate`
 	 * (exemplaire de mandat en cours) ou `ballot` (échéance électorale).
 	 */
-	readonly target?: 'party' | 'mandate' | 'ballot' | undefined;
+	readonly target?: 'party' | 'mandate' | 'ballot' | 'candidate' | 'staff' | undefined;
 }
 
 /**
@@ -342,6 +350,7 @@ export interface Balance {
 	readonly elections: ElectionsBalance;
 	readonly supports: SupportsBalance;
 	readonly campaigns: CampaignsBalance;
+	readonly entourage: EntourageBalance;
 }
 
 /** Paramètres des scrutins et du gouvernement (hypothèses de tuning, P2-02). */
@@ -401,6 +410,25 @@ export interface CampaignsBalance {
 	readonly rivalryAttitude: number;
 	/** Âge maximal d'un adversaire le jour du scrutin. */
 	readonly opponentMaxAge: number;
+}
+
+/** Entourage et délégation (hypothèses de tuning, P2-05). */
+export interface EntourageBalance {
+	/** Profils proposés pour un poste vacant. */
+	readonly candidatesPerPost: number;
+	/** Compétence à laquelle une mission produit exactement ses effets de base. */
+	readonly competenceReference: number;
+	/** Attitude gagnée à l'embauche, perdue à chaque salaire impayé ou au renvoi. */
+	readonly hireAttitude: number;
+	readonly unpaidAttitude: number;
+	readonly dismissAttitude: number;
+	/** Sous cette attitude, un collaborateur démissionne. */
+	readonly resignAttitude: number;
+	/** Seuils de compétence du conseil : précis, puis indicatif ; en dessous, il peut se tromper. */
+	readonly preciseAdviceCompetence: number;
+	readonly fairAdviceCompetence: number;
+	/** Probabilité (déterministe par décision) qu'un conseil médiocre se trompe de sens. */
+	readonly poorAdviceErrorChance: number;
 }
 
 /** Bornes de l'attitude d'un personnage envers le joueur. */
@@ -539,6 +567,56 @@ export interface SupportGroupDefinition {
 	readonly mandateBonus: number;
 }
 
+/**
+ * Mission persistante d'un poste clé (GDD §5.3) : effets appliqués chaque
+ * trimestre, proportionnels à la compétence du collaborateur, temps libéré
+ * pour le joueur, et précision des sondages.
+ */
+export interface MissionDefinition {
+	/** Identifiant stable, par exemple `mission.chief.agenda`. */
+	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	/** Effets de base de chaque trimestre (ressources, soutiens, stress, préparation). */
+	readonly effects: readonly Effect[];
+	/** Points de temps rendus au joueur chaque trimestre. */
+	readonly timeBonus: number;
+	/** La mission resserre la fourchette des sondages selon la compétence. */
+	readonly pollPrecision: boolean;
+}
+
+/** Poste clé de l'entourage (GDD §6.2), accessible progressivement. */
+export interface PostDefinition {
+	/** Identifiant stable, par exemple `post.chief_of_staff`. */
+	readonly id: string;
+	/** Nom du poste (sans accord de genre). */
+	readonly label: string;
+	readonly description: string;
+	/** Étiquette donnée au titulaire, utilisable par les événements. */
+	readonly tag: string;
+	/** Salaire trimestriel, prélevé sur le budget politique. */
+	readonly salaryCents: number;
+	readonly requires?: Condition | undefined;
+	readonly unavailableReason?: string | undefined;
+	/** Catégories d'événements sur lesquelles le titulaire donne son avis. */
+	readonly adviceCategories: readonly string[];
+	readonly missions: readonly MissionDefinition[];
+}
+
+/**
+ * Profil de candidat proposé pour un poste (GDD §6.2) : des arbitrages, pas un
+ * classement univoque. Les traits imposés s'ajoutent aux traits tirés.
+ */
+export interface CandidateProfileDefinition {
+	/** Identifiant stable, par exemple `profile.expert`. */
+	readonly id: string;
+	/** Présentation affichée (« Parcours solide, langue bien pendue »). */
+	readonly label: string;
+	readonly minCompetence: number;
+	readonly maxCompetence: number;
+	readonly traits: readonly string[];
+}
+
 /** Catalogue du monde : partis, axes et noms des personnages générés. */
 export interface WorldDefinition {
 	readonly axes: readonly AxisDefinition[];
@@ -664,6 +742,11 @@ export interface Content {
 	readonly mandates: Readonly<Record<string, MandateDefinition>>;
 	readonly mandateIds: readonly string[];
 	readonly institutions: InstitutionsDefinition;
+	readonly posts: Readonly<Record<string, PostDefinition>>;
+	readonly postIds: readonly string[];
+	readonly candidateProfiles: readonly CandidateProfileDefinition[];
+	/** Missions indexées par identifiant (toutes définitions de poste confondues). */
+	readonly missions: Readonly<Record<string, MissionDefinition>>;
 	readonly supportGroups: Readonly<Record<string, SupportGroupDefinition>>;
 	/** Ordre du catalogue : électoraux puis influence, ordre stable d'évolution. */
 	readonly supportGroupIds: readonly string[];

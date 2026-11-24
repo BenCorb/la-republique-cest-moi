@@ -13,7 +13,15 @@ import type { GameState } from './state.ts';
 /** Sous-ensemble de l'état suffisant pour évaluer une condition. */
 export type ConditionContext = Pick<
 	GameState,
-	'turn' | 'player' | 'resources' | 'upgrades' | 'world' | 'mandates' | 'institutions' | 'campaigns'
+	| 'turn'
+	| 'player'
+	| 'resources'
+	| 'upgrades'
+	| 'world'
+	| 'mandates'
+	| 'institutions'
+	| 'campaigns'
+	| 'staff'
 >;
 
 export function readStat(context: ConditionContext, stat: StatId): number {
@@ -57,6 +65,8 @@ export function readStat(context: ConditionContext, stat: StatId): number {
 			return activeMandates(context.mandates).length;
 		case 'player.popularity':
 			return context.player.popularity;
+		case 'player.staff':
+			return context.staff.filter((member) => member.status === 'active').length;
 		case 'player.campaigning':
 			return context.campaigns.filter((campaign) => campaign.status === 'running').length;
 		default: {

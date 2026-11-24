@@ -52,6 +52,14 @@ import {
 	reservedTime,
 	type CareerParts
 } from './career.ts';
+import {
+	applyStaffEffect,
+	dismissIssue,
+	hireIssue,
+	isStaffEffect,
+	staffTimeBonus,
+	type EntourageParts
+} from './staff.ts';
 
 export type PlanIssueCode =
 	| 'invalid_plan'
@@ -161,6 +169,7 @@ interface StateParts {
 	readonly player: PlayerState;
 	readonly world: WorldState;
 	readonly career: CareerParts;
+	readonly entourage: EntourageParts;
 }
 
 /**
@@ -174,7 +183,7 @@ function applyStateEffects(
 	target: string | null,
 	content: Content
 ): StateParts & { changes: PoliticalChange[] } {
-	let { player, world, career } = parts;
+	let { player, world, career, entourage } = parts;
 	const changes: PoliticalChange[] = [];
 	for (const effect of effects) {
 		if (isPoliticalEffect(effect)) {
@@ -186,9 +195,22 @@ function applyStateEffects(
 			const outcome = applyCareerEffect(effect, career, turn, target, content, player);
 			career = outcome.parts;
 			changes.push(...outcome.changes);
+		} else if (isStaffEffect(effect)) {
+			const outcome = applyStaffEffect(effect, entourage, turn, target, null, content);
+			entourage = outcome.parts;
+			changes.push(...outcome.changes);
 		}
 	}
-	return { player, world, career, changes };
+	return { player, world, career, entourage, changes };
+}
+
+function entourageOf(state: GameState): EntourageParts {
+	return {
+		staff: state.staff,
+		shortlists: state.shortlists,
+		characters: state.characters,
+		relationships: state.relationships
+	};
 }
 
 function careerOf(state: GameState): CareerParts {
@@ -212,7 +234,9 @@ export function instanceIdFor(number: number): string {
 export function previewPlan(state: GameState, plan: TurnPlan, content: Content): PlanPreview {
 	// Les mandats en cours réservent une part du temps du trimestre.
 	const reserved = reservedTime(state.mandates, content);
-	const timeAvailable = Math.max(0, content.balance.timeBudgetPerTurn - reserved);
+	// Les collaborateurs qui tiennent l'agenda rendent du temps (à partir du trimestre suivant l'embauche).
+	const delegated = staffTimeBonus(state.staff, state.characters, state.turn, content);
+	const timeAvailable = Math.max(0, content.balance.timeBudgetPerTurn - reserved + delegated);
 	const stepPreviews: PlanStepPreview[] = [];
 	const issues: PlanIssue[] = [];
 	const totals = zeroRanges();
@@ -247,6 +271,7 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 	let workingPlayer: PlayerState = state.player;
 	let workingWorld: WorldState = state.world;
 	let workingCareer: CareerParts = careerOf(state);
+	let workingEntourage: EntourageParts = entourageOf(state);
 	const upgrades: OwnedUpgrade[] = [...state.upgrades];
 	let nextInstanceNumber = state.nextInstanceNumber;
 	const actionCounts = new Map<string, number>();
@@ -310,6 +335,29 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 						? 'choisissez une élection'
 						: candidacyIssue(target, workingCareer, workingPlayer, state.turn, content);
 				if (issue) fail('invalid_target', `« ${label} » : ${issue}`);
+			} else if (definition.target === 'candidate' || definition.target === 'staff') {
+				const issue =
+					target === null
+						? 'choisissez une personne'
+						: definition.target === 'candidate'
+							? hireIssue(
+									target,
+									workingEntourage,
+									{
+										turn: state.turn,
+										player: workingPlayer,
+										resources: working,
+										upgrades,
+										world: workingWorld,
+										mandates: workingCareer.mandates,
+										campaigns: workingCareer.campaigns,
+										staff: workingEntourage.staff,
+										institutions: workingCareer.institutions
+									},
+									content
+								)
+							: dismissIssue(target, workingEntourage);
+				if (issue) fail('invalid_target', `« ${label} » : ${issue}`);
 			} else if (definition.target === 'mandate') {
 				const held = activeMandates(workingCareer.mandates).some(
 					(mandate) => mandate.instanceId === target
@@ -350,7 +398,8 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			world: workingWorld,
 			mandates: workingCareer.mandates,
 			campaigns: workingCareer.campaigns,
-			institutions: workingCareer.institutions
+			institutions: workingCareer.institutions,
+			staff: workingEntourage.staff
 		};
 		if (requires && !evaluateCondition(context, requires)) {
 			fail('condition_not_met', unavailableReason ?? `« ${label} » n’est pas disponible.`);
@@ -419,10 +468,16 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 		({
 			player: workingPlayer,
 			world: workingWorld,
-			career: workingCareer
+			career: workingCareer,
+			entourage: workingEntourage
 		} = applyStateEffects(
 			actionEffects,
-			{ player: workingPlayer, world: workingWorld, career: workingCareer },
+			{
+				player: workingPlayer,
+				world: workingWorld,
+				career: workingCareer,
+				entourage: workingEntourage
+			},
 			state.turn,
 			target,
 			content
@@ -493,6 +548,7 @@ export interface PlanExecution {
 	readonly player: PlayerState;
 	readonly world: WorldState;
 	readonly career: CareerParts;
+	readonly entourage: EntourageParts;
 	/** Temps consommé par le plan, qui détermine la charge de travail. */
 	readonly timeUsed: number;
 	readonly rng: RngState;
@@ -516,6 +572,7 @@ export function executePlan(
 	let player = state.player;
 	let world = state.world;
 	let career = careerOf(state);
+	let entourage = entourageOf(state);
 	let timeUsed = 0;
 	let rng = state.rng;
 	const upgrades: OwnedUpgrade[] = [...state.upgrades];
@@ -552,12 +609,12 @@ export function executePlan(
 				} else {
 					const applied = applyStateEffects(
 						[resolved.effect],
-						{ player, world, career },
+						{ player, world, career, entourage },
 						state.turn,
 						target,
 						content
 					);
-					({ player, world, career } = applied);
+					({ player, world, career, entourage } = applied);
 					politics.push(...applied.changes);
 				}
 			}
@@ -587,6 +644,7 @@ export function executePlan(
 		player,
 		world,
 		career,
+		entourage,
 		timeUsed,
 		rng,
 		upgrades,

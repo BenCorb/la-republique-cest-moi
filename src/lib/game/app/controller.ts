@@ -17,6 +17,7 @@
  */
 import type { Content } from '../content/types.ts';
 import {
+	assignMissionCommand,
 	accelerate as accelerateEngine,
 	chooseEventCommand,
 	commitTurn,
@@ -304,6 +305,12 @@ export class GameController {
 		if (this.acceleration?.running) return false;
 		this.acceleration = null;
 		return this.run(commitTurn({ steps: this.plan }), true);
+	}
+
+	/** Change la mission d'un collaborateur (commande hors tour, sauvegardée aussitôt). */
+	assignMission(characterId: string, missionId: string): boolean {
+		if (this.acceleration?.running) return false;
+		return this.run(assignMissionCommand(characterId, missionId), false);
 	}
 
 	choose(choiceId: string): boolean {
