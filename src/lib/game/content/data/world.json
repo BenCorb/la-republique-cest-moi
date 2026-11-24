@@ -1,0 +1,163 @@
+{
+	"axes": [
+		{
+			"id": "economy",
+			"label": "Économie",
+			"negativeLabel": "interventionniste",
+			"positiveLabel": "libéral"
+		},
+		{
+			"id": "society",
+			"label": "Société",
+			"negativeLabel": "progressiste",
+			"positiveLabel": "conservateur"
+		},
+		{
+			"id": "sovereignty",
+			"label": "Souveraineté",
+			"negativeLabel": "pro-européen",
+			"positiveLabel": "souverainiste"
+		}
+	],
+	"parties": [
+		{
+			"id": "party.lti",
+			"name": "Lutte Toujours Intransigeante",
+			"acronym": "LTI",
+			"family": "Extrême gauche",
+			"description": "Prépare le grand soir depuis 1968. Le grand soir, lui, prend son temps, mais la tribune de la fête annuelle est déjà réservée.",
+			"positions": { "economy": -95, "society": -50, "sovereignty": 20 },
+			"baseStrength": 5
+		},
+		{
+			"id": "party.pcf",
+			"name": "Parti Camarade Français",
+			"acronym": "PCF",
+			"family": "Gauche communiste",
+			"description": "Conserve précieusement ses militants, ses mairies de banlieue et une photo encadrée de jours meilleurs.",
+			"positions": { "economy": -75, "society": -25, "sovereignty": 30 },
+			"baseStrength": 7
+		},
+		{
+			"id": "party.ps",
+			"name": "Parti des Synthèses",
+			"acronym": "PS",
+			"family": "Gauche de gouvernement",
+			"description": "Capable de fondre dix-sept motions de congrès en une seule phrase que personne ne comprend, mais que tout le monde vote.",
+			"positions": { "economy": -35, "society": -45, "sovereignty": -45 },
+			"baseStrength": 25
+		},
+		{
+			"id": "party.lvd",
+			"name": "Les Verts Divisés",
+			"acronym": "LVD",
+			"family": "Écologistes",
+			"description": "Plus de courants que de rivières propres. D’accord sur l’urgence climatique, jamais sur l’ordre du jour.",
+			"positions": { "economy": -40, "society": -70, "sovereignty": -55 },
+			"baseStrength": 7
+		},
+		{
+			"id": "party.udf",
+			"name": "Union des Démocrates Flottants",
+			"acronym": "UDF",
+			"family": "Centre",
+			"description": "Centre de gravité de la vie politique, tant qu’on ne lui demande pas de choisir de quel côté tomber.",
+			"positions": { "economy": 20, "society": -5, "sovereignty": -80 },
+			"baseStrength": 9
+		},
+		{
+			"id": "party.rpr",
+			"name": "Rassemblement pour la Réélection",
+			"acronym": "RPR",
+			"family": "Droite de gouvernement",
+			"description": "Gaulliste de tradition, réélectionniste de conviction. Son programme tient en un mot, répété à chaque scrutin.",
+			"positions": { "economy": 45, "society": 40, "sovereignty": 10 },
+			"baseStrength": 24
+		},
+		{
+			"id": "party.cpna",
+			"name": "Chasse, Pêche, Nature et Apéro",
+			"acronym": "CPNA",
+			"family": "Ruralistes",
+			"description": "Défend les traditions du terroir, à commencer par celle de 18 heures. Les réunions commencent à l’heure, l’apéritif aussi.",
+			"positions": { "economy": 20, "society": 50, "sovereignty": 60 },
+			"baseStrength": 3
+		},
+		{
+			"id": "party.fn",
+			"name": "Front du Non",
+			"acronym": "FN",
+			"family": "Extrême droite",
+			"description": "Contre, par principe, et contre le principe aussi. Promet de tout changer pour que tout redevienne comme avant, en mieux.",
+			"positions": { "economy": 10, "society": 85, "sovereignty": 90 },
+			"baseStrength": 14
+		}
+	],
+	"startingGoverningParty": "party.ps",
+	"names": {
+		"first": [
+			"Agnès",
+			"Alain",
+			"Annick",
+			"Arnaud",
+			"Bernadette",
+			"Bruno",
+			"Catherine",
+			"Christian",
+			"Claudine",
+			"Daniel",
+			"Dominique",
+			"Éliane",
+			"Éric",
+			"Françoise",
+			"Gilles",
+			"Hervé",
+			"Isabelle",
+			"Jacqueline",
+			"Laurent",
+			"Martine",
+			"Michel",
+			"Monique",
+			"Nathalie",
+			"Olivier",
+			"Pascal",
+			"Patricia",
+			"Philippe",
+			"Sylvie",
+			"Thierry",
+			"Véronique"
+		],
+		"last": [
+			"Aubertin",
+			"Barbezat",
+			"Bellegarde",
+			"Bompard",
+			"Castagnède",
+			"Chauvelin",
+			"Delaporte",
+			"Desmoulières",
+			"Dufresnoy",
+			"Escoffier",
+			"Fontanel",
+			"Gaudichon",
+			"Grandjouan",
+			"Labrousse",
+			"Lamarzelle",
+			"Larrieu",
+			"Malaquais",
+			"Marchandeau",
+			"Montclar",
+			"Pélissou",
+			"Peyrebrune",
+			"Quintard",
+			"Rabastens",
+			"Rocheblave",
+			"Saint-Aubin",
+			"Tardivel",
+			"Tournemire",
+			"Vauquelin",
+			"Verdelhan",
+			"Villeneuve-Ruault"
+		]
+	}
+}

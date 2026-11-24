@@ -1,0 +1,447 @@
+{
+	"events": [
+		{
+			"id": "national.general_strike",
+			"category": "national",
+			"title": "Grève générale",
+			"text": "Les syndicats bloquent les trains, les raffineries et, par solidarité, la machine à café du ministère. {governing_party} dénonce une « prise d’otages » ; les otages, eux, ont ressorti leur vélo.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 0,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "lte",
+				"stat": "world.socialClimate",
+				"value": 38
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "addIndicator",
+					"indicator": "stability",
+					"value": -4
+				},
+				{
+					"op": "addPartyStrength",
+					"party": "governing",
+					"value": -1
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				}
+			]
+		},
+		{
+			"id": "national.record_growth",
+			"category": "national",
+			"title": "Croissance record",
+			"text": "La croissance dépasse les prévisions. Le gouvernement y voit le fruit de sa politique, {opposition_party} celui de la conjoncture mondiale, et les économistes celui d’un hiver doux.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "gte",
+				"stat": "world.economy",
+				"value": 62
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "addIndicator",
+					"indicator": "socialClimate",
+					"value": 2
+				},
+				{
+					"op": "addPartyStrength",
+					"party": "governing",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "national.recession",
+			"category": "national",
+			"title": "Récession technique",
+			"text": "Deux trimestres de recul : le gouvernement préfère parler de « croissance négative temporairement contrariée ». {opposition_party} réclame des états généraux, des assises et un grand débat, dans cet ordre.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 0,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "lte",
+				"stat": "world.economy",
+				"value": 38
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "addIndicator",
+					"indicator": "socialClimate",
+					"value": -3
+				},
+				{
+					"op": "addIndicator",
+					"indicator": "stability",
+					"value": -3
+				},
+				{
+					"op": "addPartyStrength",
+					"party": "governing",
+					"value": -1
+				},
+				{
+					"op": "addPartyStrength",
+					"party": "opposition",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "national.reshuffle",
+			"category": "national",
+			"title": "Remaniement ministériel",
+			"text": "Trois ministres changent de bureau, deux changent de cravate, aucun ne change de politique. {governing_leader} salue « un nouveau souffle » depuis le perron.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 0,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": {
+				"op": "lte",
+				"stat": "world.stability",
+				"value": 42
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "addIndicator",
+					"indicator": "stability",
+					"value": 6
+				}
+			]
+		},
+		{
+			"id": "national.censure_motion",
+			"category": "national",
+			"title": "Motion de censure",
+			"text": "{opposition_party} dépose une motion de censure. Elle est repoussée à onze voix près, dont trois députés qui s’étaient trompés de bouton et un qui dormait sincèrement.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "lte",
+				"stat": "world.stability",
+				"value": 32
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "addIndicator",
+					"indicator": "stability",
+					"value": -3
+				},
+				{
+					"op": "addPartyStrength",
+					"party": "opposition",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "national.opposition_poll",
+			"category": "national",
+			"title": "Sondage de printemps",
+			"text": "Un sondage place {opposition_party} en tête. Interrogée sur un plateau, la direction du parti, menée par {opposition_leader}, promet de rester « humble, sereine et prête à tout », surtout à tout.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 10,
+			"unique": false,
+			"when": {
+				"op": "lte",
+				"stat": "world.stability",
+				"value": 50
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "addPartyStrength",
+					"party": "opposition",
+					"value": 2
+				},
+				{
+					"op": "addPartyStrength",
+					"party": "governing",
+					"value": -1
+				}
+			]
+		},
+		{
+			"id": "national.tax_trick",
+			"category": "national",
+			"title": "Baisse d’impôts",
+			"text": "Le gouvernement annonce une baisse d’impôts financée par une hausse des taxes. Chacun peut ainsi affirmer avoir raison, et les comptables nationaux prennent un congé maladie.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "gte",
+				"stat": "world.economy",
+				"value": 50
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "addIndicator",
+					"indicator": "socialClimate",
+					"value": 3
+				},
+				{
+					"op": "addIndicator",
+					"indicator": "economy",
+					"value": -1
+				}
+			]
+		},
+		{
+			"id": "national.pension_reform",
+			"category": "national",
+			"title": "Réforme des retraites",
+			"text": "Une réforme des retraites est annoncée, « juste, équilibrée et indispensable ». La rue la juge surtout indispensable à retirer. Les cortèges battent des records, les chiffres de participation aussi, chacun les siens.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"availableFromTurn": 6,
+			"cooldownTurns": 24,
+			"unique": false,
+			"actors": [],
+			"effects": [
+				{
+					"op": "addIndicator",
+					"indicator": "socialClimate",
+					"value": -5
+				},
+				{
+					"op": "addIndicator",
+					"indicator": "stability",
+					"value": -2
+				},
+				{
+					"op": "addPartyStrength",
+					"party": "governing",
+					"value": -1
+				}
+			]
+		},
+		{
+			"id": "national.leader_book",
+			"category": "national",
+			"title": "Un livre-programme",
+			"text": "{governing_leader} publie un livre-programme de quatre cents pages. Deux mille exemplaires s’écoulent, dont mille huit cents achetés par le parti pour garnir ses permanences.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 2,
+			"priority": 0,
+			"cooldownTurns": 20,
+			"unique": false,
+			"actors": [],
+			"effects": []
+		},
+		{
+			"id": "national.party_scandal",
+			"category": "national",
+			"title": "L’affaire des adhérents fantômes",
+			"text": "{player_party} découvre quatre mille adhérents fictifs dans ses fichiers, dont un labrador et deux défunts très assidus aux votes internes. La direction dénonce « une erreur informatique ».",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 2,
+			"priority": 0,
+			"cooldownTurns": 24,
+			"unique": false,
+			"when": {
+				"op": "eq",
+				"stat": "player.affiliated",
+				"value": 1
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "addPartyStrength",
+					"party": "player",
+					"value": -2
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "national.party_congress",
+			"category": "national",
+			"title": "Congrès de {player_party}",
+			"text": "Le congrès de {player_party} s’ouvre dans un palais des congrès de province. {player_party_leader} attend un soutien unanime ; trois motions concurrentes attendent votre signature, et le buffet attend tout le monde.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 5,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "eq",
+				"stat": "player.affiliated",
+				"value": 1
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "support",
+					"label": "Signer la motion de {player_party_leader}",
+					"hints": ["Bien vu de la direction", "Un parti un peu plus uni"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 3
+						},
+						{
+							"op": "addPartyStrength",
+							"party": "player",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": "rebel",
+					"label": "Monter à la tribune avec une motion dissidente",
+					"hints": ["Coup d’éclat risqué", "Le parti se divise"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResourceRandom",
+							"resource": "influence",
+							"min": 0,
+							"max": 6
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 3
+						},
+						{
+							"op": "addPartyStrength",
+							"party": "player",
+							"value": -1
+						}
+					]
+				},
+				{
+					"id": "buffet",
+					"label": "Rester près du buffet",
+					"hints": ["Repos relatif"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -3
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "national.defend_reform",
+			"category": "national",
+			"title": "Défendre l’indéfendable",
+			"text": "Le gouvernement conduit par {player_party} présente une réforme impopulaire. La direction vous demande de la défendre au journal du soir, avec le sourire et sans fiche.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "eq",
+						"stat": "player.affiliated",
+						"value": 1
+					},
+					{
+						"op": "eq",
+						"stat": "player.partyGoverning",
+						"value": 1
+					}
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "defend",
+					"label": "Défendre la réforme à l’antenne",
+					"hints": ["Bon point auprès du parti", "Soirée éprouvante"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 4
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": "criticize",
+					"label": "Exprimer des « réserves constructives »",
+					"hints": ["Indépendance remarquée", "Le parti grince des dents"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						},
+						{
+							"op": "addPartyStrength",
+							"party": "player",
+							"value": -1
+						}
+					]
+				},
+				{
+					"id": "dodge",
+					"label": "Avoir une extinction de voix",
+					"hints": ["Rien ne se passe, c’est le but"],
+					"costs": [],
+					"effects": []
+				}
+			]
+		}
+	]
+}

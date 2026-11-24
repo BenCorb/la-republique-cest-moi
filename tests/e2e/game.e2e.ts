@@ -47,7 +47,7 @@ test.describe('parcours de jeu', () => {
 		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
 		await expect(page.getByTestId('game-date')).toHaveText('T2 2000 · 25 ans');
 		await expect(page.getByTestId('resource-influence')).toHaveText('3');
-		await expect(page.getByTestId('resource-personalCashCents')).toContainText('3 800');
+		await expect(page.getByTestId('resource-personalCashCents')).toContainText('5 300');
 
 		await page.getByRole('button', { name: 'Journal', exact: true }).click();
 		await expect(page.getByRole('heading', { name: 'T1 2000' })).toBeVisible();
@@ -55,8 +55,31 @@ test.describe('parcours de jeu', () => {
 		expect(errors).toEqual([]);
 	});
 
+	test('adhère à un parti depuis le monde politique', async ({ page }) => {
+		await startCareer(page, 'e2e-parti');
+		await expect(page.getByTestId('header-party')).toHaveText('Étiquette aucune');
+		await page.getByRole('button', { name: 'Monde politique', exact: true }).click();
+		await expect(page.getByRole('heading', { name: 'Contexte national' })).toBeVisible();
+		await expect(page.getByText('Gouvernement conduit par Parti des Synthèses.')).toBeVisible();
+		await expect(page.getByTestId('party-party.fn')).toContainText('Front du Non');
+
+		await page.getByRole('button', { name: 'Prévoir l’adhésion au Parti des Synthèses' }).click();
+		await expect(page.getByTestId('party-party.ps')).toContainText('Adhésion prévue ce trimestre');
+		await expect(
+			page.getByRole('button', { name: 'Prévoir l’adhésion au Front du Non' })
+		).toBeDisabled();
+		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+
+		await expect(page.getByTestId('header-party')).toHaveText('Étiquette PS');
+		await page.getByRole('button', { name: 'Monde politique', exact: true }).click();
+		await expect(page.getByTestId('affiliation')).toHaveText(
+			'Membre du Parti des Synthèses depuis le T1 2000'
+		);
+		await expect(page.getByTestId('party-party.ps')).toContainText('Votre parti');
+	});
+
 	test('planifie un achat qui ne produit qu’au trimestre suivant', async ({ page }) => {
-		await startCareer(page);
+		await startCareer(page, 'e2e-achat');
 		await page.getByRole('button', { name: 'Organisation', exact: true }).click();
 		await page
 			.getByRole('button', { name: 'Planifier l’achat « Recruter un militant bénévole »' })
@@ -176,7 +199,7 @@ test.describe('parcours de jeu', () => {
 
 	test('reste lisible sans défilement horizontal en cours de partie', async ({ page }) => {
 		await startCareer(page);
-		for (const tab of ['Tableau de bord', 'Agenda', 'Organisation', 'Journal']) {
+		for (const tab of ['Tableau de bord', 'Agenda', 'Monde politique', 'Organisation', 'Journal']) {
 			await page.getByRole('button', { name: tab, exact: true }).click();
 			const overflow = await page.evaluate(
 				() => document.documentElement.scrollWidth - document.documentElement.clientWidth

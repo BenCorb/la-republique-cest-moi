@@ -20,7 +20,7 @@ compte, aucune IA au runtime ; les sauvegardes restent dans le navigateur.
 ## Jouer (prototype)
 
 Une carrière commence à 25 ans, au premier trimestre 2000. À chaque trimestre : composer le plan
-dans l’**Agenda** (actions) et l’**Organisation** (achats), vérifier la prévision, puis valider avec
+dans l’**Agenda** (actions), l’**Organisation** (achats) et le **Monde politique** (adhésion à un parti), vérifier la prévision, puis valider avec
 « Trimestre suivant ». Les décisions bloquantes s’affichent dans une fenêtre et doivent être
 tranchées. « Année suivante » répète le plan pendant au plus quatre trimestres ; « Jusqu’à une
 alerte » accélère jusqu’à une décision, une alerte, une fin ou un plan devenu invalide, et peut être

@@ -9,7 +9,12 @@ import type { GameState, JournalEntry } from './state.ts';
 
 /** Étape d'un plan trimestriel : une action ou l'achat d'une amélioration. */
 export type PlanStep =
-	| { readonly kind: 'action'; readonly id: string }
+	| {
+			readonly kind: 'action';
+			readonly id: string;
+			/** Cible d'une action ciblée (identifiant de parti), absente sinon. */
+			readonly target?: string;
+	  }
 	| { readonly kind: 'purchase'; readonly id: string };
 
 /** Plan d'un trimestre : étapes exécutées dans l'ordre annoncé. */

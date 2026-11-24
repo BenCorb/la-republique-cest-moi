@@ -12,7 +12,8 @@ import {
 	fixtureBalance,
 	fixtureCast,
 	fixtureEvents,
-	fixtureUpgrades
+	fixtureUpgrades,
+	fixtureWorld
 } from '../fixtures/content.ts';
 
 const temporaryDirs: string[] = [];
@@ -58,7 +59,13 @@ describe('validation de contenu', () => {
 		const report = validateGameContent(DEFAULT_CONTENT_DIR);
 		expect(report.issues).toEqual([]);
 		expect(report.files).toEqual(
-			expect.arrayContaining(['actions.json', 'upgrades.json', 'balance.json', 'cast.json'])
+			expect.arrayContaining([
+				'actions.json',
+				'upgrades.json',
+				'balance.json',
+				'cast.json',
+				'world.json'
+			])
 		);
 	});
 
@@ -68,7 +75,8 @@ describe('validation de contenu', () => {
 		expect(validateGameContent(dir).issues).toEqual([
 			{ file: 'actions.json', message: 'catalogue obligatoire manquant' },
 			{ file: 'upgrades.json', message: 'catalogue obligatoire manquant' },
-			{ file: 'cast.json', message: 'catalogue obligatoire manquant' }
+			{ file: 'cast.json', message: 'catalogue obligatoire manquant' },
+			{ file: 'world.json', message: 'catalogue obligatoire manquant' }
 		]);
 	});
 
@@ -81,6 +89,7 @@ describe('validation de contenu', () => {
 		writeFileSync(join(dir, 'balance.json'), JSON.stringify(fixtureBalance));
 		writeFileSync(join(dir, 'upgrades.json'), JSON.stringify(fixtureUpgrades));
 		writeFileSync(join(dir, 'cast.json'), JSON.stringify(fixtureCast));
+		writeFileSync(join(dir, 'world.json'), JSON.stringify(fixtureWorld));
 		mkdirSync(join(dir, 'events'));
 		for (const [file, catalog] of Object.entries(fixtureEvents)) {
 			writeFileSync(join(dir, file), JSON.stringify(catalog));

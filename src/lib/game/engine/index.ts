@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.7.0';
+export const RULES_VERSION = '0.8.0';
 
 export {
 	START_YEAR,
@@ -62,8 +62,28 @@ export {
 	type StepRecord,
 	type WellbeingContribution,
 	type WellbeingRecord,
-	type WellbeingSource
+	type WellbeingSource,
+	type Affiliation,
+	type Character,
+	type LeaderChange,
+	type PartyState,
+	type PoliticalChange,
+	type WorldRecord,
+	type WorldState
 } from './state.ts';
+export {
+	applyPoliticalEffect,
+	characterId,
+	createWorld,
+	isPoliticalEffect,
+	oppositionPartyId,
+	resolvePartyReference,
+	resolveWorld,
+	type FrontierWorld,
+	type PoliticalEffect,
+	type PoliticalOutcome,
+	type WorldCreation
+} from './world.ts';
 export {
 	chooseEventCommand,
 	commitTurn,
@@ -119,6 +139,7 @@ export {
 } from './health.ts';
 export { careerSummary, type CareerSummary } from './selectors.ts';
 export {
+	actorName,
 	choiceAvailability,
 	describePendingEvent,
 	eventInstanceId,

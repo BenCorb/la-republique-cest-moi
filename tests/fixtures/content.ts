@@ -37,7 +37,85 @@ export const fixtureBalance = {
 	startingResources: { influence: 0, politicalBudgetCents: 10_000, personalCashCents: 100_000 },
 	wellbeing: neutralWellbeing,
 	// Aucun tirage ordinaire par défaut : les tests d'événements l'activent (`withEvents`).
-	events: { ordinaryDrawsPerTurn: 0, ordinaryEventChance: 0 }
+	events: { ordinaryDrawsPerTurn: 0, ordinaryEventChance: 0 },
+	// Monde immobile par défaut : les tests du monde l'activent (`withWorld`).
+	world: neutralWorld()
+};
+
+/** Évolution du monde neutre : ni retour à la référence, ni aléa, ni changement de direction. */
+export function neutralWorld() {
+	return {
+		startingIndicators: { economy: 50, socialClimate: 50, stability: 50 },
+		indicatorBaseline: 50,
+		indicatorReversionPercent: 0,
+		indicatorVolatility: 0,
+		minPartyStrength: 1,
+		maxPartyStrength: 60,
+		strengthReversionPercent: 0,
+		strengthVolatility: 0,
+		governingIndicatorDivisor: 5,
+		leaderChangeChance: 0,
+		leaderMinAge: 40,
+		leaderMaxAge: 60,
+		leaderRetirementAge: 200
+	};
+}
+
+export const fixtureWorld = {
+	axes: [
+		{
+			id: 'economy',
+			label: 'Économie',
+			negativeLabel: 'interventionniste',
+			positiveLabel: 'libéral'
+		},
+		{
+			id: 'society',
+			label: 'Société',
+			negativeLabel: 'progressiste',
+			positiveLabel: 'conservateur'
+		},
+		{
+			id: 'sovereignty',
+			label: 'Souveraineté',
+			negativeLabel: 'pro-européen',
+			positiveLabel: 'souverainiste'
+		}
+	],
+	parties: [
+		{
+			id: 'party.left',
+			name: 'Parti de Gauche Test',
+			acronym: 'PGT',
+			family: 'Gauche',
+			description: 'Parti de test.',
+			positions: { economy: -50, society: -40, sovereignty: -20 },
+			baseStrength: 30
+		},
+		{
+			id: 'party.right',
+			name: 'Parti de Droite Test',
+			acronym: 'PDT',
+			family: 'Droite',
+			description: 'Parti de test.',
+			positions: { economy: 50, society: 40, sovereignty: 20 },
+			baseStrength: 25
+		},
+		{
+			id: 'party.small',
+			name: 'Petit Parti Test',
+			acronym: 'PPT',
+			family: 'Centre',
+			description: 'Parti de test.',
+			positions: { economy: 0, society: 0, sovereignty: -60 },
+			baseStrength: 5
+		}
+	],
+	startingGoverningParty: 'party.left',
+	names: {
+		first: ['Alix', 'Camille', 'Dominique', 'Sacha', 'Claude', 'Maxime'],
+		last: ['Martin', 'Bernard', 'Durand', 'Petit', 'Moreau', 'Laurent']
+	}
 };
 
 export const fixtureCast = {
@@ -349,7 +427,8 @@ function load(): Content {
 		upgrades: fixtureUpgrades,
 		balance: fixtureBalance,
 		cast: fixtureCast,
-		events: fixtureEvents
+		events: fixtureEvents,
+		world: fixtureWorld
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;
@@ -383,6 +462,17 @@ export function withEvents(
 			(id) => eventIds.includes(id) || base.events[id]?.trigger === 'followUp'
 		),
 		balance: { ...base.balance, events }
+	};
+}
+
+/** Contenu de test avec une évolution du monde modifiée. */
+export function withWorld(changes: Partial<Content['balance']['world']>): Content {
+	return {
+		...fixtureContent,
+		balance: {
+			...fixtureContent.balance,
+			world: { ...fixtureContent.balance.world, ...changes }
+		}
 	};
 }
 

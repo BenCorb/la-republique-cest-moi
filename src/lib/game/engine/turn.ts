@@ -7,6 +7,7 @@
  *   2. étapes du plan dans l'ordre (actions, achats) ............ P1-02, P1-03
  *   3. charges puis production des améliorations actives ........ P1-03
  *   4. stress, santé, vieillissement, décès ..................... P1-04
+ *      puis évolution autonome du monde (indicateurs, partis) ... P2-01
  *   5. échéances ................................................ alpha
  *   6. passage à T+1 (une seule fois), journal du trimestre T,
  *      suites dues et tirage des événements ......................... P1-01, P1-05
@@ -22,6 +23,7 @@ import { economyRecords, resolveEconomy } from './economy.ts';
 import { chooseEvent, resolveEventFrontier } from './events.ts';
 import { resolveWellbeing } from './health.ts';
 import { executePlan, previewPlan } from './plan.ts';
+import { resolveWorld } from './world.ts';
 import type { CommandError, CommitTurnCommand, GameCommand, TransitionResult } from './commands.ts';
 import type { EndState, GameState, HistoryEntry } from './state.ts';
 
@@ -85,21 +87,27 @@ function commitTurn(
 	);
 	const nextTurn = resolvedTurn + 1;
 
-	// 6. Passage à T+1, puis suites dues et tirage des événements (sauf décès en 4).
-	const frontier = wellbeing.record.deathCause
+	// 4 bis. Monde autonome (sauf décès) : il évolue même si le joueur ne fait rien.
+	const world = wellbeing.record.deathCause
 		? null
-		: resolveEventFrontier(
+		: resolveWorld(execution.world, state.characters, nextTurn, wellbeing.rng, content);
+
+	// 6. Passage à T+1, puis suites dues et tirage des événements (sauf décès en 4).
+	const frontier = world
+		? resolveEventFrontier(
 				{
 					turn: nextTurn,
 					player: wellbeing.player,
 					resources: economy.resources,
 					upgrades: execution.upgrades,
-					rng: wellbeing.rng,
+					rng: world.rng,
 					nextInstanceNumber: execution.nextInstanceNumber,
-					events: state.events
+					events: state.events,
+					world: world.world
 				},
 				content
-			);
+			)
+		: null;
 
 	const entry: HistoryEntry = {
 		type: 'turn.resolved',
@@ -107,6 +115,7 @@ function commitTurn(
 		steps: execution.records,
 		economy: { producers: economyRecords(economy), changes: economy.changes },
 		wellbeing: wellbeing.record,
+		world: world?.record ?? null,
 		events: frontier?.records ?? []
 	};
 
@@ -127,6 +136,8 @@ function commitTurn(
 			rng: frontier?.rng ?? wellbeing.rng,
 			player: frontier?.player ?? wellbeing.player,
 			resources: frontier?.resources ?? economy.resources,
+			world: frontier?.world ?? execution.world,
+			characters: world?.characters ?? state.characters,
 			upgrades: execution.upgrades,
 			nextInstanceNumber: frontier?.nextInstanceNumber ?? execution.nextInstanceNumber,
 			events,

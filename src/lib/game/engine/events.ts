@@ -23,20 +23,24 @@
  */
 import {
 	RESOURCE_IDS,
+	WORLD_TEMPLATE_VARIABLES,
 	type Content,
 	type Effect,
 	type EventChoice,
 	type EventDefinition,
 	type ResourceAmount,
 	type ResourceId,
-	type Resources
+	type Resources,
+	type WorldTemplateVariable
 } from '../content/types.ts';
 import type { Turn } from './calendar.ts';
 import type { ChooseEventCommand, CommandError, TransitionResult } from './commands.ts';
 import { evaluateCondition, type ConditionContext } from './conditions.ts';
 import { applyGauge, resolveEffect } from './effects.ts';
 import { nextFloat, nextInt, type RngState } from './random.ts';
+import { applyPoliticalEffect, oppositionPartyId } from './world.ts';
 import type {
+	Character,
 	ChoiceRecord,
 	DeathCause,
 	EventInstance,
@@ -45,8 +49,10 @@ import type {
 	GameState,
 	GaugeChange,
 	PlayerState,
+	PoliticalChange,
 	ResourceChange,
-	ScheduledEvent
+	ScheduledEvent,
+	WorldState
 } from './state.ts';
 
 export function eventInstanceId(number: number): string {
@@ -55,17 +61,89 @@ export function eventInstanceId(number: number): string {
 
 const TEMPLATE_VARIABLE = /\{([a-z][a-z0-9_]*)\}/g;
 
+/** Nom affichable d'un acteur figé : membre de la distribution, parti ou personnage. */
+export function actorName(
+	id: string | undefined,
+	content: Content,
+	characters: Readonly<Record<string, Character>>
+): string | undefined {
+	if (id === undefined) return undefined;
+	if (Object.hasOwn(content.cast, id)) return content.cast[id]?.name;
+	if (Object.hasOwn(content.parties, id)) return content.parties[id]?.name;
+	if (Object.hasOwn(characters, id)) return characters[id]?.name;
+	return undefined;
+}
+
 /** Remplace `{role}` par le nom de l'acteur ; les textes sont validés au chargement. */
 export function renderTemplate(
 	text: string,
 	actors: Readonly<Record<string, string>>,
-	content: Content
+	content: Content,
+	characters: Readonly<Record<string, Character>>
 ): string {
-	return text.replace(TEMPLATE_VARIABLE, (match, role: string) => {
-		const castId = actors[role];
-		const member = castId ? content.cast[castId] : undefined;
-		return member ? member.name : match;
-	});
+	return text.replace(
+		TEMPLATE_VARIABLE,
+		(match, role: string) => actorName(actors[role], content, characters) ?? match
+	);
+}
+
+const WORLD_VARIABLES = new Set<string>(WORLD_TEMPLATE_VARIABLES);
+
+/** Variables du monde citées par les textes d'un événement. */
+function worldVariablesOf(definition: EventDefinition): WorldTemplateVariable[] {
+	const texts = [definition.title, definition.text];
+	if (definition.blocking) {
+		for (const choice of definition.choices) texts.push(choice.label, ...choice.hints);
+	}
+	const found = new Set<WorldTemplateVariable>();
+	for (const text of texts) {
+		for (const match of text.matchAll(TEMPLATE_VARIABLE)) {
+			const name = match[1] ?? '';
+			if (WORLD_VARIABLES.has(name)) found.add(name as WorldTemplateVariable);
+		}
+	}
+	return [...found].sort();
+}
+
+/**
+ * Fige les variables du monde d'une instance (partis et dirigeants du moment).
+ * Une suite conserve les valeurs héritées de l'événement d'origine.
+ */
+function bindWorldVariables(
+	definition: EventDefinition,
+	inherited: Readonly<Record<string, string>>,
+	player: PlayerState,
+	world: WorldState,
+	content: Content
+): Record<string, string> | null {
+	const bound: Record<string, string> = {};
+	for (const variable of worldVariablesOf(definition)) {
+		const kept = inherited[variable];
+		if (kept !== undefined) {
+			bound[variable] = kept;
+			continue;
+		}
+		let partyId: string | null;
+		switch (variable) {
+			case 'governing_party':
+			case 'governing_leader':
+				partyId = world.governingPartyId;
+				break;
+			case 'opposition_party':
+			case 'opposition_leader':
+				partyId = oppositionPartyId(world, content);
+				break;
+			case 'player_party':
+			case 'player_party_leader':
+				partyId = player.partyId;
+				break;
+		}
+		if (partyId === null) return null;
+		const value = variable.endsWith('_leader') ? world.parties[partyId]?.leaderId : partyId;
+		if (value === undefined) return null;
+		bound[variable] = value;
+	}
+	return bound;
 }
 
 // ---------------------------------------------------------------------------
@@ -75,9 +153,11 @@ export function renderTemplate(
 interface EffectOutcome {
 	readonly resources: Resources;
 	readonly player: PlayerState;
+	readonly world: WorldState;
 	readonly rng: RngState;
 	readonly changes: readonly ResourceChange[];
 	readonly gauges: readonly GaugeChange[];
+	readonly politics: readonly PoliticalChange[];
 }
 
 function applyAutomaticEffects(
@@ -85,11 +165,16 @@ function applyAutomaticEffects(
 	costs: readonly ResourceAmount[],
 	resources: Resources,
 	player: PlayerState,
-	rng: RngState
+	world: WorldState,
+	rng: RngState,
+	turn: Turn,
+	content: Content
 ): EffectOutcome {
 	const current: Record<ResourceId, number> = { ...resources };
 	let currentPlayer = player;
+	let currentWorld = world;
 	let currentRng = rng;
+	const politics: PoliticalChange[] = [];
 	const deltas = new Map<ResourceId, number>();
 	const gaugeDeltas = new Map<GaugeChange['gauge'], number>();
 
@@ -106,6 +191,18 @@ function applyAutomaticEffects(
 		currentRng = resolved.rng;
 		if (resolved.kind === 'resource') {
 			addResource(resolved.resource, resolved.delta);
+		} else if (resolved.kind === 'politics') {
+			const outcome = applyPoliticalEffect(
+				resolved.effect,
+				currentPlayer,
+				currentWorld,
+				turn,
+				null,
+				content
+			);
+			currentPlayer = outcome.player;
+			currentWorld = outcome.world;
+			politics.push(...outcome.changes);
 		} else {
 			const key = resolved.gauge === 'player.health' ? 'health' : 'stress';
 			const { value, applied } = applyGauge(currentPlayer[key], resolved.delta);
@@ -117,7 +214,9 @@ function applyAutomaticEffects(
 	return {
 		resources: current,
 		player: currentPlayer,
+		world: currentWorld,
 		rng: currentRng,
+		politics,
 		changes: RESOURCE_IDS.flatMap((resource) => {
 			const delta = deltas.get(resource) ?? 0;
 			return delta === 0 ? [] : [{ resource, delta }];
@@ -208,11 +307,13 @@ export interface FrontierInput {
 	readonly rng: RngState;
 	readonly nextInstanceNumber: number;
 	readonly events: EventsState;
+	readonly world: WorldState;
 }
 
 export interface FrontierResult {
 	readonly player: PlayerState;
 	readonly resources: Resources;
+	readonly world: WorldState;
 	readonly rng: RngState;
 	readonly nextInstanceNumber: number;
 	readonly events: EventsState;
@@ -221,7 +322,7 @@ export interface FrontierResult {
 }
 
 export function resolveEventFrontier(input: FrontierInput, content: Content): FrontierResult {
-	let { player, resources, rng, nextInstanceNumber } = input;
+	let { player, resources, rng, nextInstanceNumber, world } = input;
 	const turn = input.turn;
 	const pending: EventInstance[] = [...input.events.pending];
 	const occurrences: Record<string, { count: number; lastTurn: Turn }> = {
@@ -230,7 +331,13 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 	const records: EventRecord[] = [];
 	// Modifié dans `create` : objet mutable pour que l'analyse de flux suive la valeur.
 	const death: { cause: DeathCause | null } = { cause: null };
-	const context = (): ConditionContext => ({ turn, player, resources, upgrades: input.upgrades });
+	const context = (): ConditionContext => ({
+		turn,
+		player,
+		resources,
+		upgrades: input.upgrades,
+		world
+	});
 
 	const create = (definition: EventDefinition, actors: Record<string, string>): void => {
 		const instance: EventInstance = {
@@ -252,12 +359,22 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 				actors,
 				changes: [],
 				gauges: [],
+				politics: [],
 				reason: null
 			});
 			return;
 		}
-		const outcome = applyAutomaticEffects(definition.effects, [], resources, player, rng);
-		({ resources, player, rng } = outcome);
+		const outcome = applyAutomaticEffects(
+			definition.effects,
+			[],
+			resources,
+			player,
+			world,
+			rng,
+			turn,
+			content
+		);
+		({ resources, player, rng, world } = outcome);
 		records.push({
 			eventId: definition.id,
 			instanceId: instance.instanceId,
@@ -265,6 +382,7 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 			actors,
 			changes: outcome.changes,
 			gauges: outcome.gauges,
+			politics: outcome.politics,
 			reason: null
 		});
 		if (player.health <= 0) death.cause = 'health_failure';
@@ -278,6 +396,7 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 			actors: scheduled.actors,
 			changes: [],
 			gauges: [],
+			politics: [],
 			reason
 		});
 	};
@@ -294,12 +413,13 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 			continue;
 		}
 		const resolved = resolveActors(definition, entry.actors, rng, content);
-		if (!resolved) {
+		const bound = bindWorldVariables(definition, entry.actors, player, world, content);
+		if (!resolved || !bound) {
 			cancel(entry, 'Aucun acteur disponible pour cette suite.');
 			continue;
 		}
 		rng = resolved.rng;
-		create(definition, resolved.actors);
+		create(definition, { ...resolved.actors, ...bound });
 	}
 
 	// 2. Tirages ordinaires.
@@ -339,10 +459,11 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		if (!chosen) continue;
 
 		const resolved = resolveActors(chosen, {}, rng, content);
-		if (!resolved) continue;
+		const bound = bindWorldVariables(chosen, {}, player, world, content);
+		if (!resolved || !bound) continue;
 		rng = resolved.rng;
 		drawnThisTurn.add(chosen.id);
-		create(chosen, resolved.actors);
+		create(chosen, { ...resolved.actors, ...bound });
 	}
 
 	// File des événements bloquants : priorité décroissante, puis ordre de création.
@@ -356,6 +477,7 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 	return {
 		player,
 		resources,
+		world,
 		rng,
 		nextInstanceNumber,
 		events: {
@@ -430,7 +552,10 @@ export function chooseEvent(
 		choice.costs,
 		state.resources,
 		state.player,
-		state.rng
+		state.world,
+		state.rng,
+		state.turn,
+		content
 	);
 	const scheduledEntry: ScheduledEvent | null = choice.followUp
 		? {
@@ -446,7 +571,8 @@ export function chooseEvent(
 		turn: state.turn,
 		player: outcome.player,
 		resources: outcome.resources,
-		upgrades: state.upgrades
+		upgrades: state.upgrades,
+		world: outcome.world
 	};
 	const cancelled: { instanceId: string; reason: string }[] = [];
 	const remaining = state.events.pending.slice(1).filter((other) => {
@@ -473,6 +599,7 @@ export function chooseEvent(
 		choiceId: choice.id,
 		changes: outcome.changes,
 		gauges: outcome.gauges,
+		politics: outcome.politics,
 		scheduled: scheduledEntry,
 		cancelled,
 		deathCause
@@ -484,6 +611,7 @@ export function chooseEvent(
 			...state,
 			resources: outcome.resources,
 			player: outcome.player,
+			world: outcome.world,
 			rng: outcome.rng,
 			phase: deathCause ? 'ended' : remaining.length > 0 ? 'decision' : 'planning',
 			end: deathCause ? { turn: state.turn, reason: 'death', cause: deathCause } : null,
@@ -536,7 +664,8 @@ export function describePendingEvent(state: GameState, content: Content): Pendin
 	if (!instance) return null;
 	const definition = content.events[instance.eventId];
 	if (!definition || !definition.blocking) return null;
-	const render = (text: string): string => renderTemplate(text, instance.actors, content);
+	const render = (text: string): string =>
+		renderTemplate(text, instance.actors, content, state.characters);
 	return {
 		instanceId: instance.instanceId,
 		eventId: instance.eventId,
@@ -545,7 +674,7 @@ export function describePendingEvent(state: GameState, content: Content): Pendin
 		text: render(definition.text),
 		actors: definition.actors.map((slot) => ({
 			role: slot.role,
-			name: content.cast[instance.actors[slot.role] ?? '']?.name ?? slot.role
+			name: actorName(instance.actors[slot.role], content, state.characters) ?? slot.role
 		})),
 		choices: definition.choices.map((choice) => ({
 			id: choice.id,

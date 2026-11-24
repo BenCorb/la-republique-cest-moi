@@ -6,7 +6,13 @@
  * choisissent les décisions depuis `PendingEventView`, qui n'expose aucun effet
  * caché. Elles ne lisent jamais le PRNG de la partie.
  */
-import type { Content, ResourceId, Resources } from '../content/types.ts';
+import {
+	INDICATOR_IDS,
+	type Content,
+	type IndicatorId,
+	type ResourceId,
+	type Resources
+} from '../content/types.ts';
 import {
 	RULES_VERSION,
 	accelerationAlerts,
@@ -28,7 +34,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 1;
+export const SIMULATION_REPORT_VERSION = 2;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -72,6 +78,17 @@ export interface SimulationRun {
 	readonly quartersWithSuspension: number;
 	readonly eventsExperienced: number;
 	readonly eventOccurrences: readonly EventFrequency[];
+	/** Parti du joueur en fin de carrière (`null` : sans étiquette). */
+	readonly finalParty: string | null;
+	/** Nombre d'adhésions successives (changements de camp compris). */
+	readonly affiliations: number;
+	readonly quartersAffiliated: number;
+	/** Changements de direction des partis au fil de la carrière. */
+	readonly leaderChanges: number;
+	/** Plus bas et plus haut atteints par chaque indicateur national. */
+	readonly indicatorRanges: Readonly<
+		Record<IndicatorId, { readonly min: number; readonly max: number }>
+	>;
 	readonly invariantViolations: readonly string[];
 	readonly error: string | null;
 }
@@ -99,6 +116,7 @@ export interface StrategySummary {
 	readonly significantInterventions: Distribution;
 	readonly quartersWithSuspension: Distribution;
 	readonly upgradesOwned: Distribution;
+	readonly quartersAffiliated: Distribution;
 	readonly resources: { readonly [K in ResourceId]: Distribution };
 }
 
@@ -128,6 +146,12 @@ export interface SimulationAggregate {
 	readonly significantInterventions: Distribution;
 	readonly resources: { readonly [K in ResourceId]: Distribution };
 	readonly endCauses: Readonly<Record<string, number>>;
+	readonly leaderChanges: Distribution;
+	/** Parti en fin de carrière, `none` pour les carrières sans étiquette. */
+	readonly finalParties: Readonly<Record<string, number>>;
+	readonly indicatorExtremes: Readonly<
+		Record<IndicatorId, { readonly min: number; readonly max: number }>
+	>;
 	readonly strategies: readonly StrategySummary[];
 	readonly events: readonly AggregateEventFrequency[];
 	readonly problemSeeds: readonly ProblemSeed[];
@@ -147,6 +171,34 @@ export interface SimulationReport {
 const action = (id: string): PlanStep => ({ kind: 'action', id });
 const purchase = (id: string): PlanStep => ({ kind: 'purchase', id });
 
+/**
+ * Choix d'un parti par politique, d'après les seules forces publiques : les
+ * ambitieux rejoignent le parti le plus fort, les profils mixtes le parti au
+ * gouvernement, l'aléatoire un parti tiré de la seed ; les prudents et les
+ * patrimoniaux restent sans étiquette.
+ */
+function partyWish(
+	strategy: SimulationStrategy,
+	state: GameState,
+	seed: string,
+	content: Content
+): PlanStep[] {
+	const joinId = content.actionIds.find((id) => content.actions[id]?.target === 'party');
+	if (!joinId || state.player.partyId !== null) return [];
+	let target: string | undefined;
+	if (strategy === 'ambitious') {
+		target = [...content.partyIds].sort(
+			(left, right) =>
+				(state.world.parties[right]?.strength ?? 0) - (state.world.parties[left]?.strength ?? 0)
+		)[0];
+	} else if (strategy === 'mixed') {
+		target = state.world.governingPartyId;
+	} else if (strategy === 'random-valid') {
+		target = content.partyIds[hashSeed(`${seed}:parti`) % content.partyIds.length];
+	}
+	return target ? [{ kind: 'action', id: joinId, target }] : [];
+}
+
 const STRATEGY_WISHES: Readonly<
 	Record<Exclude<SimulationStrategy, 'random-valid'>, readonly PlanStep[]>
 > = {
@@ -158,6 +210,7 @@ const STRATEGY_WISHES: Readonly<
 		action('personal.rest')
 	],
 	ambitious: [
+		action('party.section_meeting'),
 		action('activism.public_meeting'),
 		action('organization.fundraising'),
 		action('network.meet_officials'),
@@ -186,27 +239,30 @@ const STRATEGY_WISHES: Readonly<
 };
 
 function randomWishes(seed: string, turn: number, content: Content): PlanStep[] {
-	return [...content.actionIds.map(action), ...content.upgradeIds.map(purchase)].sort(
-		(left, right) => {
-			const leftRank = hashSeed(`${seed}:${turn}:${left.kind}:${left.id}`);
-			const rightRank = hashSeed(`${seed}:${turn}:${right.kind}:${right.id}`);
-			return leftRank - rightRank || left.id.localeCompare(right.id);
-		}
-	);
+	const untargeted = content.actionIds.filter((id) => !content.actions[id]?.target);
+	return [...untargeted.map(action), ...content.upgradeIds.map(purchase)].sort((left, right) => {
+		const leftRank = hashSeed(`${seed}:${turn}:${left.kind}:${left.id}`);
+		const rightRank = hashSeed(`${seed}:${turn}:${right.kind}:${right.id}`);
+		return leftRank - rightRank || left.id.localeCompare(right.id);
+	});
 }
 
 function wishesFor(
 	strategy: SimulationStrategy,
+	state: GameState,
 	seed: string,
-	turn: number,
 	content: Content
 ): readonly PlanStep[] {
-	if (strategy === 'random-valid') return randomWishes(seed, turn, content);
-	return STRATEGY_WISHES[strategy].filter((step) =>
-		step.kind === 'action'
-			? Object.hasOwn(content.actions, step.id)
-			: Object.hasOwn(content.upgrades, step.id)
-	);
+	const party = partyWish(strategy, state, seed, content);
+	if (strategy === 'random-valid') return [...party, ...randomWishes(seed, state.turn, content)];
+	return [
+		...party,
+		...STRATEGY_WISHES[strategy].filter((step) =>
+			step.kind === 'action'
+				? Object.hasOwn(content.actions, step.id)
+				: Object.hasOwn(content.upgrades, step.id)
+		)
+	];
 }
 
 /** Construit gloutonnement un plan dont chaque ajout reste valide. */
@@ -217,7 +273,7 @@ export function chooseSimulationPlan(
 	content: Content
 ): TurnPlan {
 	const steps: PlanStep[] = [];
-	for (const candidate of wishesFor(strategy, seed, state.turn, content)) {
+	for (const candidate of wishesFor(strategy, state, seed, content)) {
 		const next = { steps: [...steps, candidate] };
 		if (previewPlan(state, next, content).valid) steps.push(candidate);
 	}
@@ -253,6 +309,13 @@ function eventFrequencies(state: GameState): EventFrequency[] {
 		.sort((left, right) => left.eventId.localeCompare(right.eventId));
 }
 
+function affiliatedQuarters(state: GameState): number {
+	return state.player.affiliations.reduce(
+		(total, affiliation) => total + (affiliation.toTurn ?? state.turn) - affiliation.fromTurn,
+		0
+	);
+}
+
 function finalizeRun(
 	state: GameState,
 	strategy: SimulationStrategy,
@@ -283,9 +346,48 @@ function finalizeRun(
 		quartersWithSuspension: summary.quartersWithSuspension,
 		eventsExperienced: summary.eventsExperienced,
 		eventOccurrences: eventFrequencies(state),
+		finalParty: state.player.partyId,
+		affiliations: state.player.affiliations.length,
+		quartersAffiliated: affiliatedQuarters(state),
+		leaderChanges: state.history.reduce(
+			(total, entry) =>
+				total + (entry.type === 'turn.resolved' ? (entry.world?.leaderChanges.length ?? 0) : 0),
+			0
+		),
+		indicatorRanges: indicatorRanges(state),
 		invariantViolations,
 		error
 	};
+}
+
+/** Extrêmes des indicateurs, reconstitués depuis l'état final et le journal. */
+function indicatorRanges(state: GameState): SimulationRun['indicatorRanges'] {
+	const current = { ...state.world.indicators };
+	const ranges = Object.fromEntries(
+		INDICATOR_IDS.map((id) => [id, { min: current[id], max: current[id] }])
+	) as Record<IndicatorId, { min: number; max: number }>;
+	// Remonte le temps : chaque variation journalisée est annulée dans l'ordre inverse.
+	for (const entry of [...state.history].reverse()) {
+		const changes =
+			entry.type === 'turn.resolved'
+				? [
+						...entry.events.flatMap((event) => event.politics),
+						...(entry.world?.indicators.map((change) => ({
+							kind: 'indicator' as const,
+							...change
+						})) ?? []),
+						...entry.steps.flatMap((step) => step.politics)
+					]
+				: entry.politics;
+		for (const change of changes) {
+			if (change.kind !== 'indicator') continue;
+			current[change.indicator] -= change.delta;
+			const range = ranges[change.indicator];
+			range.min = Math.min(range.min, current[change.indicator]);
+			range.max = Math.max(range.max, current[change.indicator]);
+		}
+	}
+	return ranges;
 }
 
 /** Simule une carrière avec les mêmes transitions que le jeu interactif. */
@@ -397,6 +499,7 @@ function strategySummary(
 		significantInterventions: distribution(selected.map((run) => run.significantInterventions)),
 		quartersWithSuspension: distribution(selected.map((run) => run.quartersWithSuspension)),
 		upgradesOwned: distribution(selected.map((run) => run.upgradesOwned)),
+		quartersAffiliated: distribution(selected.map((run) => run.quartersAffiliated)),
 		resources: {
 			influence: resources('influence'),
 			politicalBudgetCents: resources('politicalBudgetCents'),
@@ -446,6 +549,21 @@ function aggregateRuns(runs: readonly SimulationRun[]): SimulationAggregate {
 			personalCashCents: resources('personalCashCents')
 		},
 		endCauses: causes,
+		leaderChanges: distribution(runs.map((run) => run.leaderChanges)),
+		finalParties: runs.reduce<Record<string, number>>((totals, run) => {
+			const key = run.finalParty ?? 'none';
+			totals[key] = (totals[key] ?? 0) + 1;
+			return totals;
+		}, {}),
+		indicatorExtremes: Object.fromEntries(
+			INDICATOR_IDS.map((id) => [
+				id,
+				{
+					min: Math.min(...runs.map((run) => run.indicatorRanges[id].min)),
+					max: Math.max(...runs.map((run) => run.indicatorRanges[id].max))
+				}
+			])
+		) as SimulationAggregate['indicatorExtremes'],
 		strategies: SIMULATION_STRATEGIES.filter((strategy) =>
 			runs.some((run) => run.strategy === strategy)
 		).map((strategy) => strategySummary(strategy, runs)),
@@ -536,6 +654,11 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'quartersWithSuspension',
 		'eventsExperienced',
 		'eventOccurrences',
+		'finalParty',
+		'affiliations',
+		'quartersAffiliated',
+		'leaderChanges',
+		'indicatorRanges',
 		'invariantViolations',
 		'error'
 	];
@@ -560,6 +683,11 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.quartersWithSuspension,
 		run.eventsExperienced,
 		JSON.stringify(run.eventOccurrences),
+		run.finalParty,
+		run.affiliations,
+		run.quartersAffiliated,
+		run.leaderChanges,
+		JSON.stringify(run.indicatorRanges),
 		JSON.stringify(run.invariantViolations),
 		run.error
 	]);

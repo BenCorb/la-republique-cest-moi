@@ -73,6 +73,7 @@ describe('contrôle des invariants', () => {
 						steps: [],
 						economy: { producers: [], changes: [] },
 						wellbeing: { contributions: [], deathCause: null },
+						world: null,
 						events: []
 					},
 					{
@@ -81,6 +82,7 @@ describe('contrôle des invariants', () => {
 						steps: [],
 						economy: { producers: [], changes: [] },
 						wellbeing: { contributions: [], deathCause: null },
+						world: null,
 						events: []
 					}
 				]

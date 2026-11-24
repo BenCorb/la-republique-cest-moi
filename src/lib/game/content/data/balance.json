@@ -65,5 +65,20 @@
 	"events": {
 		"ordinaryDrawsPerTurn": 1,
 		"ordinaryEventChance": 0.3
+	},
+	"world": {
+		"startingIndicators": { "economy": 58, "socialClimate": 50, "stability": 55 },
+		"indicatorBaseline": 50,
+		"indicatorReversionPercent": 5,
+		"indicatorVolatility": 4,
+		"minPartyStrength": 1,
+		"maxPartyStrength": 45,
+		"strengthReversionPercent": 10,
+		"strengthVolatility": 1,
+		"governingIndicatorDivisor": 5,
+		"leaderChangeChance": 0.012,
+		"leaderMinAge": 42,
+		"leaderMaxAge": 66,
+		"leaderRetirementAge": 77
 	}
 }

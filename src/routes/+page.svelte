@@ -7,6 +7,7 @@
 	import DecisionDialog from '#lib/components/events/DecisionDialog.svelte';
 	import Journal from '#lib/components/journal/Journal.svelte';
 	import Organisation from '#lib/components/organisation/Organisation.svelte';
+	import WorldPanel from '#lib/components/world/WorldPanel.svelte';
 	import GameLayout from '#lib/components/shell/GameLayout.svelte';
 	import GameShell from '#lib/components/shell/GameShell.svelte';
 	import HomeScreen from '#lib/components/shell/HomeScreen.svelte';
@@ -75,6 +76,8 @@
 			<Dashboard {session} />
 		{:else if tab === 'agenda'}
 			<Agenda {session} />
+		{:else if tab === 'world'}
+			<WorldPanel {session} />
 		{:else if tab === 'organisation'}
 			<Organisation {session} />
 		{:else}

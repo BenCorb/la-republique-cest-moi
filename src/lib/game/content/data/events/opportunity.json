@@ -4,7 +4,7 @@
 			"id": "opportunity.party_invitation",
 			"category": "opportunity",
 			"title": "Une main tendue",
-			"text": "{official}, secrétaire de section du Rassemblement pour l’Avenir et le Reste, vous propose de « rejoindre une famille politique ». Il précise que la famille a des places en fin de liste.",
+			"text": "{official}, secrétaire de section du Rassemblement pour la Réélection, vous propose de « rejoindre une famille politique ». Il précise que la famille a des places en fin de liste.",
 			"blocking": true,
 			"trigger": "random",
 			"weight": 4,
@@ -12,9 +12,19 @@
 			"cooldownTurns": 0,
 			"unique": true,
 			"when": {
-				"op": "gte",
-				"stat": "resources.influence",
-				"value": 12
+				"op": "all",
+				"conditions": [
+					{
+						"op": "gte",
+						"stat": "resources.influence",
+						"value": 12
+					},
+					{
+						"op": "eq",
+						"stat": "player.affiliated",
+						"value": 0
+					}
+				]
 			},
 			"actors": [
 				{
@@ -25,10 +35,14 @@
 			"choices": [
 				{
 					"id": "join",
-					"label": "Accepter de militer à la section",
+					"label": "Prendre sa carte au Rassemblement pour la Réélection",
 					"hints": ["Réseau en hausse", "Réunions du jeudi soir"],
 					"costs": [],
 					"effects": [
+						{
+							"op": "joinParty",
+							"party": "party.rpr"
+						},
 						{
 							"op": "addResource",
 							"resource": "influence",

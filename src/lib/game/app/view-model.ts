@@ -8,6 +8,7 @@
  * n'avance pas le PRNG et ne modifie rien.
  */
 import {
+	INDICATOR_IDS,
 	RESOURCE_IDS,
 	type Content,
 	type ResourceAmount,
@@ -26,12 +27,17 @@ import {
 	type GameState,
 	type HistoryEntry,
 	type PlanStep,
-	type WellbeingSource
+	type PoliticalChange,
+	type WellbeingSource,
+	type WorldRecord
 } from '../engine/index.ts';
 import {
 	GAUGE_NAMES,
+	INDICATOR_NAMES,
 	RESOURCE_NAMES,
+	describeAxisPosition,
 	describeHealth,
+	describeIndicator,
 	describeStress,
 	formatDelta,
 	formatGaugeDelta,
@@ -123,7 +129,7 @@ export interface DecisionView {
 }
 
 export interface JournalLine {
-	readonly kind: 'step' | 'economy' | 'wellbeing' | 'event' | 'decision' | 'end';
+	readonly kind: 'step' | 'economy' | 'wellbeing' | 'world' | 'event' | 'decision' | 'end';
 	readonly text: string;
 }
 
@@ -142,6 +148,51 @@ export interface SummaryView {
 	readonly title: string;
 	readonly cause: string;
 	readonly lines: readonly { readonly label: string; readonly value: string }[];
+}
+
+export interface IndicatorView {
+	readonly id: string;
+	readonly name: string;
+	readonly gauge: GaugeDescription;
+}
+
+export interface PartyView {
+	readonly id: string;
+	readonly name: string;
+	readonly acronym: string;
+	readonly family: string;
+	readonly description: string;
+	/** Intentions de vote : part de la force du parti dans le total, en %. */
+	readonly share: number;
+	readonly leader: string;
+	readonly positions: readonly string[];
+	readonly governing: boolean;
+	readonly member: boolean;
+	/** Adhésion déjà prévue dans le plan. */
+	readonly joinPlanned: boolean;
+	readonly joinable: boolean;
+	readonly joinReason: string | null;
+}
+
+export interface WorldView {
+	readonly indicators: readonly IndicatorView[];
+	/** Partis par intentions de vote décroissantes. */
+	readonly parties: readonly PartyView[];
+	readonly governingParty: string;
+	/** Situation du joueur : « Sans étiquette » ou « Membre du … depuis … ». */
+	readonly affiliation: string;
+	readonly partyAcronym: string | null;
+	/** Action de départ du parti, si le joueur est encarté. */
+	readonly leave: {
+		readonly actionId: string;
+		readonly planned: boolean;
+		readonly addable: boolean;
+		readonly reason: string | null;
+	} | null;
+	/** Action d'adhésion (ciblée) du catalogue, si elle existe. */
+	readonly joinActionId: string | null;
+	readonly joinTimeCost: number;
+	readonly joinCosts: readonly string[];
 }
 
 export interface PlayerView {
@@ -164,6 +215,7 @@ export interface PlayerView {
 	}[];
 	readonly alerts: readonly Alert[];
 	readonly summary: SummaryView | null;
+	readonly world: WorldView;
 }
 
 const FAMILY_LABELS: Readonly<Record<string, string>> = {
@@ -193,11 +245,65 @@ function amounts(list: readonly ResourceAmount[], sign: 1 | -1): string[] {
 	);
 }
 
-function describeEffect(range: EffectRange): string {
-	if (range.kind === 'resource') {
-		return `${RESOURCE_NAMES[range.resource]} ${formatRange(range.resource, range.min, range.max)}`;
+const PARTY_REFERENCE_LABELS: Readonly<Record<string, string>> = {
+	governing: 'parti au gouvernement',
+	player: 'votre parti',
+	opposition: 'premier parti d’opposition',
+	target: 'parti choisi'
+};
+
+function partyLabel(party: string | null, content: Content): string {
+	if (party === null) return 'votre parti';
+	return content.parties[party]?.name ?? PARTY_REFERENCE_LABELS[party] ?? party;
+}
+
+function describeEffect(range: EffectRange, content: Content): string {
+	switch (range.kind) {
+		case 'resource':
+			return `${RESOURCE_NAMES[range.resource]} ${formatRange(range.resource, range.min, range.max)}`;
+		case 'gauge':
+			return `${GAUGE_NAMES[range.gauge]} ${formatGaugeDelta(range.min)}`;
+		case 'indicator':
+			return `${INDICATOR_NAMES[range.indicator]} ${formatGaugeDelta(range.value)}`;
+		case 'partyStrength':
+			return `Intentions de vote (${partyLabel(range.party, content)}) ${formatGaugeDelta(range.value)}`;
+		case 'affiliation':
+			return range.change === 'join'
+				? `Adhésion : ${partyLabel(range.party, content)}`
+				: 'Départ de votre parti';
 	}
-	return `${GAUGE_NAMES[range.gauge]} ${formatGaugeDelta(range.min)}`;
+}
+
+function politicsText(changes: readonly PoliticalChange[], content: Content): string {
+	return changes
+		.map((change) => {
+			switch (change.kind) {
+				case 'indicator':
+					return `${INDICATOR_NAMES[change.indicator]} ${formatGaugeDelta(change.delta)}`;
+				case 'partyStrength':
+					return `${content.parties[change.partyId]?.acronym ?? change.partyId} ${formatGaugeDelta(change.delta)}`;
+				case 'joined':
+					return `adhésion au ${content.parties[change.partyId]?.name ?? change.partyId}`;
+				case 'left':
+					return `départ du ${content.parties[change.partyId]?.name ?? change.partyId}`;
+			}
+		})
+		.join(', ');
+}
+
+function worldLines(record: WorldRecord | null, state: GameState, content: Content): JournalLine[] {
+	if (!record) return [];
+	return record.leaderChanges.map((change) => {
+		const party = content.parties[change.partyId]?.name ?? change.partyId;
+		const previous = state.characters[change.previousLeaderId]?.name ?? change.previousLeaderId;
+		const leader = state.characters[change.leaderId]?.name ?? change.leaderId;
+		const why =
+			change.reason === 'retirement' ? 'part à la retraite' : 'est renversé·e par un vote interne';
+		return {
+			kind: 'world',
+			text: `${party} : ${previous} ${why} ; ${leader} prend la tête du parti.`
+		};
+	});
 }
 
 function changesText(changes: readonly { resource: ResourceId; delta: number }[]): string {
@@ -231,20 +337,26 @@ function addability(state: GameState, plan: readonly PlanStep[], step: PlanStep,
 function eventTitle(
 	eventId: string,
 	actors: Readonly<Record<string, string>>,
+	state: GameState,
 	content: Content
 ): string {
 	const definition = content.events[eventId];
-	return definition ? renderTemplate(definition.title, actors, content) : eventId;
+	return definition ? renderTemplate(definition.title, actors, content, state.characters) : eventId;
 }
 
-function journalOfQuarter(entry: HistoryEntry, content: Content): JournalLine[] {
+function journalOfQuarter(entry: HistoryEntry, state: GameState, content: Content): JournalLine[] {
 	const lines: JournalLine[] = [];
 	for (const step of entry.steps) {
+		const target = step.target ? ` : ${content.parties[step.target]?.name ?? step.target}` : '';
 		const label =
 			step.kind === 'action'
-				? (content.actions[step.id]?.label ?? step.id)
+				? `${content.actions[step.id]?.label ?? step.id}${target}`
 				: `Achat : ${content.upgrades[step.id]?.label ?? step.id}`;
-		const effects = joinParts(changesText(step.changes), gaugesText(step.gauges));
+		const effects = joinParts(
+			changesText(step.changes),
+			gaugesText(step.gauges),
+			politicsText(step.politics, content)
+		);
 		lines.push({ kind: 'step', text: effects ? `${label} — ${effects}` : label });
 	}
 	for (const producer of entry.economy.producers) {
@@ -266,12 +378,17 @@ function journalOfQuarter(entry: HistoryEntry, content: Content): JournalLine[] 
 	}
 	for (const [name, parts] of byGauge)
 		lines.push({ kind: 'wellbeing', text: `${name} ${parts.join(', ')}` });
+	lines.push(...worldLines(entry.world, state, content));
 	for (const event of entry.events) {
-		const title = eventTitle(event.eventId, event.actors, content);
+		const title = eventTitle(event.eventId, event.actors, state, content);
 		if (event.outcome === 'queued')
 			lines.push({ kind: 'event', text: `${title} — décision attendue` });
 		else if (event.outcome === 'applied') {
-			const effects = joinParts(changesText(event.changes), gaugesText(event.gauges));
+			const effects = joinParts(
+				changesText(event.changes),
+				gaugesText(event.gauges),
+				politicsText(event.politics, content)
+			);
 			lines.push({ kind: 'event', text: effects ? `${title} — ${effects}` : title });
 		} else
 			lines.push({ kind: 'event', text: `${title} — sans suite : ${event.reason ?? 'annulé'}` });
@@ -290,13 +407,18 @@ function journalOfChoice(entry: ChoiceRecord, state: GameState, content: Content
 	);
 	const actors =
 		quarter?.events.find((event) => event.instanceId === entry.instanceId)?.actors ?? {};
-	const title = definition ? renderTemplate(definition.title, actors, content) : entry.eventId;
+	const render = (text: string): string => renderTemplate(text, actors, content, state.characters);
+	const title = definition ? render(definition.title) : entry.eventId;
 	const choice =
 		definition?.blocking === true
 			? definition.choices.find((candidate) => candidate.id === entry.choiceId)
 			: undefined;
-	const label = choice ? renderTemplate(choice.label, actors, content) : entry.choiceId;
-	const effects = joinParts(changesText(entry.changes), gaugesText(entry.gauges));
+	const label = choice ? render(choice.label) : entry.choiceId;
+	const effects = joinParts(
+		changesText(entry.changes),
+		gaugesText(entry.gauges),
+		politicsText(entry.politics, content)
+	);
 	const lines: JournalLine[] = [
 		{
 			kind: 'decision',
@@ -313,7 +435,7 @@ function buildJournal(state: GameState, content: Content): JournalTurnView[] {
 		groups.set(turn, [...(groups.get(turn) ?? []), ...lines]);
 	};
 	for (const entry of state.history) {
-		if (entry.type === 'turn.resolved') add(entry.turn, journalOfQuarter(entry, content));
+		if (entry.type === 'turn.resolved') add(entry.turn, journalOfQuarter(entry, state, content));
 		else add(entry.turn, journalOfChoice(entry, state, content));
 	}
 	return [...groups.entries()]
@@ -330,7 +452,7 @@ function buildPress(state: GameState, content: Content): PlayerView['press'] {
 			items.push({
 				key: event.instanceId,
 				dateLabel: formatTurn(entry.turn + 1),
-				title: eventTitle(event.eventId, event.actors, content)
+				title: eventTitle(event.eventId, event.actors, state, content)
 			});
 		}
 	}
@@ -364,6 +486,87 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 	};
 }
 
+function buildWorld(state: GameState, plan: readonly PlanStep[], content: Content): WorldView {
+	const { world, player } = state;
+	const total = content.partyIds.reduce(
+		(sum, partyId) => sum + (world.parties[partyId]?.strength ?? 0),
+		0
+	);
+	const joinActionId =
+		content.actionIds.find((id) => content.actions[id]?.target === 'party') ?? null;
+	const joinAction = joinActionId ? content.actions[joinActionId] : undefined;
+	const leaveActionId =
+		content.actionIds.find((id) =>
+			content.actions[id]?.effects.some((effect) => effect.op === 'leaveParty')
+		) ?? null;
+
+	const parties: PartyView[] = content.partyIds.map((partyId) => {
+		const definition = content.parties[partyId]!;
+		const party = world.parties[partyId];
+		const joinPlanned = plan.some(
+			(step) => step.kind === 'action' && step.id === joinActionId && step.target === partyId
+		);
+		const join = joinActionId
+			? addability(state, plan, { kind: 'action', id: joinActionId, target: partyId }, content)
+			: { addable: false, reason: 'Aucune adhésion possible.' };
+		return {
+			id: partyId,
+			name: definition.name,
+			acronym: definition.acronym,
+			family: definition.family,
+			description: definition.description,
+			share: total > 0 ? Math.round(((party?.strength ?? 0) * 100) / total) : 0,
+			leader: state.characters[party?.leaderId ?? '']?.name ?? '—',
+			positions: content.world.axes.map(
+				(axis) =>
+					`${axis.label} : ${describeAxisPosition(definition.positions[axis.id], axis.negativeLabel, axis.positiveLabel)}`
+			),
+			governing: partyId === world.governingPartyId,
+			member: player.partyId === partyId,
+			joinPlanned,
+			joinable: join.addable,
+			joinReason: join.reason
+		};
+	});
+	parties.sort(
+		(a, b) =>
+			(world.parties[b.id]?.strength ?? 0) - (world.parties[a.id]?.strength ?? 0) ||
+			content.partyIds.indexOf(a.id) - content.partyIds.indexOf(b.id)
+	);
+
+	const current = player.affiliations.at(-1);
+	const memberParty = player.partyId ? content.parties[player.partyId] : undefined;
+	const leave =
+		player.partyId && leaveActionId
+			? {
+					actionId: leaveActionId,
+					planned: plan.some((step) => step.kind === 'action' && step.id === leaveActionId),
+					...(() => {
+						const result = addability(state, plan, { kind: 'action', id: leaveActionId }, content);
+						return { addable: result.addable, reason: result.reason };
+					})()
+				}
+			: null;
+	return {
+		indicators: INDICATOR_IDS.map((id) => ({
+			id,
+			name: INDICATOR_NAMES[id],
+			gauge: describeIndicator(id, world.indicators[id])
+		})),
+		parties,
+		governingParty: content.parties[world.governingPartyId]?.name ?? world.governingPartyId,
+		affiliation:
+			memberParty && current
+				? `Membre du ${memberParty.name} depuis le ${formatTurn(current.fromTurn)}`
+				: 'Sans étiquette',
+		partyAcronym: memberParty?.acronym ?? null,
+		leave,
+		joinActionId,
+		joinTimeCost: joinAction?.timeCost ?? 0,
+		joinCosts: joinAction ? amounts(joinAction.costs, -1) : []
+	};
+}
+
 export function projectView(
 	state: GameState,
 	plan: readonly PlanStep[],
@@ -372,12 +575,23 @@ export function projectView(
 	const preview = previewPlan(state, { steps: plan }, content);
 	const steps: PlanStepView[] = preview.steps.map((step) => {
 		const upgrade = step.kind === 'purchase' && step.id ? content.upgrades[step.id] : undefined;
+		const target = step.target ? ` : ${content.parties[step.target]?.name ?? step.target}` : '';
 		return {
 			index: step.index,
 			kind: step.kind ?? 'action',
-			label: step.label ?? step.id ?? 'Étape inconnue',
+			label: `${step.label ?? step.id ?? 'Étape inconnue'}${step.label ? target : ''}`,
 			timeCost: step.timeCost,
-			details: [...amounts(step.costs, -1), ...step.effects.map(describeEffect)],
+			details: [
+				...amounts(step.costs, -1),
+				...step.effects.map((range) =>
+					describeEffect(
+						range.kind === 'affiliation' && range.party === 'target'
+							? { ...range, party: step.target }
+							: range,
+						content
+					)
+				)
+			],
 			issues: step.issues.map((issue) => issue.message),
 			note: upgrade ? 'Actif à partir du trimestre prochain.' : null
 		};
@@ -386,8 +600,10 @@ export function projectView(
 	const planned = (kind: PlanStep['kind'], id: string): number =>
 		plan.filter((step) => step.kind === kind && step.id === id).length;
 
-	const actions: CatalogItemView[] = content.actionIds.map((id) => {
+	// Les actions ciblées (adhésion) se planifient depuis l'écran Monde politique.
+	const actions: CatalogItemView[] = content.actionIds.flatMap((id) => {
 		const action = content.actions[id]!;
+		if (action.target) return [];
 		return {
 			kind: 'action',
 			id,
@@ -395,10 +611,10 @@ export function projectView(
 			description: action.description,
 			timeCost: action.timeCost,
 			costs: amounts(action.costs, -1),
-			effects: action.effects.map((effect) => describeEffect(effectRange(effect))),
+			effects: action.effects.map((effect) => describeEffect(effectRange(effect), content)),
 			planned: planned('action', id),
 			...addability(state, plan, { kind: 'action', id }, content)
-		};
+		} satisfies CatalogItemView;
 	});
 
 	const upgrades: UpgradeView[] = content.upgradeIds.map((id) => {
@@ -503,6 +719,7 @@ export function projectView(
 		journal: buildJournal(state, content),
 		press: buildPress(state, content),
 		alerts,
-		summary: buildSummary(state, content)
+		summary: buildSummary(state, content),
+		world: buildWorld(state, plan, content)
 	};
 }

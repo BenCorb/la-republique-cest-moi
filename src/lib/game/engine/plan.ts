@@ -20,6 +20,7 @@ import {
 	RESOURCE_IDS,
 	type Condition,
 	type Content,
+	type Effect,
 	type GaugeId,
 	type ResourceAmount,
 	type ResourceId,
@@ -36,14 +37,18 @@ import type {
 	GaugeChange,
 	OwnedUpgrade,
 	PlayerState,
+	PoliticalChange,
 	ResourceChange,
-	StepRecord
+	StepRecord,
+	WorldState
 } from './state.ts';
+import { applyPoliticalEffect, isPoliticalEffect } from './world.ts';
 
 export type PlanIssueCode =
 	| 'invalid_plan'
 	| 'unknown_action'
 	| 'unknown_upgrade'
+	| 'invalid_target'
 	| 'repeat_limit'
 	| 'owned_limit'
 	| 'condition_not_met'
@@ -80,6 +85,8 @@ export interface PlanStepPreview {
 	readonly index: number;
 	readonly kind: PlanStep['kind'] | null;
 	readonly id: string | null;
+	/** Cible de l'étape (parti), sinon `null`. */
+	readonly target: string | null;
 	readonly label: string | null;
 	readonly timeCost: number;
 	/** Coûts d'une action ou prix d'un achat, payés à l'étape. */
@@ -125,11 +132,49 @@ function zeroRanges(): Record<ResourceId, { min: number; max: number }> {
 
 function readStep(item: unknown): PlanStep | null {
 	if (typeof item !== 'object' || item === null) return null;
-	const { kind, id } = item as { kind?: unknown; id?: unknown };
+	const { kind, id, target } = item as { kind?: unknown; id?: unknown; target?: unknown };
 	if ((kind !== 'action' && kind !== 'purchase') || typeof id !== 'string' || id.length === 0) {
 		return null;
 	}
-	return { kind, id };
+	if (target === undefined) return { kind, id };
+	if (kind !== 'action' || typeof target !== 'string' || target.length === 0) return null;
+	return { kind, id, target };
+}
+
+function targetOf(step: PlanStep): string | null {
+	return step.kind === 'action' ? (step.target ?? null) : null;
+}
+
+/**
+ * Applique les effets politiques (certains) d'une action sur un état de travail.
+ * Utilisé à l'identique par la prévision et l'exécution.
+ */
+function applyPolitics(
+	effects: readonly Effect[],
+	player: PlayerState,
+	world: WorldState,
+	turn: number,
+	target: string | null,
+	content: Content
+): { player: PlayerState; world: WorldState; changes: PoliticalChange[] } {
+	let currentPlayer = player;
+	let currentWorld = world;
+	const changes: PoliticalChange[] = [];
+	for (const effect of effects) {
+		if (!isPoliticalEffect(effect)) continue;
+		const outcome = applyPoliticalEffect(
+			effect,
+			currentPlayer,
+			currentWorld,
+			turn,
+			target,
+			content
+		);
+		currentPlayer = outcome.player;
+		currentWorld = outcome.world;
+		changes.push(...outcome.changes);
+	}
+	return { player: currentPlayer, world: currentWorld, changes };
 }
 
 function definitionOf<T>(catalog: Readonly<Record<string, T>>, id: string): T | undefined {
@@ -174,6 +219,7 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 	// État de travail : coûts et gains certains, pire cas des effets aléatoires.
 	const working: Record<ResourceId, number> = { ...state.resources };
 	let workingPlayer: PlayerState = state.player;
+	let workingWorld: WorldState = state.world;
 	const upgrades: OwnedUpgrade[] = [...state.upgrades];
 	let nextInstanceNumber = state.nextInstanceNumber;
 	const actionCounts = new Map<string, number>();
@@ -181,7 +227,15 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 
 	(items as readonly unknown[]).forEach((item, index) => {
 		const step = readStep(item);
-		const empty = { index, label: null, timeCost: 0, costs: [], effects: [], instanceId: null };
+		const empty = {
+			index,
+			target: null,
+			label: null,
+			timeCost: 0,
+			costs: [],
+			effects: [],
+			instanceId: null
+		};
 		if (step === null) {
 			const issue: PlanIssue = {
 				index,
@@ -205,6 +259,8 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 		let requires: Condition | undefined;
 		let unavailableReason: string | undefined;
 		let ranges: EffectRange[] = [];
+		let actionEffects: readonly Effect[] = [];
+		const target = targetOf(step);
 
 		if (step.kind === 'action') {
 			const definition = definitionOf(content.actions, step.id);
@@ -216,6 +272,14 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			}
 			({ label, timeCost, costs, requires, unavailableReason } = definition);
 			ranges = definition.effects.map(effectRange);
+			actionEffects = definition.effects;
+			if (definition.target === 'party') {
+				if (target === null || !Object.hasOwn(content.parties, target)) {
+					fail('invalid_target', `« ${label} » : choisissez un parti existant.`);
+				}
+			} else if (target !== null) {
+				fail('invalid_target', `« ${label} » ne porte sur aucune cible.`);
+			}
 			const occurrence = (actionCounts.get(step.id) ?? 0) + 1;
 			actionCounts.set(step.id, occurrence);
 			if (occurrence > definition.maxPerTurn) {
@@ -240,7 +304,13 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			}
 		}
 
-		const context = { turn: state.turn, player: workingPlayer, resources: working, upgrades };
+		const context = {
+			turn: state.turn,
+			player: workingPlayer,
+			resources: working,
+			upgrades,
+			world: workingWorld
+		};
 		if (requires && !evaluateCondition(context, requires)) {
 			fail('condition_not_met', unavailableReason ?? `« ${label} » n’est pas disponible.`);
 		}
@@ -272,6 +342,7 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			index,
 			kind: step.kind,
 			id: step.id,
+			target,
 			label,
 			timeCost,
 			costs,
@@ -298,10 +369,20 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 				workingPlayer = applyGaugeEffect(workingPlayer, range.gauge, range.min).player;
 				continue;
 			}
+			if (range.kind !== 'resource') continue;
 			working[range.resource] += range.min === range.max ? range.min : Math.min(0, range.min);
 			totals[range.resource].min += range.min;
 			totals[range.resource].max += range.max;
 		}
+		// Effets politiques certains : adhésion et monde, visibles des étapes suivantes.
+		({ player: workingPlayer, world: workingWorld } = applyPolitics(
+			actionEffects,
+			workingPlayer,
+			workingWorld,
+			state.turn,
+			target,
+			content
+		));
 		if (instanceId !== null) {
 			upgrades.push({ instanceId, upgradeId: step.id, acquiredTurn: state.turn });
 			nextInstanceNumber += 1;
@@ -356,6 +437,7 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 export interface PlanExecution {
 	readonly resources: Resources;
 	readonly player: PlayerState;
+	readonly world: WorldState;
 	/** Temps consommé par le plan, qui détermine la charge de travail. */
 	readonly timeUsed: number;
 	readonly rng: RngState;
@@ -377,6 +459,7 @@ export function executePlan(
 ): PlanExecution {
 	const current: Record<ResourceId, number> = { ...state.resources };
 	let player = state.player;
+	let world = state.world;
 	let timeUsed = 0;
 	let rng = state.rng;
 	const upgrades: OwnedUpgrade[] = [...state.upgrades];
@@ -391,6 +474,8 @@ export function executePlan(
 		};
 		let instanceId: string | null = null;
 		const gauges: GaugeChange[] = [];
+		const politics: PoliticalChange[] = [];
+		const target = targetOf(step);
 
 		if (step.kind === 'action') {
 			const definition = definitionOf(content.actions, step.id);
@@ -402,10 +487,21 @@ export function executePlan(
 				rng = resolved.rng;
 				if (resolved.kind === 'resource') {
 					add(resolved.resource, resolved.delta);
-				} else {
+				} else if (resolved.kind === 'gauge') {
 					const applied = applyGaugeEffect(player, resolved.gauge, resolved.delta);
 					player = applied.player;
 					if (applied.delta !== 0) gauges.push({ gauge: resolved.gauge, delta: applied.delta });
+				} else {
+					const applied = applyPolitics(
+						[resolved.effect],
+						player,
+						world,
+						state.turn,
+						target,
+						content
+					);
+					({ player, world } = applied);
+					politics.push(...applied.changes);
 				}
 			}
 		} else {
@@ -426,10 +522,19 @@ export function executePlan(
 			const delta = deltas.get(resource) ?? 0;
 			return delta === 0 ? [] : [{ resource, delta }];
 		});
-		records.push({ kind: step.kind, id: step.id, instanceId, changes, gauges });
+		records.push({ kind: step.kind, id: step.id, instanceId, changes, gauges, target, politics });
 	}
 
-	return { resources: current, player, timeUsed, rng, upgrades, nextInstanceNumber, records };
+	return {
+		resources: current,
+		player,
+		world,
+		timeUsed,
+		rng,
+		upgrades,
+		nextInstanceNumber,
+		records
+	};
 }
 
 /** Applique une variation de jauge au personnage, dans les bornes [0, 100]. */

@@ -3,6 +3,7 @@
 		BookOpen,
 		Briefcase,
 		Calendar,
+		Flag,
 		Landmark,
 		LayoutDashboard,
 		Newspaper
@@ -33,6 +34,7 @@
 	const tabs: { id: GameTab; label: string; icon: typeof Calendar }[] = [
 		{ id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
 		{ id: 'agenda', label: 'Agenda', icon: Calendar },
+		{ id: 'world', label: 'Monde politique', icon: Flag },
 		{ id: 'organisation', label: 'Organisation', icon: Briefcase },
 		{ id: 'journal', label: 'Journal', icon: BookOpen }
 	];
@@ -57,6 +59,10 @@
 				</div>
 				<p class="font-serif text-lg" data-testid="game-date">
 					<span class="font-semibold">{view.dateLabel}</span> · {view.age} ans
+				</p>
+				<p class="text-sm" data-testid="header-party">
+					<span class="text-muted">Étiquette</span>
+					<span class="font-semibold">{view.world.partyAcronym ?? 'aucune'}</span>
 				</p>
 				<dl class="flex flex-wrap gap-x-5 gap-y-1 text-sm" aria-label="Ressources">
 					{#each view.resources as resource (resource.id)}

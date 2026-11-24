@@ -12,9 +12,11 @@ import {
 	GAUGE_MIN,
 	type Effect,
 	type GaugeId,
+	type IndicatorId,
 	type ResourceId
 } from '../content/types.ts';
 import { nextInt, type RngState } from './random.ts';
+import type { PoliticalEffect } from './world.ts';
 
 export type EffectRange =
 	| {
@@ -23,7 +25,16 @@ export type EffectRange =
 			readonly min: number;
 			readonly max: number;
 	  }
-	| { readonly kind: 'gauge'; readonly gauge: GaugeId; readonly min: number; readonly max: number };
+	| { readonly kind: 'gauge'; readonly gauge: GaugeId; readonly min: number; readonly max: number }
+	| { readonly kind: 'indicator'; readonly indicator: IndicatorId; readonly value: number }
+	/** `party` : identifiant ou référence relative, résolu à l'application. */
+	| { readonly kind: 'partyStrength'; readonly party: string; readonly value: number }
+	/** `party` : identifiant, `target` (cible du plan) ou `null` pour un départ. */
+	| {
+			readonly kind: 'affiliation';
+			readonly change: 'join' | 'leave';
+			readonly party: string | null;
+	  };
 
 export type ResolvedEffect =
 	| {
@@ -37,7 +48,9 @@ export type ResolvedEffect =
 			readonly gauge: GaugeId;
 			readonly delta: number;
 			readonly rng: RngState;
-	  };
+	  }
+	/** Effet politique déterministe, appliqué par `applyPoliticalEffect`. */
+	| { readonly kind: 'politics'; readonly effect: PoliticalEffect; readonly rng: RngState };
 
 export function clampGauge(value: number): number {
 	return Math.min(GAUGE_MAX, Math.max(GAUGE_MIN, value));
@@ -57,6 +70,14 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'resource', resource: effect.resource, min: effect.min, max: effect.max };
 		case 'addStat':
 			return { kind: 'gauge', gauge: effect.stat, min: effect.value, max: effect.value };
+		case 'addIndicator':
+			return { kind: 'indicator', indicator: effect.indicator, value: effect.value };
+		case 'addPartyStrength':
+			return { kind: 'partyStrength', party: effect.party, value: effect.value };
+		case 'joinParty':
+			return { kind: 'affiliation', change: 'join', party: effect.party };
+		case 'leaveParty':
+			return { kind: 'affiliation', change: 'leave', party: null };
 		default: {
 			const unknown: never = effect;
 			throw new Error(`Effet inconnu : ${JSON.stringify(unknown)}`);
@@ -74,6 +95,11 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 		}
 		case 'addStat':
 			return { kind: 'gauge', gauge: effect.stat, delta: effect.value, rng };
+		case 'addIndicator':
+		case 'addPartyStrength':
+		case 'joinParty':
+		case 'leaveParty':
+			return { kind: 'politics', effect, rng };
 		default: {
 			const unknown: never = effect;
 			throw new Error(`Effet inconnu : ${JSON.stringify(unknown)}`);

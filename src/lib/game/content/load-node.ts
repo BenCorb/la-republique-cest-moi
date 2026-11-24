@@ -23,6 +23,7 @@ export function loadContentFromFiles(directory = DEFAULT_CONTENT_DATA_DIR): Cont
 		upgrades: read('upgrades.json'),
 		balance: read('balance.json'),
 		cast: read('cast.json'),
+		world: read('world.json'),
 		events
 	});
 	if (!result.ok) {

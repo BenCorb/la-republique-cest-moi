@@ -29,6 +29,39 @@ export type GaugeId = (typeof GAUGE_IDS)[number];
 export const GAUGE_MIN = 0;
 export const GAUGE_MAX = 100;
 
+/** Axes politiques retenus pour l'alpha (GDD §3.2), positions de -100 à 100. */
+export const AXIS_IDS = ['economy', 'society', 'sovereignty'] as const;
+export type AxisId = (typeof AXIS_IDS)[number];
+export const AXIS_MIN = -100;
+export const AXIS_MAX = 100;
+
+/** Indicateurs nationaux abstraits (GDD §8.2), entiers de 0 à 100, 50 = situation ordinaire. */
+export const INDICATOR_IDS = ['economy', 'socialClimate', 'stability'] as const;
+export type IndicatorId = (typeof INDICATOR_IDS)[number];
+
+/**
+ * Cible d'un effet sur la force d'un parti : un parti du catalogue, le parti au
+ * gouvernement, celui du joueur (sans effet s'il n'est pas encarté) ou le
+ * premier parti d'opposition.
+ */
+export const PARTY_REFERENCES = ['governing', 'player', 'opposition'] as const;
+export type PartyReference = (typeof PARTY_REFERENCES)[number];
+
+/**
+ * Variables de texte liées au monde, figées à la création d'une instance
+ * d'événement comme les acteurs. Les variables `player_party*` exigent que la
+ * condition de l'événement impose l'adhésion du joueur.
+ */
+export const WORLD_TEMPLATE_VARIABLES = [
+	'governing_party',
+	'governing_leader',
+	'opposition_party',
+	'opposition_leader',
+	'player_party',
+	'player_party_leader'
+] as const;
+export type WorldTemplateVariable = (typeof WORLD_TEMPLATE_VARIABLES)[number];
+
 /**
  * Registre typé des statistiques lisibles par les conditions. Toute nouvelle
  * statistique s'ajoute ici et dans `engine/conditions.ts` (switch exhaustif) :
@@ -44,7 +77,16 @@ export const STAT_IDS = [
 	'calendar.year',
 	'calendar.quarter',
 	/** Nombre d'exemplaires d'améliorations possédés (taille de l'organisation). */
-	'upgrades.owned'
+	'upgrades.owned',
+	'world.economy',
+	'world.socialClimate',
+	'world.stability',
+	/** 1 si le joueur est membre d'un parti, sinon 0. */
+	'player.affiliated',
+	/** Force du parti du joueur (0 sans parti). */
+	'player.partyStrength',
+	/** 1 si le parti du joueur conduit le gouvernement, sinon 0. */
+	'player.partyGoverning'
 ] as const;
 export type StatId = (typeof STAT_IDS)[number];
 
@@ -55,7 +97,9 @@ export type Condition =
 	| { readonly op: 'all'; readonly conditions: readonly Condition[] }
 	| { readonly op: 'any'; readonly conditions: readonly Condition[] }
 	| { readonly op: 'not'; readonly condition: Condition }
-	| { readonly op: ComparisonOp; readonly stat: StatId; readonly value: number };
+	| { readonly op: ComparisonOp; readonly stat: StatId; readonly value: number }
+	/** Le joueur est membre de ce parti. */
+	| { readonly op: 'memberOf'; readonly party: string };
 
 export type Effect =
 	| { readonly op: 'addResource'; readonly resource: ResourceId; readonly value: number }
@@ -71,7 +115,26 @@ export type Effect =
 			/** Bornes incluses, tirées à la validation du trimestre. */
 			readonly min: number;
 			readonly max: number;
-	  };
+	  }
+	| {
+			readonly op: 'addIndicator';
+			readonly indicator: IndicatorId;
+			/** Variation maintenue dans [0, 100]. */
+			readonly value: number;
+	  }
+	| {
+			readonly op: 'addPartyStrength';
+			/** Identifiant de parti ou référence relative (`governing`, `player`, `opposition`). */
+			readonly party: string;
+			/** Variation maintenue dans les bornes de force de l'équilibrage. */
+			readonly value: number;
+	  }
+	| {
+			readonly op: 'joinParty';
+			/** Identifiant de parti, ou `target` pour la cible choisie dans le plan. */
+			readonly party: string;
+	  }
+	| { readonly op: 'leaveParty' };
 
 export interface ResourceAmount {
 	readonly resource: ResourceId;
@@ -94,6 +157,8 @@ export interface ActionDefinition {
 	/** Explication affichée lorsque le prérequis n'est pas rempli. */
 	readonly unavailableReason?: string | undefined;
 	readonly effects: readonly Effect[];
+	/** Cible à choisir dans le plan : `party` pour une action portant sur un parti. */
+	readonly target?: 'party' | undefined;
 }
 
 /**
@@ -169,12 +234,78 @@ export interface EventsBalance {
 	readonly ordinaryEventChance: number;
 }
 
+/**
+ * Évolution autonome du monde à chaque frontière de trimestre (hypothèses de
+ * tuning, ARCHITECTURE.md §8.3 bis). Les pourcentages sont des entiers.
+ */
+export interface WorldBalance {
+	readonly startingIndicators: { readonly [K in IndicatorId]: number };
+	/** Valeur vers laquelle les indicateurs reviennent. */
+	readonly indicatorBaseline: number;
+	/** Part de l'écart à la référence résorbée chaque trimestre, en %. */
+	readonly indicatorReversionPercent: number;
+	/** Variation aléatoire maximale d'un indicateur par trimestre. */
+	readonly indicatorVolatility: number;
+	readonly minPartyStrength: number;
+	readonly maxPartyStrength: number;
+	/** Part de l'écart à la force de référence résorbée chaque trimestre, en %. */
+	readonly strengthReversionPercent: number;
+	readonly strengthVolatility: number;
+	/**
+	 * Écart des indicateurs économie et climat social à la référence, divisé par
+	 * ce nombre, ajouté à la force de référence du parti au gouvernement (usure ou
+	 * état de grâce).
+	 */
+	readonly governingIndicatorDivisor: number;
+	/** Probabilité trimestrielle de changement de direction de chaque parti. */
+	readonly leaderChangeChance: number;
+	/** Âge des dirigeants tirés au sort (nouvelle direction). */
+	readonly leaderMinAge: number;
+	readonly leaderMaxAge: number;
+	/** Âge auquel un dirigeant quitte d'office la direction de son parti. */
+	readonly leaderRetirementAge: number;
+}
+
 export interface Balance {
 	/** Points de temps disponibles chaque trimestre, non cumulables. */
 	readonly timeBudgetPerTurn: number;
 	readonly startingResources: Resources;
 	readonly wellbeing: WellbeingBalance;
 	readonly events: EventsBalance;
+	readonly world: WorldBalance;
+}
+
+/** Parti fictif du paysage initial (GDD §8.1), identique à chaque partie. */
+export interface PartyDefinition {
+	/** Identifiant stable, par exemple `party.ps`. */
+	readonly id: string;
+	readonly name: string;
+	readonly acronym: string;
+	/** Famille politique, en clair (par exemple « Centre »). */
+	readonly family: string;
+	readonly description: string;
+	/** Positions internes sur les axes, jamais affichées en chiffres. */
+	readonly positions: { readonly [K in AxisId]: number };
+	/** Force électorale de référence (poids relatif, entier). */
+	readonly baseStrength: number;
+}
+
+export interface AxisDefinition {
+	readonly id: AxisId;
+	readonly label: string;
+	/** Adjectif (accordé avec « parti ») du pôle négatif (-100) puis du pôle positif (100). */
+	readonly negativeLabel: string;
+	readonly positiveLabel: string;
+}
+
+/** Catalogue du monde : partis, axes et noms des personnages générés. */
+export interface WorldDefinition {
+	readonly axes: readonly AxisDefinition[];
+	readonly parties: readonly PartyDefinition[];
+	/** Parti qui conduit le gouvernement au début de la partie. */
+	readonly startingGoverningParty: string;
+	/** Prénoms et noms fictifs combinés pour générer les dirigeants. */
+	readonly names: { readonly first: readonly string[]; readonly last: readonly string[] };
 }
 
 /**
@@ -269,4 +400,9 @@ export interface Content {
 	readonly cast: Readonly<Record<string, CastMember>>;
 	/** Identifiants triés : ordre stable du choix des acteurs. */
 	readonly castIds: readonly string[];
+	readonly world: WorldDefinition;
+	/** Partis indexés par identifiant. */
+	readonly parties: Readonly<Record<string, PartyDefinition>>;
+	/** Ordre du catalogue : ordre stable de l'évolution autonome. */
+	readonly partyIds: readonly string[];
 }

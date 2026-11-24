@@ -92,7 +92,7 @@ describe('simulateur automatique', () => {
 		const lines = csv.split('\n');
 		expect(lines).toHaveLength(3);
 		expect(lines[0]).toBe(
-			'seed,strategy,status,turns,endingAge,endCause,decisions,alertEpisodes,significantInterventions,influence,politicalBudgetCents,personalCashCents,health,stress,upgradesOwned,actionsPerformed,purchases,quartersWithSuspension,eventsExperienced,eventOccurrences,invariantViolations,error'
+			'seed,strategy,status,turns,endingAge,endCause,decisions,alertEpisodes,significantInterventions,influence,politicalBudgetCents,personalCashCents,health,stress,upgradesOwned,actionsPerformed,purchases,quartersWithSuspension,eventsExperienced,eventOccurrences,finalParty,affiliations,quartersAffiliated,leaderChanges,indicatorRanges,invariantViolations,error'
 		);
 		expect(lines[1]).toContain('csv-1,mixed,ended');
 		expect(lines[1]).toContain('"[{""eventId""');

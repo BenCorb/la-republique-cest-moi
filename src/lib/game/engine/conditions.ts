@@ -10,7 +10,10 @@ import { ageAt, quarterOf, yearOf } from './calendar.ts';
 import type { GameState } from './state.ts';
 
 /** Sous-ensemble de l'état suffisant pour évaluer une condition. */
-export type ConditionContext = Pick<GameState, 'turn' | 'player' | 'resources' | 'upgrades'>;
+export type ConditionContext = Pick<
+	GameState,
+	'turn' | 'player' | 'resources' | 'upgrades' | 'world'
+>;
 
 export function readStat(context: ConditionContext, stat: StatId): number {
 	switch (stat) {
@@ -32,6 +35,23 @@ export function readStat(context: ConditionContext, stat: StatId): number {
 			return quarterOf(context.turn);
 		case 'upgrades.owned':
 			return context.upgrades.length;
+		case 'world.economy':
+			return context.world.indicators.economy;
+		case 'world.socialClimate':
+			return context.world.indicators.socialClimate;
+		case 'world.stability':
+			return context.world.indicators.stability;
+		case 'player.affiliated':
+			return context.player.partyId === null ? 0 : 1;
+		case 'player.partyStrength':
+			return context.player.partyId === null
+				? 0
+				: (context.world.parties[context.player.partyId]?.strength ?? 0);
+		case 'player.partyGoverning':
+			return context.player.partyId !== null &&
+				context.player.partyId === context.world.governingPartyId
+				? 1
+				: 0;
 		default: {
 			const unknown: never = stat;
 			throw new Error(`Statistique inconnue : ${String(unknown)}`);
@@ -53,6 +73,8 @@ export function evaluateCondition(context: ConditionContext, condition: Conditio
 			return readStat(context, condition.stat) <= condition.value;
 		case 'eq':
 			return readStat(context, condition.stat) === condition.value;
+		case 'memberOf':
+			return context.player.partyId === condition.party;
 		default: {
 			const unknown: never = condition;
 			throw new Error(`Condition inconnue : ${JSON.stringify(unknown)}`);

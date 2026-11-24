@@ -175,6 +175,15 @@ describe('scénario : catalogue réel', () => {
 				act('network.meet_officials'),
 				act('activism.leaflets'),
 				act('personal.freelance')
+			],
+			// Militant encarté au parti du gouvernement de départ (P2-01).
+			[
+				{ kind: 'action', id: 'party.join', target: content.world.startingGoverningParty },
+				act('party.section_meeting'),
+				act('network.meet_officials'),
+				act('organization.fundraising'),
+				act('personal.freelance'),
+				act('personal.rest')
 			]
 		];
 		const seen = new Set<string>();

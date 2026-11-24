@@ -11,7 +11,11 @@
  */
 import { z } from 'zod';
 import {
+	AXIS_IDS,
+	AXIS_MAX,
+	AXIS_MIN,
 	COMPARISON_OPS,
+	INDICATOR_IDS,
 	GAUGE_IDS,
 	GAUGE_MAX,
 	RESOURCE_IDS,
@@ -20,6 +24,7 @@ import {
 	UPGRADE_FAMILIES,
 	type ActionDefinition,
 	type AgeBand,
+	type AxisDefinition,
 	type Balance,
 	type Condition,
 	type CastMember,
@@ -27,9 +32,12 @@ import {
 	type EventChoice,
 	type EventDefinition,
 	type EventsBalance,
+	type PartyDefinition,
 	type ResourceAmount,
 	type UpgradeDefinition,
-	type WellbeingBalance
+	type WellbeingBalance,
+	type WorldBalance,
+	type WorldDefinition
 } from './types.ts';
 
 /** Identifiant stable : segments en minuscules séparés par des points (`activism.leaflets`). */
@@ -47,8 +55,16 @@ export const conditionSchema: z.ZodType<Condition> = z.lazy(() =>
 		z.strictObject({ op: z.literal('all'), conditions: z.array(conditionSchema).min(1) }),
 		z.strictObject({ op: z.literal('any'), conditions: z.array(conditionSchema).min(1) }),
 		z.strictObject({ op: z.literal('not'), condition: conditionSchema }),
-		z.strictObject({ op: z.enum(COMPARISON_OPS), stat: z.enum(STAT_IDS), value: safeInt })
+		z.strictObject({ op: z.enum(COMPARISON_OPS), stat: z.enum(STAT_IDS), value: safeInt }),
+		z.strictObject({ op: z.literal('memberOf'), party: contentId })
 	])
+);
+
+/** Parti du catalogue (`party.x`), référence relative ou, pour une adhésion, `target`. */
+const partyReference = z.string().regex(/^([a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+|[a-z]+)$/);
+const nonZeroGaugeDelta = safeInt.refine(
+	(value) => value !== 0 && Math.abs(value) <= GAUGE_MAX,
+	'variation non nulle, au plus 100'
 );
 
 export const effectSchema: z.ZodType<Effect> = z.union([
@@ -75,7 +91,19 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 		.refine((effect) => effect.min < effect.max, {
 			message: 'min doit être strictement inférieur à max',
 			path: ['max']
-		})
+		}),
+	z.strictObject({
+		op: z.literal('addIndicator'),
+		indicator: z.enum(INDICATOR_IDS),
+		value: nonZeroGaugeDelta
+	}),
+	z.strictObject({
+		op: z.literal('addPartyStrength'),
+		party: partyReference,
+		value: nonZeroGaugeDelta
+	}),
+	z.strictObject({ op: z.literal('joinParty'), party: partyReference }),
+	z.strictObject({ op: z.literal('leaveParty') })
 ]);
 
 export const resourceAmountSchema: z.ZodType<ResourceAmount> = z.strictObject({
@@ -93,7 +121,8 @@ export const actionSchema: z.ZodType<ActionDefinition> = z
 		costs: z.array(resourceAmountSchema),
 		requires: conditionSchema.optional(),
 		unavailableReason: frenchText.optional(),
-		effects: z.array(effectSchema).min(1)
+		effects: z.array(effectSchema).min(1),
+		target: z.literal('party').optional()
 	})
 	.refine(
 		(action) => (action.requires === undefined) === (action.unavailableReason === undefined),
@@ -261,6 +290,77 @@ export const eventCatalogSchema = z.strictObject({
 	events: z.array(eventSchema)
 });
 
+const percent = safeInt.refine((value) => value >= 0 && value <= 100, 'pourcentage de 0 à 100');
+
+export const worldBalanceSchema: z.ZodType<WorldBalance> = z
+	.strictObject({
+		startingIndicators: z.strictObject({
+			economy: gaugeValue,
+			socialClimate: gaugeValue,
+			stability: gaugeValue
+		}),
+		indicatorBaseline: gaugeValue,
+		indicatorReversionPercent: percent,
+		indicatorVolatility: nonNegativeInt,
+		minPartyStrength: gaugeValue,
+		maxPartyStrength: gaugeValue,
+		strengthReversionPercent: percent,
+		strengthVolatility: nonNegativeInt,
+		governingIndicatorDivisor: positiveInt,
+		leaderChangeChance: probability,
+		leaderMinAge: positiveInt,
+		leaderMaxAge: positiveInt,
+		leaderRetirementAge: positiveInt
+	})
+	.refine((world) => world.minPartyStrength <= world.maxPartyStrength, {
+		message: 'force minimale supérieure à la force maximale',
+		path: ['maxPartyStrength']
+	})
+	.refine((world) => world.leaderMinAge <= world.leaderMaxAge, {
+		message: 'âge minimal des dirigeants supérieur à l’âge maximal',
+		path: ['leaderMaxAge']
+	})
+	.refine((world) => world.leaderMaxAge < world.leaderRetirementAge, {
+		message: 'l’âge de retraite doit dépasser l’âge maximal des nouveaux dirigeants',
+		path: ['leaderRetirementAge']
+	});
+
+const axisPosition = safeInt.refine(
+	(value) => value >= AXIS_MIN && value <= AXIS_MAX,
+	'position de -100 à 100'
+);
+
+export const partySchema: z.ZodType<PartyDefinition> = z.strictObject({
+	id: contentId.refine((value) => value.startsWith('party.'), 'identifiant « party.nom »'),
+	name: frenchText,
+	acronym: frenchText,
+	family: frenchText,
+	description: frenchText,
+	positions: z.strictObject({
+		economy: axisPosition,
+		society: axisPosition,
+		sovereignty: axisPosition
+	}),
+	baseStrength: positiveInt
+});
+
+const axisSchema: z.ZodType<AxisDefinition> = z.strictObject({
+	id: z.enum(AXIS_IDS),
+	label: frenchText,
+	negativeLabel: frenchText,
+	positiveLabel: frenchText
+});
+
+export const worldSchema: z.ZodType<WorldDefinition> = z.strictObject({
+	axes: z.array(axisSchema).length(AXIS_IDS.length),
+	parties: z.array(partySchema).min(2),
+	startingGoverningParty: contentId,
+	names: z.strictObject({
+		first: z.array(frenchText).min(2),
+		last: z.array(frenchText).min(2)
+	})
+});
+
 export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	timeBudgetPerTurn: positiveInt,
 	startingResources: z.strictObject({
@@ -269,5 +369,6 @@ export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 		personalCashCents: nonNegativeInt
 	}),
 	wellbeing: wellbeingSchema,
-	events: eventsBalanceSchema
+	events: eventsBalanceSchema,
+	world: worldBalanceSchema
 });

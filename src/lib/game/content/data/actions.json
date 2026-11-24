@@ -169,6 +169,88 @@
 					"value": 2
 				}
 			]
+		},
+		{
+			"id": "party.join",
+			"label": "Adhérer à un parti",
+			"description": "Remplir le bulletin, régler la cotisation et recevoir une carte plastifiée qui vous engage pour la vie, ou jusqu’au prochain congrès.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [
+				{
+					"resource": "personalCashCents",
+					"amount": 3000
+				}
+			],
+			"requires": {
+				"op": "eq",
+				"stat": "player.affiliated",
+				"value": 0
+			},
+			"unavailableReason": "Vous avez déjà une carte : rendez-la avant d’en prendre une autre.",
+			"effects": [
+				{
+					"op": "joinParty",
+					"party": "target"
+				},
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 2
+				}
+			],
+			"target": "party"
+		},
+		{
+			"id": "party.section_meeting",
+			"label": "Assister à la réunion de section",
+			"description": "Deux heures sur l’ordre du jour, une heure sur la motion de soutien, dix minutes de vrai débat près de la machine à café.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "eq",
+				"stat": "player.affiliated",
+				"value": 1
+			},
+			"unavailableReason": "Il faut être membre d’un parti pour assister à ses réunions.",
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "influence",
+					"min": 1,
+					"max": 3
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "party.leave",
+			"label": "Rendre sa carte",
+			"description": "Annoncer votre départ par un communiqué digne, sobre, et relu sept fois. Les anciens camarades, eux, ne relisent rien.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "eq",
+				"stat": "player.affiliated",
+				"value": 1
+			},
+			"unavailableReason": "Vous n’êtes membre d’aucun parti.",
+			"effects": [
+				{
+					"op": "leaveParty"
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 3
+				}
+			]
 		}
 	]
 }

@@ -59,6 +59,17 @@
 			</p>
 		</section>
 
+		<section class="card flex flex-col gap-3" aria-labelledby="national-title">
+			<h2 id="national-title" class="section-title">Contexte national</h2>
+			<p class="text-sm">
+				Gouvernement : <span class="font-semibold">{view.world.governingParty}</span> · Vous :
+				<span class="font-semibold">{view.world.affiliation}</span>
+			</p>
+			{#each view.world.indicators as indicator (indicator.id)}
+				<Gauge name={indicator.name} gauge={indicator.gauge} />
+			{/each}
+		</section>
+
 		<section class="card" aria-labelledby="orga-title">
 			<h2 id="orga-title" class="section-title">Organisation</h2>
 			{#if view.producers.length === 0}

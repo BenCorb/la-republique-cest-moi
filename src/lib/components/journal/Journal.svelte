@@ -14,6 +14,7 @@
 		step: 'Agenda',
 		economy: 'Organisation',
 		wellbeing: 'Santé',
+		world: 'Politique',
 		event: 'Nouvelle',
 		decision: 'Décision',
 		end: 'Fin'

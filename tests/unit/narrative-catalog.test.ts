@@ -1,11 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { loadContent } from '../../src/lib/game/content/load.ts';
 import type { EventDefinition } from '../../src/lib/game/content/types.ts';
-import { renderTemplate } from '../../src/lib/game/engine/index.ts';
+import { createGame, renderTemplate } from '../../src/lib/game/engine/index.ts';
 
 /** Catalogue narratif du prototype (P1-06) : critères vérifiés automatiquement. */
 const content = loadContent();
 const events: EventDefinition[] = content.eventIds.map((id) => content.events[id]!);
+/** Événements du prototype (P1-06), hors actualité nationale ajoutée en P2-01. */
+const prototypeEvents = events.filter((event) => event.category !== 'national');
+const game = createGame({ seed: 'catalogue-narratif' }, content);
+const someParty = content.partyIds[0]!;
+/** Variables du monde liées à des valeurs plausibles (partis et dirigeants réels de l'état). */
+const worldBindings: Record<string, string> = {
+	governing_party: game.world.governingPartyId,
+	governing_leader: game.world.parties[game.world.governingPartyId]!.leaderId,
+	opposition_party: someParty,
+	opposition_leader: game.world.parties[someParty]!.leaderId,
+	player_party: someParty,
+	player_party_leader: game.world.parties[someParty]!.leaderId
+};
 
 /** Toutes les distributions possibles d'un événement (produit des candidats par rôle). */
 function castings(event: EventDefinition): Record<string, string>[] {
@@ -22,7 +35,7 @@ function castings(event: EventDefinition): Record<string, string>[] {
 					})
 					.map((id) => ({ ...partial, [slot.role]: id }))
 			),
-		[{}]
+		[{ ...worldBindings }]
 	);
 }
 
@@ -34,8 +47,15 @@ function texts(event: EventDefinition): string[] {
 
 describe('catalogue narratif du prototype', () => {
 	it('contient entre 20 et 30 événements', () => {
-		expect(events.length).toBeGreaterThanOrEqual(20);
-		expect(events.length).toBeLessThanOrEqual(30);
+		expect(prototypeEvents.length).toBeGreaterThanOrEqual(20);
+		expect(prototypeEvents.length).toBeLessThanOrEqual(30);
+	});
+
+	it('ajoute une actualité nationale conditionnelle (P2-01)', () => {
+		const national = events.filter((event) => event.category === 'national');
+		expect(national.length).toBeGreaterThanOrEqual(10);
+		expect(national.filter((event) => event.when !== undefined).length).toBeGreaterThanOrEqual(8);
+		expect(national.some((event) => event.blocking)).toBe(true);
 	});
 
 	it('couvre les thèmes du prototype', () => {
@@ -74,7 +94,7 @@ describe('catalogue narratif du prototype', () => {
 			expect(possible.length).toBeGreaterThan(0);
 			for (const actors of possible) {
 				for (const text of texts(event)) {
-					const rendered = renderTemplate(text, actors, content);
+					const rendered = renderTemplate(text, actors, content, game.characters);
 					expect(rendered).not.toMatch(/[{}]|undefined|null/);
 					expect(rendered.trim().length).toBeGreaterThan(0);
 				}

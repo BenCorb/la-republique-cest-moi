@@ -14,16 +14,24 @@ import {
 	balanceSchema,
 	castCatalogSchema,
 	eventCatalogSchema,
-	upgradeCatalogSchema
+	upgradeCatalogSchema,
+	worldSchema
 } from './schemas.ts';
 import {
+	PARTY_REFERENCES,
 	TREASURY_IDS,
+	WORLD_TEMPLATE_VARIABLES,
 	type ActionDefinition,
+	type Balance,
 	type CastMember,
+	type Condition,
 	type Content,
+	type Effect,
 	type EventDefinition,
+	type PartyDefinition,
 	type ResourceAmount,
-	type UpgradeDefinition
+	type UpgradeDefinition,
+	type WorldDefinition
 } from './types.ts';
 import { contentFingerprint } from './version.ts';
 
@@ -45,6 +53,8 @@ export interface RawContent {
 	readonly cast: unknown;
 	/** Fichiers d'événements, par nom de fichier (par exemple `events/press.json`). */
 	readonly events: Readonly<Record<string, unknown>>;
+	/** Partis, axes et noms du monde (`world.json`). */
+	readonly world: unknown;
 }
 
 export type ContentValidation =
@@ -144,6 +154,197 @@ function crossCheck(
 	return issues;
 }
 
+// ---------------------------------------------------------------------------
+// Monde : partis et références politiques
+// ---------------------------------------------------------------------------
+
+function crossCheckWorld(
+	world: WorldDefinition,
+	balance: Balance,
+	knownIds: Set<string>
+): ContentIssue[] {
+	const issues: ContentIssue[] = [];
+	const source = 'world.json';
+	const axisIds = new Set<string>();
+	world.axes.forEach((axis, index) => {
+		if (axisIds.has(axis.id)) {
+			issues.push({ source, path: `axes[${index}].id`, message: `axe en double : ${axis.id}` });
+		}
+		axisIds.add(axis.id);
+	});
+	const partyIds = new Set<string>();
+	const names = new Set<string>();
+	world.parties.forEach((party, index) => {
+		if (partyIds.has(party.id) || knownIds.has(party.id)) {
+			issues.push({
+				source,
+				path: `parties[${index}].id`,
+				message: `identifiant en double : ${party.id}`
+			});
+		}
+		partyIds.add(party.id);
+		knownIds.add(party.id);
+		if (names.has(party.name)) {
+			issues.push({
+				source,
+				path: `parties[${index}].name`,
+				message: `nom de parti en double : ${party.name}`
+			});
+		}
+		names.add(party.name);
+		const { minPartyStrength, maxPartyStrength } = balance.world;
+		if (party.baseStrength < minPartyStrength || party.baseStrength > maxPartyStrength) {
+			issues.push({
+				source,
+				path: `parties[${index}].baseStrength`,
+				message: `force de référence hors des bornes ${minPartyStrength}–${maxPartyStrength}`
+			});
+		}
+	});
+	if (!partyIds.has(world.startingGoverningParty)) {
+		issues.push({
+			source,
+			path: 'startingGoverningParty',
+			message: `parti inconnu : ${world.startingGoverningParty}`
+		});
+	}
+	// Assez de combinaisons de noms pour renouveler les directions sans doublon.
+	const combinations = new Set(world.names.first).size * new Set(world.names.last).size;
+	if (combinations < world.parties.length * 10) {
+		issues.push({
+			source,
+			path: 'names',
+			message: `trop peu de combinaisons de noms (${combinations}) pour ${world.parties.length} partis`
+		});
+	}
+	return issues;
+}
+
+/** Vérifie les partis cités par une condition (`memberOf`). */
+function conditionIssues(
+	condition: Condition | undefined,
+	parties: ReadonlySet<string>,
+	source: string,
+	path: string
+): ContentIssue[] {
+	if (!condition) return [];
+	switch (condition.op) {
+		case 'all':
+		case 'any':
+			return condition.conditions.flatMap((child, index) =>
+				conditionIssues(child, parties, source, `${path}.conditions[${index}]`)
+			);
+		case 'not':
+			return conditionIssues(condition.condition, parties, source, `${path}.condition`);
+		case 'memberOf':
+			return parties.has(condition.party)
+				? []
+				: [{ source, path: `${path}.party`, message: `parti inconnu : ${condition.party}` }];
+		default:
+			return [];
+	}
+}
+
+/** Vérifie les partis cités par des effets ; `target` n'est permis que pour une action ciblée. */
+function effectIssues(
+	effects: readonly Effect[],
+	parties: ReadonlySet<string>,
+	allowTarget: boolean,
+	source: string,
+	path: string
+): ContentIssue[] {
+	const issues: ContentIssue[] = [];
+	effects.forEach((effect, index) => {
+		const at = `${path}[${index}].party`;
+		if (effect.op === 'addPartyStrength') {
+			const relative = (PARTY_REFERENCES as readonly string[]).includes(effect.party);
+			if (!relative && !parties.has(effect.party)) {
+				issues.push({ source, path: at, message: `parti inconnu : ${effect.party}` });
+			}
+		} else if (effect.op === 'joinParty') {
+			if (effect.party === 'target') {
+				if (!allowTarget) {
+					issues.push({
+						source,
+						path: at,
+						message: '« target » réservé aux actions ciblant un parti'
+					});
+				}
+			} else if (!parties.has(effect.party)) {
+				issues.push({ source, path: at, message: `parti inconnu : ${effect.party}` });
+			}
+		}
+	});
+	return issues;
+}
+
+/** La condition impose-t-elle, à coup sûr, que le joueur soit encarté ? */
+export function requiresAffiliation(condition: Condition | undefined): boolean {
+	if (!condition) return false;
+	switch (condition.op) {
+		case 'memberOf':
+			return true;
+		case 'all':
+			return condition.conditions.some(requiresAffiliation);
+		case 'any':
+			return condition.conditions.length > 0 && condition.conditions.every(requiresAffiliation);
+		case 'gte':
+			return condition.stat === 'player.affiliated' && condition.value >= 1;
+		case 'eq':
+			return condition.stat === 'player.affiliated' && condition.value === 1;
+		default:
+			return false;
+	}
+}
+
+function crossCheckPolitics(
+	actions: readonly ActionDefinition[],
+	upgrades: readonly UpgradeDefinition[],
+	events: readonly SourcedEvent[],
+	parties: ReadonlySet<string>
+): ContentIssue[] {
+	const issues: ContentIssue[] = [];
+	actions.forEach((action, index) => {
+		const path = `actions[${index}]`;
+		issues.push(...conditionIssues(action.requires, parties, 'actions.json', `${path}.requires`));
+		const targeted = action.target === 'party';
+		issues.push(
+			...effectIssues(action.effects, parties, targeted, 'actions.json', `${path}.effects`)
+		);
+		const usesTarget = action.effects.some(
+			(effect) => effect.op === 'joinParty' && effect.party === 'target'
+		);
+		if (targeted && !usesTarget) {
+			issues.push({
+				source: 'actions.json',
+				path: `${path}.target`,
+				message: 'cible déclarée mais jamais utilisée'
+			});
+		}
+	});
+	upgrades.forEach((upgrade, index) => {
+		issues.push(
+			...conditionIssues(upgrade.requires, parties, 'upgrades.json', `upgrades[${index}].requires`)
+		);
+	});
+	for (const { source, index, event } of events) {
+		const path = `events[${index}]`;
+		issues.push(...conditionIssues(event.when, parties, source, `${path}.when`));
+		if (event.blocking) {
+			event.choices.forEach((choice, choiceIndex) => {
+				const choicePath = `${path}.choices[${choiceIndex}]`;
+				issues.push(...conditionIssues(choice.requires, parties, source, `${choicePath}.requires`));
+				issues.push(
+					...effectIssues(choice.effects, parties, false, source, `${choicePath}.effects`)
+				);
+			});
+		} else {
+			issues.push(...effectIssues(event.effects, parties, false, source, `${path}.effects`));
+		}
+	}
+	return issues;
+}
+
 interface SourcedEvent {
 	readonly source: string;
 	readonly index: number;
@@ -179,6 +380,13 @@ function crossCheckEvents(
 
 		const roles = new Set<string>();
 		event.actors.forEach((slot, slotIndex) => {
+			if ((WORLD_TEMPLATE_VARIABLES as readonly string[]).includes(slot.role)) {
+				issues.push({
+					source,
+					path: `${path}.actors[${slotIndex}].role`,
+					message: `rôle réservé aux variables du monde : ${slot.role}`
+				});
+			}
 			if (roles.has(slot.role)) {
 				issues.push({
 					source,
@@ -206,9 +414,21 @@ function crossCheckEvents(
 			});
 		}
 
+		const worldVariables = new Set<string>(WORLD_TEMPLATE_VARIABLES);
+		const affiliated = requiresAffiliation(event.when);
 		const checkText = (text: string, textPath: string): void => {
 			for (const match of text.matchAll(TEMPLATE_VARIABLE)) {
 				const role = match[1] ?? '';
+				if (worldVariables.has(role)) {
+					if (role.startsWith('player_party') && !affiliated) {
+						issues.push({
+							source,
+							path: textPath,
+							message: `{${role}} exige une condition imposant l’adhésion du joueur`
+						});
+					}
+					continue;
+				}
 				if (!roles.has(role)) {
 					issues.push({
 						source,
@@ -287,6 +507,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	const actionCatalog = actionCatalogSchema.safeParse(raw.actions);
 	const upgradeCatalog = upgradeCatalogSchema.safeParse(raw.upgrades);
 	const castCatalog = castCatalogSchema.safeParse(raw.cast);
+	const world = worldSchema.safeParse(raw.world);
 	const eventFiles = Object.keys(raw.events)
 		.sort()
 		.map((source) => ({ source, parsed: eventCatalogSchema.safeParse(raw.events[source]) }));
@@ -296,6 +517,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	if (!actionCatalog.success) issues.push(...zodIssues('actions.json', actionCatalog.error));
 	if (!upgradeCatalog.success) issues.push(...zodIssues('upgrades.json', upgradeCatalog.error));
 	if (!castCatalog.success) issues.push(...zodIssues('cast.json', castCatalog.error));
+	if (!world.success) issues.push(...zodIssues('world.json', world.error));
 	for (const { source, parsed } of eventFiles) {
 		if (!parsed.success) issues.push(...zodIssues(source, parsed.error));
 	}
@@ -304,6 +526,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 		!actionCatalog.success ||
 		!upgradeCatalog.success ||
 		!castCatalog.success ||
+		!world.success ||
 		eventFiles.some(({ parsed }) => !parsed.success)
 	) {
 		return { ok: false, issues };
@@ -318,6 +541,9 @@ export function validateContent(raw: RawContent): ContentValidation {
 	issues.push(...crossCheck(actionList, upgradeList, balance.data.timeBudgetPerTurn));
 	const knownIds = new Set([...actionList.map((a) => a.id), ...upgradeList.map((u) => u.id)]);
 	issues.push(...crossCheckEvents(sourcedEvents, castList, knownIds));
+	issues.push(...crossCheckWorld(world.data, balance.data, knownIds));
+	const partyIdSet = new Set(world.data.parties.map((party) => party.id));
+	issues.push(...crossCheckPolitics(actionList, upgradeList, sourcedEvents, partyIdSet));
 	if (issues.length > 0) return { ok: false, issues };
 
 	const actions: Record<string, ActionDefinition> = {};
@@ -328,6 +554,8 @@ export function validateContent(raw: RawContent): ContentValidation {
 	for (const { event } of sourcedEvents) events[event.id] = event;
 	const cast: Record<string, CastMember> = {};
 	for (const member of castList) cast[member.id] = member;
+	const parties: Record<string, PartyDefinition> = {};
+	for (const party of world.data.parties) parties[party.id] = party;
 	return {
 		ok: true,
 		content: {
@@ -336,6 +564,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 				upgrades: upgradeCatalog.data,
 				balance: balance.data,
 				cast: castCatalog.data,
+				world: world.data,
 				events: Object.fromEntries(eventFiles.map(({ source, parsed }) => [source, parsed.data]))
 			}),
 			balance: balance.data,
@@ -346,7 +575,10 @@ export function validateContent(raw: RawContent): ContentValidation {
 			events,
 			eventIds: Object.keys(events).sort(),
 			cast,
-			castIds: Object.keys(cast).sort()
+			castIds: Object.keys(cast).sort(),
+			world: world.data,
+			parties,
+			partyIds: world.data.parties.map((party) => party.id)
 		}
 	};
 }

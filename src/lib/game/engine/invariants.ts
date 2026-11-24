@@ -5,7 +5,14 @@
  * chargement (sauvegarde, import). Ne corrige rien : signale toutes les violations.
  * Avec le contenu, vérifie aussi les références vers le catalogue.
  */
-import { GAUGE_MAX, GAUGE_MIN, RESOURCE_IDS, type Content } from '../content/types.ts';
+import {
+	GAUGE_MAX,
+	GAUGE_MIN,
+	INDICATOR_IDS,
+	RESOURCE_IDS,
+	WORLD_TEMPLATE_VARIABLES,
+	type Content
+} from '../content/types.ts';
 import { RNG_ALGORITHM, validateSeed } from './random.ts';
 import { START_TURN, STATE_SCHEMA_VERSION, type GameState } from './state.ts';
 
@@ -17,6 +24,7 @@ function isUint32(value: unknown): boolean {
 
 const INSTANCE_ID = /^upgrade\.([1-9][0-9]*)$/;
 const EVENT_INSTANCE_ID = /^event\.([1-9][0-9]*)$/;
+const CHARACTER_ID = /^character\.([1-9][0-9]*)$/;
 
 export function checkInvariants(state: GameState, content?: Content): string[] {
 	const violations: string[] = [];
@@ -103,6 +111,7 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
 	}
 
 	violations.push(...checkEventInvariants(state, instanceIds));
+	violations.push(...checkWorldInvariants(state));
 	if (content) violations.push(...checkContentReferences(state, content));
 	return violations;
 }
@@ -150,6 +159,78 @@ function checkEventInvariants(state: GameState, usedInstanceIds: Set<string>): s
 	return violations;
 }
 
+/** Monde, personnages et adhésions du joueur (P2-01). */
+function checkWorldInvariants(state: GameState): string[] {
+	const violations: string[] = [];
+	const { world, characters, player } = state;
+
+	for (const indicator of INDICATOR_IDS) {
+		const value = world.indicators[indicator];
+		if (!Number.isSafeInteger(value) || value < GAUGE_MIN || value > GAUGE_MAX) {
+			violations.push(`indicateur invalide : ${indicator} = ${value}`);
+		}
+	}
+	if (!Object.hasOwn(world.parties, world.governingPartyId)) {
+		violations.push(`parti au gouvernement inconnu : ${world.governingPartyId}`);
+	}
+
+	const characterCount = Object.keys(characters).length;
+	for (const [key, character] of Object.entries(characters)) {
+		// Rangs de création 1..N, sans trou : aucun personnage n'est supprimé.
+		const match = CHARACTER_ID.exec(character.id);
+		if (key !== character.id || !match || Number(match[1]) > characterCount) {
+			violations.push(`identifiant de personnage invalide : ${key}`);
+		}
+		if (!Number.isSafeInteger(character.birthTurn) || character.birthTurn > state.turn) {
+			violations.push(`naissance de personnage invalide : ${character.id}`);
+		}
+		if (character.partyId !== null && !Object.hasOwn(world.parties, character.partyId)) {
+			violations.push(`parti inconnu pour ${character.id} : ${character.partyId}`);
+		}
+	}
+	const leaders = new Set<string>();
+	for (const [partyId, party] of Object.entries(world.parties)) {
+		if (!Number.isSafeInteger(party.strength) || party.strength < 0) {
+			violations.push(`force invalide : ${partyId} = ${party.strength}`);
+		}
+		const leader = characters[party.leaderId];
+		if (!leader) {
+			violations.push(`dirigeant inconnu pour ${partyId} : ${party.leaderId}`);
+		} else if (leader.partyId !== partyId) {
+			violations.push(`dirigeant d’un autre parti à la tête de ${partyId} : ${leader.id}`);
+		}
+		if (leaders.has(party.leaderId)) {
+			violations.push(`dirigeant à la tête de deux partis : ${party.leaderId}`);
+		}
+		leaders.add(party.leaderId);
+	}
+
+	// Adhésions : chronologiques, une seule en cours, cohérente avec le parti actuel.
+	let previousEnd = -Infinity;
+	player.affiliations.forEach((affiliation, index) => {
+		const last = index === player.affiliations.length - 1;
+		if (!Object.hasOwn(world.parties, affiliation.partyId)) {
+			violations.push(`adhésion à un parti inconnu : ${affiliation.partyId}`);
+		}
+		if (affiliation.fromTurn < previousEnd || affiliation.fromTurn > state.turn) {
+			violations.push(`adhésion hors chronologie : ${affiliation.partyId}`);
+		}
+		if (affiliation.toTurn === null && !last) {
+			violations.push(`adhésion en cours qui n’est pas la dernière : ${affiliation.partyId}`);
+		}
+		if (affiliation.toTurn !== null && affiliation.toTurn < affiliation.fromTurn) {
+			violations.push(`adhésion terminée avant d’avoir commencé : ${affiliation.partyId}`);
+		}
+		previousEnd = affiliation.toTurn ?? affiliation.fromTurn;
+	});
+	const current = player.affiliations.at(-1);
+	const expected = current && current.toTurn === null ? current.partyId : null;
+	if (player.partyId !== expected) {
+		violations.push(`parti du joueur incohérent avec ses adhésions : ${String(player.partyId)}`);
+	}
+	return violations;
+}
+
 /**
  * Références de l'état vers le catalogue : améliorations, événements en attente
  * ou programmés, occurrences, acteurs et nombres maximaux d'exemplaires. Une
@@ -192,11 +273,24 @@ export function checkContentReferences(state: GameState, content: Content): stri
 		...pending.map((instance) => instance.actors),
 		...scheduled.map((entry) => entry.actors)
 	];
+	const worldVariables = new Set<string>(WORLD_TEMPLATE_VARIABLES);
 	for (const actors of actorSets) {
-		for (const castId of Object.values(actors)) {
-			if (!Object.hasOwn(content.cast, castId)) {
-				violations.push(`acteur inconnu de la distribution : ${castId}`);
-			}
+		for (const [role, actorId] of Object.entries(actors)) {
+			const known = worldVariables.has(role)
+				? Object.hasOwn(content.parties, actorId) || Object.hasOwn(state.characters, actorId)
+				: Object.hasOwn(content.cast, actorId);
+			if (!known) violations.push(`acteur inconnu : ${role} = ${actorId}`);
+		}
+	}
+	const partyIds = Object.keys(state.world.parties).sort();
+	const catalogIds = [...content.partyIds].sort();
+	if (partyIds.join(',') !== catalogIds.join(',')) {
+		violations.push('partis de l’état différents de ceux du catalogue');
+	}
+	const { minPartyStrength, maxPartyStrength } = content.balance.world;
+	for (const [partyId, party] of Object.entries(state.world.parties)) {
+		if (party.strength < minPartyStrength || party.strength > maxPartyStrength) {
+			violations.push(`force hors bornes : ${partyId} = ${party.strength}`);
 		}
 	}
 	return violations;

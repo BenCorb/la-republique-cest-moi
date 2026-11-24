@@ -4,9 +4,10 @@
  * L'état est un objet JSON pur (nombres, chaînes, booléens, tableaux, objets,
  * `null`) : il se sérialise et se recharge sans perte.
  */
-import type { Content, GaugeId, ResourceId, Resources } from '../content/types.ts';
+import type { Content, GaugeId, IndicatorId, ResourceId, Resources } from '../content/types.ts';
 import { TURNS_PER_YEAR, type Turn } from './calendar.ts';
 import { createRng, type RngState } from './random.ts';
+import { createWorld } from './world.ts';
 
 /** Version du format de l'état, à incrémenter avec une migration explicite. */
 export const STATE_SCHEMA_VERSION = 1;
@@ -19,6 +20,15 @@ export const PROTOTYPE_STARTING_AGE = 25;
 
 export type GamePhase = 'planning' | 'decision' | 'ended';
 
+/** Période d'adhésion à un parti, conservée pour le bilan et les événements. */
+export interface Affiliation {
+	readonly partyId: string;
+	/** Trimestre de l'adhésion. */
+	readonly fromTurn: Turn;
+	/** Trimestre du départ, `null` pour l'adhésion en cours. */
+	readonly toTurn: Turn | null;
+}
+
 export interface PlayerState {
 	/** Trimestre de naissance ; l'âge en est toujours dérivé. */
 	readonly birthTurn: Turn;
@@ -26,6 +36,59 @@ export interface PlayerState {
 	readonly health: number;
 	/** Stress, entier de 0 à 100. */
 	readonly stress: number;
+	/** Parti du joueur, `null` s'il n'est pas encarté. */
+	readonly partyId: string | null;
+	/** Historique des adhésions, dans l'ordre ; seule la dernière peut être en cours. */
+	readonly affiliations: readonly Affiliation[];
+}
+
+/**
+ * Personnage nommé généré par le moteur (dirigeants de parti en P2-01). Modèle
+ * volontairement minimal, enrichi par P2-04 (traits, relations, mémoire).
+ * Un personnage remplacé reste dans l'état : les textes déjà figés le citent.
+ */
+export interface Character {
+	/** Identifiant `character.N`, N étant le rang de création (personnages jamais supprimés). */
+	readonly id: string;
+	readonly name: string;
+	readonly birthTurn: Turn;
+	readonly partyId: string | null;
+}
+
+export interface PartyState {
+	/** Force électorale relative, entière, dans les bornes de l'équilibrage. */
+	readonly strength: number;
+	/** Personnage à la tête du parti. */
+	readonly leaderId: string;
+}
+
+/** Contexte national abstrait (ARCHITECTURE.md §4.2) : indicateurs et partis. */
+export interface WorldState {
+	readonly indicators: { readonly [K in IndicatorId]: number };
+	/** États des partis du catalogue, par identifiant. */
+	readonly parties: Readonly<Record<string, PartyState>>;
+	readonly governingPartyId: string;
+}
+
+/** Variation politique produite par un effet (journal). */
+export type PoliticalChange =
+	| { readonly kind: 'indicator'; readonly indicator: IndicatorId; readonly delta: number }
+	| { readonly kind: 'partyStrength'; readonly partyId: string; readonly delta: number }
+	| { readonly kind: 'joined'; readonly partyId: string }
+	| { readonly kind: 'left'; readonly partyId: string };
+
+export interface LeaderChange {
+	readonly partyId: string;
+	readonly previousLeaderId: string;
+	readonly leaderId: string;
+	readonly reason: 'retirement' | 'internal_vote';
+}
+
+/** Évolution autonome du monde à la frontière du trimestre. */
+export interface WorldRecord {
+	readonly indicators: readonly { readonly indicator: IndicatorId; readonly delta: number }[];
+	readonly parties: readonly { readonly partyId: string; readonly delta: number }[];
+	readonly leaderChanges: readonly LeaderChange[];
 }
 
 export interface ResourceChange {
@@ -60,6 +123,9 @@ export interface StepRecord {
 	readonly changes: readonly ResourceChange[];
 	/** Variations de santé et de stress dues à l'étape. */
 	readonly gauges: readonly GaugeChange[];
+	/** Cible choisie dans le plan (parti), sinon `null`. */
+	readonly target: string | null;
+	readonly politics: readonly PoliticalChange[];
 }
 
 /** Résultat d'un producteur actif au trimestre résolu. */
@@ -139,6 +205,7 @@ export interface EventRecord {
 	readonly actors: Readonly<Record<string, string>>;
 	readonly changes: readonly ResourceChange[];
 	readonly gauges: readonly GaugeChange[];
+	readonly politics: readonly PoliticalChange[];
 	/** Motif d'annulation, en français. */
 	readonly reason: string | null;
 }
@@ -153,6 +220,8 @@ export interface HistoryEntry {
 	readonly economy: EconomyRecord;
 	/** Charge de travail, récupération, vieillissement et éventuel décès. */
 	readonly wellbeing: WellbeingRecord;
+	/** Évolution autonome du monde, `null` si la carrière s'est terminée avant. */
+	readonly world: WorldRecord | null;
 	/** Événements créés (ou suites annulées) au passage à T+1. */
 	readonly events: readonly EventRecord[];
 }
@@ -167,6 +236,7 @@ export interface ChoiceRecord {
 	readonly choiceId: string;
 	readonly changes: readonly ResourceChange[];
 	readonly gauges: readonly GaugeChange[];
+	readonly politics: readonly PoliticalChange[];
 	readonly scheduled: ScheduledEvent | null;
 	/** Événements en attente annulés parce que devenus impossibles. */
 	readonly cancelled: readonly { readonly instanceId: string; readonly reason: string }[];
@@ -195,6 +265,9 @@ export interface GameState {
 	/** Prochain numéro d'instance (identifiants déterministes, jamais réutilisés). */
 	readonly nextInstanceNumber: number;
 	readonly events: EventsState;
+	readonly world: WorldState;
+	/** Personnages nommés générés, par identifiant (jamais supprimés). */
+	readonly characters: Readonly<Record<string, Character>>;
 	/** Journal : trimestres résolus et choix, dans l'ordre chronologique. */
 	readonly history: readonly JournalEntry[];
 	readonly end: EndState | null;
@@ -209,20 +282,26 @@ export interface NewGameConfig {
 }
 
 export function createGame(config: NewGameConfig, content: Content): GameState {
+	// Paysage initial fixe ; seuls les dirigeants sont tirés (GDD §8.1).
+	const world = createWorld(createRng(config.seed), START_TURN, content);
 	return {
 		schemaVersion: STATE_SCHEMA_VERSION,
 		turn: START_TURN,
-		rng: createRng(config.seed),
+		rng: world.rng,
 		phase: 'planning',
 		player: {
 			birthTurn: START_TURN - PROTOTYPE_STARTING_AGE * TURNS_PER_YEAR,
 			health: content.balance.wellbeing.startingHealth,
-			stress: content.balance.wellbeing.startingStress
+			stress: content.balance.wellbeing.startingStress,
+			partyId: null,
+			affiliations: []
 		},
 		resources: { ...content.balance.startingResources },
 		upgrades: [],
 		nextInstanceNumber: 1,
 		events: { pending: [], scheduled: [], occurrences: {} },
+		world: world.world,
+		characters: world.characters,
 		history: [],
 		end: null
 	};

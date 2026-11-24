@@ -6,10 +6,11 @@ import {
 	fixtureBalance,
 	fixtureCast,
 	fixtureEvents,
-	fixtureUpgrades
+	fixtureUpgrades,
+	fixtureWorld
 } from '../fixtures/content.ts';
 
-const rest = { cast: fixtureCast, events: fixtureEvents };
+const rest = { cast: fixtureCast, events: fixtureEvents, world: fixtureWorld };
 
 type MutableAction = Record<string, unknown>;
 
@@ -134,6 +135,7 @@ describe('validation des catalogues', () => {
 			upgrades: { upgrades: [] },
 			cast: { cast: [] },
 			events: {},
+			world: fixtureWorld,
 			balance: { timeBudgetPerTurn: 0, startingResources: { influence: -1 } }
 		});
 		expect(result.ok).toBe(false);
@@ -240,7 +242,8 @@ describe('validation des événements', () => {
 			upgrades: fixtureUpgrades,
 			balance: fixtureBalance,
 			cast: fixtureCast,
-			events
+			events,
+			world: fixtureWorld
 		});
 	}
 
@@ -358,6 +361,7 @@ describe('validation des événements', () => {
 			upgrades: fixtureUpgrades,
 			balance: fixtureBalance,
 			events: fixtureEvents,
+			world: fixtureWorld,
 			cast: { cast: [...fixtureCast.cast, member] }
 		});
 		expect(messages(result)).toContain(fragment);

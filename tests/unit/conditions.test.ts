@@ -1,15 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import type { Condition } from '../../src/lib/game/content/types.ts';
 import {
+	createGame,
 	evaluateCondition,
 	readStat,
 	turnOf,
 	type ConditionContext
 } from '../../src/lib/game/engine/index.ts';
+import { fixtureContent } from '../fixtures/content.ts';
 
 const context: ConditionContext = {
 	turn: turnOf(2004, 2),
-	player: { birthTurn: turnOf(1975, 1), health: 64, stress: 37 },
+	player: {
+		birthTurn: turnOf(1975, 1),
+		health: 64,
+		stress: 37,
+		partyId: null,
+		affiliations: []
+	},
+	world: createGame({ seed: 'conditions' }, fixtureContent).world,
 	resources: { influence: 12, politicalBudgetCents: 5_000, personalCashCents: 0 },
 	upgrades: [
 		{ instanceId: 'upgrade.1', upgradeId: 'test.volunteer', acquiredTurn: 0 },
