@@ -18,7 +18,16 @@ const context: ConditionContext = {
 		partyId: null,
 		affiliations: [],
 		supports: {},
-		popularity: 0
+		popularity: 0,
+		origin: 'origin.neutral',
+		profession: 'profession.none',
+		family: {
+			partnerId: null,
+			childrenIds: [],
+			parentIds: [],
+			siblingIds: [],
+			formerPartnerIds: []
+		}
 	},
 	world: createGame({ seed: 'conditions' }, fixtureContent).world,
 	mandates: [],

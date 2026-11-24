@@ -41,6 +41,14 @@ test.describe('coque d’accueil (build statique)', () => {
 		await page.keyboard.press('Tab');
 		await expect(page.getByRole('button', { name: 'Nouvelle carrière' })).toBeFocused();
 		await page.keyboard.press('Enter');
+
+		// Création du personnage : choix au clavier, puis lancement.
+		const firstOrigin = page.getByRole('radio').first();
+		await firstOrigin.focus();
+		await page.keyboard.press('ArrowDown');
+		await expect(page.getByRole('radio').nth(1)).toBeChecked();
+		await page.getByRole('button', { name: 'Commencer la carrière' }).focus();
+		await page.keyboard.press('Enter');
 		await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 25 ans');
 	});
 

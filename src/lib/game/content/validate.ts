@@ -18,6 +18,7 @@ import {
 	careerCatalogSchema,
 	supportCatalogSchema,
 	entourageCatalogSchema,
+	profileCatalogSchema,
 	upgradeCatalogSchema,
 	worldSchema
 } from './schemas.ts';
@@ -36,6 +37,8 @@ import {
 	type InstitutionsDefinition,
 	type MandateDefinition,
 	type MissionDefinition,
+	type OriginDefinition,
+	type ProfessionDefinition,
 	type PostDefinition,
 	type SupportGroupDefinition,
 	type PartyDefinition,
@@ -74,6 +77,8 @@ export interface RawContent {
 	readonly supports: unknown;
 	/** Postes clés et missions de l'entourage (`entourage.json`). */
 	readonly entourage: unknown;
+	/** Origines, professions et profil par défaut (`profiles.json`). */
+	readonly profiles: unknown;
 }
 
 export type ContentValidation =
@@ -245,6 +250,8 @@ interface Refs {
 	readonly mandates: ReadonlySet<string>;
 	readonly elections: ReadonlySet<string>;
 	readonly groups: ReadonlySet<string>;
+	readonly origins: ReadonlySet<string>;
+	readonly professions: ReadonlySet<string>;
 }
 
 /** Vérifie les partis et mandats cités par une condition. */
@@ -267,6 +274,20 @@ function conditionIssues(
 			return refs.parties.has(condition.party)
 				? []
 				: [{ source, path: `${path}.party`, message: `parti inconnu : ${condition.party}` }];
+		case 'origin':
+			return refs.origins.has(condition.origin)
+				? []
+				: [{ source, path: `${path}.origin`, message: `origine inconnue : ${condition.origin}` }];
+		case 'profession':
+			return refs.professions.has(condition.profession)
+				? []
+				: [
+						{
+							source,
+							path: `${path}.profession`,
+							message: `profession inconnue : ${condition.profession}`
+						}
+					];
 		case 'support':
 			return refs.groups.has(condition.group)
 				? []
@@ -338,6 +359,12 @@ function effectIssues(
 					}
 				} else if (!refs.parties.has(effect.party)) {
 					issues.push({ source, path: `${at}.party`, message: `parti inconnu : ${effect.party}` });
+				}
+				break;
+			case 'familyJoins':
+			case 'separate':
+				if (roles === null) {
+					issues.push({ source, path: at, message: 'vie de famille réservée aux événements' });
 				}
 				break;
 			case 'hireStaff':
@@ -534,6 +561,59 @@ function crossCheckSupports(
 			source: 'supports.json',
 			path: 'groups',
 			message: 'au moins un groupe électoral est nécessaire à la popularité'
+		});
+	}
+	return issues;
+}
+
+/** Effets permis à la création d'un personnage (origine et profession). */
+const PROFILE_EFFECTS = new Set(['addResource', 'addSupport', 'addStat']);
+
+function crossCheckProfiles(
+	origins: readonly OriginDefinition[],
+	professions: readonly ProfessionDefinition[],
+	defaults: { readonly origin: string; readonly profession: string },
+	refs: Refs,
+	knownIds: Set<string>
+): ContentIssue[] {
+	const issues: ContentIssue[] = [];
+	const source = 'profiles.json';
+	const check = (
+		list: readonly (OriginDefinition | ProfessionDefinition)[],
+		field: 'origins' | 'professions'
+	): void => {
+		list.forEach((entry, index) => {
+			const path = `${field}[${index}]`;
+			if (knownIds.has(entry.id)) {
+				issues.push({ source, path: `${path}.id`, message: `identifiant en double : ${entry.id}` });
+			}
+			knownIds.add(entry.id);
+			entry.effects.forEach((effect, effectIndex) => {
+				if (!PROFILE_EFFECTS.has(effect.op)) {
+					issues.push({
+						source,
+						path: `${path}.effects[${effectIndex}]`,
+						message: `effet non permis à la création : ${effect.op}`
+					});
+				}
+			});
+			issues.push(...effectIssues(entry.effects, refs, null, source, `${path}.effects`));
+		});
+	};
+	check(origins, 'origins');
+	check(professions, 'professions');
+	if (!refs.origins.has(defaults.origin)) {
+		issues.push({
+			source,
+			path: 'defaults.origin',
+			message: `origine inconnue : ${defaults.origin}`
+		});
+	}
+	if (!refs.professions.has(defaults.profession)) {
+		issues.push({
+			source,
+			path: 'defaults.profession',
+			message: `profession inconnue : ${defaults.profession}`
 		});
 	}
 	return issues;
@@ -925,6 +1005,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	const careerCatalog = careerCatalogSchema.safeParse(raw.career);
 	const supportCatalog = supportCatalogSchema.safeParse(raw.supports);
 	const entourageCatalog = entourageCatalogSchema.safeParse(raw.entourage);
+	const profileCatalog = profileCatalogSchema.safeParse(raw.profiles);
 	const eventFiles = Object.keys(raw.events)
 		.sort()
 		.map((source) => ({ source, parsed: eventCatalogSchema.safeParse(raw.events[source]) }));
@@ -941,6 +1022,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	if (!entourageCatalog.success) {
 		issues.push(...zodIssues('entourage.json', entourageCatalog.error));
 	}
+	if (!profileCatalog.success) issues.push(...zodIssues('profiles.json', profileCatalog.error));
 	for (const { source, parsed } of eventFiles) {
 		if (!parsed.success) issues.push(...zodIssues(source, parsed.error));
 	}
@@ -954,6 +1036,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 		!careerCatalog.success ||
 		!supportCatalog.success ||
 		!entourageCatalog.success ||
+		!profileCatalog.success ||
 		eventFiles.some(({ parsed }) => !parsed.success)
 	) {
 		return { ok: false, issues };
@@ -979,6 +1062,10 @@ export function validateContent(raw: RawContent): ContentValidation {
 				'staff',
 				'candidate',
 				'party_leader',
+				'parent',
+				'sibling',
+				'partner',
+				'child',
 				...(entourageCatalog.data.posts ?? []).map((post) => post.tag)
 			])
 		)
@@ -1003,13 +1090,25 @@ export function validateContent(raw: RawContent): ContentValidation {
 			message: `groupe de soutien inconnu : ${balance.data.campaigns.apparatusGroup}`
 		});
 	}
+	const profileData = profileCatalog.data;
 	const refs: Refs = {
+		origins: new Set(profileData.origins.map((origin) => origin.id)),
+		professions: new Set(profileData.professions.map((profession) => profession.id)),
 		groups: new Set(groupList.map((group) => group.id)),
 		parties: new Set(world.data.parties.map((party) => party.id)),
 		mandates: new Set(career.mandates.map((mandate) => mandate.id)),
 		elections: new Set(career.elections.map((election) => election.id))
 	};
 	issues.push(...crossCheckPolitics(actionList, upgradeList, sourcedEvents, refs));
+	issues.push(
+		...crossCheckProfiles(
+			profileData.origins,
+			profileData.professions,
+			profileData.defaults,
+			refs,
+			knownIds
+		)
+	);
 	const postList = entourageCatalog.data.posts;
 	issues.push(...crossCheckEntourage(postList, refs, knownIds));
 	const traitIdSet = new Set(traitList.map((trait) => trait.id));
@@ -1048,6 +1147,10 @@ export function validateContent(raw: RawContent): ContentValidation {
 	for (const election of career.elections) elections[election.id] = election;
 	const mandates: Record<string, MandateDefinition> = {};
 	for (const mandate of career.mandates) mandates[mandate.id] = mandate;
+	const origins: Record<string, OriginDefinition> = {};
+	for (const origin of profileData.origins) origins[origin.id] = origin;
+	const professions: Record<string, ProfessionDefinition> = {};
+	for (const profession of profileData.professions) professions[profession.id] = profession;
 	const posts: Record<string, PostDefinition> = {};
 	const missions: Record<string, MissionDefinition> = {};
 	for (const post of postList) {
@@ -1071,6 +1174,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 				career,
 				supports: supportCatalog.data,
 				entourage: entourageCatalog.data,
+				profiles: profileData,
 				events: Object.fromEntries(eventFiles.map(({ source, parsed }) => [source, parsed.data]))
 			}),
 			balance: balance.data,
@@ -1090,6 +1194,11 @@ export function validateContent(raw: RawContent): ContentValidation {
 			mandates,
 			mandateIds: career.mandates.map((mandate) => mandate.id),
 			institutions: career.institutions,
+			origins,
+			originIds: profileData.origins.map((origin) => origin.id),
+			professions,
+			professionIds: profileData.professions.map((profession) => profession.id),
+			defaultProfile: profileData.defaults,
 			posts,
 			postIds: postList.map((post) => post.id),
 			candidateProfiles: entourageCatalog.data.profiles,

@@ -51,6 +51,7 @@ import {
 import { applyPoliticalEffect, oppositionPartyId } from './world.ts';
 import { applyCareerEffect, careerEffectIssue, type CareerParts } from './career.ts';
 import { staffLeavesByEvent } from './staff.ts';
+import { applyFamilyEffect } from './family.ts';
 import type {
 	Character,
 	ChoiceRecord,
@@ -257,6 +258,17 @@ function applyAutomaticEffects(
 		} else if (resolved.kind === 'career') {
 			const outcome = applyCareerEffect(resolved.effect, career, turn, null, content, player);
 			career = outcome.parts;
+			politics.push(...outcome.changes);
+		} else if (resolved.kind === 'family') {
+			const outcome = applyFamilyEffect(
+				resolved.effect,
+				{ player, characters, relationships },
+				turn,
+				rng,
+				content
+			);
+			({ player, characters, relationships } = outcome.parts);
+			rng = outcome.rng;
 			politics.push(...outcome.changes);
 		} else if (resolved.kind === 'staffAction') {
 			throw new Error(`Embauche ou renvoi hors du plan : ${resolved.effect.op}`);

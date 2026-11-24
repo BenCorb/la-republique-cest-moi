@@ -39,6 +39,7 @@ import {
 	activeMandates,
 	activeStaff,
 	campaignPoll,
+	livingChildren,
 	pollingCompetence,
 	postUnlocked,
 	staffTimeBonus,
@@ -411,6 +412,12 @@ export interface PlayerView {
 	readonly world: WorldView;
 	/** Personnages rencontrés : actifs d'abord, puis par date de rencontre. */
 	readonly people: readonly PersonView[];
+	/** Profil du personnage : origine, profession et situation familiale. */
+	readonly profile: {
+		readonly origin: string;
+		readonly profession: string;
+		readonly family: string;
+	};
 	readonly career: CareerView;
 	readonly supports: SupportsView;
 	readonly entourage: EntourageView;
@@ -483,6 +490,10 @@ function describeEffect(range: EffectRange, content: Content): string {
 			return `Élection anticipée : ${content.elections[range.election]?.label ?? range.election}`;
 		case 'candidacy':
 			return 'Candidature déposée';
+		case 'family':
+			return range.change === 'attitude'
+				? `Famille ${range.value > 0 ? 'apaisée' : 'agacée'}`
+				: 'Vie de famille';
 		case 'staff':
 			return range.change === 'hire'
 				? 'Embauche'
@@ -518,6 +529,12 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 						: 'candidature déposée sans investiture';
 				case 'preparation':
 					return `préparation de campagne + ${change.delta}`;
+				case 'familyJoined':
+					return change.relation === 'partner'
+						? 'une nouvelle vie à deux'
+						: 'une naissance dans la famille';
+				case 'separated':
+					return 'une séparation';
 				case 'hired':
 					return `embauche au poste « ${content.posts[change.postId]?.label ?? change.postId} »`;
 				case 'staffLeft':
@@ -833,6 +850,14 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 		cause: CAUSE_LABELS[state.end.cause],
 		lines: [
 			{ label: 'Né au', value: born },
+			{
+				label: 'Origine',
+				value: content.origins[state.player.origin]?.label ?? state.player.origin
+			},
+			{
+				label: 'Profession',
+				value: content.professions[state.player.profession]?.label ?? state.player.profession
+			},
 			{ label: 'Décédé au', value: formatTurn(summary.lastTurn) },
 			{ label: 'Âge', value: `${summary.age} ans` },
 			{ label: 'Trimestres de carrière', value: String(summary.quartersPlayed) },
@@ -932,6 +957,24 @@ function buildWorld(state: GameState, plan: readonly PlanStep[], content: Conten
 	};
 }
 
+/** Lien familial d'un personnage généré (étiquette `kin`), sans accord de genre. */
+const KIN_LABELS: Readonly<Record<string, string>> = {
+	partner: 'Famille — vie commune',
+	former_partner: 'Famille — ancienne relation',
+	child: 'Famille — enfant',
+	parent: 'Famille — parent',
+	sibling: 'Famille — fratrie'
+};
+
+function roleOf(tags: readonly string[]): string {
+	if (tags.includes('kin')) {
+		const relation = tags.find((tag) => Object.hasOwn(KIN_LABELS, tag));
+		return relation ? KIN_LABELS[relation]! : 'Famille';
+	}
+	if (tags.includes('staff')) return 'Entourage';
+	return ROLE_LABELS[tags[0] ?? ''] ?? 'Connaissance';
+}
+
 const ROLE_LABELS: Readonly<Record<string, string>> = {
 	medical: 'Santé',
 	journalist: 'Presse',
@@ -967,7 +1010,7 @@ function buildPeople(state: GameState, content: Content): PersonView[] {
 				view: {
 					id,
 					name: displayName(character),
-					role: ROLE_LABELS[character.tags[0] ?? ''] ?? 'Connaissance',
+					role: roleOf(character.tags),
 					age: ageAt(character.birthTurn, lastTurn),
 					status:
 						character.status === 'active'
@@ -991,9 +1034,11 @@ function buildPeople(state: GameState, content: Content): PersonView[] {
 			}
 		];
 	});
+	// La famille d'abord, puis les personnages actifs, par date de rencontre.
 	return people
 		.sort(
 			(a, b) =>
+				Number(b.view.role.startsWith('Famille')) - Number(a.view.role.startsWith('Famille')) ||
 				Number(b.view.active) - Number(a.view.active) ||
 				a.metTurn - b.metTurn ||
 				a.view.id.localeCompare(b.view.id)
@@ -1393,6 +1438,44 @@ function buildAdvice(
 	return { adviser: `${best.name} (${best.post})`, quality, choices };
 }
 
+function describeFamily(state: GameState): string {
+	const partner = state.player.family.partnerId ? 'en couple' : 'célibataire';
+	const children = livingChildren(state.player, state.characters).length;
+	return children === 0 ? partner : `${partner}, ${children} enfant${children > 1 ? 's' : ''}`;
+}
+
+/** Option de création : libellé, description et effets de départ lisibles. */
+export interface ProfileOptionView {
+	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	readonly effects: readonly string[];
+}
+
+/** Choix proposés à la création d'un personnage (P2-08). */
+export function creationOptions(content: Content): {
+	readonly origins: readonly ProfileOptionView[];
+	readonly professions: readonly ProfileOptionView[];
+	readonly defaults: Content['defaultProfile'];
+} {
+	const option = (entry: {
+		id: string;
+		label: string;
+		description: string;
+		effects: readonly Effect[];
+	}): ProfileOptionView => ({
+		id: entry.id,
+		label: entry.label,
+		description: entry.description,
+		effects: entry.effects.map((effect) => describeEffect(effectRange(effect), content))
+	});
+	return {
+		origins: content.originIds.map((id) => option(content.origins[id]!)),
+		professions: content.professionIds.map((id) => option(content.professions[id]!)),
+		defaults: content.defaultProfile
+	};
+}
+
 export function projectView(
 	state: GameState,
 	plan: readonly PlanStep[],
@@ -1580,6 +1663,11 @@ export function projectView(
 		people: buildPeople(state, content),
 		career: buildCareer(state, plan, content),
 		supports: buildSupports(state, content),
-		entourage: buildEntourage(state, plan, content)
+		entourage: buildEntourage(state, plan, content),
+		profile: {
+			origin: content.origins[state.player.origin]?.label ?? state.player.origin,
+			profession: content.professions[state.player.profession]?.label ?? state.player.profession,
+			family: describeFamily(state)
+		}
 	};
 }

@@ -34,7 +34,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 8;
+export const SIMULATION_REPORT_VERSION = 9;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -101,6 +101,11 @@ export interface SimulationRun {
 	readonly campaignsLost: number;
 	/** Adversaires différents affrontés et plus grand nombre d'affrontements avec le même. */
 	readonly distinctOpponents: number;
+	/** Profil de départ et famille en fin de carrière (P2-08). */
+	readonly origin: string;
+	readonly profession: string;
+	readonly children: number;
+	readonly separations: number;
 	/** Collaborateurs recrutés et départs (démission, renvoi, débauchage…). */
 	readonly staffHired: number;
 	readonly staffDepartures: number;
@@ -479,6 +484,17 @@ function finalizeRun(
 		distinctOpponents: new Set(
 			state.campaigns.flatMap((campaign) => (campaign.opponentId ? [campaign.opponentId] : []))
 		).size,
+		origin: state.player.origin,
+		profession: state.player.profession,
+		children: state.player.family.childrenIds.length,
+		separations: state.history.reduce(
+			(total, entry) =>
+				total +
+				(entry.type === 'event.resolved'
+					? entry.politics.filter((change) => change.kind === 'separated').length
+					: 0),
+			0
+		),
 		staffHired: state.staff.length,
 		staffDepartures: state.staff.filter((member) => member.status === 'left').length,
 		maxRivalEncounters: Math.max(
@@ -550,7 +566,16 @@ export function simulateCareer(
 	if (!Number.isSafeInteger(maxTurns) || maxTurns < 1) {
 		throw new RangeError(`Plafond de tours invalide : ${maxTurns}`);
 	}
-	let state = createGame({ seed }, content);
+	// Origine et profession tirées de la seed du lot (P2-08), sans toucher au PRNG de la partie.
+	let state = createGame(
+		{
+			seed,
+			origin: content.originIds[hashSeed(`${seed}:origine`) % content.originIds.length]!,
+			profession:
+				content.professionIds[hashSeed(`${seed}:profession`) % content.professionIds.length]!
+		},
+		content
+	);
 	let decisions = 0;
 	let peakPopularity = state.player.popularity;
 	let alertEpisodes = 0;
@@ -849,6 +874,10 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'campaignsLost',
 		'distinctOpponents',
 		'maxRivalEncounters',
+		'origin',
+		'profession',
+		'children',
+		'separations',
 		'staffHired',
 		'staffDepartures',
 		'finalPopularity',
@@ -894,6 +923,10 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.campaignsLost,
 		run.distinctOpponents,
 		run.maxRivalEncounters,
+		run.origin,
+		run.profession,
+		run.children,
+		run.separations,
 		run.staffHired,
 		run.staffDepartures,
 		run.finalPopularity,

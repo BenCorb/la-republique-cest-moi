@@ -24,6 +24,7 @@ import {
 	fixtureCast,
 	fixtureEntourage,
 	fixtureEvents,
+	fixtureProfiles,
 	fixtureSupports,
 	fixtureTraits,
 	fixtureUpgrades,
@@ -103,7 +104,8 @@ function load(): Content {
 		traits: fixtureTraits,
 		career: fixtureCareer,
 		supports: fixtureSupports,
-		entourage: fixtureEntourage
+		entourage: fixtureEntourage,
+		profiles: fixtureProfiles
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;

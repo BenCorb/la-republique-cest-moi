@@ -11,6 +11,7 @@ import upgrades from './data/upgrades.json';
 import career from './data/career.json';
 import supports from './data/supports.json';
 import entourage from './data/entourage.json';
+import profiles from './data/profiles.json';
 import traits from './data/traits.json';
 import world from './data/world.json';
 import type { Content } from './types.ts';
@@ -36,7 +37,8 @@ export function loadContent(): Content {
 		traits,
 		career,
 		supports,
-		entourage
+		entourage,
+		profiles
 	});
 	if (!result.ok) {
 		const details = result.issues

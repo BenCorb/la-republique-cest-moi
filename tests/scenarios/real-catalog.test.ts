@@ -66,7 +66,15 @@ function career(
 	turns: number,
 	choicePolicy = 0
 ): GameState {
-	let state = createGame({ seed }, content);
+	// Origines et professions variées d'une carrière à l'autre (P2-08).
+	let state = createGame(
+		{
+			seed,
+			origin: content.originIds[choicePolicy % content.originIds.length]!,
+			profession: content.professionIds[choicePolicy % content.professionIds.length]!
+		},
+		content
+	);
 	for (let turn = 0; turn < turns && state.end === null; turn += 1) {
 		const result = transition(state, commitTurn(choosePlan(state, wishes)), content);
 		if (!result.ok) throw new Error(`${formatTurn(state.turn)} : ${result.error.message}`);

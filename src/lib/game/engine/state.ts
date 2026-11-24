@@ -4,6 +4,7 @@
  * L'état est un objet JSON pur (nombres, chaînes, booléens, tableaux, objets,
  * `null`) : il se sérialise et se recharge sans perte.
  */
+import { GAUGE_MAX } from '../content/types.ts';
 import type {
 	Content,
 	GaugeId,
@@ -17,6 +18,8 @@ import { createRng, type RngState } from './random.ts';
 import { createCalendar } from './career.ts';
 import { createCast } from './characters.ts';
 import { computePopularity, startingSupports } from './supports.ts';
+import { EMPTY_FAMILY, createFamily, type FamilyRecord } from './family.ts';
+import { applyPoliticalEffect } from './world.ts';
 import { createWorld } from './world.ts';
 
 /** Version du format de l'état, à incrémenter avec une migration explicite. */
@@ -54,6 +57,20 @@ export interface PlayerState {
 	readonly supports: Readonly<Record<string, number>>;
 	/** Popularité : synthèse pondérée des soutiens électoraux, toujours recalculée. */
 	readonly popularity: number;
+	/** Origine sociale et profession choisies à la création (P2-08). */
+	readonly origin: string;
+	readonly profession: string;
+	readonly family: FamilyState;
+}
+
+/** Liens familiaux du joueur : identifiants de personnages (P2-08). */
+export interface FamilyState {
+	readonly partnerId: string | null;
+	readonly childrenIds: readonly string[];
+	readonly parentIds: readonly string[];
+	readonly siblingIds: readonly string[];
+	/** Ex-partenaires (séparation) et partenaires décédés. */
+	readonly formerPartnerIds: readonly string[];
 }
 
 export type CharacterStatus = 'active' | 'retired' | 'dead';
@@ -278,6 +295,12 @@ export type PoliticalChange =
 	| { readonly kind: 'preparation'; readonly delta: number }
 	| { readonly kind: 'hired'; readonly characterId: string; readonly postId: string }
 	| {
+			readonly kind: 'familyJoined';
+			readonly characterId: string;
+			readonly relation: 'partner' | 'child';
+	  }
+	| { readonly kind: 'separated'; readonly characterId: string }
+	| {
 			readonly kind: 'staffLeft';
 			readonly characterId: string;
 			readonly postId: string;
@@ -459,6 +482,8 @@ export interface HistoryEntry {
 	readonly mandates: { readonly changes: readonly ResourceChange[]; readonly stress: number };
 	/** Entourage : salaires et missions du trimestre T, départs et présélections à la frontière. */
 	readonly staff: StaffRecord | null;
+	/** Famille à la frontière : héritage, dépenses, disponibilité, `null` après un décès. */
+	readonly family: FamilyRecord | null;
 	/** Charge de travail, récupération, vieillissement et éventuel décès. */
 	readonly wellbeing: WellbeingRecord;
 	/** Vieillissement, départs et successions, `null` si la carrière s'est terminée avant. */
@@ -540,33 +565,69 @@ export interface NewGameConfig {
 	 * frontière ; les tests et le simulateur la fournissent.
 	 */
 	readonly seed: string;
+	/** Origine et profession choisies (P2-08) ; à défaut, le profil par défaut du catalogue. */
+	readonly origin?: string;
+	readonly profession?: string;
 }
 
 export function createGame(config: NewGameConfig, content: Content): GameState {
+	const originId = config.origin ?? content.defaultProfile.origin;
+	const professionId = config.profession ?? content.defaultProfile.profession;
+	const origin = content.origins[originId];
+	const profession = content.professions[professionId];
+	if (!origin) throw new Error(`Origine inconnue : ${originId}`);
+	if (!profession) throw new Error(`Profession inconnue : ${professionId}`);
+
 	// Paysage initial fixe ; seuls les dirigeants sont tirés (GDD §8.1).
 	const world = createWorld(createRng(config.seed), START_TURN, content);
 	const cast = createCast(world.characters, world.rng, START_TURN, content);
+
+	// Profil : effets de l'origine puis de la profession, dans cet ordre.
+	let player: PlayerState = {
+		birthTurn: START_TURN - PROTOTYPE_STARTING_AGE * TURNS_PER_YEAR,
+		health: content.balance.wellbeing.startingHealth,
+		stress: content.balance.wellbeing.startingStress,
+		partyId: null,
+		affiliations: [],
+		supports: startingSupports(content),
+		popularity: computePopularity(startingSupports(content), content),
+		origin: originId,
+		profession: professionId,
+		family: EMPTY_FAMILY
+	};
+	const resources: Record<ResourceId, number> = { ...content.balance.startingResources };
+	for (const effect of [...origin.effects, ...profession.effects]) {
+		if (effect.op === 'addResource') {
+			resources[effect.resource] = Math.max(0, resources[effect.resource] + effect.value);
+		} else if (effect.op === 'addStat') {
+			const key = effect.stat === 'player.health' ? 'health' : 'stress';
+			player = { ...player, [key]: Math.min(GAUGE_MAX, Math.max(1, player[key] + effect.value)) };
+		} else if (effect.op === 'addSupport') {
+			player = applyPoliticalEffect(effect, player, world.world, START_TURN, null, content).player;
+		}
+	}
+
+	// Famille d'origine : parents et fratrie générés.
+	const family = createFamily(
+		originId,
+		{ player, characters: cast.characters, relationships: {} },
+		START_TURN,
+		cast.rng,
+		content
+	);
 	return {
 		schemaVersion: STATE_SCHEMA_VERSION,
 		turn: START_TURN,
-		rng: cast.rng,
+		rng: family.rng,
 		phase: 'planning',
-		player: {
-			birthTurn: START_TURN - PROTOTYPE_STARTING_AGE * TURNS_PER_YEAR,
-			health: content.balance.wellbeing.startingHealth,
-			stress: content.balance.wellbeing.startingStress,
-			partyId: null,
-			affiliations: [],
-			supports: startingSupports(content),
-			popularity: computePopularity(startingSupports(content), content)
-		},
-		resources: { ...content.balance.startingResources },
+		player: family.parts.player,
+		resources,
 		upgrades: [],
 		nextInstanceNumber: 1,
 		events: { pending: [], scheduled: [], occurrences: {} },
 		world: world.world,
-		characters: cast.characters,
-		relationships: {},
+		characters: family.parts.characters,
+		relationships: family.parts.relationships,
 		mandates: [],
 		ballots: createCalendar(START_TURN, content),
 		campaigns: [],

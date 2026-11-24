@@ -1,0 +1,307 @@
+{
+	"origins": [
+		{
+			"id": "origin.working_class",
+			"label": "Milieu populaire",
+			"description": "HLM, fins de mois serrées et un sens aigu du prix d’une baguette. Les classes populaires vous reconnaissent ; les salons, moins.",
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "personalCashCents",
+					"value": -150000
+				},
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": 8
+				},
+				{
+					"op": "addSupport",
+					"group": "support.wealthy",
+					"value": -3
+				}
+			],
+			"family": [
+				{
+					"relation": "parent",
+					"minAge": 48,
+					"maxAge": 60,
+					"attitude": 25,
+					"tags": []
+				},
+				{
+					"relation": "parent",
+					"minAge": 48,
+					"maxAge": 60,
+					"attitude": 25,
+					"tags": []
+				},
+				{
+					"relation": "sibling",
+					"minAge": 20,
+					"maxAge": 32,
+					"attitude": 15,
+					"tags": []
+				}
+			],
+			"inheritanceCents": 60000
+		},
+		{
+			"id": "origin.middle_class",
+			"label": "Classe moyenne",
+			"description": "Pavillon, crédit sur vingt ans et camping chaque été. Personne ne vous déteste, personne ne vous attend.",
+			"effects": [
+				{
+					"op": "addSupport",
+					"group": "support.middle_class",
+					"value": 5
+				}
+			],
+			"family": [
+				{
+					"relation": "parent",
+					"minAge": 50,
+					"maxAge": 62,
+					"attitude": 15,
+					"tags": []
+				},
+				{
+					"relation": "parent",
+					"minAge": 50,
+					"maxAge": 62,
+					"attitude": 15,
+					"tags": []
+				},
+				{
+					"relation": "sibling",
+					"minAge": 22,
+					"maxAge": 30,
+					"attitude": 5,
+					"tags": []
+				}
+			],
+			"inheritanceCents": 400000
+		},
+		{
+			"id": "origin.upper_class",
+			"label": "Grande bourgeoisie",
+			"description": "Hôtel particulier, rallyes dansants et un nom qu’on épelle au téléphone. L’argent ouvre des portes que la sincérité referme.",
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "personalCashCents",
+					"value": 1500000
+				},
+				{
+					"op": "addSupport",
+					"group": "support.wealthy",
+					"value": 8
+				},
+				{
+					"op": "addSupport",
+					"group": "support.business",
+					"value": 5
+				},
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": -6
+				},
+				{
+					"op": "addSupport",
+					"group": "support.middle_class",
+					"value": -2
+				}
+			],
+			"family": [
+				{
+					"relation": "parent",
+					"minAge": 55,
+					"maxAge": 68,
+					"attitude": 5,
+					"tags": []
+				},
+				{
+					"relation": "parent",
+					"minAge": 55,
+					"maxAge": 68,
+					"attitude": 5,
+					"tags": []
+				}
+			],
+			"inheritanceCents": 5000000
+		},
+		{
+			"id": "origin.political_dynasty",
+			"label": "Dynastie politique",
+			"description": "Un nom connu, des réseaux tout prêts et une comparaison permanente avec un parent illustre. L’héritage pèse autant qu’il porte.",
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 15
+				},
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
+					"value": 8
+				},
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": -4
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 8
+				}
+			],
+			"family": [
+				{
+					"relation": "parent",
+					"minAge": 55,
+					"maxAge": 70,
+					"attitude": 10,
+					"tags": ["politician"]
+				},
+				{
+					"relation": "parent",
+					"minAge": 52,
+					"maxAge": 65,
+					"attitude": 15,
+					"tags": []
+				}
+			],
+			"inheritanceCents": 1200000
+		}
+	],
+	"professions": [
+		{
+			"id": "profession.factory",
+			"label": "Usine et chantiers",
+			"description": "Les trois-huit, le syndicat et les mains calleuses. Un parcours qui parle aux classes populaires.",
+			"effects": [
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": 6
+				},
+				{
+					"op": "addSupport",
+					"group": "support.middle_class",
+					"value": -1
+				}
+			]
+		},
+		{
+			"id": "profession.teacher",
+			"label": "Enseignement",
+			"description": "Des classes de trente, des copies le dimanche et un don pour expliquer longtemps.",
+			"effects": [
+				{
+					"op": "addSupport",
+					"group": "support.middle_class",
+					"value": 5
+				},
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 2
+				}
+			]
+		},
+		{
+			"id": "profession.lawyer",
+			"label": "Barreau",
+			"description": "La robe, les effets de manche et des honoraires confortables. On vous écoute, on vous soupçonne un peu.",
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "personalCashCents",
+					"value": 400000
+				},
+				{
+					"op": "addSupport",
+					"group": "support.wealthy",
+					"value": 3
+				},
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": -2
+				}
+			]
+		},
+		{
+			"id": "profession.journalist",
+			"label": "Presse",
+			"description": "Un carnet d’adresses, des bouclages tardifs et l’habitude de poser les questions plutôt que d’y répondre.",
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 6
+				},
+				{
+					"op": "addSupport",
+					"group": "support.middle_class",
+					"value": 2
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				}
+			]
+		},
+		{
+			"id": "profession.entrepreneur",
+			"label": "Entreprise",
+			"description": "Une petite société, des bilans, des salariés et une méfiance tenace envers les formulaires.",
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "personalCashCents",
+					"value": 600000
+				},
+				{
+					"op": "addSupport",
+					"group": "support.business",
+					"value": 6
+				},
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": -3
+				}
+			]
+		},
+		{
+			"id": "profession.civil_servant",
+			"label": "Haute administration",
+			"description": "Une grande école, des notes de synthèse et un tutoiement facile avec les cabinets ministériels.",
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 8
+				},
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
+					"value": 3
+				},
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": -4
+				}
+			]
+		}
+	],
+	"defaults": {
+		"origin": "origin.middle_class",
+		"profession": "profession.teacher"
+	}
+}

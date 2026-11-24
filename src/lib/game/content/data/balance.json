@@ -134,5 +134,15 @@
 		"preciseAdviceCompetence": 70,
 		"fairAdviceCompetence": 45,
 		"poorAdviceErrorChance": 0.35
+	},
+	"family": {
+		"childCostCents": 40000,
+		"childIndependenceAge": 20,
+		"neglectThreshold": 90,
+		"neglectAttitude": -2,
+		"supportiveAttitude": 15,
+		"hostileAttitude": -15,
+		"partnerStress": 1,
+		"partnerAgeSpread": 5
 	}
 }

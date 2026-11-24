@@ -7,6 +7,7 @@ import {
 	fixtureCast,
 	fixtureEntourage,
 	fixtureEvents,
+	fixtureProfiles,
 	fixtureCareer,
 	fixtureSupports,
 	fixtureTraits,
@@ -21,7 +22,8 @@ const rest = {
 	traits: fixtureTraits,
 	career: fixtureCareer,
 	supports: fixtureSupports,
-	entourage: fixtureEntourage
+	entourage: fixtureEntourage,
+	profiles: fixtureProfiles
 };
 
 type MutableAction = Record<string, unknown>;
@@ -151,6 +153,7 @@ describe('validation des catalogues', () => {
 			career: fixtureCareer,
 			supports: fixtureSupports,
 			entourage: fixtureEntourage,
+			profiles: fixtureProfiles,
 			traits: fixtureTraits,
 			balance: { timeBudgetPerTurn: 0, startingResources: { influence: -1 } }
 		});
@@ -263,7 +266,8 @@ describe('validation des événements', () => {
 			traits: fixtureTraits,
 			career: fixtureCareer,
 			supports: fixtureSupports,
-			entourage: fixtureEntourage
+			entourage: fixtureEntourage,
+			profiles: fixtureProfiles
 		});
 	}
 
@@ -387,6 +391,7 @@ describe('validation des événements', () => {
 			career: fixtureCareer,
 			supports: fixtureSupports,
 			entourage: fixtureEntourage,
+			profiles: fixtureProfiles,
 			cast: { cast: [...fixtureCast.cast, member] }
 		});
 		expect(messages(result)).toContain(fragment);

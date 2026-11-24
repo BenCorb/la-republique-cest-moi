@@ -6,14 +6,15 @@ import { createGame, renderTemplate } from '../../src/lib/game/engine/index.ts';
 /** Catalogue narratif du prototype (P1-06) : critères vérifiés automatiquement. */
 const content = loadContent();
 const events: EventDefinition[] = content.eventIds.map((id) => content.events[id]!);
-/** Événements du prototype (P1-06), hors catégories ajoutées par l'alpha (P2-01 à P2-07 et P2-05). */
+/** Événements du prototype (P1-06), hors catégories ajoutées par l'alpha (P2-01 à P2-08). */
 const ALPHA_CATEGORIES = new Set([
 	'national',
 	'relations',
 	'career',
 	'supports',
 	'campaign',
-	'entourage'
+	'entourage',
+	'family'
 ]);
 const prototypeEvents = events.filter((event) => !ALPHA_CATEGORIES.has(event.category));
 const game = createGame({ seed: 'catalogue-narratif' }, content);

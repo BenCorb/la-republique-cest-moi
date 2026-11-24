@@ -28,6 +28,10 @@ import {
 	type CampaignsBalance,
 	type CandidateProfileDefinition,
 	type EntourageBalance,
+	type FamilyBalance,
+	type FamilyTemplate,
+	type OriginDefinition,
+	type ProfessionDefinition,
 	type MissionDefinition,
 	type PostDefinition,
 	type CharactersBalance,
@@ -72,6 +76,8 @@ export const conditionSchema: z.ZodType<Condition> = z.lazy(() =>
 		z.strictObject({ op: z.literal('memberOf'), party: contentId }),
 		z.strictObject({ op: z.literal('holdsMandate'), mandate: contentId }),
 		z.strictObject({ op: z.literal('canHoldMandate'), mandate: contentId }),
+		z.strictObject({ op: z.literal('origin'), origin: contentId }),
+		z.strictObject({ op: z.literal('profession'), profession: contentId }),
 		z.strictObject({
 			op: z.literal('support'),
 			group: contentId,
@@ -150,6 +156,9 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 	}),
 	z.strictObject({ op: z.literal('declareCandidacy') }),
 	z.strictObject({ op: z.literal('hireStaff') }),
+	z.strictObject({ op: z.literal('familyJoins'), relation: z.enum(['partner', 'child']) }),
+	z.strictObject({ op: z.literal('separate') }),
+	z.strictObject({ op: z.literal('familyAttitude'), value: nonZeroGaugeDelta }),
 	z.strictObject({ op: z.literal('dismissStaff') }),
 	z.strictObject({
 		op: z.literal('staffLeaves'),
@@ -639,6 +648,55 @@ export const entourageCatalogSchema = z.strictObject({
 	profiles: z.array(candidateProfileSchema).min(1)
 });
 
+export const familyBalanceSchema: z.ZodType<FamilyBalance> = z.strictObject({
+	childCostCents: nonNegativeInt,
+	childIndependenceAge: positiveInt,
+	neglectThreshold: nonNegativeInt,
+	neglectAttitude: safeInt,
+	supportiveAttitude: safeInt,
+	hostileAttitude: safeInt,
+	partnerStress: nonNegativeInt,
+	partnerAgeSpread: nonNegativeInt
+});
+
+const familyTemplateSchema: z.ZodType<FamilyTemplate> = z
+	.strictObject({
+		relation: z.enum(['parent', 'sibling']),
+		minAge: positiveInt,
+		maxAge: positiveInt,
+		attitude: safeInt.refine((value) => Math.abs(value) <= 100, 'attitude de -100 à 100'),
+		tags: z.array(shortId)
+	})
+	.refine((member) => member.minAge <= member.maxAge, {
+		message: 'âge minimal supérieur à l’âge maximal',
+		path: ['maxAge']
+	});
+
+export const originSchema: z.ZodType<OriginDefinition> = z.strictObject({
+	id: contentId.refine((value) => value.startsWith('origin.'), 'identifiant « origin.nom »'),
+	label: frenchText,
+	description: frenchText,
+	effects: z.array(effectSchema),
+	family: z.array(familyTemplateSchema),
+	inheritanceCents: nonNegativeInt
+});
+
+export const professionSchema: z.ZodType<ProfessionDefinition> = z.strictObject({
+	id: contentId.refine(
+		(value) => value.startsWith('profession.'),
+		'identifiant « profession.nom »'
+	),
+	label: frenchText,
+	description: frenchText,
+	effects: z.array(effectSchema)
+});
+
+export const profileCatalogSchema = z.strictObject({
+	origins: z.array(originSchema).min(1),
+	professions: z.array(professionSchema).min(1),
+	defaults: z.strictObject({ origin: contentId, profession: contentId })
+});
+
 export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	timeBudgetPerTurn: positiveInt,
 	startingResources: z.strictObject({
@@ -653,5 +711,6 @@ export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	elections: electionsBalanceSchema,
 	supports: supportsBalanceSchema,
 	campaigns: campaignsBalanceSchema,
-	entourage: entourageBalanceSchema
+	entourage: entourageBalanceSchema,
+	family: familyBalanceSchema
 });

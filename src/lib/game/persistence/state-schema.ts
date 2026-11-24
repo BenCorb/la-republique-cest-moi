@@ -45,6 +45,12 @@ const politicalChange = z.discriminatedUnion('kind', [
 	z.strictObject({ kind: z.literal('preparation'), delta: int }),
 	z.strictObject({ kind: z.literal('hired'), characterId: id, postId: id }),
 	z.strictObject({
+		kind: z.literal('familyJoined'),
+		characterId: id,
+		relation: z.enum(['partner', 'child'])
+	}),
+	z.strictObject({ kind: z.literal('separated'), characterId: id }),
+	z.strictObject({
 		kind: z.literal('staffLeft'),
 		characterId: id,
 		postId: id,
@@ -91,6 +97,15 @@ const turnEntry = z.strictObject({
 		changes: z.array(resourceChange)
 	}),
 	mandates: z.strictObject({ changes: z.array(resourceChange), stress: int }),
+	family: z
+		.strictObject({
+			inheritance: int,
+			childCosts: int,
+			stress: int,
+			neglected: z.boolean(),
+			widowed: id.nullable()
+		})
+		.nullable(),
 	staff: z
 		.strictObject({
 			payroll: z.array(resourceChange),
@@ -213,7 +228,16 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 		partyId: id.nullable(),
 		affiliations: z.array(z.strictObject({ partyId: id, fromTurn: int, toTurn: int.nullable() })),
 		supports: z.record(id, int),
-		popularity: int
+		popularity: int,
+		origin: id,
+		profession: id,
+		family: z.strictObject({
+			partnerId: id.nullable(),
+			childrenIds: z.array(id),
+			parentIds: z.array(id),
+			siblingIds: z.array(id),
+			formerPartnerIds: z.array(id)
+		})
 	}),
 	resources: z.strictObject({
 		influence: int,

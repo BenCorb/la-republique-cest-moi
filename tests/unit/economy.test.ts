@@ -34,6 +34,7 @@ function game(
 			economy: { producers: [], changes: [] },
 			mandates: { changes: [], stress: 0 },
 			staff: null,
+			family: null,
 			wellbeing: { contributions: [], deathCause: null },
 			characters: null,
 			world: null,

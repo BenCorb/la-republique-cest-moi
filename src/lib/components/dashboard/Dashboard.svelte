@@ -59,6 +59,13 @@
 			</p>
 		</section>
 
+		<section class="card flex flex-col gap-1 lg:col-span-2" aria-labelledby="profil-title">
+			<h2 id="profil-title" class="section-title">Profil</h2>
+			<p class="text-sm" data-testid="profile">
+				{view.profile.origin} · {view.profile.profession} · {view.profile.family}
+			</p>
+		</section>
+
 		<section class="card flex flex-col gap-3" aria-labelledby="national-title">
 			<h2 id="national-title" class="section-title">Contexte national</h2>
 			<p class="text-sm">

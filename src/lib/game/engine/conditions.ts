@@ -65,6 +65,10 @@ export function readStat(context: ConditionContext, stat: StatId): number {
 			return activeMandates(context.mandates).length;
 		case 'player.popularity':
 			return context.player.popularity;
+		case 'player.hasPartner':
+			return context.player.family.partnerId === null ? 0 : 1;
+		case 'player.children':
+			return context.player.family.childrenIds.length;
 		case 'player.staff':
 			return context.staff.filter((member) => member.status === 'active').length;
 		case 'player.campaigning':
@@ -92,6 +96,10 @@ export function evaluateCondition(context: ConditionContext, condition: Conditio
 			return readStat(context, condition.stat) === condition.value;
 		case 'memberOf':
 			return context.player.partyId === condition.party;
+		case 'origin':
+			return context.player.origin === condition.origin;
+		case 'profession':
+			return context.player.profession === condition.profession;
 		case 'holdsMandate':
 			return activeMandates(context.mandates).some(
 				(mandate) => mandate.mandateId === condition.mandate

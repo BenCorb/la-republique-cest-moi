@@ -83,7 +83,68 @@ export const fixtureBalance = {
 		preciseAdviceCompetence: 70,
 		fairAdviceCompetence: 40,
 		poorAdviceErrorChance: 0.5
+	},
+	family: {
+		childCostCents: 10_000,
+		childIndependenceAge: 20,
+		neglectThreshold: 90,
+		neglectAttitude: -2,
+		supportiveAttitude: 15,
+		hostileAttitude: -15,
+		partnerStress: 1,
+		partnerAgeSpread: 5
 	}
+};
+
+/**
+ * Profils de test : par défaut, une origine et une profession sans effet ni
+ * famille (les autres tests restent indépendants de la création) ; une origine
+ * avec famille et héritage pour les tests de famille.
+ */
+export const fixtureProfiles = {
+	origins: [
+		{
+			id: 'origin.neutral',
+			label: 'Neutre',
+			description: 'Origine de test sans effet.',
+			effects: [],
+			family: [],
+			inheritanceCents: 0
+		},
+		{
+			id: 'origin.heirs',
+			label: 'Héritiers',
+			description: 'Origine de test avec famille.',
+			effects: [
+				{ op: 'addResource', resource: 'personalCashCents', value: 50_000 },
+				{ op: 'addSupport', group: 'support.owners', value: 10 }
+			],
+			family: [
+				{ relation: 'parent', minAge: 60, maxAge: 60, attitude: 20, tags: [] },
+				{ relation: 'parent', minAge: 60, maxAge: 60, attitude: 20, tags: ['politician'] },
+				{ relation: 'sibling', minAge: 28, maxAge: 28, attitude: 5, tags: [] }
+			],
+			inheritanceCents: 1_000_000
+		}
+	],
+	professions: [
+		{
+			id: 'profession.none',
+			label: 'Aucune',
+			description: 'Profession de test sans effet.',
+			effects: []
+		},
+		{
+			id: 'profession.press',
+			label: 'Presse',
+			description: 'Profession de test.',
+			effects: [
+				{ op: 'addResource', resource: 'influence', value: 6 },
+				{ op: 'addStat', stat: 'player.stress', value: 2 }
+			]
+		}
+	],
+	defaults: { origin: 'origin.neutral', profession: 'profession.none' }
 };
 
 /** Deux postes de test : un ouvert avec de l'influence, un réservé aux élus. */
@@ -716,7 +777,8 @@ function load(): Content {
 		traits: fixtureTraits,
 		career: fixtureCareer,
 		supports: fixtureSupports,
-		entourage: fixtureEntourage
+		entourage: fixtureEntourage,
+		profiles: fixtureProfiles
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;

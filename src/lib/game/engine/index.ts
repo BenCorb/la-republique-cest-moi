@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.14.0';
+export const RULES_VERSION = '0.15.0';
 
 export {
 	START_YEAR,
@@ -68,6 +68,7 @@ export {
 	type BallotShare,
 	type Campaign,
 	type CampaignStatus,
+	type FamilyState,
 	type ShortlistEntry,
 	type StaffLeaveReason,
 	type StaffMember,
@@ -89,6 +90,19 @@ export {
 	type WorldRecord,
 	type WorldState
 } from './state.ts';
+export {
+	EMPTY_FAMILY,
+	applyFamilyEffect,
+	closeFamily,
+	createFamily,
+	isFamilyEffect,
+	livingChildren,
+	resolveFamily,
+	shiftFamily,
+	type FamilyEffect,
+	type FamilyParts,
+	type FamilyRecord
+} from './family.ts';
 export {
 	activeStaff,
 	applyStaffEffect,

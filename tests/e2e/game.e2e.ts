@@ -9,6 +9,7 @@ import { loadContentFromFiles } from './support/content.ts';
 async function startCareer(page: Page, seed = 'e2e'): Promise<void> {
 	await page.goto(`./?seed=${seed}`);
 	await page.getByRole('button', { name: 'Nouvelle carrière' }).click();
+	await page.getByRole('button', { name: 'Commencer la carrière' }).click();
 	await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 25 ans');
 }
 
@@ -55,7 +56,8 @@ test.describe('parcours de jeu', () => {
 
 		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
 		await expect(page.getByTestId('game-date')).toHaveText('T2 2000 · 25 ans');
-		await expect(page.getByTestId('resource-influence')).toHaveText('3');
+		// Influence du profil par défaut (+2) et de la rencontre d'élus (+3).
+		await expect(page.getByTestId('resource-influence')).toHaveText('5');
 		// Gain aléatoire du free-lance : valeur attendue calculée par le même moteur et la même seed.
 		const content = loadContentFromFiles();
 		const expected = transition(
@@ -240,6 +242,7 @@ test.describe('parcours de jeu', () => {
 
 		// Une nouvelle carrière demande confirmation avant de remplacer la sauvegarde.
 		await page.getByRole('main').getByRole('button', { name: 'Nouvelle carrière' }).click();
+		await page.getByRole('button', { name: 'Commencer la carrière' }).click();
 		await expect(
 			page.getByRole('dialog', { name: 'Commencer une nouvelle carrière ?' })
 		).toBeVisible();

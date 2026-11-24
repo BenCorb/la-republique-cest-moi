@@ -93,6 +93,8 @@ L’âge ne garantit ni richesse ni compétence : le passé professionnel et soc
 
 Exemples d’origines : milieu populaire, classe moyenne, grande bourgeoisie, dynastie politique. Exemples de professions : ouvrier, enseignant, avocat, journaliste, entrepreneur, haut fonctionnaire, permanent de parti, sans emploi. Les bonus sont liés aux expériences fictives du personnage plutôt qu’à des jugements automatiques sur les catégories sociales.
 
+**Hypothèses provisoires de l’alpha (P2-08, 24 novembre 2026, choix délégués) :** quatre origines (milieu populaire, classe moyenne, grande bourgeoisie, dynastie politique) et six professions (ouvrier, enseignant, avocat, journaliste, entrepreneur, haut fonctionnaire), chacune avec des effets de départ chiffrés (argent, influence, soutiens, stress) et une action propre ; l’origine fixe la famille de départ et l’héritage. Âge de départ toujours 25 ans. Valeurs modifiables à l’équilibrage.
+
 ### 3.2 Orientation politique
 
 Le joueur peut partir avec des convictions initiales, rejoindre un parti fictif, le quitter, changer de camp, rester indépendant ou fonder un mouvement. Les décisions modifient progressivement le profil idéologique et la cohérence perçue par les autres acteurs.
@@ -104,6 +106,8 @@ Axes proposés, à retenir en nombre limité pour la V1 : économie (interventio
 ### 3.3 Famille et vie privée
 
 La famille fait partie de la simulation, mais sans système de vie domestique exhaustif. Parents, conjoint, enfants et autres proches peuvent apporter un réseau, des revenus, des dépenses, du soutien ou du stress. Des événements permettent notamment de gérer des tensions familiales, un divorce, une demande de poste, un héritage ou une révélation embarrassante. Les liens familiaux alimentent le moteur de personnages et d’événements existant.
+
+**Hypothèses provisoires de l’alpha (P2-08) :** famille légère — parents et fratrie générés à la création, rencontre, naissance et séparation par événements ; enfants à charge coûteux jusqu’à 20 ans ; héritage au décès d’un parent ; une famille délaissée quand le joueur surcharge son agenda ; un partenaire bien disposé apaise le stress, un partenaire hostile l’aggrave.
 
 ## 4. Ressources, jauges et données de simulation
 

@@ -9,6 +9,7 @@
  *   4. stress, santé, vieillissement, décès ..................... P1-04
  *      puis vieillissement et départs des personnages ........... P2-04
  *      puis évolution autonome du monde (indicateurs, partis) ... P2-01
+ *      puis entourage et famille (départs, héritage, dépenses) .. P2-05, P2-08
  *      puis retour des soutiens vers leur référence ............. P2-07
  *   3 bis. revenus et stress des mandats ......................... P2-02
  *   3 ter. salaires et missions de l'entourage ................... P2-05
@@ -34,6 +35,7 @@ import { RESOURCE_IDS, type ResourceId } from '../content/types.ts';
 import { resolveWorld } from './world.ts';
 import { resolveSupports } from './supports.ts';
 import { resolveStaffFrontier, resolveStaffProduction } from './staff.ts';
+import { resolveFamily } from './family.ts';
 import type {
 	AssignMissionCommand,
 	CommandError,
@@ -160,10 +162,25 @@ function commitTurn(
 			)
 		: null;
 
+	// 4 bis (fin). Famille : héritage, veuvage, enfants à charge, disponibilité.
+	const family = team
+		? resolveFamily(
+				{
+					player: wellbeing.player,
+					characters: team.entourage.characters,
+					relationships: team.entourage.relationships
+				},
+				production.resources,
+				execution.timeUsed + reservedTime(state.mandates, content),
+				nextTurn,
+				content
+			)
+		: null;
+
 	// 4 ter. Soutiens : retour partiel vers leur référence (parti, mandats en cours).
-	const supports = world
+	const supports = family
 		? resolveSupports(
-				wellbeing.player,
+				family.parts.player,
 				production.career.mandates,
 				production.resources.influence,
 				content
@@ -172,14 +189,14 @@ function commitTurn(
 
 	// 5. Échéances de la fin de T : fins de mandat, scrutins, échéances suivantes.
 	const deadlines =
-		world && supports && team
+		world && supports && team && family
 			? resolveDeadlines(
 					{
 						world: world.world,
 						player: supports.player,
-						resources: production.resources,
-						characters: team.entourage.characters,
-						relationships: team.entourage.relationships,
+						resources: family.resources,
+						characters: family.parts.characters,
+						relationships: family.parts.relationships,
 						career: production.career
 					},
 					resolvedTurn,
@@ -216,6 +233,7 @@ function commitTurn(
 		steps: execution.records,
 		economy: { producers: economyRecords(economy), changes: economy.changes },
 		mandates: mandateRecord,
+		family: family?.record ?? null,
 		staff: {
 			...production.record,
 			departures: team?.record.departures ?? [],

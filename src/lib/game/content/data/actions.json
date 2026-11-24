@@ -192,6 +192,10 @@
 					"op": "addStat",
 					"stat": "player.health",
 					"value": 2
+				},
+				{
+					"op": "familyAttitude",
+					"value": 5
 				}
 			]
 		},
@@ -444,6 +448,157 @@
 				}
 			],
 			"target": "staff"
+		},
+		{
+			"id": "profession.union_office",
+			"label": "Tenir la permanence syndicale",
+			"description": "Écouter les collègues, remplir des dossiers et rappeler à la direction l’existence du Code du travail.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "profession",
+				"profession": "profession.factory"
+			},
+			"unavailableReason": "Réservé à qui vient de l’usine et des chantiers.",
+			"effects": [
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": 2
+				},
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "profession.evening_classes",
+			"label": "Donner des cours du soir",
+			"description": "Expliquer la règle de trois à des adultes fatigués, et repartir avec quelques électeurs.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "profession",
+				"profession": "profession.teacher"
+			},
+			"unavailableReason": "Réservé à qui vient de l’enseignement.",
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "personalCashCents",
+					"value": 40000
+				},
+				{
+					"op": "addSupport",
+					"group": "support.middle_class",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "profession.plead",
+			"label": "Plaider une affaire",
+			"description": "Une audience, une plaidoirie inspirée et une note d’honoraires qui l’est tout autant.",
+			"timeCost": 30,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "profession",
+				"profession": "profession.lawyer"
+			},
+			"unavailableReason": "Réservé à qui vient du barreau.",
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "personalCashCents",
+					"min": 100000,
+					"max": 250000
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				}
+			]
+		},
+		{
+			"id": "profession.op_ed",
+			"label": "Signer une tribune",
+			"description": "Huit mille signes sur l’avenir du pays, relus par trois amis et un dictionnaire des citations.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "profession",
+				"profession": "profession.journalist"
+			},
+			"unavailableReason": "Réservé à qui vient de la presse.",
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 2
+				},
+				{
+					"op": "addSupport",
+					"group": "support.middle_class",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "profession.consulting",
+			"label": "Conseiller une entreprise",
+			"description": "Une journée de conseil facturée au prix d’une semaine, avec un tableur très coloré.",
+			"timeCost": 25,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "profession",
+				"profession": "profession.entrepreneur"
+			},
+			"unavailableReason": "Réservé à qui vient de l’entreprise.",
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "personalCashCents",
+					"value": 150000
+				},
+				{
+					"op": "addSupport",
+					"group": "support.business",
+					"value": 2
+				}
+			]
+		},
+		{
+			"id": "profession.old_networks",
+			"label": "Activer les anciens réseaux",
+			"description": "Un déjeuner avec d’anciens camarades de promotion devenus indispensables dans des ministères.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "profession",
+				"profession": "profession.civil_servant"
+			},
+			"unavailableReason": "Réservé à qui vient de la haute administration.",
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 3
+				},
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
+					"value": 1
+				}
+			]
 		}
 	]
 }

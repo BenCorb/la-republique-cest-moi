@@ -25,6 +25,7 @@ import {
 	fixtureContent,
 	fixtureEntourage,
 	fixtureEvents,
+	fixtureProfiles,
 	fixtureCareer,
 	fixtureSupports,
 	fixtureTraits,
@@ -141,7 +142,8 @@ function political(
 		traits: fixtureTraits,
 		career: fixtureCareer,
 		supports: fixtureSupports,
-		entourage: fixtureEntourage
+		entourage: fixtureEntourage,
+		profiles: fixtureProfiles
 	});
 }
 

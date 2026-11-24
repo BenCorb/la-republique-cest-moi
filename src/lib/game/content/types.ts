@@ -94,7 +94,11 @@ export const STAT_IDS = [
 	/** Nombre de campagnes en cours du joueur (P2-03). */
 	'player.campaigning',
 	/** Nombre de collaborateurs en poste (P2-05). */
-	'player.staff'
+	'player.staff',
+	/** 1 si le joueur vit en couple, sinon 0 (P2-08). */
+	'player.hasPartner',
+	/** Nombre d'enfants du joueur. */
+	'player.children'
 ] as const;
 export type StatId = (typeof STAT_IDS)[number];
 
@@ -112,6 +116,9 @@ export type Condition =
 	| { readonly op: 'holdsMandate'; readonly mandate: string }
 	/** Le joueur pourrait recevoir ce mandat sans en quitter aucun (cumul et incompatibilités). */
 	| { readonly op: 'canHoldMandate'; readonly mandate: string }
+	/** Origine ou profession du joueur (P2-08). */
+	| { readonly op: 'origin'; readonly origin: string }
+	| { readonly op: 'profession'; readonly profession: string }
 	/** Soutien d'un groupe comparé à une valeur. */
 	| {
 			readonly op: 'support';
@@ -189,7 +196,13 @@ export type Effect =
 	/** Renvoi du collaborateur choisi dans le plan (`target`). */
 	| { readonly op: 'dismissStaff' }
 	/** Départ du collaborateur qui tient ce rôle d'événement (débauchage, démission). */
-	| { readonly op: 'staffLeaves'; readonly role: string };
+	| { readonly op: 'staffLeaves'; readonly role: string }
+	/** Arrivée d'un membre de la famille proche, généré (événements seulement, P2-08). */
+	| { readonly op: 'familyJoins'; readonly relation: 'partner' | 'child' }
+	/** Séparation : la personne qui partage la vie du joueur s'en va. */
+	| { readonly op: 'separate' }
+	/** Variation d'attitude de la famille proche (partenaire et enfants). */
+	| { readonly op: 'familyAttitude'; readonly value: number };
 
 export interface ResourceAmount {
 	readonly resource: ResourceId;
@@ -351,6 +364,7 @@ export interface Balance {
 	readonly supports: SupportsBalance;
 	readonly campaigns: CampaignsBalance;
 	readonly entourage: EntourageBalance;
+	readonly family: FamilyBalance;
 }
 
 /** Paramètres des scrutins et du gouvernement (hypothèses de tuning, P2-02). */
@@ -429,6 +443,23 @@ export interface EntourageBalance {
 	readonly fairAdviceCompetence: number;
 	/** Probabilité (déterministe par décision) qu'un conseil médiocre se trompe de sens. */
 	readonly poorAdviceErrorChance: number;
+}
+
+/** Vie de famille (hypothèses de tuning, P2-08). */
+export interface FamilyBalance {
+	/** Dépense trimestrielle par enfant à charge, sur l'argent personnel. */
+	readonly childCostCents: number;
+	/** Âge auquel un enfant n'est plus à charge. */
+	readonly childIndependenceAge: number;
+	/** Au-delà de ce temps de travail (plan et mandats), la famille se sent délaissée. */
+	readonly neglectThreshold: number;
+	readonly neglectAttitude: number;
+	/** Attitude du partenaire à partir de laquelle il apaise, ou sous laquelle il stresse. */
+	readonly supportiveAttitude: number;
+	readonly hostileAttitude: number;
+	readonly partnerStress: number;
+	/** Âge des partenaires générés, autour de celui du joueur. */
+	readonly partnerAgeSpread: number;
 }
 
 /** Bornes de l'attitude d'un personnage envers le joueur. */
@@ -617,6 +648,42 @@ export interface CandidateProfileDefinition {
 	readonly traits: readonly string[];
 }
 
+/** Membre de la famille généré à la création selon l'origine (GDD §3.3). */
+export interface FamilyTemplate {
+	readonly relation: 'parent' | 'sibling';
+	readonly minAge: number;
+	readonly maxAge: number;
+	/** Attitude de départ envers le joueur. */
+	readonly attitude: number;
+	/** Étiquettes supplémentaires (un parent élu : `politician`). */
+	readonly tags: readonly string[];
+}
+
+/**
+ * Origine sociale (GDD §3.1) : avantages et handicaps de départ, famille et
+ * héritage. Aucune origine n'est meilleure qu'une autre ; elles s'arbitrent.
+ */
+export interface OriginDefinition {
+	/** Identifiant stable, par exemple `origin.working_class`. */
+	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	/** Effets appliqués à la création (ressources, soutiens, stress). */
+	readonly effects: readonly Effect[];
+	readonly family: readonly FamilyTemplate[];
+	/** Patrimoine des parents, partagé entre eux, versé au décès de chacun. */
+	readonly inheritanceCents: number;
+}
+
+/** Profession avant la politique : effets de départ et action propre éventuelle. */
+export interface ProfessionDefinition {
+	/** Identifiant stable, par exemple `profession.lawyer`. */
+	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	readonly effects: readonly Effect[];
+}
+
 /** Catalogue du monde : partis, axes et noms des personnages générés. */
 export interface WorldDefinition {
 	readonly axes: readonly AxisDefinition[];
@@ -742,6 +809,12 @@ export interface Content {
 	readonly mandates: Readonly<Record<string, MandateDefinition>>;
 	readonly mandateIds: readonly string[];
 	readonly institutions: InstitutionsDefinition;
+	readonly origins: Readonly<Record<string, OriginDefinition>>;
+	readonly originIds: readonly string[];
+	readonly professions: Readonly<Record<string, ProfessionDefinition>>;
+	readonly professionIds: readonly string[];
+	/** Profil retenu quand la création n'en précise pas (tests, simulateur). */
+	readonly defaultProfile: { readonly origin: string; readonly profession: string };
 	readonly posts: Readonly<Record<string, PostDefinition>>;
 	readonly postIds: readonly string[];
 	readonly candidateProfiles: readonly CandidateProfileDefinition[];

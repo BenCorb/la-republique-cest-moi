@@ -28,6 +28,7 @@ export function loadContentFromFiles(directory = DEFAULT_CONTENT_DATA_DIR): Cont
 		career: read('career.json'),
 		supports: read('supports.json'),
 		entourage: read('entourage.json'),
+		profiles: read('profiles.json'),
 		events
 	});
 	if (!result.ok) {

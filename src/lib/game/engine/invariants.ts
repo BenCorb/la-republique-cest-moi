@@ -270,6 +270,26 @@ function checkWorldInvariants(state: GameState): string[] {
 		violations.push(`popularité invalide : ${player.popularity}`);
 	}
 
+	const { family } = player;
+	const kin = [
+		...(family.partnerId ? [family.partnerId] : []),
+		...family.childrenIds,
+		...family.parentIds,
+		...family.siblingIds,
+		...family.formerPartnerIds
+	];
+	for (const id of kin) {
+		if (!state.characters[id]) violations.push(`membre de la famille inconnu : ${id}`);
+	}
+	if (new Set(kin).size !== kin.length) violations.push('membre de la famille compté deux fois');
+	if (
+		family.partnerId &&
+		state.characters[family.partnerId]?.status === 'dead' &&
+		state.phase !== 'ended'
+	) {
+		violations.push(`partenaire décédé encore en couple : ${family.partnerId}`);
+	}
+
 	// Adhésions : chronologiques, une seule en cours, cohérente avec le parti actuel.
 	let previousEnd = -Infinity;
 	player.affiliations.forEach((affiliation, index) => {
@@ -524,6 +544,12 @@ export function checkContentReferences(state: GameState, content: Content): stri
 	}
 	if (state.player.popularity !== computePopularity(state.player.supports, content)) {
 		violations.push(`popularité incohérente avec les soutiens : ${state.player.popularity}`);
+	}
+	if (!Object.hasOwn(content.origins, state.player.origin)) {
+		violations.push(`origine inconnue du catalogue : ${state.player.origin}`);
+	}
+	if (!Object.hasOwn(content.professions, state.player.profession)) {
+		violations.push(`profession inconnue du catalogue : ${state.player.profession}`);
 	}
 	for (const member of state.staff) {
 		const post = content.posts[member.postId];

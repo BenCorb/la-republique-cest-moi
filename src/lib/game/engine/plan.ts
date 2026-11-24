@@ -52,6 +52,7 @@ import {
 	reservedTime,
 	type CareerParts
 } from './career.ts';
+import { shiftFamily } from './family.ts';
 import {
 	applyStaffEffect,
 	dismissIssue,
@@ -199,6 +200,15 @@ function applyStateEffects(
 			const outcome = applyStaffEffect(effect, entourage, turn, target, null, content);
 			entourage = outcome.parts;
 			changes.push(...outcome.changes);
+		} else if (effect.op === 'familyAttitude') {
+			// Seul effet familial permis dans une action : déterministe, sans tirage.
+			const relationships = shiftFamily(
+				{ player, characters: entourage.characters, relationships: entourage.relationships },
+				effect.value,
+				turn,
+				content
+			);
+			entourage = { ...entourage, relationships };
 		}
 	}
 	return { player, world, career, entourage, changes };

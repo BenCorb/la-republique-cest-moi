@@ -43,7 +43,7 @@ import {
 	type WriteError
 } from '../persistence/index.ts';
 import { formatSavedAt } from './format.ts';
-import { projectView, type PlayerView } from './view-model.ts';
+import { creationOptions, projectView, type PlayerView } from './view-model.ts';
 
 export interface ControllerDependencies {
 	readonly content: Content;
@@ -225,15 +225,29 @@ export class GameController {
 	 * Nouvelle carrière. Une sauvegarde existante (lisible ou non) n'est remplacée
 	 * qu'avec `replaceExisting`, après confirmation du joueur.
 	 */
-	newCareer(options: { replaceExisting?: boolean } = {}): StartResult {
+	newCareer(
+		options: { replaceExisting?: boolean; origin?: string; profession?: string } = {}
+	): StartResult {
 		this.home = this.readHome();
 		const hasExisting = this.home.existing !== null || this.home.unreadable !== null;
 		if (hasExisting && !options.replaceExisting) return 'needs_confirmation';
-		const state = createGame({ seed: this.deps.newSeed() }, this.deps.content);
+		const state = createGame(
+			{
+				seed: this.deps.newSeed(),
+				...(options.origin ? { origin: options.origin } : {}),
+				...(options.profession ? { profession: options.profession } : {})
+			},
+			this.deps.content
+		);
 		this.enterGame(state, null);
 		this.persist({ overwriteUnreadable: options.replaceExisting === true });
 		this.changed();
 		return this.saveStatus?.kind === 'failed' ? 'failed' : 'started';
+	}
+
+	/** Origines et professions proposées à la création d'une carrière. */
+	creationOptions(): ReturnType<typeof creationOptions> {
+		return creationOptions(this.deps.content);
 	}
 
 	/** Retour à l'accueil ; le brouillon de plan non validé est abandonné. */
