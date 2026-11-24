@@ -254,6 +254,8 @@ export type EventDefinition = BlockingEventDefinition | InformativeEventDefiniti
 
 /** Contenu validé et indexé, tel que le reçoit le moteur. */
 export interface Content {
+	/** Empreinte des catalogues (`content-xxxxxxxx`), enregistrée dans les sauvegardes. */
+	readonly version: string;
 	readonly balance: Balance;
 	/** Définitions indexées par identifiant. */
 	readonly actions: Readonly<Record<string, ActionDefinition>>;

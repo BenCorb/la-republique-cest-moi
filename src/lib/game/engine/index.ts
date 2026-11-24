@@ -131,4 +131,4 @@ export {
 	type PendingEventView
 } from './events.ts';
 export { transition } from './turn.ts';
-export { assertInvariants, checkInvariants } from './invariants.ts';
+export { assertInvariants, checkContentReferences, checkInvariants } from './invariants.ts';

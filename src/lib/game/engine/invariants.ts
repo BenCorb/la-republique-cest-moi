@@ -79,21 +79,6 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
 			violations.push(`améliorations hors ordre d’acquisition : ${upgrade.instanceId}`);
 		}
 		previousTurn = upgrade.acquiredTurn;
-		if (content && !Object.hasOwn(content.upgrades, upgrade.upgradeId)) {
-			violations.push(`amélioration inconnue du catalogue : ${upgrade.upgradeId}`);
-		}
-	}
-	if (content) {
-		const counts = new Map<string, number>();
-		for (const upgrade of state.upgrades) {
-			counts.set(upgrade.upgradeId, (counts.get(upgrade.upgradeId) ?? 0) + 1);
-		}
-		for (const [upgradeId, count] of counts) {
-			const maxOwned = content.upgrades[upgradeId]?.maxOwned;
-			if (maxOwned !== undefined && count > maxOwned) {
-				violations.push(`trop d’exemplaires de ${upgradeId} : ${count} > ${maxOwned}`);
-			}
-		}
 	}
 
 	// Le journal contient exactement un tour résolu par trimestre écoulé, dans l'ordre.
@@ -117,15 +102,12 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
 		violations.push(`tour de fin invalide : ${state.end.turn}`);
 	}
 
-	violations.push(...checkEventInvariants(state, instanceIds, content));
+	violations.push(...checkEventInvariants(state, instanceIds));
+	if (content) violations.push(...checkContentReferences(state, content));
 	return violations;
 }
 
-function checkEventInvariants(
-	state: GameState,
-	usedInstanceIds: Set<string>,
-	content: Content | undefined
-): string[] {
+function checkEventInvariants(state: GameState, usedInstanceIds: Set<string>): string[] {
 	const violations: string[] = [];
 	const { pending, scheduled, occurrences } = state.events;
 
@@ -151,19 +133,10 @@ function checkEventInvariants(
 		if (!Number.isSafeInteger(instance.turn) || instance.turn > state.turn) {
 			violations.push(`date d’événement invalide : ${instance.instanceId}`);
 		}
-		if (content) {
-			const definition = content.events[instance.eventId];
-			if (!definition || !definition.blocking) {
-				violations.push(`événement en attente inconnu ou non bloquant : ${instance.eventId}`);
-			}
-		}
 	}
 	for (const entry of scheduled) {
 		if (!Number.isSafeInteger(entry.dueTurn) || entry.dueTurn <= state.turn) {
 			violations.push(`suite échue non traitée : ${entry.eventId} au tour ${entry.dueTurn}`);
-		}
-		if (content && !Object.hasOwn(content.events, entry.eventId)) {
-			violations.push(`suite inconnue du catalogue : ${entry.eventId}`);
 		}
 	}
 	for (const [eventId, occurrence] of Object.entries(occurrences)) {
@@ -173,20 +146,56 @@ function checkEventInvariants(
 		if (!Number.isSafeInteger(occurrence.lastTurn) || occurrence.lastTurn > state.turn) {
 			violations.push(`dernière occurrence future : ${eventId}`);
 		}
-		if (content && !Object.hasOwn(content.events, eventId)) {
+	}
+	return violations;
+}
+
+/**
+ * Références de l'état vers le catalogue : améliorations, événements en attente
+ * ou programmés, occurrences, acteurs et nombres maximaux d'exemplaires. Une
+ * violation ici signale un état incompatible avec ce contenu (par exemple une
+ * sauvegarde d'une autre version), pas un état incohérent en soi.
+ */
+export function checkContentReferences(state: GameState, content: Content): string[] {
+	const violations: string[] = [];
+	const counts = new Map<string, number>();
+	for (const upgrade of state.upgrades) {
+		if (!Object.hasOwn(content.upgrades, upgrade.upgradeId)) {
+			violations.push(`amélioration inconnue du catalogue : ${upgrade.upgradeId}`);
+		}
+		counts.set(upgrade.upgradeId, (counts.get(upgrade.upgradeId) ?? 0) + 1);
+	}
+	for (const [upgradeId, count] of counts) {
+		const maxOwned = content.upgrades[upgradeId]?.maxOwned;
+		if (maxOwned !== undefined && count > maxOwned) {
+			violations.push(`trop d’exemplaires de ${upgradeId} : ${count} > ${maxOwned}`);
+		}
+	}
+	const { pending, scheduled, occurrences } = state.events;
+	for (const instance of pending) {
+		const definition = content.events[instance.eventId];
+		if (!definition || !definition.blocking) {
+			violations.push(`événement en attente inconnu ou non bloquant : ${instance.eventId}`);
+		}
+	}
+	for (const entry of scheduled) {
+		if (!Object.hasOwn(content.events, entry.eventId)) {
+			violations.push(`suite inconnue du catalogue : ${entry.eventId}`);
+		}
+	}
+	for (const eventId of Object.keys(occurrences)) {
+		if (!Object.hasOwn(content.events, eventId)) {
 			violations.push(`occurrence d’un événement inconnu : ${eventId}`);
 		}
 	}
-	if (content) {
-		const actorSets = [
-			...pending.map((instance) => instance.actors),
-			...scheduled.map((entry) => entry.actors)
-		];
-		for (const actors of actorSets) {
-			for (const castId of Object.values(actors)) {
-				if (!Object.hasOwn(content.cast, castId)) {
-					violations.push(`acteur inconnu de la distribution : ${castId}`);
-				}
+	const actorSets = [
+		...pending.map((instance) => instance.actors),
+		...scheduled.map((entry) => entry.actors)
+	];
+	for (const actors of actorSets) {
+		for (const castId of Object.values(actors)) {
+			if (!Object.hasOwn(content.cast, castId)) {
+				violations.push(`acteur inconnu de la distribution : ${castId}`);
 			}
 		}
 	}

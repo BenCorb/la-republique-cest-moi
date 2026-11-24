@@ -25,6 +25,7 @@ import {
 	type ResourceAmount,
 	type UpgradeDefinition
 } from './types.ts';
+import { contentFingerprint } from './version.ts';
 
 /** Variables de texte : `{role}`. Toute autre accolade est interdite. */
 export const TEMPLATE_VARIABLE = /\{([^{}]*)\}/g;
@@ -330,6 +331,13 @@ export function validateContent(raw: RawContent): ContentValidation {
 	return {
 		ok: true,
 		content: {
+			version: contentFingerprint({
+				actions: actionCatalog.data,
+				upgrades: upgradeCatalog.data,
+				balance: balance.data,
+				cast: castCatalog.data,
+				events: Object.fromEntries(eventFiles.map(({ source, parsed }) => [source, parsed.data]))
+			}),
 			balance: balance.data,
 			actions,
 			actionIds: actionList.map((action) => action.id),

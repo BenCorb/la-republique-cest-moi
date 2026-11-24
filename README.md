@@ -139,6 +139,7 @@ src/
   lib/
     game/engine/          # moteur TypeScript pur (sans Svelte, DOM, stockage, réseau, hasard réel)
     game/content/         # types, schémas Zod, validation et catalogues JSON (data/, data/events/)
+    game/persistence/     # enveloppe de sauvegarde, migrations, stockage local, export/import
     components/shell/     # coque desktop (GameShell)
 static/                   # fichiers copiés tels quels (favicon.svg, .nojekyll)
 scripts/
