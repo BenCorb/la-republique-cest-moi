@@ -240,7 +240,7 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			}
 		}
 
-		const context = { turn: state.turn, player: workingPlayer, resources: working };
+		const context = { turn: state.turn, player: workingPlayer, resources: working, upgrades };
 		if (requires && !evaluateCondition(context, requires)) {
 			fail('condition_not_met', unavailableReason ?? `« ${label} » n’est pas disponible.`);
 		}

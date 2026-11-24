@@ -1,0 +1,101 @@
+{
+	"events": [
+		{
+			"id": "world.millennium_bug",
+			"category": "world",
+			"title": "Le bogue de l’an 2000",
+			"text": "Le bogue de l’an 2000 n’a finalement fait planter que la cafetière de la préfecture. Les experts restent mobilisés, au cas où.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 8,
+			"priority": 0,
+			"availableFromTurn": 0,
+			"availableUntilTurn": 2,
+			"cooldownTurns": 0,
+			"unique": true,
+			"actors": [],
+			"effects": []
+		},
+		{
+			"id": "world.new_currency",
+			"category": "world",
+			"title": "La nouvelle monnaie arrive",
+			"text": "La nouvelle monnaie est en circulation. Tout le monde convertit mentalement les prix, personne ne trouve le même résultat, et la baguette reste un sujet sensible.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 8,
+			"priority": 0,
+			"availableFromTurn": 8,
+			"availableUntilTurn": 10,
+			"cooldownTurns": 0,
+			"unique": true,
+			"actors": [],
+			"effects": []
+		},
+		{
+			"id": "world.heatwave",
+			"category": "world",
+			"title": "Canicule",
+			"text": "Une vague de chaleur s’abat sur le pays. Le gouvernement recommande de boire de l’eau et de reporter les meetings en plein soleil, dans cet ordre.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"availableFromTurn": 12,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "eq",
+				"stat": "calendar.quarter",
+				"value": 3
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 3
+				},
+				{
+					"op": "addStat",
+					"stat": "player.health",
+					"value": -1
+				}
+			]
+		},
+		{
+			"id": "world.rail_strike",
+			"category": "world",
+			"title": "Grève des transports",
+			"text": "Une grève des transports paralyse la région. Vos réunions se tiennent en visioconférence téléphonique, ce qui n’existe pas encore vraiment.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 24,
+			"unique": false,
+			"actors": [],
+			"effects": [
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				}
+			]
+		},
+		{
+			"id": "world.ministerial_reshuffle",
+			"category": "world",
+			"title": "Remaniement",
+			"text": "Un remaniement ministériel crée un ministère de la Simplification administrative, rattaché à trois autres ministères. Personne ne sait encore lequel signe les arrêtés.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 2,
+			"priority": 0,
+			"cooldownTurns": 28,
+			"unique": false,
+			"actors": [],
+			"effects": []
+		}
+	]
+}

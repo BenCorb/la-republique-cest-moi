@@ -33,27 +33,36 @@ function choosePlan(state: GameState, wishes: readonly PlanStep[]): TurnPlan {
 	}
 }
 
-function career(seed: string, wishes: readonly PlanStep[], turns: number): GameState {
+function career(
+	seed: string,
+	wishes: readonly PlanStep[],
+	turns: number,
+	choicePolicy = 0
+): GameState {
 	let state = createGame({ seed }, content);
 	for (let turn = 0; turn < turns && state.end === null; turn += 1) {
 		const result = transition(state, commitTurn(choosePlan(state, wishes)), content);
 		if (!result.ok) throw new Error(`${formatTurn(state.turn)} : ${result.error.message}`);
 		state = result.state;
 		assertInvariants(state, content);
-		state = answerEvents(state);
+		state = answerEvents(state, choicePolicy);
 	}
 	return state;
 }
 
-/** Politique automatique déterministe : premier choix disponible de chaque événement. */
-function answerEvents(start: GameState): GameState {
+/**
+ * Politique automatique déterministe : parmi les choix disponibles, prend celui de
+ * rang (politique + trimestre) modulo leur nombre ; la politique 0 varie donc aussi.
+ */
+function answerEvents(start: GameState, policy: number): GameState {
 	let state = start;
 	for (
 		let view = describePendingEvent(state, content);
 		view;
 		view = describePendingEvent(state, content)
 	) {
-		const choice = view.choices.find((candidate) => candidate.available);
+		const available = view.choices.filter((candidate) => candidate.available);
+		const choice = available[(policy + state.turn) % Math.max(1, available.length)];
 		if (!choice) throw new Error(`Aucun choix disponible : ${view.eventId}`);
 		const result = transition(state, chooseEventCommand(view.instanceId, choice.id), content);
 		if (!result.ok) throw new Error(`${view.eventId} : ${result.error.message}`);
@@ -142,5 +151,43 @@ describe('scénario : catalogue réel', () => {
 			const after = transition(state, commitTurn(), content);
 			expect(after.ok).toBe(false);
 		}
+	});
+
+	it('atteint chaque événement du catalogue au fil de carrières simulées', () => {
+		const strategies: PlanStep[][] = [
+			[
+				act('network.meet_officials'),
+				act('organization.fundraising'),
+				act('personal.freelance'),
+				act('personal.rest')
+			],
+			[
+				buy('organization.donor_file'),
+				buy('organization.volunteer'),
+				buy('organization.local_office'),
+				act('organization.fundraising'),
+				act('network.meet_officials'),
+				act('personal.freelance')
+			],
+			[
+				act('activism.public_meeting'),
+				act('organization.fundraising'),
+				act('network.meet_officials'),
+				act('activism.leaflets'),
+				act('personal.freelance')
+			]
+		];
+		const seen = new Set<string>();
+		strategies.forEach((wishes, strategy) => {
+			for (let seed = 0; seed < 20; seed += 1) {
+				const state = career(`atteinte-${strategy}-${seed}`, wishes, 400, seed);
+				for (const entry of quarters(state.history)) {
+					for (const event of entry.events) {
+						if (event.outcome !== 'cancelled') seen.add(event.eventId);
+					}
+				}
+			}
+		});
+		expect(content.eventIds.filter((id) => !seen.has(id))).toEqual([]);
 	});
 });

@@ -241,7 +241,8 @@ export const eventSchema: z.ZodType<EventDefinition> = z
 		z.strictObject({
 			...eventBaseShape,
 			blocking: z.literal(false),
-			effects: z.array(effectSchema).min(1)
+			// Une brève sans effet est permise : le fil d'actualité est aussi un ressort satirique.
+			effects: z.array(effectSchema)
 		})
 	])
 	.refine((event) => event.trigger === 'followUp' || event.weight > 0, {

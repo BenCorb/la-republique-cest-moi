@@ -10,7 +10,7 @@ import { ageAt, quarterOf, yearOf } from './calendar.ts';
 import type { GameState } from './state.ts';
 
 /** Sous-ensemble de l'état suffisant pour évaluer une condition. */
-export type ConditionContext = Pick<GameState, 'turn' | 'player' | 'resources'>;
+export type ConditionContext = Pick<GameState, 'turn' | 'player' | 'resources' | 'upgrades'>;
 
 export function readStat(context: ConditionContext, stat: StatId): number {
 	switch (stat) {
@@ -30,6 +30,8 @@ export function readStat(context: ConditionContext, stat: StatId): number {
 			return yearOf(context.turn);
 		case 'calendar.quarter':
 			return quarterOf(context.turn);
+		case 'upgrades.owned':
+			return context.upgrades.length;
 		default: {
 			const unknown: never = stat;
 			throw new Error(`Statistique inconnue : ${String(unknown)}`);

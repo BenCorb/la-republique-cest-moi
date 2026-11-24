@@ -1,0 +1,158 @@
+{
+	"events": [
+		{
+			"id": "organization.volunteer_quarrel",
+			"category": "organization",
+			"title": "Querelle de militants",
+			"text": "{volunteer} et {other_volunteer} ne se parlent plus depuis le choix de la police de caractères du dernier tract. Les autres bénévoles comptent les points.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 5,
+			"priority": 0,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "gte",
+				"stat": "upgrades.owned",
+				"value": 2
+			},
+			"actors": [
+				{
+					"role": "volunteer",
+					"tags": ["volunteer"]
+				},
+				{
+					"role": "other_volunteer",
+					"tags": ["volunteer"]
+				}
+			],
+			"choices": [
+				{
+					"id": "arbitrate",
+					"label": "Arbitrer soi-même",
+					"hints": ["Organisation apaisée", "Une soirée entière de médiation"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 4
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": "pizza",
+					"label": "Organiser une soirée pizza de réconciliation",
+					"hints": ["Ambiance retrouvée", "Budget politique en baisse"],
+					"costs": [
+						{
+							"resource": "politicalBudgetCents",
+							"amount": 4000
+						}
+					],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 1
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -1
+						}
+					]
+				},
+				{
+					"id": "ignore",
+					"label": "Laisser faire",
+					"hints": ["Rien à faire", "L’ambiance se dégrade"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -1
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "organization.enthusiastic_volunteer",
+			"category": "organization",
+			"title": "Une idée de militant",
+			"text": "{volunteer} propose une « action coup de poing » : une chorégraphie militante sur la place du marché, un samedi matin, sur un tube de l’été.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 5,
+			"priority": 0,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "gte",
+				"stat": "upgrades.owned",
+				"value": 1
+			},
+			"actors": [
+				{
+					"role": "volunteer",
+					"tags": ["volunteer"]
+				}
+			],
+			"choices": [
+				{
+					"id": "support",
+					"label": "Soutenir l’initiative",
+					"hints": ["Coup d’éclat ou ridicule", "Bénévoles motivés"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResourceRandom",
+							"resource": "influence",
+							"min": -2,
+							"max": 6
+						}
+					]
+				},
+				{
+					"id": "refuse",
+					"label": "Proposer plutôt une distribution de tracts",
+					"hints": ["Rien ne change"],
+					"costs": [],
+					"effects": []
+				}
+			]
+		},
+		{
+			"id": "organization.photocopier",
+			"category": "organization",
+			"title": "Le photocopieur rend l’âme",
+			"text": "Le photocopieur de l’organisation a rendu l’âme au milieu d’un tirage de 2 000 tracts, dans un dernier bruit que les témoins décrivent comme « politique ».",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "gte",
+				"stat": "upgrades.owned",
+				"value": 1
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "politicalBudgetCents",
+					"value": -6000
+				}
+			]
+		}
+	]
+}

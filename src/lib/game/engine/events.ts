@@ -203,6 +203,8 @@ export interface FrontierInput {
 	readonly turn: Turn;
 	readonly player: PlayerState;
 	readonly resources: Resources;
+	/** Améliorations possédées, lisibles par les conditions (`upgrades.owned`). */
+	readonly upgrades: GameState['upgrades'];
 	readonly rng: RngState;
 	readonly nextInstanceNumber: number;
 	readonly events: EventsState;
@@ -228,7 +230,7 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 	const records: EventRecord[] = [];
 	// Modifié dans `create` : objet mutable pour que l'analyse de flux suive la valeur.
 	const death: { cause: DeathCause | null } = { cause: null };
-	const context = (): ConditionContext => ({ turn, player, resources });
+	const context = (): ConditionContext => ({ turn, player, resources, upgrades: input.upgrades });
 
 	const create = (definition: EventDefinition, actors: Record<string, string>): void => {
 		const instance: EventInstance = {
@@ -443,7 +445,8 @@ export function chooseEvent(
 	const afterContext: ConditionContext = {
 		turn: state.turn,
 		player: outcome.player,
-		resources: outcome.resources
+		resources: outcome.resources,
+		upgrades: state.upgrades
 	};
 	const cancelled: { instanceId: string; reason: string }[] = [];
 	const remaining = state.events.pending.slice(1).filter((other) => {

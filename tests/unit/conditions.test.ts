@@ -10,7 +10,11 @@ import {
 const context: ConditionContext = {
 	turn: turnOf(2004, 2),
 	player: { birthTurn: turnOf(1975, 1), health: 64, stress: 37 },
-	resources: { influence: 12, politicalBudgetCents: 5_000, personalCashCents: 0 }
+	resources: { influence: 12, politicalBudgetCents: 5_000, personalCashCents: 0 },
+	upgrades: [
+		{ instanceId: 'upgrade.1', upgradeId: 'test.volunteer', acquiredTurn: 0 },
+		{ instanceId: 'upgrade.2', upgradeId: 'test.donors', acquiredTurn: 1 }
+	]
 };
 
 const influenceAtLeast = (value: number): Condition => ({
@@ -29,6 +33,7 @@ describe('statistiques du registre', () => {
 		expect(readStat(context, 'player.stress')).toBe(37);
 		expect(readStat(context, 'calendar.year')).toBe(2004);
 		expect(readStat(context, 'calendar.quarter')).toBe(2);
+		expect(readStat(context, 'upgrades.owned')).toBe(2);
 	});
 });
 

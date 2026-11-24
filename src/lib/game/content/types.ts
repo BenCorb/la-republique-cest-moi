@@ -42,7 +42,9 @@ export const STAT_IDS = [
 	'player.health',
 	'player.stress',
 	'calendar.year',
-	'calendar.quarter'
+	'calendar.quarter',
+	/** Nombre d'exemplaires d'améliorations possédés (taille de l'organisation). */
+	'upgrades.owned'
 ] as const;
 export type StatId = (typeof STAT_IDS)[number];
 
@@ -242,7 +244,7 @@ export interface BlockingEventDefinition extends EventBase {
 	readonly choices: readonly EventChoice[];
 }
 
-/** Événement informatif : effets automatiques, aucun choix. */
+/** Événement informatif : effets automatiques (éventuellement aucun : simple brève), aucun choix. */
 export interface InformativeEventDefinition extends EventBase {
 	readonly blocking: false;
 	readonly effects: readonly Effect[];

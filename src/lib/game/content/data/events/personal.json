@@ -11,8 +11,17 @@
 			"priority": 20,
 			"cooldownTurns": 8,
 			"unique": false,
-			"when": { "op": "gte", "stat": "player.stress", "value": 60 },
-			"actors": [{ "role": "doctor", "tags": ["medical"] }],
+			"when": {
+				"op": "gte",
+				"stat": "player.stress",
+				"value": 60
+			},
+			"actors": [
+				{
+					"role": "doctor",
+					"tags": ["medical"]
+				}
+			],
 			"choices": [
 				{
 					"id": "slow_down",
@@ -20,8 +29,16 @@
 					"hints": ["Moins de stress", "Influence en baisse"],
 					"costs": [],
 					"effects": [
-						{ "op": "addStat", "stat": "player.stress", "value": -12 },
-						{ "op": "addResource", "resource": "influence", "value": -2 }
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -12
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -2
+						}
 					]
 				},
 				{
@@ -29,7 +46,323 @@
 					"label": "Maintenir le cap",
 					"hints": ["Stress en hausse"],
 					"costs": [],
-					"effects": [{ "op": "addStat", "stat": "player.stress", "value": 4 }]
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 4
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "personal.burnout_scare",
+			"category": "personal",
+			"title": "Un malaise en pleine réunion",
+			"text": "Au milieu d’un débat passionné sur l’emplacement des panneaux d’affichage, la salle se met à tourner. {doctor} parle de « signal d’alarme » ; vous parlez de « simple coup de chaud ».",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 12,
+			"priority": 30,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "gte",
+				"stat": "player.stress",
+				"value": 80
+			},
+			"actors": [
+				{
+					"role": "doctor",
+					"tags": ["medical"]
+				}
+			],
+			"choices": [
+				{
+					"id": "hospital",
+					"label": "Accepter deux semaines d’arrêt",
+					"hints": ["Récupération réelle", "Absence remarquée"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -25
+						},
+						{
+							"op": "addStat",
+							"stat": "player.health",
+							"value": 3
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -3
+						}
+					]
+				},
+				{
+					"id": "hide",
+					"label": "Repartir aussitôt, en souriant aux photographes",
+					"hints": ["Rien ne transparaît", "Votre corps, lui, s’en souviendra"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 5
+						},
+						{
+							"op": "addStat",
+							"stat": "player.health",
+							"value": -3
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "personal.seasonal_flu",
+			"category": "personal",
+			"title": "La grippe de saison",
+			"text": "Une grippe tenace vous cloue au lit. Vous dictez des communiqués entre deux tisanes ; personne ne les publie, ce qui vous repose aussi.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 0,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": {
+				"op": "eq",
+				"stat": "calendar.quarter",
+				"value": 1
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "addStat",
+					"stat": "player.health",
+					"value": -3
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": -3
+				}
+			]
+		},
+		{
+			"id": "personal.old_friend_dinner",
+			"category": "personal",
+			"title": "Un dîner entre vieux amis",
+			"text": "{friend} vous propose un dîner « comme avant, sans parler de politique ». Vous savez tous les deux que c’est impossible.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 6,
+			"priority": 0,
+			"cooldownTurns": 24,
+			"unique": false,
+			"actors": [
+				{
+					"role": "friend",
+					"tags": ["friend"]
+				}
+			],
+			"choices": [
+				{
+					"id": "go",
+					"label": "Y aller et payer l’addition",
+					"hints": ["Un vrai moment de détente", "Une addition salée"],
+					"costs": [
+						{
+							"resource": "personalCashCents",
+							"amount": 8000
+						}
+					],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -8
+						}
+					]
+				},
+				{
+					"id": "decline",
+					"label": "Prétexter une réunion",
+					"hints": ["Votre agenda reste plein", "L’amitié, un peu moins"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "personal.family_job_request",
+			"category": "personal",
+			"title": "Un poste pour la famille",
+			"text": "{relative} vient de découvrir une vocation pour le service public, précisément au moment où votre organisation recrute. Son expérience correspond mal au poste, son carnet d’adresses beaucoup mieux.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 5,
+			"priority": 10,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "gte",
+				"stat": "upgrades.owned",
+				"value": 1
+			},
+			"actors": [
+				{
+					"role": "relative",
+					"tags": ["family", "job_seeker"]
+				}
+			],
+			"choices": [
+				{
+					"id": "hire",
+					"label": "Le recruter",
+					"hints": ["Soutien relationnel en hausse", "Vigilance médiatique possible"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						},
+						{
+							"op": "addResource",
+							"resource": "politicalBudgetCents",
+							"value": -15000
+						}
+					],
+					"followUp": {
+						"eventId": "personal.family_hire_rumour",
+						"delayTurns": 3
+					}
+				},
+				{
+					"id": "open_selection",
+					"label": "Organiser une sélection ouverte",
+					"hints": ["Procédure exemplaire", "Réaction familiale incertaine"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 3
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 1
+						}
+					]
+				},
+				{
+					"id": "refuse",
+					"label": "Refuser",
+					"hints": ["L’organisation reste sereine", "Tensions familiales possibles"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 4
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "personal.family_hire_rumour",
+			"category": "press",
+			"title": "Une embauche remarquée",
+			"text": "Un entrefilet signé {journalist} relève que {relative} a obtenu un poste « au terme d’un processus de recrutement d’une rare brièveté ». Le mot « népotisme » n’est pas écrit ; il est suggéré en gras.",
+			"blocking": false,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 0,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [
+				{
+					"role": "relative",
+					"tags": ["family", "job_seeker"]
+				},
+				{
+					"role": "journalist",
+					"tags": ["journalist"]
+				}
+			],
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "influence",
+					"min": -6,
+					"max": -1
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 3
+				}
+			]
+		},
+		{
+			"id": "personal.gym_membership",
+			"category": "personal",
+			"title": "Une salle de sport au coin de la rue",
+			"text": "Une salle de sport ouvre en bas de chez vous, avec une offre « spéciale élus et futurs élus ». Vous n’êtes ni l’un ni l’autre, mais le commercial est confiant.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 0,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "lte",
+				"stat": "player.health",
+				"value": 75
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "subscribe",
+					"label": "S’abonner pour un an",
+					"hints": ["Meilleure forme", "Argent personnel en baisse"],
+					"costs": [
+						{
+							"resource": "personalCashCents",
+							"amount": 30000
+						}
+					],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.health",
+							"value": 4
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -4
+						}
+					]
+				},
+				{
+					"id": "decline",
+					"label": "Se promettre de prendre l’escalier",
+					"hints": ["Rien ne change"],
+					"costs": [],
+					"effects": []
 				}
 			]
 		},
@@ -44,8 +377,44 @@
 			"priority": 0,
 			"cooldownTurns": 0,
 			"unique": true,
-			"actors": [{ "role": "relative", "tags": ["family"] }],
-			"effects": [{ "op": "addResource", "resource": "personalCashCents", "value": 150000 }]
+			"actors": [
+				{
+					"role": "relative",
+					"tags": ["family"]
+				}
+			],
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "personalCashCents",
+					"value": 150000
+				}
+			]
+		},
+		{
+			"id": "personal.rent_increase",
+			"category": "personal",
+			"title": "Votre propriétaire découvre l’inflation",
+			"text": "Votre propriétaire vous annonce une « révision exceptionnelle » du loyer, justifiée par la vue sur le parking et votre « futur train de vie d’élu ».",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 24,
+			"unique": false,
+			"actors": [],
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "personalCashCents",
+					"value": -25000
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				}
+			]
 		}
 	]
 }

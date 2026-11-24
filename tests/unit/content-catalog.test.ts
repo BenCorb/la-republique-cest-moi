@@ -331,6 +331,7 @@ describe('validation des événements', () => {
 		['identifiant d’une action', 'test.windfall', (e) => (e.id = 'test.fixed'), 'en double'],
 		['bloquant sans choix', 'test.seasonal', (e) => (e.choices = []), 'choices'],
 		['informatif avec choix', 'test.windfall', (e) => (e.choices = []), 'choices'],
+
 		[
 			'suite jamais déclenchée',
 			'test.interview',

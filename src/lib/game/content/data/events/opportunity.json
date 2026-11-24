@@ -1,0 +1,148 @@
+{
+	"events": [
+		{
+			"id": "opportunity.party_invitation",
+			"category": "opportunity",
+			"title": "Une main tendue",
+			"text": "{official}, secrétaire de section du Rassemblement pour l’Avenir et le Reste, vous propose de « rejoindre une famille politique ». Il précise que la famille a des places en fin de liste.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 10,
+			"cooldownTurns": 0,
+			"unique": true,
+			"when": {
+				"op": "gte",
+				"stat": "resources.influence",
+				"value": 12
+			},
+			"actors": [
+				{
+					"role": "official",
+					"tags": ["party_official"]
+				}
+			],
+			"choices": [
+				{
+					"id": "join",
+					"label": "Accepter de militer à la section",
+					"hints": ["Réseau en hausse", "Réunions du jeudi soir"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 4
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": "negotiate",
+					"label": "Faire monter les enchères",
+					"hints": ["Un peu plus d’influence", "Une réputation de calculateur"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": "independent",
+					"label": "Rester indépendant",
+					"hints": ["Liberté préservée"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 1
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "opportunity.local_award",
+			"category": "opportunity",
+			"title": "Le prix du jeune espoir citoyen",
+			"text": "La chambre de commerce vous remet le prix du « jeune espoir citoyen » lors d’une cérémonie de deux heures. Le trophée représente une main serrant une autre main.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 0,
+			"unique": true,
+			"when": {
+				"op": "gte",
+				"stat": "resources.influence",
+				"value": 30
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 5
+				}
+			]
+		},
+		{
+			"id": "opportunity.association_board",
+			"category": "opportunity",
+			"title": "Le conseil d’administration d’une association",
+			"text": "L’association des amis du patrimoine cherche un administrateur « dynamique et disponible ». La réunion annuelle dure quatre heures et se termine par un gratin.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 0,
+			"cooldownTurns": 28,
+			"unique": false,
+			"when": {
+				"op": "gte",
+				"stat": "resources.influence",
+				"value": 5
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "accept",
+					"label": "Accepter le poste",
+					"hints": ["Réseau local en hausse", "Des réunions en plus"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 3
+						}
+					]
+				},
+				{
+					"id": "decline",
+					"label": "Décliner",
+					"hints": ["Rien ne change"],
+					"costs": [],
+					"effects": []
+				}
+			]
+		}
+	]
+}

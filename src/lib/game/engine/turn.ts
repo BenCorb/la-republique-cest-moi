@@ -93,6 +93,7 @@ function commitTurn(
 					turn: nextTurn,
 					player: wellbeing.player,
 					resources: economy.resources,
+					upgrades: execution.upgrades,
 					rng: wellbeing.rng,
 					nextInstanceNumber: execution.nextInstanceNumber,
 					events: state.events
