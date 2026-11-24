@@ -22,7 +22,11 @@ import {
 	type AgeBand,
 	type Balance,
 	type Condition,
+	type CastMember,
 	type Effect,
+	type EventChoice,
+	type EventDefinition,
+	type EventsBalance,
 	type ResourceAmount,
 	type UpgradeDefinition,
 	type WellbeingBalance
@@ -169,6 +173,93 @@ export const wellbeingSchema: z.ZodType<WellbeingBalance> = z
 		path: ['calmStressThreshold']
 	});
 
+export const eventsBalanceSchema: z.ZodType<EventsBalance> = z.strictObject({
+	ordinaryDrawsPerTurn: nonNegativeInt,
+	ordinaryEventChance: probability
+});
+
+/** Identifiant court : rôle d'acteur, identifiant de choix, étiquette. */
+const shortId = z.string().regex(/^[a-z][a-z0-9_]*$/, 'identifiant en minuscules (a-z, 0-9, _)');
+
+export const castMemberSchema: z.ZodType<CastMember> = z.strictObject({
+	id: contentId,
+	name: frenchText,
+	tags: z.array(shortId).min(1)
+});
+
+export const castCatalogSchema = z.strictObject({
+	cast: z.array(castMemberSchema)
+});
+
+const followUpSchema = z.strictObject({
+	eventId: contentId,
+	delayTurns: positiveInt
+});
+
+const eventChoiceSchema: z.ZodType<EventChoice> = z
+	.strictObject({
+		id: shortId,
+		label: frenchText,
+		hints: z.array(frenchText),
+		costs: z.array(resourceAmountSchema),
+		requires: conditionSchema.optional(),
+		unavailableReason: frenchText.optional(),
+		effects: z.array(effectSchema),
+		followUp: followUpSchema.optional()
+	})
+	.refine(
+		(choice) => (choice.requires === undefined) === (choice.unavailableReason === undefined),
+		{
+			message: '« requires » et « unavailableReason » vont ensemble',
+			path: ['unavailableReason']
+		}
+	);
+
+const eventBaseShape = {
+	id: contentId,
+	category: shortId,
+	title: frenchText,
+	text: frenchText,
+	trigger: z.enum(['random', 'followUp']),
+	weight: nonNegativeInt,
+	priority: safeInt,
+	availableFromTurn: safeInt.optional(),
+	availableUntilTurn: safeInt.optional(),
+	cooldownTurns: nonNegativeInt,
+	unique: z.boolean(),
+	when: conditionSchema.optional(),
+	actors: z.array(z.strictObject({ role: shortId, tags: z.array(shortId).min(1) }))
+};
+
+export const eventSchema: z.ZodType<EventDefinition> = z
+	.discriminatedUnion('blocking', [
+		z.strictObject({
+			...eventBaseShape,
+			blocking: z.literal(true),
+			choices: z.array(eventChoiceSchema).min(1)
+		}),
+		z.strictObject({
+			...eventBaseShape,
+			blocking: z.literal(false),
+			effects: z.array(effectSchema).min(1)
+		})
+	])
+	.refine((event) => event.trigger === 'followUp' || event.weight > 0, {
+		message: 'un événement tiré au sort doit avoir un poids strictement positif',
+		path: ['weight']
+	})
+	.refine(
+		(event) =>
+			event.availableFromTurn === undefined ||
+			event.availableUntilTurn === undefined ||
+			event.availableFromTurn <= event.availableUntilTurn,
+		{ message: 'fenêtre de disponibilité inversée', path: ['availableUntilTurn'] }
+	);
+
+export const eventCatalogSchema = z.strictObject({
+	events: z.array(eventSchema)
+});
+
 export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	timeBudgetPerTurn: positiveInt,
 	startingResources: z.strictObject({
@@ -176,5 +267,6 @@ export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 		politicalBudgetCents: nonNegativeInt,
 		personalCashCents: nonNegativeInt
 	}),
-	wellbeing: wellbeingSchema
+	wellbeing: wellbeingSchema,
+	events: eventsBalanceSchema
 });

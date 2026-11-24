@@ -8,7 +8,7 @@ import {
 	type GameState,
 	type TurnPlan
 } from '../../src/lib/game/engine/index.ts';
-import { fixtureContent } from '../fixtures/content.ts';
+import { fixtureContent, quarterLog } from '../fixtures/content.ts';
 
 function deepFreeze<T>(value: T): T {
 	if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -182,7 +182,7 @@ describe('validation du trimestre avec un plan', () => {
 			politicalBudgetCents: 10_000 + 120_000 - 1_000,
 			personalCashCents: 100_000 + 50_000 - 120_000
 		});
-		expect(result.log[0]?.steps).toEqual([
+		expect(quarterLog(result).steps).toEqual([
 			{
 				kind: 'action',
 				id: 'test.earn',

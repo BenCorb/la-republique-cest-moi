@@ -61,5 +61,9 @@
 				"mortalityChance": 0.08
 			}
 		]
+	},
+	"events": {
+		"ordinaryDrawsPerTurn": 1,
+		"ordinaryEventChance": 0.4
 	}
 }

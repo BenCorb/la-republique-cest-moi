@@ -16,6 +16,7 @@ function isUint32(value: unknown): boolean {
 }
 
 const INSTANCE_ID = /^upgrade\.([1-9][0-9]*)$/;
+const EVENT_INSTANCE_ID = /^event\.([1-9][0-9]*)$/;
 
 export function checkInvariants(state: GameState, content?: Content): string[] {
 	const violations: string[] = [];
@@ -111,10 +112,84 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
 	if ((state.phase === 'ended') !== (state.end !== null)) {
 		violations.push('phase de fin et état de fin incohérents');
 	}
-	if (state.end && (!Number.isSafeInteger(state.end.turn) || state.end.turn >= state.turn)) {
+	// Fin en T (pendant la résolution) ou en T+1 (événement ou choix après la frontière).
+	if (state.end && (!Number.isSafeInteger(state.end.turn) || state.end.turn > state.turn)) {
 		violations.push(`tour de fin invalide : ${state.end.turn}`);
 	}
 
+	violations.push(...checkEventInvariants(state, instanceIds, content));
+	return violations;
+}
+
+function checkEventInvariants(
+	state: GameState,
+	usedInstanceIds: Set<string>,
+	content: Content | undefined
+): string[] {
+	const violations: string[] = [];
+	const { pending, scheduled, occurrences } = state.events;
+
+	if (state.phase === 'decision' && pending.length === 0) {
+		violations.push('phase de décision sans événement en attente');
+	}
+	if (state.phase !== 'decision' && pending.length > 0) {
+		violations.push(`événement(s) en attente hors phase de décision : ${pending.length}`);
+	}
+	if (state.phase === 'ended' && scheduled.length > 0) {
+		violations.push('suites programmées après la fin de carrière');
+	}
+
+	for (const instance of pending) {
+		const match = EVENT_INSTANCE_ID.exec(instance.instanceId);
+		if (!match || Number(match[1]) >= state.nextInstanceNumber) {
+			violations.push(`identifiant d’événement invalide : ${instance.instanceId}`);
+		}
+		if (usedInstanceIds.has(instance.instanceId)) {
+			violations.push(`instance en double : ${instance.instanceId}`);
+		}
+		usedInstanceIds.add(instance.instanceId);
+		if (!Number.isSafeInteger(instance.turn) || instance.turn > state.turn) {
+			violations.push(`date d’événement invalide : ${instance.instanceId}`);
+		}
+		if (content) {
+			const definition = content.events[instance.eventId];
+			if (!definition || !definition.blocking) {
+				violations.push(`événement en attente inconnu ou non bloquant : ${instance.eventId}`);
+			}
+		}
+	}
+	for (const entry of scheduled) {
+		if (!Number.isSafeInteger(entry.dueTurn) || entry.dueTurn <= state.turn) {
+			violations.push(`suite échue non traitée : ${entry.eventId} au tour ${entry.dueTurn}`);
+		}
+		if (content && !Object.hasOwn(content.events, entry.eventId)) {
+			violations.push(`suite inconnue du catalogue : ${entry.eventId}`);
+		}
+	}
+	for (const [eventId, occurrence] of Object.entries(occurrences)) {
+		if (!Number.isSafeInteger(occurrence.count) || occurrence.count < 1) {
+			violations.push(`occurrences invalides : ${eventId}`);
+		}
+		if (!Number.isSafeInteger(occurrence.lastTurn) || occurrence.lastTurn > state.turn) {
+			violations.push(`dernière occurrence future : ${eventId}`);
+		}
+		if (content && !Object.hasOwn(content.events, eventId)) {
+			violations.push(`occurrence d’un événement inconnu : ${eventId}`);
+		}
+	}
+	if (content) {
+		const actorSets = [
+			...pending.map((instance) => instance.actors),
+			...scheduled.map((entry) => entry.actors)
+		];
+		for (const actors of actorSets) {
+			for (const castId of Object.values(actors)) {
+				if (!Object.hasOwn(content.cast, castId)) {
+					violations.push(`acteur inconnu de la distribution : ${castId}`);
+				}
+			}
+		}
+	}
 	return violations;
 }
 

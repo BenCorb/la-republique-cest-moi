@@ -1,0 +1,56 @@
+{
+	"events": [
+		{
+			"id": "press.local_portrait",
+			"category": "press",
+			"title": "Un portrait dans la presse locale",
+			"text": "{journalist} souhaite consacrer un portrait à « la nouvelle génération qui monte ». Vous ignorez encore si c’est vous qui montez ou la génération.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 6,
+			"priority": 10,
+			"cooldownTurns": 0,
+			"unique": true,
+			"when": { "op": "gte", "stat": "resources.influence", "value": 8 },
+			"actors": [{ "role": "journalist", "tags": ["journalist"] }],
+			"choices": [
+				{
+					"id": "accept",
+					"label": "Accepter l’entretien",
+					"hints": ["Visibilité à venir", "Une soirée de plus au téléphone"],
+					"costs": [],
+					"effects": [{ "op": "addStat", "stat": "player.stress", "value": 3 }],
+					"followUp": { "eventId": "press.portrait_published", "delayTurns": 2 }
+				},
+				{
+					"id": "advertise",
+					"label": "Proposer plutôt un encart publicitaire",
+					"hints": ["Visibilité immédiate", "Le journal s’en souviendra"],
+					"costs": [{ "resource": "politicalBudgetCents", "amount": 20000 }],
+					"effects": [{ "op": "addResource", "resource": "influence", "value": 3 }]
+				},
+				{
+					"id": "decline",
+					"label": "Décliner poliment",
+					"hints": ["Rien ne change, en apparence"],
+					"costs": [],
+					"effects": []
+				}
+			]
+		},
+		{
+			"id": "press.portrait_published",
+			"category": "press",
+			"title": "Le portrait paraît",
+			"text": "Le portrait signé {journalist} paraît en page 7, entre la fête de la châtaigne et les résultats du club de pétanque. Il est plutôt flatteur, la photo beaucoup moins.",
+			"blocking": false,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 0,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [{ "role": "journalist", "tags": ["journalist"] }],
+			"effects": [{ "op": "addResourceRandom", "resource": "influence", "min": 2, "max": 6 }]
+		}
+	]
+}

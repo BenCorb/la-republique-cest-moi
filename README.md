@@ -138,7 +138,7 @@ src/
   routes/                 # +layout.svelte, +page.svelte (coque d’accueil), layout.css (tokens)
   lib/
     game/engine/          # moteur TypeScript pur (sans Svelte, DOM, stockage, réseau, hasard réel)
-    game/content/         # types, schémas Zod, validation et catalogues JSON (data/)
+    game/content/         # types, schémas Zod, validation et catalogues JSON (data/, data/events/)
     components/shell/     # coque desktop (GameShell)
 static/                   # fichiers copiés tels quels (favicon.svg, .nojekyll)
 scripts/

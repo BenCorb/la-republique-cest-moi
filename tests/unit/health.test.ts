@@ -16,7 +16,7 @@ import {
 	type TransitionSuccess,
 	type TurnPlan
 } from '../../src/lib/game/engine/index.ts';
-import { fixtureContent, withWellbeing } from '../fixtures/content.ts';
+import { fixtureContent, withWellbeing, quarterLog } from '../fixtures/content.ts';
 
 const act = (id: string): PlanStep => ({ kind: 'action', id });
 const plan = (...steps: PlanStep[]): TurnPlan => ({ steps });
@@ -60,7 +60,7 @@ describe('charge de travail et repos', () => {
 		const start = game(workloadModel, { stress: 20 });
 		const busy = commit(start, workloadModel, plan(act('test.heavy')));
 		expect(busy.state.player.stress).toBe(20 + 15 - 4);
-		expect(busy.log[0]?.wellbeing.contributions).toEqual([
+		expect(quarterLog(busy).wellbeing.contributions).toEqual([
 			{ source: 'workload', gauge: 'player.stress', delta: 15 },
 			{ source: 'recovery', gauge: 'player.stress', delta: -4 }
 		]);
@@ -74,7 +74,7 @@ describe('charge de travail et repos', () => {
 		const rested = commit(start, workloadModel, plan(act('test.rest'), act('test.rest')));
 		// 40 points de temps : sous le seuil ; −30 de repos, −4 de récupération.
 		expect(rested.state.player.stress).toBe(16);
-		expect(rested.log[0]?.steps.map((step) => step.gauges)).toEqual([
+		expect(quarterLog(rested).steps.map((step) => step.gauges)).toEqual([
 			[{ gauge: 'player.stress', delta: -15 }],
 			[{ gauge: 'player.stress', delta: -15 }]
 		]);
@@ -84,7 +84,7 @@ describe('charge de travail et repos', () => {
 		const start = game(workloadModel, { stress: 5, health: 98 });
 		const result = commit(start, workloadModel, plan(act('test.rest'), act('test.tonic')));
 		expect(result.state.player).toMatchObject({ stress: 0, health: 100 });
-		expect(result.log[0]?.steps.map((step) => step.gauges)).toEqual([
+		expect(quarterLog(result).steps.map((step) => step.gauges)).toEqual([
 			[{ gauge: 'player.stress', delta: -5 }],
 			[{ gauge: 'player.health', delta: 2 }]
 		]);
@@ -121,7 +121,7 @@ describe('stress élevé, calme et vieillissement', () => {
 	it('dégrade la santé sous stress élevé', () => {
 		const result = commit(game(model, { stress: 80, health: 60 }), model);
 		expect(result.state.player.health).toBe(58);
-		expect(result.log[0]?.wellbeing.contributions).toContainEqual({
+		expect(quarterLog(result).wellbeing.contributions).toContainEqual({
 			source: 'high_stress',
 			gauge: 'player.health',
 			delta: -2
@@ -169,7 +169,7 @@ describe('stress élevé, calme et vieillissement', () => {
 		// Né en 1940 : 60 ans au T1 2000.
 		const old = commit(game(ageing, { health: 70, birthTurn: turnOf(1940, 1) }), ageing);
 		expect(old.state.player.health).toBe(68);
-		expect(old.log[0]?.wellbeing.contributions).toEqual([
+		expect(quarterLog(old).wellbeing.contributions).toEqual([
 			{ source: 'ageing', gauge: 'player.health', delta: -2 }
 		]);
 	});
@@ -188,7 +188,7 @@ describe('décès et fin de carrière', () => {
 		expect(result.state.end).toEqual({ turn: 0, reason: 'death', cause: 'health_failure' });
 		expect(result.state.turn).toBe(1);
 		expect(result.state.player.health).toBe(0);
-		expect(result.log[0]?.wellbeing.deathCause).toBe('health_failure');
+		expect(quarterLog(result).wellbeing.deathCause).toBe('health_failure');
 	});
 
 	it('peut mourir de cause naturelle selon le risque de la tranche d’âge', () => {

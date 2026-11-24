@@ -10,7 +10,7 @@ import {
 	type GameCommand,
 	type GameState
 } from '../../src/lib/game/engine/index.ts';
-import { fixtureContent } from '../fixtures/content.ts';
+import { fixtureContent, quarters as quarterEntries } from '../fixtures/content.ts';
 
 function deepFreeze<T>(value: T): T {
 	if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -51,14 +51,14 @@ describe('scénario : passage du temps', () => {
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
 		expect(result.state.turn).toBe(1);
-		expect(result.resolvedTurn).toBe(0);
 		expect(result.log).toEqual([
 			{
 				type: 'turn.resolved',
 				turn: 0,
 				steps: [],
 				economy: { producers: [], changes: [] },
-				wellbeing: { contributions: [], deathCause: null }
+				wellbeing: { contributions: [], deathCause: null },
+				events: []
 			}
 		]);
 		expect(result.state.history).toEqual(result.log);
@@ -150,7 +150,7 @@ describe('scénario : reproductibilité', () => {
 		const first = play('économie', commands);
 		expect(play('économie', commands)).toStrictEqual(first);
 		expect(first.upgrades).toHaveLength(2);
-		const statuses = first.history.flatMap((entry) =>
+		const statuses = quarterEntries(first.history).flatMap((entry) =>
 			entry.economy.producers.map((producer) => producer.status)
 		);
 		expect(statuses.length).toBeGreaterThan(0);

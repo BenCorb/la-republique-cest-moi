@@ -1,0 +1,51 @@
+{
+	"events": [
+		{
+			"id": "personal.doctor_warning",
+			"category": "personal",
+			"title": "Un agenda bien rempli",
+			"text": "Entre deux rendez-vous, {doctor} vous regarde par-dessus ses lunettes : « Votre tension a les mêmes ambitions que vous. Ce n’est pas un compliment. »",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 10,
+			"priority": 20,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": { "op": "gte", "stat": "player.stress", "value": 60 },
+			"actors": [{ "role": "doctor", "tags": ["medical"] }],
+			"choices": [
+				{
+					"id": "slow_down",
+					"label": "Lever le pied",
+					"hints": ["Moins de stress", "Influence en baisse"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.stress", "value": -12 },
+						{ "op": "addResource", "resource": "influence", "value": -2 }
+					]
+				},
+				{
+					"id": "carry_on",
+					"label": "Maintenir le cap",
+					"hints": ["Stress en hausse"],
+					"costs": [],
+					"effects": [{ "op": "addStat", "stat": "player.stress", "value": 4 }]
+				}
+			]
+		},
+		{
+			"id": "personal.small_inheritance",
+			"category": "personal",
+			"title": "Un héritage modeste",
+			"text": "{relative} vous lègue une petite somme, un service à café incomplet et la consigne de « ne pas tout dépenser en affiches ».",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 0,
+			"unique": true,
+			"actors": [{ "role": "relative", "tags": ["family"] }],
+			"effects": [{ "op": "addResource", "resource": "personalCashCents", "value": 150000 }]
+		}
+	]
+}

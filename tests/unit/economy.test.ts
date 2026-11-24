@@ -11,7 +11,7 @@ import {
 	type TransitionSuccess,
 	type TurnPlan
 } from '../../src/lib/game/engine/index.ts';
-import { fixtureContent } from '../fixtures/content.ts';
+import { fixtureContent, quarterLog } from '../fixtures/content.ts';
 
 const act = (id: string): PlanStep => ({ kind: 'action', id });
 const buy = (id: string): PlanStep => ({ kind: 'purchase', id });
@@ -32,7 +32,8 @@ function game(
 			turn: index,
 			steps: [],
 			economy: { producers: [], changes: [] },
-			wellbeing: { contributions: [], deathCause: null }
+			wellbeing: { contributions: [], deathCause: null },
+			events: []
 		})),
 		resources: { ...base.resources, ...resources },
 		upgrades,
@@ -62,7 +63,7 @@ describe('achat d’une amélioration', () => {
 
 		expect(bought.state.upgrades).toEqual([owned(1, 'test.donors', 0)]);
 		expect(bought.state.nextInstanceNumber).toBe(2);
-		expect(bought.log[0]?.steps).toEqual([
+		expect(quarterLog(bought).steps).toEqual([
 			{
 				kind: 'purchase',
 				id: 'test.donors',
@@ -72,12 +73,12 @@ describe('achat d’une amélioration', () => {
 			}
 		]);
 		// Trimestre T : aucune production.
-		expect(bought.log[0]?.economy).toEqual({ producers: [], changes: [] });
+		expect(quarterLog(bought).economy).toEqual({ producers: [], changes: [] });
 		expect(bought.state.resources.politicalBudgetCents).toBe(10_000 - 5_000);
 
 		// Trimestre T+1 : production.
 		const next = commit(bought.state);
-		expect(next.log[0]?.economy.producers).toEqual([
+		expect(quarterLog(next).economy.producers).toEqual([
 			{
 				instanceId: 'upgrade.1',
 				upgradeId: 'test.donors',
@@ -181,7 +182,7 @@ describe('trésoreries séparées', () => {
 			1
 		);
 		const next = commit(state);
-		expect(next.log[0]?.economy.producers[0]?.status).toBe('suspended');
+		expect(quarterLog(next).economy.producers[0]?.status).toBe('suspended');
 		expect(next.state.resources.personalCashCents).toBe(1_000_000);
 	});
 });
@@ -190,7 +191,7 @@ describe('charges impayées', () => {
 	it('suspend la production sans rien prélever, puis reprend quand la trésorerie suffit', () => {
 		const state = game({ politicalBudgetCents: 3_999 }, [owned(1, 'test.volunteer')], 1);
 		const suspended = commit(state);
-		expect(suspended.log[0]?.economy.producers).toEqual([
+		expect(quarterLog(suspended).economy.producers).toEqual([
 			{ instanceId: 'upgrade.1', upgradeId: 'test.volunteer', status: 'suspended', changes: [] }
 		]);
 		expect(suspended.state.resources).toEqual(state.resources);
@@ -199,7 +200,7 @@ describe('charges impayées', () => {
 			...suspended.state,
 			resources: { ...suspended.state.resources, politicalBudgetCents: 4_000 }
 		});
-		expect(funded.log[0]?.economy.producers[0]?.status).toBe('active');
+		expect(quarterLog(funded).economy.producers[0]?.status).toBe('active');
 		expect(funded.state.resources).toMatchObject({ politicalBudgetCents: 0, influence: 1 });
 	});
 
@@ -210,7 +211,7 @@ describe('charges impayées', () => {
 			1
 		);
 		const next = commit(state);
-		expect(next.log[0]?.economy.producers.map((producer) => producer.status)).toEqual([
+		expect(quarterLog(next).economy.producers.map((producer) => producer.status)).toEqual([
 			'active',
 			'suspended'
 		]);
@@ -225,7 +226,7 @@ describe('charges impayées', () => {
 			1
 		);
 		const next = commit(state);
-		expect(next.log[0]?.economy.producers.map((producer) => producer.status)).toEqual([
+		expect(quarterLog(next).economy.producers.map((producer) => producer.status)).toEqual([
 			'active',
 			'suspended'
 		]);
@@ -241,7 +242,7 @@ describe('charges impayées', () => {
 			expect.objectContaining({ code: 'upkeep_at_risk', instanceId: 'upgrade.1' })
 		]);
 		const next = commit(state, turnPlan);
-		expect(next.log[0]?.economy.producers[0]?.status).toBe('suspended');
+		expect(quarterLog(next).economy.producers[0]?.status).toBe('suspended');
 	});
 });
 

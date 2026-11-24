@@ -72,14 +72,16 @@ describe('contrôle des invariants', () => {
 						turn: 1,
 						steps: [],
 						economy: { producers: [], changes: [] },
-						wellbeing: { contributions: [], deathCause: null }
+						wellbeing: { contributions: [], deathCause: null },
+						events: []
 					},
 					{
 						type: 'turn.resolved',
 						turn: 0,
 						steps: [],
 						economy: { producers: [], changes: [] },
-						wellbeing: { contributions: [], deathCause: null }
+						wellbeing: { contributions: [], deathCause: null },
+						events: []
 					}
 				]
 			},

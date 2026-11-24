@@ -159,12 +159,96 @@ export interface WellbeingBalance {
 	readonly ageBands: readonly AgeBand[];
 }
 
+/** Paramètres du tirage des événements ordinaires (hypothèses de tuning). */
+export interface EventsBalance {
+	/** Nombre maximal de tirages ordinaires par trimestre. */
+	readonly ordinaryDrawsPerTurn: number;
+	/** Probabilité qu'un tirage ordinaire produise un événement. */
+	readonly ordinaryEventChance: number;
+}
+
 export interface Balance {
 	/** Points de temps disponibles chaque trimestre, non cumulables. */
 	readonly timeBudgetPerTurn: number;
 	readonly startingResources: Resources;
 	readonly wellbeing: WellbeingBalance;
+	readonly events: EventsBalance;
 }
+
+/**
+ * Personnage secondaire fictif, mobilisable comme acteur d'un événement. Le
+ * prototype n'en simule ni l'âge ni les relations (personnages complets : P2-04).
+ */
+export interface CastMember {
+	readonly id: string;
+	readonly name: string;
+	/** Étiquettes de rôle, par exemple `medical`, `journalist`. */
+	readonly tags: readonly string[];
+}
+
+/** Rôle d'un événement, pourvu à la création de l'instance parmi la distribution. */
+export interface ActorSlot {
+	/** Nom du rôle, utilisé dans les textes sous la forme `{role}`. */
+	readonly role: string;
+	/** Étiquettes que l'acteur doit toutes posséder. */
+	readonly tags: readonly string[];
+}
+
+/** Suite différée déclenchée par un choix. */
+export interface FollowUp {
+	readonly eventId: string;
+	/** Nombre de trimestres avant la suite (au moins 1). */
+	readonly delayTurns: number;
+}
+
+export interface EventChoice {
+	readonly id: string;
+	readonly label: string;
+	/** Tendances annoncées au joueur, rédigées à la main (pas de chiffres cachés). */
+	readonly hints: readonly string[];
+	/** Coûts certains : le choix est indisponible s'ils ne sont pas couverts. */
+	readonly costs: readonly ResourceAmount[];
+	readonly requires?: Condition | undefined;
+	readonly unavailableReason?: string | undefined;
+	readonly effects: readonly Effect[];
+	readonly followUp?: FollowUp | undefined;
+}
+
+interface EventBase {
+	/** Identifiant stable, par exemple `press.local_portrait`. */
+	readonly id: string;
+	readonly category: string;
+	readonly title: string;
+	readonly text: string;
+	/** `random` : tiré au sort ; `followUp` : uniquement comme suite d'un choix. */
+	readonly trigger: 'random' | 'followUp';
+	/** Poids relatif du tirage (événements `random`). */
+	readonly weight: number;
+	/** Ordre de présentation des événements bloquants (plus grand d'abord). */
+	readonly priority: number;
+	readonly availableFromTurn?: number | undefined;
+	readonly availableUntilTurn?: number | undefined;
+	/** Trimestres minimum entre deux occurrences. */
+	readonly cooldownTurns: number;
+	/** Une seule occurrence par carrière. */
+	readonly unique: boolean;
+	readonly when?: Condition | undefined;
+	readonly actors: readonly ActorSlot[];
+}
+
+/** Événement bloquant : la progression attend un choix du joueur. */
+export interface BlockingEventDefinition extends EventBase {
+	readonly blocking: true;
+	readonly choices: readonly EventChoice[];
+}
+
+/** Événement informatif : effets automatiques, aucun choix. */
+export interface InformativeEventDefinition extends EventBase {
+	readonly blocking: false;
+	readonly effects: readonly Effect[];
+}
+
+export type EventDefinition = BlockingEventDefinition | InformativeEventDefinition;
 
 /** Contenu validé et indexé, tel que le reçoit le moteur. */
 export interface Content {
@@ -175,4 +259,10 @@ export interface Content {
 	readonly actionIds: readonly string[];
 	readonly upgrades: Readonly<Record<string, UpgradeDefinition>>;
 	readonly upgradeIds: readonly string[];
+	readonly events: Readonly<Record<string, EventDefinition>>;
+	/** Identifiants triés : ordre stable des tirages. */
+	readonly eventIds: readonly string[];
+	readonly cast: Readonly<Record<string, CastMember>>;
+	/** Identifiants triés : ordre stable du choix des acteurs. */
+	readonly castIds: readonly string[];
 }

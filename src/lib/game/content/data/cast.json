@@ -1,0 +1,10 @@
+{
+	"cast": [
+		{ "id": "cast.dr_mercier", "name": "la docteure Hélène Mercier", "tags": ["medical"] },
+		{ "id": "cast.dr_benali", "name": "le docteur Karim Benali", "tags": ["medical"] },
+		{ "id": "cast.sophie_roux", "name": "Sophie Roux", "tags": ["journalist", "local_press"] },
+		{ "id": "cast.antoine_vasseur", "name": "Antoine Vasseur", "tags": ["journalist"] },
+		{ "id": "cast.aunt_odette", "name": "tante Odette", "tags": ["family"] },
+		{ "id": "cast.cousin_regis", "name": "le cousin Régis", "tags": ["family"] }
+	]
+}

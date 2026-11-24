@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { loadContent } from '../../src/lib/game/content/load.ts';
+import { quarters } from '../fixtures/content.ts';
 import {
 	assertInvariants,
 	careerSummary,
+	chooseEventCommand,
 	commitTurn,
+	describePendingEvent,
 	createGame,
 	formatTurn,
 	previewPlan,
@@ -37,6 +40,25 @@ function career(seed: string, wishes: readonly PlanStep[], turns: number): GameS
 		if (!result.ok) throw new Error(`${formatTurn(state.turn)} : ${result.error.message}`);
 		state = result.state;
 		assertInvariants(state, content);
+		state = answerEvents(state);
+	}
+	return state;
+}
+
+/** Politique automatique déterministe : premier choix disponible de chaque événement. */
+function answerEvents(start: GameState): GameState {
+	let state = start;
+	for (
+		let view = describePendingEvent(state, content);
+		view;
+		view = describePendingEvent(state, content)
+	) {
+		const choice = view.choices.find((candidate) => candidate.available);
+		if (!choice) throw new Error(`Aucun choix disponible : ${view.eventId}`);
+		const result = transition(state, chooseEventCommand(view.instanceId, choice.id), content);
+		if (!result.ok) throw new Error(`${view.eventId} : ${result.error.message}`);
+		state = result.state;
+		assertInvariants(state, content);
 	}
 	return state;
 }
@@ -55,7 +77,9 @@ describe('scénario : catalogue réel', () => {
 		const state = career('militant', militant, 40);
 		expect(formatTurn(state.turn)).toBe('T1 2010');
 		expect(state.resources.influence).toBeGreaterThan(0);
-		const performed = new Set(state.history.flatMap((entry) => entry.steps.map((step) => step.id)));
+		const performed = new Set(
+			quarters(state.history).flatMap((entry) => entry.steps.map((step) => step.id))
+		);
 		// Les actions conditionnelles finissent par se débloquer.
 		expect(performed).toContain('organization.fundraising');
 		expect(performed).toContain('activism.public_meeting');
@@ -75,7 +99,7 @@ describe('scénario : catalogue réel', () => {
 		expect(state.upgrades.length).toBeGreaterThan(1);
 		expect(state.upgrades.every((upgrade) => upgrade.acquiredTurn < state.turn)).toBe(true);
 		const firstPurchaseTurn = Math.min(...state.upgrades.map((upgrade) => upgrade.acquiredTurn));
-		const productive = state.history.filter((entry) =>
+		const productive = quarters(state.history).filter((entry) =>
 			entry.economy.producers.some((producer) => producer.status === 'active')
 		);
 		expect(productive.length).toBeGreaterThan(0);

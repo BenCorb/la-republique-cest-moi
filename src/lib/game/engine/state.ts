@@ -2,8 +2,7 @@
  * État central de la partie (ARCHITECTURE.md §4.1) — sous-ensemble du prototype.
  *
  * L'état est un objet JSON pur (nombres, chaînes, booléens, tableaux, objets,
- * `null`) : il se sérialise et se recharge sans perte. Les événements rejoignent
- * cet état avec leur tâche (P1-05).
+ * `null`) : il se sérialise et se recharge sans perte.
  */
 import type { Content, GaugeId, ResourceId, Resources } from '../content/types.ts';
 import { TURNS_PER_YEAR, type Turn } from './calendar.ts';
@@ -95,6 +94,55 @@ export interface WellbeingRecord {
 	readonly deathCause: DeathCause | null;
 }
 
+/** Occurrence d'un événement, avec ses acteurs figés à la création. */
+export interface EventInstance {
+	/** Identifiant d'instance, tiré du compteur `nextInstanceNumber` (`event.N`). */
+	readonly instanceId: string;
+	readonly eventId: string;
+	/** Trimestre de création. */
+	readonly turn: Turn;
+	/** Acteurs par rôle : identifiants de la distribution. */
+	readonly actors: Readonly<Record<string, string>>;
+}
+
+/** Suite différée en attente de son trimestre. */
+export interface ScheduledEvent {
+	readonly eventId: string;
+	readonly dueTurn: Turn;
+	/** Instance dont un choix a programmé la suite. */
+	readonly sourceInstanceId: string;
+	/** Acteurs transmis, réutilisés pour les rôles de même nom. */
+	readonly actors: Readonly<Record<string, string>>;
+}
+
+export interface EventOccurrence {
+	readonly count: number;
+	readonly lastTurn: Turn;
+}
+
+export interface EventsState {
+	/** Événements bloquants en attente de choix, dans l'ordre de présentation. */
+	readonly pending: readonly EventInstance[];
+	/** Suites différées, dans l'ordre de programmation. */
+	readonly scheduled: readonly ScheduledEvent[];
+	/** Occurrences créées par définition : unicité et délai de réapparition. */
+	readonly occurrences: Readonly<Record<string, EventOccurrence>>;
+}
+
+/** Devenir d'un événement à la frontière du trimestre. */
+export interface EventRecord {
+	readonly eventId: string;
+	/** `null` pour une suite annulée avant création. */
+	readonly instanceId: string | null;
+	/** `queued` : bloquant en attente ; `applied` : informatif appliqué ; `cancelled` : suite devenue impossible. */
+	readonly outcome: 'queued' | 'applied' | 'cancelled';
+	readonly actors: Readonly<Record<string, string>>;
+	readonly changes: readonly ResourceChange[];
+	readonly gauges: readonly GaugeChange[];
+	/** Motif d'annulation, en français. */
+	readonly reason: string | null;
+}
+
 export interface HistoryEntry {
 	readonly type: 'turn.resolved';
 	/** Trimestre résolu (T), le journal étant produit au passage vers T+1. */
@@ -105,7 +153,27 @@ export interface HistoryEntry {
 	readonly economy: EconomyRecord;
 	/** Charge de travail, récupération, vieillissement et éventuel décès. */
 	readonly wellbeing: WellbeingRecord;
+	/** Événements créés (ou suites annulées) au passage à T+1. */
+	readonly events: readonly EventRecord[];
 }
+
+/** Choix appliqué pour un événement bloquant, exactement une fois. */
+export interface ChoiceRecord {
+	readonly type: 'event.resolved';
+	/** Trimestre pendant lequel le choix a été fait. */
+	readonly turn: Turn;
+	readonly instanceId: string;
+	readonly eventId: string;
+	readonly choiceId: string;
+	readonly changes: readonly ResourceChange[];
+	readonly gauges: readonly GaugeChange[];
+	readonly scheduled: ScheduledEvent | null;
+	/** Événements en attente annulés parce que devenus impossibles. */
+	readonly cancelled: readonly { readonly instanceId: string; readonly reason: string }[];
+	readonly deathCause: DeathCause | null;
+}
+
+export type JournalEntry = HistoryEntry | ChoiceRecord;
 
 export interface EndState {
 	/** Trimestre au cours duquel la carrière s'est terminée. */
@@ -126,7 +194,9 @@ export interface GameState {
 	readonly upgrades: readonly OwnedUpgrade[];
 	/** Prochain numéro d'instance (identifiants déterministes, jamais réutilisés). */
 	readonly nextInstanceNumber: number;
-	readonly history: readonly HistoryEntry[];
+	readonly events: EventsState;
+	/** Journal : trimestres résolus et choix, dans l'ordre chronologique. */
+	readonly history: readonly JournalEntry[];
 	readonly end: EndState | null;
 }
 
@@ -152,6 +222,7 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		resources: { ...content.balance.startingResources },
 		upgrades: [],
 		nextInstanceNumber: 1,
+		events: { pending: [], scheduled: [], occurrences: {} },
 		history: [],
 		end: null
 	};
