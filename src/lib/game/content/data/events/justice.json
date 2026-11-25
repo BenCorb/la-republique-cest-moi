@@ -1,0 +1,111 @@
+{
+	"events": [
+		{
+			"id": "justice.revelation",
+			"category": "justice",
+			"title": "Le dossier sort dans la presse",
+			"text": "Un hebdomadaire publie, sur quatre colonnes et avec une photo prise sous votre plus mauvais profil, le détail d’une affaire qui vous concerne. Le parquet annonce l’ouverture d’une enquête préliminaire, « comme il se doit ».",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 40,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [],
+			"choices": [
+				{
+					"id": "plot",
+					"label": "Dénoncer un complot politico-judiciaire",
+					"hints": ["Vos militants serrent les rangs", "Les magistrats lisent aussi les journaux"],
+					"costs": [],
+					"effects": [
+						{ "op": "addSupport", "group": "support.activists", "value": 4 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": -2 },
+						{ "op": "addStat", "stat": "player.exposure", "value": 6 }
+					]
+				},
+				{
+					"id": "lawyer",
+					"label": "Engager un ténor du barreau",
+					"hints": ["Une défense solide", "Des honoraires à la hauteur du talent"],
+					"costs": [{ "resource": "personalCashCents", "amount": 500000 }],
+					"effects": [
+						{ "op": "addStat", "stat": "player.defense", "value": 40 },
+						{ "op": "addStat", "stat": "player.stress", "value": 2 }
+					]
+				},
+				{
+					"id": "admin_error",
+					"label": "Reconnaître une « simple erreur administrative »",
+					"hints": ["Les classes moyennes apprécient la franchise", "Les militants, moins"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.defense", "value": 15 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+						{ "op": "addSupport", "group": "support.activists", "value": -2 }
+					]
+				},
+				{
+					"id": "silence",
+					"label": "Ne faire aucun commentaire",
+					"hints": ["Rien ne s’arrange, rien ne s’aggrave"],
+					"costs": [],
+					"effects": [{ "op": "addStat", "stat": "player.defense", "value": 5 }]
+				}
+			]
+		},
+		{
+			"id": "justice.entourage_revelation",
+			"category": "justice",
+			"title": "Un proche dans la tourmente",
+			"text": "Les enquêteurs s’intéressent de près à {defendant}. Les journalistes, eux, s’intéressent surtout à ce que vous saviez, et depuis quand.",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 40,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [{ "role": "defendant", "tags": ["staff"] }],
+			"choices": [
+				{
+					"id": "stand_by",
+					"label": "Défendre {defendant} publiquement",
+					"hints": ["Une loyauté remarquée", "Vous voilà sur la photo"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "defendant",
+							"value": 15,
+							"memory": "Vous l’avez défendu publiquement quand l’enquête a commencé."
+						},
+						{ "op": "addStat", "stat": "player.exposure", "value": 5 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": -2 }
+					]
+				},
+				{
+					"id": "distance",
+					"label": "Découvrir les faits « avec stupéfaction »",
+					"hints": ["Vous restez à l’écart", "{defendant} s’en souviendra"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "defendant",
+							"value": -20,
+							"memory": "Vous avez découvert ses agissements « avec stupéfaction »."
+						},
+						{ "op": "addSupport", "group": "support.middle_class", "value": 1 }
+					]
+				},
+				{
+					"id": "trust_justice",
+					"label": "Laisser la justice faire son travail",
+					"hints": ["La formule consacrée"],
+					"costs": [],
+					"effects": []
+				}
+			]
+		}
+	]
+}

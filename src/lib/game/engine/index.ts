@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.20.0';
+export const RULES_VERSION = '0.21.0';
 
 export {
 	START_YEAR,
@@ -51,6 +51,12 @@ export {
 	type EventRecord,
 	type EventsState,
 	type Fact,
+	type CaseEventKind,
+	type CaseOutcome,
+	type CaseStage,
+	type JusticeRecord,
+	type LegalCase,
+	type Sentence,
 	type JournalEntry,
 	type ScheduledEvent,
 	type EconomyRecord,
@@ -151,6 +157,7 @@ export {
 	conflictingMandates,
 	createCalendar,
 	holdIssue,
+	isIneligible,
 	isCareerEffect,
 	mainMandate,
 	mandateIncome,
@@ -251,10 +258,16 @@ export {
 	type WellbeingForecast,
 	type WellbeingResolution
 } from './health.ts';
-export { careerSummary, type CareerSummary } from './selectors.ts';
+export { careerSummary, type CareerSummary, type EndCause } from './selectors.ts';
 export {
+	caseInstanceId,
+	convictionPercent,
 	createFact,
 	currentJudicialRisk,
+	dismissalPercent,
+	openCases,
+	resolveJustice,
+	revealPercent,
 	divertedFunds,
 	factInstanceId,
 	judicialRisk,
@@ -280,6 +293,7 @@ export { transition } from './turn.ts';
 export {
 	accelerate,
 	accelerationAlerts,
+	caseStepMessage,
 	type AccelerationAlert,
 	type AccelerationAlertKind,
 	type AccelerationRequest,

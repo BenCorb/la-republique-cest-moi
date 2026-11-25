@@ -8,6 +8,7 @@ import {
 	createGame,
 	currentJudicialRisk,
 	divertedFunds,
+	evaluateCondition,
 	judicialRisk,
 	readStat,
 	referenceExposure,
@@ -170,7 +171,7 @@ describe('risque judiciaire', () => {
 	const rules = fixtureJustice.balance;
 
 	it('vaut zéro sans fait, quelle que soit l’exposition', () => {
-		expect(judicialRisk([], 100, 10, shady)).toEqual({
+		expect(judicialRisk([], [], 100, 10, shady)).toEqual({
 			value: 0,
 			contributions: [],
 			exposureBonus: 0
@@ -178,26 +179,26 @@ describe('risque judiciaire', () => {
 	});
 
 	it('compte la gravité d’un fait récent, à moitié quand le joueur n’est que complice', () => {
-		const author = judicialRisk([fact()], 0, 0, shady);
+		const author = judicialRisk([fact()], [], 0, 0, shady);
 		expect(author.value).toBe(2 * rules.riskPerSeverity);
-		const accomplice = judicialRisk([fact({ authorId: 'test.cousin' })], 0, 0, shady);
+		const accomplice = judicialRisk([fact({ authorId: 'test.cousin' })], [], 0, 0, shady);
 		expect(accomplice.value).toBe(rules.riskPerSeverity);
 	});
 
 	it('décroît jusqu’à la prescription', () => {
-		const half = judicialRisk([fact()], 0, rules.prescriptionTurns / 2, shady);
+		const half = judicialRisk([fact()], [], 0, rules.prescriptionTurns / 2, shady);
 		expect(half.value).toBe(rules.riskPerSeverity);
-		expect(judicialRisk([fact()], 0, rules.prescriptionTurns, shady).value).toBe(0);
+		expect(judicialRisk([fact()], [], 0, rules.prescriptionTurns, shady).value).toBe(0);
 	});
 
 	it('est majoré par l’exposition médiatique et reste borné à 100', () => {
-		const exposed = judicialRisk([fact()], 100, 0, shady);
+		const exposed = judicialRisk([fact()], [], 100, 0, shady);
 		expect(exposed.exposureBonus).toBe(8);
 		expect(exposed.value).toBe(24);
 		const many = Array.from({ length: 10 }, (_, index) =>
 			fact({ factId: `fact.${index + 1}`, severity: 3 })
 		);
-		expect(judicialRisk(many, 100, 0, shady).value).toBe(100);
+		expect(judicialRisk(many, [], 100, 0, shady).value).toBe(100);
 	});
 
 	it('se lit sur l’état courant sans être stocké', () => {
@@ -210,7 +211,6 @@ describe('risque judiciaire', () => {
 
 describe('exposition médiatique', () => {
 	const drifting = withJustice({
-		...fixtureJustice.balance,
 		baseExposure: 5,
 		campaignExposure: 10,
 		mandateExposure: { 'mandate.mayor': 20, 'mandate.councillor': 10 },
@@ -325,5 +325,211 @@ describe('projection de l’interface', () => {
 		const view = projectView(later, [], shady).justice;
 		expect(view.facts[0]).toMatchObject({ prescribed: true, riskPoints: 0 });
 		expect(view.risk.value).toBe(0);
+	});
+});
+
+describe('dossiers judiciaires', () => {
+	/** Révélation certaine, enquête sans classement, condamnation certaine sans défense. */
+	const court = (changes: Partial<Content['justice']> = {}): Content =>
+		withJustice({ revealPercentPerSeverity: 100, ...changes });
+	const withCourt = (changes: Partial<Content['justice']> = {}): Content => {
+		const base = court(changes);
+		return { ...shady, justice: base.justice };
+	};
+
+	/** Valide des trimestres vides en tranchant les décisions par le choix donné. */
+	function advance(
+		state: GameState,
+		content: Content,
+		turns: number,
+		choiceId = 'refuse'
+	): GameState {
+		let current = state;
+		for (let index = 0; index < turns && current.phase !== 'ended'; index += 1) {
+			if (current.phase === 'planning') {
+				current = ok(transition(current, commitTurn(), content), content).state;
+			}
+			while (current.phase === 'decision') {
+				const instance = current.events.pending[0]!;
+				const definition = content.events[instance.eventId]!;
+				const ids = definition.blocking ? definition.choices.map((choice) => choice.id) : [];
+				const id = ids.includes(choiceId) ? choiceId : ids.at(-1)!;
+				current = ok(
+					transition(current, chooseEventCommand(instance.instanceId, id), content),
+					content
+				).state;
+			}
+		}
+		return current;
+	}
+
+	const quiet = (content: Content): Content => ({
+		...content,
+		balance: { ...content.balance, events: { ordinaryDrawsPerTurn: 0, ordinaryEventChance: 0 } }
+	});
+	/**
+	 * Partie avec un fait (gravité 2) commis pendant le trimestre 1, puis un trimestre
+	 * calme : le fait, plus ancien que le trimestre en cours, peut désormais être révélé.
+	 */
+	function withFact(content: Content, choiceId = 'accept'): GameState {
+		const loud = { ...content, balance: shady.balance };
+		const state = choose(offered(loud), choiceId, loud);
+		return ok(transition(state, commitTurn(), content), content).state;
+	}
+
+	it('révèle un fait à la frontière suivante et présente la révélation', () => {
+		const content = quiet(withCourt());
+		const before = withFact(content);
+		const after = ok(transition(before, commitTurn(), content), content).state;
+		expect(after.cases).toEqual([
+			{
+				caseId: 'case.1',
+				factId: 'fact.1',
+				defendantId: null,
+				openedTurn: before.turn,
+				stage: 'investigation',
+				dueTurn: before.turn + 2,
+				outcome: null,
+				closedTurn: null,
+				sentence: null
+			}
+		]);
+		expect(after.phase).toBe('decision');
+		expect(after.events.pending[0]?.eventId).toBe('test.revelation');
+		const entry = after.history.at(-1)!;
+		expect(entry).toMatchObject({ type: 'turn.resolved' });
+		if (entry.type !== 'turn.resolved') return;
+		expect(entry.justice?.cases).toEqual([{ caseId: 'case.1', kind: 'revealed' }]);
+		expect(after.player.exposure).toBe(before.player.exposure + 20);
+		// Un fait révélé relève de son dossier : il ne compte plus dans le risque.
+		expect(currentJudicialRisk(after, content).value).toBe(0);
+		expect(readStat(after, 'player.openCases')).toBe(1);
+	});
+
+	it('ne révèle pas un fait commis pendant le trimestre ni un fait prescrit', () => {
+		const content = quiet(withCourt());
+		const fresh = withFact(content);
+		const sameTurn = { ...fresh, facts: [{ ...fresh.facts[0]!, turn: fresh.turn }] };
+		expect(ok(transition(sameTurn, commitTurn(), content), content).state.cases).toEqual([]);
+		const prescribing = quiet(withCourt({ prescriptionTurns: 1 }));
+		const prescribed = withFact(prescribing);
+		expect(ok(transition(prescribed, commitTurn(), prescribing), prescribing).state.cases).toEqual(
+			[]
+		);
+	});
+
+	it('mène de l’enquête à la condamnation définitive, après appel, avec amende et inéligibilité', () => {
+		const content = quiet(withCourt());
+		let state = withFact(content);
+		state = advance(state, content, 1, 'deny');
+		expect(state.cases[0]?.stage).toBe('investigation');
+		state = advance(state, content, 2);
+		expect(state.cases[0]?.stage).toBe('indicted');
+		state = advance(state, content, 2);
+		expect(state.cases[0]?.stage).toBe('appeal');
+		const cash = state.resources.personalCashCents;
+		state = advance(state, content, 3);
+		const closed = state.cases[0]!;
+		expect(closed).toMatchObject({
+			stage: 'closed',
+			outcome: 'convicted',
+			sentence: { fineCents: 5_000, ineligibilityTurns: 8, prison: 'suspended' }
+		});
+		expect(state.resources.personalCashCents).toBe(Math.max(0, cash - 5_000));
+		expect(state.player.ineligibleUntil).toBe(closed.closedTurn! + 1 + 8);
+		expect(readStat(state, 'player.ineligible')).toBe(1);
+		expect(readStat(state, 'player.openCases')).toBe(0);
+		const kinds = state.history.flatMap((entry) =>
+			entry.type === 'turn.resolved' ? (entry.justice?.cases.map((item) => item.kind) ?? []) : []
+		);
+		expect(kinds).toEqual(['revealed', 'indicted', 'appealed', 'convicted']);
+		const view = projectView(state, [], content).justice;
+		expect(view.cases[0]).toMatchObject({
+			offense: 'Financement de test',
+			defendant: 'vous',
+			status: 'condamnation définitive',
+			due: null,
+			closed: true
+		});
+		expect(view.cases[0]?.sentence).toContain('inéligibilité de 8 trimestres');
+		expect(view.ineligibleUntil).not.toBeNull();
+		expect(view.facts[0]?.inCase).toBe(true);
+		const summary = projectView({ ...state, phase: 'ended' }, [], content);
+		expect(
+			summary.journal.some((turn) =>
+				turn.lines.some((line) => line.text.includes('mise en examen'))
+			)
+		).toBe(true);
+		expect(state.phase).not.toBe('ended');
+	});
+
+	it('classe sans suite ou relaxe selon la défense', () => {
+		const dismissing = quiet(withCourt({ dismissalBasePercent: 100 }));
+		const dismissed = advance(withFact(dismissing), dismissing, 3);
+		expect(dismissed.cases[0]).toMatchObject({ outcome: 'dismissed', sentence: null });
+
+		const content = quiet(withCourt());
+		let state = advance(withFact(content), content, 3);
+		expect(state.cases[0]?.stage).toBe('indicted');
+		// Défense maximale : la condamnation n'est plus certaine, elle devient impossible ici.
+		state = { ...state, player: { ...state.player, defense: 100 } };
+		state = advance(state, content, 2);
+		expect(state.cases[0]).toMatchObject({ outcome: 'acquitted', sentence: null });
+	});
+
+	it('use la défense avec un dossier ouvert et la remet à zéro sans dossier', () => {
+		const content = quiet(withCourt());
+		const open = advance(withFact(content), content, 1, 'lawyer');
+		expect(open.player.defense).toBe(50);
+		const next = ok(transition(open, commitTurn(), content), content).state;
+		expect(next.player.defense).toBe(45);
+		const idle = createGame({ seed: 'défense' }, content);
+		const reset = ok(
+			transition({ ...idle, player: { ...idle.player, defense: 30 } }, commitTurn(), content),
+			content
+		).state;
+		expect(reset.player.defense).toBe(0);
+	});
+
+	it('met fin à la carrière par une peine de prison ferme', () => {
+		const content = quiet(withCourt());
+		let state = withFact(content);
+		state = { ...state, facts: [{ ...state.facts[0]!, severity: 3 }] };
+		state = advance(state, content, 12);
+		expect(state.phase).toBe('ended');
+		expect(state.end).toMatchObject({ reason: 'prison', caseId: 'case.1' });
+		expect(state.cases[0]?.sentence?.prison).toBe('firm');
+		const summary = projectView(state, [], content).summary;
+		expect(summary?.cause).toBe('Condamnation définitive à de la prison ferme.');
+		expect(gameStateSchema.parse(JSON.parse(JSON.stringify(state)))).toStrictEqual(state);
+	});
+
+	it('poursuit le proche auteur du fait, sans appel ni peine pour le joueur', () => {
+		const content = quiet(withCourt());
+		let state = withFact(content, 'delegate');
+		const author = state.facts[0]!.authorId!;
+		state = ok(transition(state, commitTurn(), content), content).state;
+		expect(state.cases[0]?.defendantId).toBe(author);
+		expect(state.events.pending[0]).toMatchObject({
+			eventId: 'test.entourage_revelation',
+			actors: { defendant: author }
+		});
+		state = advance(state, content, 6, 'distance');
+		expect(state.cases[0]).toMatchObject({ outcome: 'convicted', defendantId: author });
+		expect(state.cases[0]?.sentence).toMatchObject({ fineCents: 0, ineligibilityTurns: 0 });
+		expect(state.player.ineligibleUntil).toBeNull();
+		expect(readStat(state, 'player.openCases')).toBe(0);
+	});
+
+	it('refuse la candidature et l’attribution d’un mandat pendant l’inéligibilité', () => {
+		const content = quiet(withCourt());
+		const base = createGame({ seed: 'inéligible' }, content);
+		const banned = { ...base, player: { ...base.player, ineligibleUntil: base.turn + 40 } };
+		expect(evaluateCondition(banned, { op: 'canHoldMandate', mandate: 'mandate.councillor' })).toBe(
+			false
+		);
+		expect(evaluateCondition(base, { op: 'canHoldMandate', mandate: 'mandate.councillor' })).toBe(
+			true
+		);
 	});
 });

@@ -69,7 +69,31 @@
 			<div class="grid gap-4 sm:grid-cols-2">
 				<Gauge name="Exposition médiatique" gauge={view.justice.exposure} />
 				<Gauge name="Risque judiciaire" gauge={view.justice.risk} />
+				{#if view.justice.cases.some((legalCase) => !legalCase.closed)}
+					<Gauge name="Défense" gauge={view.justice.defense} />
+				{/if}
 			</div>
+			{#if view.justice.ineligibleUntil}
+				<p class="text-sm font-semibold text-danger" data-testid="ineligible">
+					Inéligible jusqu’au {view.justice.ineligibleUntil} : aucune candidature ni fonction.
+				</p>
+			{/if}
+			{#if view.justice.cases.length > 0}
+				<ul class="flex flex-col gap-2 text-sm" data-testid="cases">
+					{#each view.justice.cases as legalCase (legalCase.key)}
+						<li class="border-t border-line pt-2" class:text-muted={legalCase.closed}>
+							<span class="font-medium">{legalCase.offense}</span>
+							({legalCase.defendant}, révélé au {legalCase.opened}) : {legalCase.status}{legalCase.due
+								? `, échéance au ${legalCase.due}`
+								: ''}{legalCase.sentence ? ` — ${legalCase.sentence}` : ''}.
+						</li>
+					{/each}
+				</ul>
+				<p class="text-xs text-muted">
+					Préparez votre défense (agenda, conseil juridique) : elle pèse sur le classement et sur le
+					jugement, et s’use avec le temps.
+				</p>
+			{/if}
 			<p class="text-xs text-muted">
 				Vos fonctions et vos campagnes vous mettent en vue ; l’exposition retombe peu à peu. Le
 				risque judiciaire vient des faits inscrits au registre : il baisse avec le temps jusqu’à la
@@ -99,7 +123,11 @@
 								</th>
 								<td class="py-1.5">{fact.involvement}</td>
 								<td class="py-1.5 text-right tabular-nums">
-									{fact.prescribed ? 'prescrit' : `+ ${fact.riskPoints}`}
+									{fact.inCase
+										? 'en justice'
+										: fact.prescribed
+											? 'prescrit'
+											: `+ ${fact.riskPoints}`}
 								</td>
 							</tr>
 						{/each}

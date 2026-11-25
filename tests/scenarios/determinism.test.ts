@@ -69,6 +69,7 @@ describe('scénario : passage du temps', () => {
 				supports: [],
 				deadlines: { mandates: [], ballots: [], campaigns: [], people: [] },
 				exposure: 0,
+				justice: { cases: [], changes: [], gauges: [], politics: [] },
 				events: []
 			}
 		]);

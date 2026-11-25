@@ -477,6 +477,45 @@ export const fixtureEvents = {
 	'events/test.json': {
 		events: [
 			{
+				id: 'test.revelation',
+				category: 'press',
+				title: 'Révélations',
+				text: 'Un dossier vous concernant est révélé.',
+				blocking: true,
+				trigger: 'followUp',
+				weight: 0,
+				priority: 30,
+				cooldownTurns: 0,
+				unique: false,
+				actors: [],
+				choices: [
+					{
+						id: 'lawyer',
+						label: 'Prendre un avocat',
+						hints: ['Défense renforcée'],
+						costs: [],
+						effects: [{ op: 'addStat', stat: 'player.defense', value: 50 }]
+					},
+					{ id: 'deny', label: 'Nier', hints: [], costs: [], effects: [] }
+				]
+			},
+			{
+				id: 'test.entourage_revelation',
+				category: 'press',
+				title: 'Un proche mis en cause',
+				text: '{defendant} est mis en cause.',
+				blocking: true,
+				trigger: 'followUp',
+				weight: 0,
+				priority: 30,
+				cooldownTurns: 0,
+				unique: false,
+				actors: [{ role: 'defendant', tags: ['family'] }],
+				choices: [
+					{ id: 'distance', label: 'Prendre ses distances', hints: [], costs: [], effects: [] }
+				]
+			},
+			{
 				id: 'test.shady_offer',
 				category: 'opportunity',
 				title: 'Une offre douteuse',
@@ -835,7 +874,49 @@ export const fixtureJustice = {
 		baseExposure: 0,
 		campaignExposure: 0,
 		mandateExposure: {},
-		exposureDriftPercent: 0
+		exposureDriftPercent: 0,
+		// Aucune révélation par défaut : les tests de dossiers l'activent (`withJustice`).
+		revealPercentPerSeverity: 0,
+		investigationTurns: { min: 2, max: 2 },
+		trialDelayTurns: { min: 2, max: 2 },
+		appealTurns: { min: 3, max: 3 },
+		dismissalBasePercent: 0,
+		dismissalPerSeverityPercent: 0,
+		defenseDismissalPercent: 0,
+		convictionPercentBySeverity: [100, 100, 100],
+		defenseConvictionPercent: 100,
+		sentences: [
+			{
+				fineCents: { min: 1_000, max: 1_000 },
+				ineligibilityTurns: { min: 0, max: 0 },
+				prison: 'none',
+				firmPrisonPercent: 0
+			},
+			{
+				fineCents: { min: 5_000, max: 5_000 },
+				ineligibilityTurns: { min: 8, max: 8 },
+				prison: 'suspended',
+				firmPrisonPercent: 0
+			},
+			{
+				fineCents: { min: 10_000, max: 10_000 },
+				ineligibilityTurns: { min: 20, max: 20 },
+				prison: 'firm_possible',
+				firmPrisonPercent: 100
+			}
+		],
+		revelationExposure: 10,
+		revelationSupport: 2,
+		revelationStress: 4,
+		indictmentStress: 3,
+		indictmentSupport: 1,
+		convictionSupport: 3,
+		convictionStress: 5,
+		acquittalRelief: 5,
+		entourageImpactPercent: 50,
+		defenseDecayPercent: 10,
+		revelationEvent: 'test.revelation',
+		entourageRevelationEvent: 'test.entourage_revelation'
 	}
 };
 

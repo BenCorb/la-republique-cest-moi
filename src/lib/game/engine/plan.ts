@@ -397,7 +397,8 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 										campaigns: workingCareer.campaigns,
 										staff: workingEntourage.staff,
 										institutions: workingCareer.institutions,
-										facts: state.facts
+										facts: state.facts,
+										cases: state.cases
 									},
 									content
 								)
@@ -455,7 +456,8 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			campaigns: workingCareer.campaigns,
 			institutions: workingCareer.institutions,
 			staff: workingEntourage.staff,
-			facts: state.facts
+			facts: state.facts,
+			cases: state.cases
 		};
 		if (requires && !evaluateCondition(context, requires)) {
 			fail('condition_not_met', unavailableReason ?? `« ${label} » n’est pas disponible.`);

@@ -41,6 +41,74 @@
 			"mandate.senator": 20,
 			"mandate.minister": 50
 		},
-		"exposureDriftPercent": 25
+		"exposureDriftPercent": 25,
+		"revealPercentPerSeverity": 2,
+		"investigationTurns": {
+			"min": 2,
+			"max": 6
+		},
+		"trialDelayTurns": {
+			"min": 2,
+			"max": 4
+		},
+		"appealTurns": {
+			"min": 4,
+			"max": 8
+		},
+		"dismissalBasePercent": 45,
+		"dismissalPerSeverityPercent": 10,
+		"defenseDismissalPercent": 20,
+		"convictionPercentBySeverity": [40, 55, 70],
+		"defenseConvictionPercent": 30,
+		"sentences": [
+			{
+				"fineCents": {
+					"min": 200000,
+					"max": 800000
+				},
+				"ineligibilityTurns": {
+					"min": 0,
+					"max": 0
+				},
+				"prison": "none",
+				"firmPrisonPercent": 0
+			},
+			{
+				"fineCents": {
+					"min": 1000000,
+					"max": 3000000
+				},
+				"ineligibilityTurns": {
+					"min": 4,
+					"max": 16
+				},
+				"prison": "suspended",
+				"firmPrisonPercent": 0
+			},
+			{
+				"fineCents": {
+					"min": 3000000,
+					"max": 10000000
+				},
+				"ineligibilityTurns": {
+					"min": 12,
+					"max": 40
+				},
+				"prison": "firm_possible",
+				"firmPrisonPercent": 50
+			}
+		],
+		"revelationExposure": 10,
+		"revelationSupport": 2,
+		"revelationStress": 4,
+		"indictmentStress": 3,
+		"indictmentSupport": 1,
+		"convictionSupport": 3,
+		"convictionStress": 5,
+		"acquittalRelief": 5,
+		"entourageImpactPercent": 50,
+		"defenseDecayPercent": 10,
+		"revelationEvent": "justice.revelation",
+		"entourageRevelationEvent": "justice.entourage_revelation"
 	}
 }

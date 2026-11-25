@@ -15,7 +15,7 @@ import { formatTurn } from './calendar.ts';
 import { candidacyIssue, runningCampaigns } from './career.ts';
 import { commitTurn, type PlanStep, type TurnPlan } from './commands.ts';
 import { carryOverPlan, previewPlan, type PlanIssue } from './plan.ts';
-import type { GameState, HistoryEntry, PoliticalChange } from './state.ts';
+import type { CaseEventKind, GameState, HistoryEntry, PoliticalChange } from './state.ts';
 import { transition } from './turn.ts';
 
 export type AccelerationStopReason =
@@ -25,7 +25,8 @@ export type AccelerationStopReason =
  * Origine d'une alerte : prévision du plan, santé, échéance électorale,
  * carrière (résultat, mandat), entourage ou finances.
  */
-export type AccelerationAlertKind = 'plan' | 'health' | 'deadline' | 'career' | 'staff' | 'finance';
+export type AccelerationAlertKind =
+	'plan' | 'health' | 'deadline' | 'career' | 'staff' | 'finance' | 'justice';
 
 export interface AccelerationAlert {
 	readonly id: string;
@@ -64,6 +65,7 @@ function quarterPolitics(entry: HistoryEntry): PoliticalChange[] {
 	return [
 		...entry.steps.flatMap((step) => step.politics),
 		...(entry.deadlines?.mandates ?? []),
+		...(entry.justice?.politics ?? []),
 		...entry.events.flatMap((event) => event.politics)
 	];
 }
@@ -117,6 +119,15 @@ function quarterAlerts(state: GameState, content: Content): AccelerationAlert[] 
 	for (const departure of entry.staff?.departures ?? []) {
 		alerts.push(staffLeftAlert(departure.characterId, departure.postId, state, content));
 	}
+	// Étapes des dossiers judiciaires (la révélation arrête déjà l'accélération par sa décision).
+	for (const step of entry.justice?.cases ?? []) {
+		if (step.kind === 'revealed') continue;
+		alerts.push({
+			id: `case:${step.caseId}:${step.kind}`,
+			kind: 'justice',
+			message: caseStepMessage(step.caseId, step.kind, state, content)
+		});
+	}
 	for (const postId of entry.staff?.shortlisted ?? []) {
 		alerts.push({
 			id: `shortlist:${postId}:${entry.turn}`,
@@ -128,6 +139,32 @@ function quarterAlerts(state: GameState, content: Content): AccelerationAlert[] 
 	return alerts.filter(
 		(alert, index) => alerts.findIndex((other) => other.id === alert.id) === index
 	);
+}
+
+const CASE_STEP_LABELS: { readonly [K in CaseEventKind]: string } = {
+	revealed: 'révélé',
+	dismissed: 'classé sans suite',
+	indicted: 'mise en examen, procès à venir',
+	appealed: 'condamnation en première instance, appel en cours',
+	acquitted: 'relaxe',
+	convicted: 'condamnation définitive'
+};
+
+/** Message d'une étape de dossier : infraction, personne poursuivie, étape. */
+export function caseStepMessage(
+	caseId: string,
+	kind: CaseEventKind,
+	state: GameState,
+	content: Content
+): string {
+	const legalCase = state.cases.find((entry) => entry.caseId === caseId);
+	const fact = state.facts.find((entry) => entry.factId === legalCase?.factId);
+	const offense = content.offenses[fact?.offenseId ?? '']?.label ?? 'Affaire';
+	const who =
+		legalCase?.defendantId === null || legalCase === undefined
+			? ''
+			: ` (${state.characters[legalCase.defendantId]?.name ?? legalCase.defendantId})`;
+	return `${offense}${who} : ${CASE_STEP_LABELS[kind]}.`;
 }
 
 function staffLeftAlert(

@@ -244,6 +244,15 @@ export function applyStaffEffect(
 }
 
 /** Départ d'un collaborateur qui tient un rôle d'événement (débauchage). */
+/** Départ d'un collaborateur condamné (P3-01) : il démissionne. */
+export function staffLeavesAfterConviction(
+	parts: EntourageParts,
+	characterId: string,
+	turn: Turn
+): { parts: EntourageParts; changes: PoliticalChange[] } {
+	return leave(parts, characterId, 'resigned', turn);
+}
+
 export function staffLeavesByEvent(
 	parts: EntourageParts,
 	characterId: string,

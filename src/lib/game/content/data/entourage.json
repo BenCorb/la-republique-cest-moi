@@ -180,12 +180,17 @@
 				{
 					"id": "mission.legal.shield",
 					"label": "Désamorcer les ennuis",
-					"description": "Traite courriers anonymes et menaces de procès avant qu’ils ne vous empêchent de dormir.",
+					"description": "Traite courriers anonymes et menaces de procès avant qu’ils ne vous empêchent de dormir, et prépare votre défense si un dossier vous vise.",
 					"effects": [
 						{
 							"op": "addStat",
 							"stat": "player.stress",
 							"value": -1
+						},
+						{
+							"op": "addStat",
+							"stat": "player.defense",
+							"value": 5
 						}
 					],
 					"timeBonus": 0,

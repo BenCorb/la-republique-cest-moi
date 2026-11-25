@@ -230,7 +230,7 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 		];
 		const seen = new Set<string>();
 		strategies.forEach((wishes, strategy) => {
-			for (let seed = 0; seed < 40; seed += 1) {
+			for (let seed = 0; seed < 60; seed += 1) {
 				const state = career(`atteinte-${strategy}-${seed}`, wishes, 400, seed);
 				for (const entry of quarters(state.history)) {
 					for (const event of entry.events) {

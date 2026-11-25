@@ -19,7 +19,7 @@ import {
 import { RNG_ALGORITHM, validateSeed } from './random.ts';
 import { activeMandates, conflictingMandates, cumulatedMandates } from './career.ts';
 import { computePopularity } from './supports.ts';
-import { factInstanceId } from './justice.ts';
+import { caseInstanceId, factInstanceId } from './justice.ts';
 import { START_TURN, STATE_SCHEMA_VERSION, type GameState } from './state.ts';
 
 const PHASES = new Set(['planning', 'decision', 'ended']);
@@ -57,7 +57,7 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
 		violations.push(`naissance invalide : ${state.player.birthTurn}`);
 	}
 
-	for (const gauge of ['health', 'stress', 'exposure'] as const) {
+	for (const gauge of ['health', 'stress', 'exposure', 'defense'] as const) {
 		const value = state.player[gauge];
 		if (!Number.isSafeInteger(value) || value < GAUGE_MIN || value > GAUGE_MAX) {
 			violations.push(`jauge invalide : ${gauge} = ${value}`);
@@ -123,7 +123,56 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
 	violations.push(...checkWorldInvariants(state));
 	violations.push(...checkCareerInvariants(state));
 	violations.push(...checkFactInvariants(state));
+	violations.push(...checkCaseInvariants(state));
 	if (content) violations.push(...checkContentReferences(state, content));
+	return violations;
+}
+
+/** Dossiers : rangs en séquence, un dossier par fait, étapes et issues cohérentes. */
+function checkCaseInvariants(state: GameState): string[] {
+	const violations: string[] = [];
+	const seen = new Set<string>();
+	state.cases.forEach((legalCase, index) => {
+		const id = legalCase.caseId;
+		if (id !== caseInstanceId(index + 1)) violations.push(`dossier hors séquence : ${id}`);
+		const fact = state.facts.find((entry) => entry.factId === legalCase.factId);
+		if (!fact) violations.push(`fait inconnu pour ${id} : ${legalCase.factId}`);
+		else if (fact.authorId !== legalCase.defendantId) {
+			violations.push(`personne poursuivie incohérente : ${id}`);
+		}
+		if (seen.has(legalCase.factId))
+			violations.push(`fait poursuivi deux fois : ${legalCase.factId}`);
+		seen.add(legalCase.factId);
+		if (legalCase.openedTurn > state.turn || (fact && legalCase.openedTurn <= fact.turn)) {
+			violations.push(`date d’ouverture invalide : ${id}`);
+		}
+		const closed = legalCase.stage === 'closed';
+		if (closed !== (legalCase.outcome !== null) || closed !== (legalCase.closedTurn !== null)) {
+			violations.push(`clôture incohérente : ${id}`);
+		}
+		if (closed === (legalCase.dueTurn !== null)) violations.push(`échéance incohérente : ${id}`);
+		if (
+			state.phase !== 'ended' &&
+			!closed &&
+			legalCase.dueTurn !== null &&
+			legalCase.dueTurn < state.turn
+		) {
+			violations.push(`étape échue non traitée : ${id}`);
+		}
+		if ((legalCase.outcome === 'convicted') !== (legalCase.sentence !== null)) {
+			violations.push(`peine incohérente : ${id}`);
+		}
+		if (legalCase.stage === 'appeal' && legalCase.defendantId !== null) {
+			violations.push(`appel d’un proche : ${id}`);
+		}
+	});
+	const end = state.end;
+	if (
+		end?.reason === 'prison' &&
+		!state.cases.some((entry) => entry.caseId === end.caseId && entry.sentence?.prison === 'firm')
+	) {
+		violations.push('fin de carrière en prison sans peine ferme');
+	}
 	return violations;
 }
 

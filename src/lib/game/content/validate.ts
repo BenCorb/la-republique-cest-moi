@@ -870,7 +870,9 @@ function crossCheckEvents(
 	cast: readonly CastMember[],
 	knownIds: Set<string>,
 	traitIds: ReadonlySet<string> = new Set(),
-	dynamicTags: ReadonlySet<string> = new Set()
+	dynamicTags: ReadonlySet<string> = new Set(),
+	/** Suites déclenchées par le moteur lui-même (révélations judiciaires, P3-01). */
+	engineFollowUps: ReadonlySet<string> = new Set()
 ): ContentIssue[] {
 	const issues: ContentIssue[] = [];
 	const eventIds = new Set(events.map(({ event }) => event.id));
@@ -1033,14 +1035,15 @@ function crossCheckEvents(
 		}
 	}
 
-	// Une suite `followUp` doit être atteignable par au moins un choix.
-	const reachable = new Set(
-		events.flatMap(({ event }) =>
+	// Une suite `followUp` doit être atteignable par au moins un choix ou par le moteur.
+	const reachable = new Set([
+		...engineFollowUps,
+		...events.flatMap(({ event }) =>
 			event.blocking
 				? event.choices.flatMap((choice) => (choice.followUp ? [choice.followUp.eventId] : []))
 				: []
 		)
-	);
+	]);
 	for (const { source, index, event } of events) {
 		if (event.trigger === 'followUp' && !reachable.has(event.id)) {
 			issues.push({
@@ -1142,6 +1145,10 @@ export function validateContent(raw: RawContent): ContentValidation {
 				'partner',
 				'child',
 				...(entourageCatalog.data.posts ?? []).map((post) => post.tag)
+			]),
+			new Set([
+				justiceCatalog.data.balance.revelationEvent,
+				justiceCatalog.data.balance.entourageRevelationEvent
 			])
 		)
 	);
@@ -1175,7 +1182,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 		elections: new Set(career.elections.map((election) => election.id)),
 		offenses: new Set(justiceCatalog.data.offenses.map((offense) => offense.id))
 	};
-	issues.push(...crossCheckJustice(justiceCatalog.data, refs, knownIds));
+	issues.push(...crossCheckJustice(justiceCatalog.data, refs, knownIds, sourcedEvents));
 	issues.push(...crossCheckPolitics(actionList, upgradeList, sourcedEvents, refs));
 	issues.push(
 		...crossCheckProfiles(
@@ -1302,9 +1309,45 @@ export function validateContent(raw: RawContent): ContentValidation {
 function crossCheckJustice(
 	justice: JusticeDefinition,
 	refs: Refs,
-	knownIds: Set<string>
+	knownIds: Set<string>,
+	events: readonly SourcedEvent[]
 ): ContentIssue[] {
 	const issues: ContentIssue[] = [];
+	const rules = justice.balance;
+	for (const key of ['investigationTurns', 'trialDelayTurns', 'appealTurns'] as const) {
+		if (rules[key].min < 1) {
+			issues.push({
+				source: 'justice.json',
+				path: `balance.${key}.min`,
+				message: 'une étape dure au moins un trimestre'
+			});
+		}
+	}
+	for (const [key, role] of [
+		['revelationEvent', null],
+		['entourageRevelationEvent', 'defendant']
+	] as const) {
+		const event = events.find((entry) => entry.event.id === rules[key])?.event;
+		if (!event) {
+			issues.push({
+				source: 'justice.json',
+				path: `balance.${key}`,
+				message: `événement inconnu : ${rules[key]}`
+			});
+		} else if (!event.blocking || event.trigger !== 'followUp') {
+			issues.push({
+				source: 'justice.json',
+				path: `balance.${key}`,
+				message: 'la révélation doit être un événement bloquant de type « followUp »'
+			});
+		} else if (role !== null && !event.actors.some((slot) => slot.role === role)) {
+			issues.push({
+				source: 'justice.json',
+				path: `balance.${key}`,
+				message: `l’événement doit avoir un rôle « ${role} »`
+			});
+		}
+	}
 	justice.offenses.forEach((offense, index) => {
 		if (knownIds.has(offense.id)) {
 			issues.push({

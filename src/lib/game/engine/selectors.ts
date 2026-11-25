@@ -5,11 +5,20 @@
 import type { Resources } from '../content/types.ts';
 import { ageAt, type Turn } from './calendar.ts';
 import type { DeathCause, GameState, HistoryEntry } from './state.ts';
+import { divertedFunds } from './justice.ts';
+
+/** Cause de fin de carrière : décès, ou prison ferme (P3-01). */
+export type EndCause = DeathCause | 'prison';
 
 /** Bilan minimal de carrière (enrichi par le bilan de fin, P1-08 puis V1). */
 export interface CareerSummary {
 	readonly ended: boolean;
-	readonly cause: DeathCause | null;
+	readonly cause: EndCause | null;
+	/** Dossiers judiciaires ouverts au cours de la carrière, et condamnations définitives. */
+	readonly cases: number;
+	readonly convictions: number;
+	/** Fonds détournés cumulés, en centimes (GDD §12). */
+	readonly divertedCents: number;
 	/** Trimestre de fin, ou trimestre courant si la carrière continue. */
 	readonly lastTurn: Turn;
 	readonly age: number;
@@ -36,7 +45,12 @@ export function careerSummary(state: GameState): CareerSummary {
 	const decisions = state.history.filter((entry) => entry.type === 'event.resolved');
 	return {
 		ended: state.end !== null,
-		cause: state.end?.cause ?? null,
+		cause: state.end ? (state.end.reason === 'prison' ? 'prison' : state.end.cause) : null,
+		cases: state.cases.filter((entry) => entry.defendantId === null).length,
+		convictions: state.cases.filter(
+			(entry) => entry.defendantId === null && entry.outcome === 'convicted'
+		).length,
+		divertedCents: divertedFunds(state.facts),
 		lastTurn,
 		age: ageAt(state.player.birthTurn, lastTurn),
 		quartersPlayed: quarters.length,

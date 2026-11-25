@@ -87,7 +87,7 @@ export type ResolvedEffect =
 export type FactEffect = Extract<Effect, { op: 'recordFact' }>;
 
 /** Champ de `PlayerState` portant une jauge. */
-export function gaugeKey(gauge: GaugeId): 'health' | 'stress' | 'exposure' {
+export function gaugeKey(gauge: GaugeId): 'health' | 'stress' | 'exposure' | 'defense' {
 	switch (gauge) {
 		case 'player.health':
 			return 'health';
@@ -95,6 +95,8 @@ export function gaugeKey(gauge: GaugeId): 'health' | 'stress' | 'exposure' {
 			return 'stress';
 		case 'player.exposure':
 			return 'exposure';
+		case 'player.defense':
+			return 'defense';
 		default: {
 			const unknown: never = gauge;
 			throw new Error(`Jauge inconnue : ${String(unknown)}`);

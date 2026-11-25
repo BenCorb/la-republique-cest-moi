@@ -42,6 +42,7 @@ import {
 	type JusticeBalance,
 	type JusticeDefinition,
 	type OffenseDefinition,
+	type SentenceRule,
 	type MandateDefinition,
 	type SupportGroupDefinition,
 	type SupportsBalance,
@@ -608,6 +609,17 @@ export const offenseSchema: z.ZodType<OffenseDefinition> = z.strictObject({
 	description: frenchText
 });
 
+const intRange = z
+	.strictObject({ min: nonNegativeInt, max: nonNegativeInt })
+	.refine((range) => range.min <= range.max, { message: 'min doit être inférieur ou égal à max' });
+
+const sentenceRuleSchema: z.ZodType<SentenceRule> = z.strictObject({
+	fineCents: intRange,
+	ineligibilityTurns: intRange,
+	prison: z.enum(['none', 'suspended', 'firm_possible']),
+	firmPrisonPercent: percent
+});
+
 export const justiceBalanceSchema: z.ZodType<JusticeBalance> = z.strictObject({
 	riskPerSeverity: gaugeValue,
 	accompliceRiskPercent: percent,
@@ -616,7 +628,29 @@ export const justiceBalanceSchema: z.ZodType<JusticeBalance> = z.strictObject({
 	baseExposure: gaugeValue,
 	campaignExposure: gaugeValue,
 	mandateExposure: z.record(contentId, gaugeValue),
-	exposureDriftPercent: percent
+	exposureDriftPercent: percent,
+	revealPercentPerSeverity: percent,
+	investigationTurns: intRange,
+	trialDelayTurns: intRange,
+	appealTurns: intRange,
+	dismissalBasePercent: percent,
+	dismissalPerSeverityPercent: percent,
+	defenseDismissalPercent: percent,
+	convictionPercentBySeverity: z.array(percent).length(FACT_SEVERITY_MAX),
+	defenseConvictionPercent: percent,
+	sentences: z.array(sentenceRuleSchema).length(FACT_SEVERITY_MAX),
+	revelationExposure: gaugeValue,
+	revelationSupport: gaugeValue,
+	revelationStress: gaugeValue,
+	indictmentStress: gaugeValue,
+	indictmentSupport: gaugeValue,
+	convictionSupport: gaugeValue,
+	convictionStress: gaugeValue,
+	acquittalRelief: gaugeValue,
+	entourageImpactPercent: percent,
+	defenseDecayPercent: percent,
+	revelationEvent: contentId,
+	entourageRevelationEvent: contentId
 });
 
 /** Registre des faits et jauges de la justice (`justice.json`, P3-01). */

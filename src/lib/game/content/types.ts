@@ -28,7 +28,16 @@ export type UpgradeFamily = (typeof UPGRADE_FAMILIES)[number];
  * L'exposition médiatique (P3-01) mesure la visibilité : elle amplifie le
  * risque judiciaire et revient vers une référence fixée par les fonctions.
  */
-export const GAUGE_IDS = ['player.health', 'player.stress', 'player.exposure'] as const;
+export const GAUGE_IDS = [
+	'player.health',
+	'player.stress',
+	'player.exposure',
+	/**
+	 * Préparation de la défense (P3-01) : avocats, conseil juridique et stratégie.
+	 * Elle pèse sur les décisions de justice et retombe sans dossier ouvert.
+	 */
+	'player.defense'
+] as const;
 export type GaugeId = (typeof GAUGE_IDS)[number];
 export const GAUGE_MIN = 0;
 export const GAUGE_MAX = 100;
@@ -109,7 +118,11 @@ export const STAT_IDS = [
 	/** Exposition médiatique, de 0 à 100 (P3-01). */
 	'player.exposure',
 	/** Nombre de faits du registre impliquant le joueur, comme auteur ou complice (P3-01). */
-	'player.facts'
+	'player.facts',
+	/** Dossiers judiciaires en cours visant le joueur (P3-01). */
+	'player.openCases',
+	/** 1 si le joueur est frappé d'inéligibilité, sinon 0 (P3-01). */
+	'player.ineligible'
 ] as const;
 export type StatId = (typeof STAT_IDS)[number];
 
@@ -269,6 +282,57 @@ export interface JusticeBalance {
 	readonly mandateExposure: Readonly<Record<string, number>>;
 	/** Part de l'écart à la référence résorbée à chaque trimestre, en %. */
 	readonly exposureDriftPercent: number;
+	/** Chance de révélation d'un fait, par trimestre et par point de gravité, en % (majorée par l'exposition). */
+	readonly revealPercentPerSeverity: number;
+	/** Durées des étapes, en trimestres : enquête, attente du procès, appel. */
+	readonly investigationTurns: IntRange;
+	readonly trialDelayTurns: IntRange;
+	readonly appealTurns: IntRange;
+	/** Classement sans suite : base, moins par point de gravité, plus la défense (à 100). */
+	readonly dismissalBasePercent: number;
+	readonly dismissalPerSeverityPercent: number;
+	readonly defenseDismissalPercent: number;
+	/** Probabilité de condamnation par gravité (index 0 : gravité 1), réduite par la défense (à 100). */
+	readonly convictionPercentBySeverity: readonly number[];
+	readonly defenseConvictionPercent: number;
+	/** Peines par gravité (index 0 : gravité 1). */
+	readonly sentences: readonly SentenceRule[];
+	/** Conséquences, par point de gravité sauf mention : révélation, mise en examen, verdict. */
+	readonly revelationExposure: number;
+	readonly revelationSupport: number;
+	readonly revelationStress: number;
+	readonly indictmentStress: number;
+	readonly indictmentSupport: number;
+	readonly convictionSupport: number;
+	/** Stress d'une condamnation (forfait). */
+	readonly convictionStress: number;
+	/** Stress retiré par un classement ou une relaxe (forfait). */
+	readonly acquittalRelief: number;
+	/** Part des conséquences subies par le joueur quand un proche est poursuivi, en %. */
+	readonly entourageImpactPercent: number;
+	/** Baisse de la défense par trimestre avec un dossier ouvert, en % (sans dossier : retour à 0). */
+	readonly defenseDecayPercent: number;
+	/** Événements bloquants présentés à la révélation : dossier du joueur, puis d'un proche. */
+	readonly revelationEvent: string;
+	readonly entourageRevelationEvent: string;
+}
+
+/** Intervalle d’entiers, bornes incluses (trimestres, centimes). */
+export interface IntRange {
+	readonly min: number;
+	readonly max: number;
+}
+
+/** Peine prononcée pour une gravité donnée. */
+export interface SentenceRule {
+	/** Amende, en centimes, prélevée sur l'argent personnel. */
+	readonly fineCents: IntRange;
+	/** Inéligibilité, en trimestres (0 : aucune). */
+	readonly ineligibilityTurns: IntRange;
+	/** Prison avec sursis (sans effet de jeu) ; ferme met fin à la carrière. */
+	readonly prison: 'none' | 'suspended' | 'firm_possible';
+	/** Probabilité d'une peine ferme quand elle est possible, en %. */
+	readonly firmPrisonPercent: number;
 }
 
 export interface JusticeDefinition {

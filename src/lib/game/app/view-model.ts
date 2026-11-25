@@ -21,6 +21,8 @@ import {
 	campaignRefund,
 	careerSummary,
 	currentJudicialRisk,
+	caseStepMessage,
+	isIneligible,
 	divertedFunds,
 	describePendingEvent,
 	effectRange,
@@ -30,6 +32,8 @@ import {
 	type ChoiceRecord,
 	type EffectRange,
 	type GameState,
+	type LegalCase,
+	type Sentence,
 	type HistoryEntry,
 	type PeopleChange,
 	type PlanStep,
@@ -72,6 +76,7 @@ import {
 	describeStress,
 	describeExposure,
 	describeJudicialRisk,
+	describeDefense,
 	formatDelta,
 	formatMoney,
 	formatGaugeDelta,
@@ -458,11 +463,32 @@ export interface FactView {
 	/** Points de risque encore apportés (avant majoration par l'exposition). */
 	readonly riskPoints: number;
 	readonly prescribed: boolean;
+	/** Le fait a été révélé : il relève désormais de son dossier. */
+	readonly inCase: boolean;
+}
+
+export interface CaseView {
+	readonly key: string;
+	readonly offense: string;
+	/** « vous » ou le nom du proche poursuivi. */
+	readonly defendant: string;
+	readonly opened: string;
+	/** Étape ou issue, en clair. */
+	readonly status: string;
+	/** Prochaine échéance, `null` une fois clos. */
+	readonly due: string | null;
+	readonly sentence: string | null;
+	readonly closed: boolean;
 }
 
 export interface JusticeView {
 	readonly exposure: GaugeDescription;
 	readonly risk: GaugeDescription;
+	readonly defense: GaugeDescription;
+	/** Dossiers, en cours d'abord puis clos, du plus récent au plus ancien. */
+	readonly cases: readonly CaseView[];
+	/** Fin de l'inéligibilité, `null` si le joueur est éligible. */
+	readonly ineligibleUntil: string | null;
 	/** Majoration du risque due à l'exposition, en points. */
 	readonly exposureBonus: number;
 	/** Faits du registre, du plus récent au plus ancien. */
@@ -473,12 +499,64 @@ export interface JusticeView {
 
 const SEVERITY_LABELS = ['', 'indélicatesse', 'faute', 'affaire d’envergure'] as const;
 
+const STAGE_LABELS = {
+	investigation: 'enquête préliminaire',
+	indicted: 'mise en examen, procès à venir',
+	appeal: 'condamné en première instance, en appel',
+	closed: 'clos'
+} as const;
+
+const OUTCOME_LABELS = {
+	dismissed: 'classé sans suite',
+	acquitted: 'relaxe',
+	convicted: 'condamnation définitive'
+} as const;
+
+function sentenceText(sentence: Sentence): string {
+	return joinParts(
+		sentence.fineCents > 0 ? `amende de ${formatMoney(sentence.fineCents)}` : '',
+		sentence.ineligibilityTurns > 0
+			? `inéligibilité de ${sentence.ineligibilityTurns} trimestres`
+			: '',
+		sentence.prison === 'firm'
+			? 'prison ferme'
+			: sentence.prison === 'suspended'
+				? 'prison avec sursis'
+				: ''
+	);
+}
+
+function caseView(legalCase: LegalCase, state: GameState, content: Content): CaseView {
+	const fact = state.facts.find((entry) => entry.factId === legalCase.factId);
+	return {
+		key: legalCase.caseId,
+		offense: content.offenses[fact?.offenseId ?? '']?.label ?? legalCase.factId,
+		defendant:
+			legalCase.defendantId === null
+				? 'vous'
+				: (state.characters[legalCase.defendantId]?.name ?? legalCase.defendantId),
+		opened: formatTurn(legalCase.openedTurn),
+		status: legalCase.outcome ? OUTCOME_LABELS[legalCase.outcome] : STAGE_LABELS[legalCase.stage],
+		due: legalCase.dueTurn === null ? null : formatTurn(legalCase.dueTurn),
+		sentence: legalCase.sentence ? sentenceText(legalCase.sentence) || null : null,
+		closed: legalCase.stage === 'closed'
+	};
+}
+
 function buildJustice(state: GameState, content: Content): JusticeView {
 	const risk = currentJudicialRisk(state, content);
 	const points = new Map(risk.contributions.map((entry) => [entry.factId, entry.points]));
 	return {
 		exposure: describeExposure(state.player.exposure),
 		risk: describeJudicialRisk(risk.value),
+		defense: describeDefense(state.player.defense),
+		cases: [...state.cases]
+			.reverse()
+			.sort((left, right) => Number(left.stage === 'closed') - Number(right.stage === 'closed'))
+			.map((legalCase) => caseView(legalCase, state, content)),
+		ineligibleUntil: isIneligible(state.player, state.turn)
+			? formatTurn(state.player.ineligibleUntil!)
+			: null,
 		exposureBonus: risk.exposureBonus,
 		facts: [...state.facts].reverse().map((fact) => ({
 			key: fact.factId,
@@ -487,7 +565,8 @@ function buildJustice(state: GameState, content: Content): JusticeView {
 			involvement: fact.authorId === null ? 'auteur' : 'complice',
 			severity: SEVERITY_LABELS[fact.severity] ?? String(fact.severity),
 			riskPoints: points.get(fact.factId) ?? 0,
-			prescribed: state.turn - fact.turn >= content.justice.prescriptionTurns
+			prescribed: state.turn - fact.turn >= content.justice.prescriptionTurns,
+			inCase: state.cases.some((legalCase) => legalCase.factId === fact.factId)
 		})),
 		diverted: formatMoney(divertedFunds(state.facts))
 	};
@@ -549,7 +628,8 @@ const SOURCE_LABELS: { readonly [K in WellbeingSource]: string } = {
 
 const CAUSE_LABELS = {
 	health_failure: 'Épuisement : la santé a fini par céder.',
-	natural_causes: 'Mort naturelle.'
+	natural_causes: 'Mort naturelle.',
+	prison: 'Condamnation définitive à de la prison ferme.'
 } as const;
 
 function amounts(list: readonly ResourceAmount[], sign: 1 | -1): string[] {
@@ -965,6 +1045,17 @@ function journalOfQuarter(entry: HistoryEntry, state: GameState, content: Conten
 	lines.push(...deadlineLines(entry.deadlines, state, content));
 	lines.push(...staffLines(entry.staff, state, content));
 	lines.push(...familyLines(entry.family, state));
+	for (const step of entry.justice?.cases ?? []) {
+		lines.push({ kind: 'career', text: caseStepMessage(step.caseId, step.kind, state, content) });
+	}
+	if (entry.justice) {
+		const effects = joinParts(
+			changesText(entry.justice.changes),
+			gaugesText(entry.justice.gauges),
+			politicsText(entry.justice.politics, content)
+		);
+		if (effects) lines.push({ kind: 'career', text: `Justice — ${effects}` });
+	}
 	if (entry.mandates.changes.length > 0) {
 		lines.push({
 			kind: 'economy',
@@ -987,6 +1078,9 @@ function journalOfQuarter(entry: HistoryEntry, state: GameState, content: Conten
 			lines.push({ kind: 'event', text: `${title} — sans suite : ${event.reason ?? 'annulé'}` });
 	}
 	if (entry.wellbeing.deathCause) lines.push({ kind: 'end', text: 'Fin de carrière.' });
+	if (state.end?.reason === 'prison' && state.end.turn === entry.turn) {
+		lines.push({ kind: 'end', text: 'Fin de carrière : incarcération.' });
+	}
 	if (lines.length === 0) lines.push({ kind: 'step', text: 'Trimestre calme : rien à signaler.' });
 	return lines;
 }
@@ -1129,7 +1223,7 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 	const born = formatTurn(state.player.birthTurn);
 	return {
 		title: `Fin de carrière à ${summary.age} ans`,
-		cause: CAUSE_LABELS[state.end.cause],
+		cause: CAUSE_LABELS[summary.cause ?? 'natural_causes'],
 		lines: [
 			{ label: 'Né au', value: born },
 			{
@@ -1140,7 +1234,10 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 				label: 'Profession',
 				value: content.professions[state.player.profession]?.label ?? state.player.profession
 			},
-			{ label: 'Décédé au', value: formatTurn(summary.lastTurn) },
+			{
+				label: summary.cause === 'prison' ? 'Incarcéré au' : 'Décédé au',
+				value: formatTurn(summary.lastTurn)
+			},
 			{ label: 'Âge', value: `${summary.age} ans` },
 			{ label: 'Trimestres de carrière', value: String(summary.quartersPlayed) },
 			...RESOURCE_IDS.map((id) => ({
@@ -1150,6 +1247,11 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 			{ label: 'Actions menées', value: String(summary.actionsPerformed) },
 			{ label: 'Améliorations acquises', value: String(summary.upgradesOwned) },
 			{ label: 'Événements vécus', value: String(summary.eventsExperienced) },
+			{
+				label: 'Affaires judiciaires',
+				value: `${summary.cases} dossier(s), ${summary.convictions} condamnation(s)`
+			},
+			{ label: 'Fonds détournés', value: formatMoney(summary.divertedCents) },
 			{
 				label: 'Catalogue',
 				value: `${content.eventIds.length} événements possibles`
@@ -1968,6 +2070,8 @@ export function projectView(
 		// santé sont présentées plus bas, de façon plus complète.
 		for (const alert of accelerationAlerts(state, { steps: plan }, content)) {
 			if (alert.kind === 'finance' || alert.id.startsWith('staff_left:')) {
+				alerts.push({ level: 'warning', text: alert.message });
+			} else if (alert.kind === 'justice') {
 				alerts.push({ level: 'warning', text: alert.message });
 			} else if (alert.kind === 'career' || alert.kind === 'staff') {
 				alerts.push({ level: 'info', text: alert.message });

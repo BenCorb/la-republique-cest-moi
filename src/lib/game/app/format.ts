@@ -52,7 +52,8 @@ export const RESOURCE_NAMES: { readonly [K in ResourceId]: string } = {
 export const GAUGE_NAMES: { readonly [K in GaugeId]: string } = {
 	'player.health': 'Santé',
 	'player.stress': 'Stress',
-	'player.exposure': 'Exposition médiatique'
+	'player.exposure': 'Exposition médiatique',
+	'player.defense': 'Défense'
 };
 
 export type GaugeTone = 'good' | 'neutral' | 'warning' | 'danger';
@@ -84,6 +85,14 @@ export function describeExposure(value: number): GaugeDescription {
 	if (value < 35) return { value, label: 'Remarquée', tone: 'neutral' };
 	if (value < 60) return { value, label: 'En vue', tone: 'warning' };
 	return { value, label: 'Sous les projecteurs', tone: 'warning' };
+}
+
+/** Préparation de la défense (P3-01). */
+export function describeDefense(value: number): GaugeDescription {
+	if (value < 15) return { value, label: 'Improvisée', tone: 'neutral' };
+	if (value < 40) return { value, label: 'Préparée', tone: 'neutral' };
+	if (value < 70) return { value, label: 'Solide', tone: 'good' };
+	return { value, label: 'Redoutable', tone: 'good' };
 }
 
 /** Risque judiciaire (P3-01) : exposition aux enquêtes, pas culpabilité. */

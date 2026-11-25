@@ -418,6 +418,8 @@ export interface FrontierInput {
 	readonly staff: GameState['staff'];
 	readonly shortlists: GameState['shortlists'];
 	readonly facts: GameState['facts'];
+	/** Dossiers judiciaires, lisibles par les conditions (P3-01). */
+	readonly cases: GameState['cases'];
 }
 
 export interface FrontierResult {
@@ -470,7 +472,8 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		campaigns: career.campaigns,
 		staff,
 		institutions: career.institutions,
-		facts
+		facts,
+		cases: input.cases
 	});
 
 	const create = (definition: EventDefinition, actors: Record<string, string>): void => {
@@ -683,7 +686,7 @@ export function choiceAvailability(
 		institutions: state.institutions
 	};
 	for (const effect of choice.effects) {
-		const issue = careerEffectIssue(effect, career, content ?? null);
+		const issue = careerEffectIssue(effect, career, content ?? null, state.player, state.turn);
 		if (issue) return { available: false, reason: issue };
 	}
 	return { available: true, reason: null };
@@ -781,7 +784,8 @@ export function chooseEvent(
 		campaigns: outcome.career.campaigns,
 		institutions: outcome.career.institutions,
 		staff: outcome.staff,
-		facts: outcome.facts
+		facts: outcome.facts,
+		cases: state.cases
 	};
 	const cancelled: { instanceId: string; reason: string }[] = [];
 	const remaining = state.events.pending.slice(1).filter((other) => {
