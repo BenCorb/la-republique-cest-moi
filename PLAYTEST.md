@@ -152,3 +152,8 @@ bugs, irritants classés (bloquant, gênant, mineur) et décisions._
   Recommandation : 1, 2 et 4 corrigent la marche d’escalier entre le début de carrière et le
   premier mandat national, sans rendre le budget gratuit ; vérifier ensuite par simulation que
   les charges impayées baissent sans que le budget déborde davantage.
+
+  **Décision du créateur (26 novembre 2026) :** retenir les pistes 1 (moyens des mandats
+  locaux), 2 (remboursement des frais de campagne) et 4 (gala de levée de fonds) pour la série
+  de corrections du playtest, avec les chiffres ci-dessus comme point de départ ; les pistes 3, 5
+  et 6 restent en réserve si la simulation montre que cela ne suffit pas.
