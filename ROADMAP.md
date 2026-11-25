@@ -1,7 +1,7 @@
 # La République, c’est moi ! — Feuille de route
 
 **Version 0.1 — 24 novembre 2026**  
-**Statut :** phases 0 et 1 terminées et intégrées à `main` (PR #4, CI verte, 24 novembre 2026) ; P0-01 à P0-06 et P1-01 à P1-10 réalisées et vérifiées (✅ = tâche terminée dans les tableaux). Phase 2 sur `feat/p2-alpha` (§4.1) : P2-01 à P2-10 réalisées et vérifiées ; reste la pull request de phase vers `main`. Le site publié montre encore la phase 0. Reprise : voir §9.
+**Statut :** phases 0 et 1 terminées et intégrées à `main` (PR #4, CI verte, 24 novembre 2026) ; P0-01 à P0-06 et P1-01 à P1-10 réalisées et vérifiées (✅ = tâche terminée dans les tableaux). Phase 2 (alpha) terminée et intégrée à `main` (PR #5, `5a5b0e5`, CI verte, 25 novembre 2026) ; P2-01 à P2-10 réalisées et vérifiées. L’alpha est publiée sur GitHub Pages (déploiement manuel du 25 novembre 2026). Reprise : voir §9.
 
 **Références :** [GAME_DESIGN.md](GAME_DESIGN.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN.md](DESIGN.md), [AGENTS.md](AGENTS.md).
 
@@ -147,11 +147,11 @@ Les deux assistants doivent lire `AGENTS.md`, puis les documents concernés et c
 
 Les tâches de phase 0 peuvent également être confiées une par une pour faciliter la revue. Après le bootstrap, commencer P1-01, pas une implémentation globale de la V1.
 
-## 9. Reprise du travail — passage de relais (24 novembre 2026)
+## 9. Reprise du travail — passage de relais (25 novembre 2026)
 
-- **Branche :** `feat/p2-alpha`, créée depuis `main` (`0a59481`, fusion « squash » de la phase 1 via la PR #4, CI verte). La branche distante `feat/p1-prototype` a été supprimée ; la copie locale peut l’être aussi. Le site publié montre encore la phase 0 (aucun déploiement demandé).
-- **État :** phases 0 et 1 terminées et intégrées. Phase 2 planifiée au §4.1 (ordre des lots, préalables techniques, décisions retenues).
+- **Branche :** `main` (`5a5b0e5`, fusion « squash » de la phase 2 via la PR #5, CI verte). La branche `feat/p2-alpha` n’a plus d’usage et peut être supprimée. Le site publié (https://bencorb.github.io/la-republique-cest-moi/) montre l’alpha, déployée à la demande du créateur le 25 novembre 2026.
+- **État :** phases 0, 1 et 2 terminées, intégrées et publiées. Plan et décisions de la phase 2 au §4.1.
 - **Où lire :** décisions de chaque tâche de phase 1 dans `ARCHITECTURE.md` (§5.2 bis, §6.1, §7.1 bis, §7.3, §7.4, §8.1 bis, §8.2 bis, §9.1, §10.1, §11.1 bis, §12.1–12.3) ; protocole humain dans `PLAYTEST.md` ; limites, dette et règles provisoires au §15.
-- **Prochaine étape :** phase 2 terminée (P2-01 à P2-10 ; décisions : ARCHITECTURE §5.2 ter et §8.3 bis à decies). Suite : pull request de phase `feat/p2-alpha` → `main` après CI verte, puis playtest de l’alpha (rythme des arrêts d’accélération, fréquence de la vie de famille, relecture des hypothèses provisoires) avant la phase 3. Ne pas déployer sans demande explicite.
+- **Prochaine étape :** phase 2 terminée (P2-01 à P2-10 ; décisions : ARCHITECTURE §5.2 ter et §8.3 bis à decies). Suite : retouches d’interface utiles au playtest (sur une branche dédiée depuis `main`), puis playtest de l’alpha (rythme des arrêts d’accélération, fréquence de la vie de famille, relecture des hypothèses provisoires) avant la phase 3. Ne pas déployer sans demande explicite.
 - **Décisions attendues du créateur :** relecture des hypothèses provisoires du §4.1 ; coût de la vie personnel ; relecture éditoriale des 30 événements ; déplacement du dépôt hors d’iCloud (§15.4).
 - **Avant de commencer :** `git fetch --prune`, `git status`, rechercher les copies de synchronisation (`find . -path ./node_modules -prune -o -name '* [0-9].*' -print`), `npm ci`, puis `npm run check`, `npm run lint`, `npm run content:validate`, `npm run test` et `npm run build`.
