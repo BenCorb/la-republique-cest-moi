@@ -272,6 +272,8 @@ function applyAutomaticEffects(
 			politics.push(...outcome.changes);
 		} else if (resolved.kind === 'staffAction') {
 			throw new Error(`Embauche ou renvoi hors du plan : ${resolved.effect.op}`);
+		} else if (resolved.kind === 'release') {
+			throw new Error('Départ d’un élément de l’organisation hors du plan.');
 		} else {
 			const key = resolved.gauge === 'player.health' ? 'health' : 'stress';
 			const { value, applied } = applyGauge(player[key], resolved.delta);

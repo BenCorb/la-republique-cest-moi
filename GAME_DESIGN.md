@@ -177,6 +177,8 @@ Les améliorations appartiennent principalement à quatre familles : organisatio
 
 Une amélioration comporte un coût initial, des prérequis, des effets récurrents ou ponctuels, et éventuellement des charges d’entretien, des limites et des événements associés. Les dépenses récurrentes doivent rester visibles. Les actifs et les personnels ne sont pas nécessairement conservés après la perte d’une fonction si leur financement ou leur accès dépend de celle-ci.
 
+**Décision du créateur (25 novembre 2026) :** le joueur peut se séparer d’un élément de son organisation (militant, permanence, abonnement…) par une action du plan, sans coût financier ; le départ est immédiat (plus de charge ni de production dès ce trimestre). Renvoyer un militant bénévole coûte un peu de soutien militant (provisoirement −2). Les exemplaires possédés s’affichent regroupés par type.
+
 ### 5.3 Délégation
 
 Les employés ordinaires sont gérés comme des effectifs agrégés ; les collaborateurs clés sont des personnages. L’organisation peut produire passivement des ressources et prendre en charge des actions récurrentes. Le joueur définit les missions et les priorités, qui persistent entre les tours jusqu’à modification.

@@ -165,6 +165,39 @@ function targetOf(step: PlanStep): string | null {
 	return step.kind === 'action' ? (step.target ?? null) : null;
 }
 
+/**
+ * Effets réellement appliqués par une action : un départ (`releaseUpgrade`) est
+ * remplacé par les effets propres de l'exemplaire ciblé, qui quitte la liste.
+ */
+function expandRelease(
+	effects: readonly Effect[],
+	target: string | null,
+	upgrades: readonly OwnedUpgrade[],
+	content: Content
+): { effects: Effect[]; released: string | null } {
+	if (!effects.some((effect) => effect.op === 'releaseUpgrade')) {
+		return { effects: [...effects], released: null };
+	}
+	const owned = upgrades.find((upgrade) => upgrade.instanceId === target);
+	const own = owned ? (content.upgrades[owned.upgradeId]?.releaseEffects ?? []) : [];
+	return {
+		effects: [...effects.filter((effect) => effect.op !== 'releaseUpgrade'), ...own],
+		released: owned?.instanceId ?? null
+	};
+}
+
+/** Problème de cible d'un départ : un exemplaire possédé avant ce trimestre. */
+function releaseIssue(
+	target: string | null,
+	upgrades: readonly OwnedUpgrade[],
+	turn: number
+): string | null {
+	const owned = upgrades.find((upgrade) => upgrade.instanceId === target);
+	if (!owned) return 'choisissez un élément de votre organisation';
+	if (owned.acquiredTurn >= turn) return 'cet élément n’est acquis qu’à la fin du trimestre';
+	return null;
+}
+
 /** Parties de l'état modifiées par les effets politiques et de carrière d'une action. */
 interface StateParts {
 	readonly player: PlayerState;
@@ -322,6 +355,7 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 		let unavailableReason: string | undefined;
 		let ranges: EffectRange[] = [];
 		let actionEffects: readonly Effect[] = [];
+		let released: string | null = null;
 		const target = targetOf(step);
 
 		if (step.kind === 'action') {
@@ -373,6 +407,16 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 					(mandate) => mandate.instanceId === target
 				);
 				if (!held) fail('invalid_target', `« ${label} » : choisissez un mandat en cours.`);
+			} else if (definition.target === 'upgrade') {
+				const issue = releaseIssue(target, upgrades, state.turn);
+				if (issue) {
+					fail('invalid_target', `« ${label} » : ${issue}.`);
+				} else {
+					const expanded = expandRelease(definition.effects, target, upgrades, content);
+					actionEffects = expanded.effects;
+					ranges = expanded.effects.map(effectRange);
+					released = expanded.released;
+				}
 			} else if (target !== null) {
 				fail('invalid_target', `« ${label} » ne porte sur aucune cible.`);
 			}
@@ -496,6 +540,12 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			upgrades.push({ instanceId, upgradeId: step.id, acquiredTurn: state.turn });
 			nextInstanceNumber += 1;
 		}
+		if (released !== null) {
+			upgrades.splice(
+				upgrades.findIndex((upgrade) => upgrade.instanceId === released),
+				1
+			);
+		}
 	});
 
 	// Économie du trimestre sur le pire cas : une charge prévue impayée est un risque.
@@ -605,7 +655,14 @@ export function executePlan(
 			if (!definition) throw new Error(`Action non validée : ${step.id}`);
 			timeUsed += definition.timeCost;
 			for (const cost of definition.costs) add(cost.resource, -cost.amount);
-			for (const effect of definition.effects) {
+			const expanded = expandRelease(definition.effects, target, upgrades, content);
+			if (expanded.released !== null) {
+				upgrades.splice(
+					upgrades.findIndex((upgrade) => upgrade.instanceId === expanded.released),
+					1
+				);
+			}
+			for (const effect of expanded.effects) {
 				const resolved = resolveEffect(effect, rng);
 				rng = resolved.rng;
 				if (resolved.kind === 'resource') {
@@ -616,6 +673,8 @@ export function executePlan(
 					if (applied.delta !== 0) gauges.push({ gauge: resolved.gauge, delta: applied.delta });
 				} else if (resolved.kind === 'people') {
 					throw new Error(`Effet sur un personnage hors événement : ${step.id}`);
+				} else if (resolved.kind === 'release') {
+					throw new Error(`Départ non développé : ${step.id}`);
 				} else {
 					const applied = applyStateEffects(
 						[resolved.effect],

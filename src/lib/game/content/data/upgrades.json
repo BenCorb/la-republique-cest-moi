@@ -3,6 +3,8 @@
 		{
 			"id": "organization.volunteer",
 			"family": "organization",
+			"ownedLabel": "Militant bénévole",
+			"releaseEffects": [{ "op": "addSupport", "group": "support.activists", "value": -2 }],
 			"label": "Recruter un militant bénévole",
 			"description": "Bénévole, motivé, disponible le week-end. Ses frais de photocopies et de covoiturage, eux, ne sont pas bénévoles.",
 			"treasury": "politicalBudgetCents",
@@ -15,6 +17,7 @@
 		{
 			"id": "organization.donor_file",
 			"family": "organization",
+			"ownedLabel": "Fichier de donateurs",
 			"label": "Constituer un fichier de donateurs",
 			"description": "Une liste soigneusement entretenue de sympathisants qui ont un jour signé une pétition et ne s’en souviennent plus.",
 			"treasury": "politicalBudgetCents",
@@ -29,6 +32,7 @@
 		{
 			"id": "organization.local_office",
 			"family": "organization",
+			"ownedLabel": "Permanence",
 			"label": "Ouvrir une permanence",
 			"description": "Un local en rez-de-chaussée, une affiche à votre effigie et une machine à café qui fédère davantage que le programme.",
 			"treasury": "politicalBudgetCents",
@@ -43,6 +47,7 @@
 		{
 			"id": "communication.press_officer",
 			"family": "communication",
+			"ownedLabel": "Attaché de presse",
 			"label": "Embaucher un attaché de presse à mi-temps",
 			"description": "Il connaît trois journalistes, en tutoie deux et rédige des communiqués plus vite que vous ne les lisez.",
 			"treasury": "politicalBudgetCents",
@@ -57,6 +62,7 @@
 		{
 			"id": "network.think_tank",
 			"family": "network",
+			"ownedLabel": "Cercle de réflexion",
 			"label": "Adhérer à un cercle de réflexion",
 			"description": "Un dîner mensuel où l’on réfléchit beaucoup, surtout à qui sera assis à côté de qui. Cotisation payée sur vos deniers personnels.",
 			"treasury": "personalCashCents",

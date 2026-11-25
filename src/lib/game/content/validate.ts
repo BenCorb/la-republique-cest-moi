@@ -316,7 +316,7 @@ function conditionIssues(
 function effectIssues(
 	effects: readonly Effect[],
 	refs: Refs,
-	targetKind: 'party' | 'mandate' | 'ballot' | 'candidate' | 'staff' | null,
+	targetKind: 'party' | 'mandate' | 'ballot' | 'candidate' | 'staff' | 'upgrade' | null,
 	source: string,
 	path: string,
 	roles: ReadonlySet<string> | null = null
@@ -373,6 +373,15 @@ function effectIssues(
 						source,
 						path: at,
 						message: 'embauche réservée aux actions ciblant un candidat'
+					});
+				}
+				break;
+			case 'releaseUpgrade':
+				if (targetKind !== 'upgrade') {
+					issues.push({
+						source,
+						path: at,
+						message: 'départ réservé aux actions ciblant un exemplaire de l’organisation'
 					});
 				}
 				break;
@@ -507,7 +516,8 @@ function crossCheckPolitics(
 				(effect.op === 'endMandate' && effect.mandate === 'target') ||
 				effect.op === 'declareCandidacy' ||
 				effect.op === 'hireStaff' ||
-				effect.op === 'dismissStaff'
+				effect.op === 'dismissStaff' ||
+				effect.op === 'releaseUpgrade'
 		);
 		if (targetKind !== null && !usesTarget) {
 			issues.push({
@@ -521,6 +531,18 @@ function crossCheckPolitics(
 		issues.push(
 			...conditionIssues(upgrade.requires, refs, 'upgrades.json', `upgrades[${index}].requires`)
 		);
+		const release = upgrade.releaseEffects ?? [];
+		const path = `upgrades[${index}].releaseEffects`;
+		issues.push(...effectIssues(release, refs, null, 'upgrades.json', path));
+		release.forEach((effect, effectIndex) => {
+			if (!['addResource', 'addStat', 'addSupport'].includes(effect.op)) {
+				issues.push({
+					source: 'upgrades.json',
+					path: `${path}[${effectIndex}]`,
+					message: 'un départ n’a que des effets certains : ressources, jauges ou soutiens'
+				});
+			}
+		});
 	});
 	for (const { source, index, event } of events) {
 		const path = `events[${index}]`;

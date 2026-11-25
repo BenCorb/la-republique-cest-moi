@@ -1,11 +1,13 @@
 <script lang="ts">
-	import { Plus } from '@lucide/svelte';
+	import { Minus, Plus } from '@lucide/svelte';
 	import PlanPanel from '#lib/components/agenda/PlanPanel.svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 
 	/**
-	 * Organisation (DESIGN.md §4.5) : producteurs possédés et leur statut ce trimestre,
-	 * améliorations achetables. Un achat rejoint le plan et produit au trimestre suivant.
+	 * Organisation (DESIGN.md §4.5) : éléments possédés regroupés par type, avec leur
+	 * statut, leurs charges et leur production cumulées ce trimestre, et le départ d'un
+	 * exemplaire ; améliorations achetables. Un achat rejoint le plan et produit au
+	 * trimestre suivant ; un départ prend effet dès ce trimestre.
 	 */
 	interface Props {
 		session: GameSession;
@@ -27,29 +29,66 @@
 		<div class="flex flex-col gap-6">
 			<section aria-labelledby="producers-title">
 				<h2 id="producers-title" class="section-title">Votre organisation</h2>
-				{#if view.producers.length === 0}
+				{#if view.organisation.length === 0}
 					<p class="mt-2 text-sm text-muted">
 						Personne ne travaille encore pour vous. Les achats ci-dessous produisent à partir du
 						trimestre suivant.
 					</p>
 				{:else}
 					<ul class="mt-3 grid gap-2">
-						{#each view.producers as producer (producer.instanceId)}
-							<li class="card flex flex-wrap items-center gap-x-4 gap-y-1 py-3">
-								<span class="font-medium">{producer.label}</span>
-								<span
-									class="rounded border px-2 py-0.5 text-xs font-medium {statusClass[
-										producer.status
-									]}"
-								>
-									{producer.statusLabel}
-								</span>
-								<span class="text-sm text-muted">
+						{#each view.organisation as group (group.upgradeId)}
+							<li class="card flex flex-col gap-2 py-3" data-testid="group-{group.upgradeId}">
+								<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+									<span class="font-medium">
+										{group.label}{group.owned + group.pending > 1
+											? ` × ${group.owned + group.pending - group.releasesPlanned}`
+											: ''}
+									</span>
+									{#each [['active', group.active, 'Actif ce trimestre'], ['pending', group.pending, 'Actif à partir du trimestre prochain'], ['suspended', group.suspended, 'Suspendu : charges non couvertes']] as const as [status, count, text] (status)}
+										{#if count > 0}
+											<span
+												class="rounded border px-2 py-0.5 text-xs font-medium {statusClass[status]}"
+											>
+												{text}{group.owned + group.pending > 1 ? ` × ${count}` : ''}
+											</span>
+										{/if}
+									{/each}
+								</div>
+								<p class="text-sm text-muted">
 									{[
-										...producer.upkeep.map((item) => `Charges : ${item}`),
-										...producer.production.map((item) => `Production : ${item}`)
-									].join(' · ')}
-								</span>
+										...group.upkeep.map((item) => `Charges : ${item}`),
+										...group.production.map((item) => `Production : ${item}`)
+									].join(' · ') || 'Aucune charge ni production ce trimestre.'}
+								</p>
+								{#if group.release}
+									<div class="flex flex-wrap items-center justify-end gap-2">
+										{#if group.releasesPlanned > 0}
+											<span class="text-xs text-muted">
+												{group.releasesPlanned} départ{group.releasesPlanned > 1 ? 's' : ''} prévu{group.releasesPlanned >
+												1
+													? 's'
+													: ''} ce trimestre (annulable dans le plan).
+											</span>
+										{/if}
+										{#if group.release.reason}
+											<span class="text-xs text-warning">{group.release.reason}</span>
+										{:else if group.releaseEffects.length > 0}
+											<span class="text-xs text-muted">
+												Au départ : {group.releaseEffects.join(', ')}
+											</span>
+										{/if}
+										<button
+											type="button"
+											class="btn-secondary btn-small"
+											disabled={group.release.step === null || accelerating}
+											aria-label="Prévoir un départ : {group.label}"
+											onclick={() =>
+												group.release?.step && session.controller.addStep(group.release.step)}
+										>
+											<Minus class="size-3.5" aria-hidden="true" /> Se séparer d’un exemplaire
+										</button>
+									</div>
+								{/if}
 							</li>
 						{/each}
 					</ul>

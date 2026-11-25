@@ -450,6 +450,16 @@
 			"target": "staff"
 		},
 		{
+			"id": "organization.release",
+			"label": "Se séparer d’un élément de l’organisation",
+			"description": "Un militant qu’on remercie, une permanence qu’on ferme, un abonnement qu’on résilie : l’organisation maigrit, les charges aussi.",
+			"timeCost": 2,
+			"maxPerTurn": 10,
+			"costs": [],
+			"effects": [{ "op": "releaseUpgrade" }],
+			"target": "upgrade"
+		},
+		{
 			"id": "profession.union_office",
 			"label": "Tenir la permanence syndicale",
 			"description": "Écouter les collègues, remplir des dossiers et rappeler à la direction l’existence du Code du travail.",

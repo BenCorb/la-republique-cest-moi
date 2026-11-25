@@ -353,6 +353,16 @@ Calculer les flux par producteur et par trimestre, avec détail pour l’interfa
 - **Journal :** `turn.resolved` contient `steps` (actions et achats, avec l’instance créée) et `economy` (producteurs actifs ou suspendus et variation nette). Les invariants contrôlent les instances (format, unicité, compteur, date d’acquisition antérieure au tour, ordre) et, avec le contenu, les références et `maxOwned`. `RULES_VERSION = '0.3.0'`.
 - **Provisoire :** catalogue de 5 améliorations et chiffres non calibrés. Aucun coût de la vie personnel n’est encore prélevé ; l’insolvabilité ne vient donc que des charges. Question d’équilibrage ouverte (GDD §17, « Économie »).
 
+### 8.1 ter Départ d’un élément de l’organisation et affichage regroupé (25 novembre 2026)
+
+Demandé par le créateur après le premier essai de l’alpha publiée : une carte par militant rendait l’écran Organisation illisible et la base militante ne pouvait pas être réduite.
+
+- **Règle :** action ciblée `organization.release` (`target: 'upgrade'`, effet `releaseUpgrade`), gratuite, 2 points de temps (le schéma exige un coût en temps positif), au plus dix par trimestre. Elle vise un exemplaire possédé avant le trimestre (pas un achat du même plan) ; l’exemplaire quitte l’organisation pendant l’exécution du plan, donc sans charge ni production ce trimestre, et peut être racheté ensuite. Les effets propres du départ sont déclarés par amélioration (`releaseEffects`, limités aux ressources, jauges et soutiens) : un militant bénévole parti retire 2 points de soutien des militants (décision du créateur : départ gratuit, petit effet militant) ; les autres départs n’ont pas d’effet propre. La prévision montre ces effets ; l’étape sort du plan reconduit (`invalid_target`).
+- **État :** l’exemplaire est retiré de `upgrades` ; format d’état inchangé, les sauvegardes existantes restent lisibles. Le journal retrouve le nom d’un exemplaire parti grâce à son achat.
+- **Contenu :** chaque amélioration a un `ownedLabel` (« Militant bénévole », « Permanence »…) pour les exemplaires possédés, distinct du libellé d’achat.
+- **Interface :** l’écran Organisation regroupe les exemplaires par type (« Militant bénévole × 3 »), avec statuts comptés, charges et production cumulées du trimestre, effet d’un départ et bouton « Se séparer d’un exemplaire » (le plus récent part en premier ; départ annulable dans le plan).
+- **Versions et tests :** `RULES_VERSION = '0.17.0'`. `tests/unit/organisation.test.ts` (départ sans charge ni production, effet militant, journal, cibles refusées, prévision, plan reconduit, regroupement, validation) ; E2E du départ d’un militant.
+
 ### 8.2 Stress, santé et fin
 
 La santé et le stress sont mis à jour une fois par trimestre, avec des contributions identifiables : charge de travail, mandats, événements, repos, confort et âge. L’âge affecte la vulnérabilité ; décès et fins sont testés par une règle commune qui produit un motif explicite et un bilan. Les probabilités et courbes sont des hypothèses de tuning. Le modèle n’a pas de prétention médicale. Toute transition terminale interdit de poursuivre la carrière, mais permet de consulter le bilan et démarrer une nouvelle partie indépendante.
@@ -647,7 +657,7 @@ Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défa
 ### 15.1 Règles provisoires à confirmer
 
 - **Format de sauvegarde.** `STATE_SCHEMA_VERSION = 1` et `SAVE_VERSION = 1`. Toute modification de `GameState` doit mettre à jour `persistence/state-schema.ts` (la compilation l’impose). Retenu pour l’alpha (ROADMAP §4.1, 24 novembre 2026) : tant qu’aucune version jouable n’est publiée, conserver la version 1 (une sauvegarde de développement devenue incompatible est signalée, jamais effacée) ; dès la première publication, toute modification de format incrémente `SAVE_VERSION` avec une migration testée. P2-01 a modifié l’état sans incrémenter la version : les sauvegardes du prototype sont refusées, avec le code explicite `outdated_rules` depuis P2-10 (§8.3 decies).
-- **Version des règles.** `RULES_VERSION = '0.16.0'` (P2-09), incrémentée à chaque changement de règle ; elle n’est qu’informative à la lecture d’une sauvegarde.
+- **Version des règles.** `RULES_VERSION = '0.17.0'` (départ d’un élément de l’organisation, §8.1 ter), incrémentée à chaque changement de règle ; elle n’est qu’informative à la lecture d’une sauvegarde.
 - **Paramètre `?seed=`.** Réservé aux essais et à la reproduction ; à masquer ou documenter auprès des joueurs avant diffusion large.
 
 ### 15.2 Limites fonctionnelles connues (prototype)

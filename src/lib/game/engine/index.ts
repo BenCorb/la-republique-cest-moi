@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.16.0';
+export const RULES_VERSION = '0.17.0';
 
 export {
 	START_YEAR,

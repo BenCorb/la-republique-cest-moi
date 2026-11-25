@@ -45,6 +45,8 @@ export type EffectRange =
 	| { readonly kind: 'earlyElection'; readonly election: string; readonly delayTurns: number }
 	| { readonly kind: 'candidacy' }
 	| { readonly kind: 'staff'; readonly change: 'hire' | 'dismiss' | 'leave' }
+	/** Départ d'un exemplaire de l'organisation ; ses effets propres sont ajoutés par le plan. */
+	| { readonly kind: 'release' }
 	| {
 			readonly kind: 'family';
 			readonly change: 'partner' | 'child' | 'separate' | 'attitude';
@@ -74,7 +76,9 @@ export type ResolvedEffect =
 	/** Embauche ou renvoi ciblé, appliqué par `applyStaffEffect`. */
 	| { readonly kind: 'staffAction'; readonly effect: StaffEffect; readonly rng: RngState }
 	/** Vie de famille, appliquée par `applyFamilyEffect` (une arrivée tire un personnage). */
-	| { readonly kind: 'family'; readonly effect: FamilyEffect; readonly rng: RngState };
+	| { readonly kind: 'family'; readonly effect: FamilyEffect; readonly rng: RngState }
+	/** Départ de l'exemplaire ciblé, appliqué par le plan (actions seulement). */
+	| { readonly kind: 'release'; readonly rng: RngState };
 
 export type PeopleEffect = Extract<Effect, { op: 'addRelation' | 'revealTraits' | 'staffLeaves' }>;
 
@@ -121,6 +125,8 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'staff', change: 'hire' };
 		case 'dismissStaff':
 			return { kind: 'staff', change: 'dismiss' };
+		case 'releaseUpgrade':
+			return { kind: 'release' };
 		case 'staffLeaves':
 			return { kind: 'staff', change: 'leave' };
 		case 'familyJoins':
@@ -166,6 +172,8 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 		case 'hireStaff':
 		case 'dismissStaff':
 			return { kind: 'staffAction', effect, rng };
+		case 'releaseUpgrade':
+			return { kind: 'release', rng };
 		case 'staffLeaves':
 			return { kind: 'people', effect, rng };
 		case 'familyJoins':
