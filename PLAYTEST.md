@@ -120,3 +120,35 @@ bugs, irritants classés (bloquant, gênant, mineur) et décisions._
 
   Recommandation : faire 1 à 3 dans la série de corrections du playtest (interface et catalogue,
   sans changement de règle) ; 4 reste en P3-08.
+
+- **Budget politique trop difficile à faire grossir (26 novembre 2026, gênant).** Constat
+  chiffré :
+  - recettes avant un mandat national : collecte de 100 à 400 € pour 25 points de temps
+    (influence 5 requise), fichier de donateurs à 120 € par trimestre (un seul), don depuis
+    l’argent personnel (1 € pour 1 €), mission de collecte du trésorier (1 500 € à compétence 60,
+    pour 1 000 € de salaire) ;
+  - les mandats locaux (conseil municipal, mairie, conseil régional) et le ministère ne
+    rapportent aucun budget politique ; seuls l’Assemblée (5 000 € par trimestre) et le Sénat
+    (3 000 €) en rapportent ;
+  - dépenses courantes de 300 à 1 500 € : réunion publique, meeting, salaires de l’entourage,
+    attaché de presse ;
+  - en simulation (P2-10), le budget est le goulot d’étranglement jusqu’au premier mandat
+    national, puis déborde : budget final médian ≈ 45 000 € pour les stratégies élues, 430 €
+    pour la stratégie patrimoniale, en charges impayées les trois quarts du temps.
+
+  Pistes (réglages provisoires, à choisir) :
+  1. **Moyens des mandats locaux** : mairie 600 €, conseil régional 300 €, conseil municipal 50 €
+     par trimestre.
+  2. **Remboursement des frais de campagne** : à partir de 5 % des voix, une partie des dépenses
+     de campagne est remboursée après le scrutin (règle française, matière à satire).
+  3. **Dotation du parti** : un adhérent investi reçoit une aide de campagne de son parti,
+     selon la force de celui-ci.
+  4. **Gala de levée de fonds** : action de milieu de carrière (influence 20) rapportant 1 000 à
+     3 000 €, avec un risque d’événement sur les donateurs.
+  5. **Collecte proportionnée** : son rendement croît avec l’influence ou le soutien des
+     militants.
+  6. **Trésorier plus rentable** : mission de collecte portée à 2 500 €.
+
+  Recommandation : 1, 2 et 4 corrigent la marche d’escalier entre le début de carrière et le
+  premier mandat national, sans rendre le budget gratuit ; vérifier ensuite par simulation que
+  les charges impayées baissent sans que le budget déborde davantage.
