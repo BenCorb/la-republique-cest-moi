@@ -8,7 +8,8 @@
 		{ "id": "work", "label": "Métier et revenus" },
 		{ "id": "personal", "label": "Vie personnelle" },
 		{ "id": "organisation", "label": "Organisation et entourage" },
-		{ "id": "mandate", "label": "Mandats" }
+		{ "id": "mandate", "label": "Mandats" },
+		{ "id": "justice", "label": "Justice" }
 	],
 	"actions": [
 		{
@@ -99,7 +100,8 @@
 					"op": "addSupport",
 					"group": "support.middle_class",
 					"value": 1
-				}
+				},
+				{ "op": "addStat", "stat": "player.exposure", "value": 3 }
 			]
 		},
 		{
@@ -154,7 +156,8 @@
 				},
 				{ "op": "addStat", "stat": "player.stress", "value": 3 },
 				{ "op": "addSupport", "group": "support.business", "value": 2 },
-				{ "op": "addSupport", "group": "support.activists", "value": -1 }
+				{ "op": "addSupport", "group": "support.activists", "value": -1 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 3 }
 			]
 		},
 		{
@@ -461,7 +464,8 @@
 					"op": "addSupport",
 					"group": "support.middle_class",
 					"value": 1
-				}
+				},
+				{ "op": "addStat", "stat": "player.exposure", "value": 4 }
 			]
 		},
 		{
@@ -612,7 +616,8 @@
 					"op": "addSupport",
 					"group": "support.middle_class",
 					"value": 1
-				}
+				},
+				{ "op": "addStat", "stat": "player.exposure", "value": 3 }
 			]
 		},
 		{
@@ -665,6 +670,21 @@
 					"group": "support.apparatus",
 					"value": 1
 				}
+			]
+		},
+		{
+			"id": "justice.prepare_defense",
+			"category": "justice",
+			"label": "Préparer sa défense",
+			"description": "Relire le dossier avec vos avocats, apprendre par cœur la formule « je n’ai aucun souvenir de cette réunion » et choisir une cravate de circonstance.",
+			"timeCost": 20,
+			"maxPerTurn": 2,
+			"costs": [{ "resource": "personalCashCents", "amount": 150000 }],
+			"requires": { "op": "gte", "stat": "player.openCases", "value": 1 },
+			"unavailableReason": "Aucun dossier judiciaire ne vous vise.",
+			"effects": [
+				{ "op": "addStat", "stat": "player.defense", "value": 15 },
+				{ "op": "addStat", "stat": "player.stress", "value": 2 }
 			]
 		}
 	]

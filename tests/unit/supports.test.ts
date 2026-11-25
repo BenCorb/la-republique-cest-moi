@@ -25,6 +25,7 @@ import {
 	fixtureEntourage,
 	fixtureEvents,
 	fixtureProfiles,
+	fixtureJustice,
 	fixtureSupports,
 	fixtureTraits,
 	fixtureUpgrades,
@@ -72,7 +73,8 @@ function load(
 		career: fixtureCareer,
 		supports: overrides.supports ?? fixtureSupports,
 		entourage: fixtureEntourage,
-		profiles: fixtureProfiles
+		profiles: fixtureProfiles,
+		justice: fixtureJustice
 	});
 }
 

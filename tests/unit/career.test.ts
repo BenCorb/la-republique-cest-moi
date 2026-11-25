@@ -28,6 +28,7 @@ import {
 	fixtureEntourage,
 	fixtureEvents,
 	fixtureProfiles,
+	fixtureJustice,
 	fixtureTraits,
 	fixtureUpgrades,
 	fixtureWorld,
@@ -113,7 +114,8 @@ function load(
 		career: fixtureCareer,
 		supports: fixtureSupports,
 		entourage: fixtureEntourage,
-		profiles: fixtureProfiles
+		profiles: fixtureProfiles,
+		justice: fixtureJustice
 	});
 }
 

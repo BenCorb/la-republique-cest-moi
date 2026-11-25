@@ -7,7 +7,7 @@
  */
 import type { Condition, StatId } from '../content/types.ts';
 import { ageAt, quarterOf, yearOf } from './calendar.ts';
-import { activeMandates, cumulatedMandates, holdIssue } from './career.ts';
+import { activeMandates, cumulatedMandates, holdIssue, isIneligible } from './career.ts';
 import type { GameState } from './state.ts';
 
 /** Sous-ensemble de l'état suffisant pour évaluer une condition. */
@@ -22,6 +22,8 @@ export type ConditionContext = Pick<
 	| 'institutions'
 	| 'campaigns'
 	| 'staff'
+	| 'facts'
+	| 'cases'
 >;
 
 export function readStat(context: ConditionContext, stat: StatId): number {
@@ -74,6 +76,15 @@ export function readStat(context: ConditionContext, stat: StatId): number {
 			return context.staff.filter((member) => member.status === 'active').length;
 		case 'player.campaigning':
 			return context.campaigns.filter((campaign) => campaign.status === 'running').length;
+		case 'player.exposure':
+			return context.player.exposure;
+		case 'player.facts':
+			return context.facts.length;
+		case 'player.openCases':
+			return context.cases.filter((entry) => entry.stage !== 'closed' && entry.defendantId === null)
+				.length;
+		case 'player.ineligible':
+			return isIneligible(context.player, context.turn) ? 1 : 0;
 		default: {
 			const unknown: never = stat;
 			throw new Error(`Statistique inconnue : ${String(unknown)}`);
@@ -114,7 +125,10 @@ export function evaluateCondition(context: ConditionContext, condition: Conditio
 					: value === condition.value;
 		}
 		case 'canHoldMandate':
-			return holdIssue(condition.mandate, context.mandates, context.institutions, null) === null;
+			return (
+				!isIneligible(context.player, context.turn) &&
+				holdIssue(condition.mandate, context.mandates, context.institutions, null) === null
+			);
 		default: {
 			const unknown: never = condition;
 			throw new Error(`Condition inconnue : ${JSON.stringify(unknown)}`);

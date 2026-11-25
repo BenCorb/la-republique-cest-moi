@@ -198,7 +198,7 @@ describe('décès et fin de carrière', () => {
 			]
 		});
 		const result = commit(game(certain), certain);
-		expect(result.state.end?.cause).toBe('natural_causes');
+		expect(result.state.end).toMatchObject({ reason: 'death', cause: 'natural_causes' });
 		expect(result.state.player.health).toBeGreaterThan(0);
 	});
 

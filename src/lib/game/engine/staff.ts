@@ -26,6 +26,7 @@ import type { Turn } from './calendar.ts';
 import { applyCareerEffect, type CareerParts } from './career.ts';
 import { addRelation, generatePerson, meet } from './characters.ts';
 import { evaluateCondition, type ConditionContext } from './conditions.ts';
+import { gaugeKey } from './effects.ts';
 import { nextInt, type RngState } from './random.ts';
 import type {
 	Character,
@@ -243,6 +244,15 @@ export function applyStaffEffect(
 }
 
 /** Départ d'un collaborateur qui tient un rôle d'événement (débauchage). */
+/** Départ d'un collaborateur condamné (P3-01) : il démissionne. */
+export function staffLeavesAfterConviction(
+	parts: EntourageParts,
+	characterId: string,
+	turn: Turn
+): { parts: EntourageParts; changes: PoliticalChange[] } {
+	return leave(parts, characterId, 'resigned', turn);
+}
+
 export function staffLeavesByEvent(
 	parts: EntourageParts,
 	characterId: string,
@@ -356,7 +366,7 @@ export function resolveStaffProduction(
 				}
 				case 'addStat': {
 					const value = scaledValue(effect.value, character.competence, content);
-					const key = effect.stat === 'player.health' ? 'health' : 'stress';
+					const key = gaugeKey(effect.stat);
 					const next = Math.min(GAUGE_MAX, Math.max(GAUGE_MIN, player[key] + value));
 					if (key === 'stress') stress += next - player[key];
 					player = { ...player, [key]: next };

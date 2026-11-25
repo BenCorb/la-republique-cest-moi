@@ -34,6 +34,7 @@ import { applyGauge } from './effects.ts';
 import { RESOURCE_IDS, type ResourceId } from '../content/types.ts';
 import { resolveWorld } from './world.ts';
 import { resolveSupports } from './supports.ts';
+import { resolveExposure, resolveJustice } from './justice.ts';
 import { resolveStaffFrontier, resolveStaffProduction } from './staff.ts';
 import { resolveFamily } from './family.ts';
 import type {
@@ -154,7 +155,9 @@ function commitTurn(
 					mandates: production.career.mandates,
 					campaigns: production.career.campaigns,
 					institutions: production.career.institutions,
-					staff: production.entourage.staff
+					staff: production.entourage.staff,
+					facts: state.facts,
+					cases: state.cases
 				},
 				nextTurn,
 				world.rng,
@@ -187,13 +190,23 @@ function commitTurn(
 			)
 		: null;
 
+	// 4 quater. Exposition médiatique : retour vers la référence des fonctions exercées.
+	const exposure = supports
+		? resolveExposure(
+				supports.player,
+				production.career.mandates,
+				production.career.campaigns,
+				content
+			)
+		: null;
+
 	// 5. Échéances de la fin de T : fins de mandat, scrutins, échéances suivantes.
 	const deadlines =
-		world && supports && team && family
+		world && exposure && team && family
 			? resolveDeadlines(
 					{
 						world: world.world,
-						player: supports.player,
+						player: exposure.player,
 						resources: family.resources,
 						characters: family.parts.characters,
 						relationships: family.parts.relationships,
@@ -205,27 +218,56 @@ function commitTurn(
 				)
 			: null;
 
-	// 6. Passage à T+1, puis suites dues et tirage des événements (sauf décès en 4).
-	const frontier = world
-		? resolveEventFrontier(
+	// 5 bis. Justice : étapes échues des dossiers, révélations, usure de la défense.
+	const justice = deadlines
+		? resolveJustice(
 				{
-					turn: nextTurn,
-					player: deadlines!.player,
-					resources: deadlines!.resources,
-					upgrades: execution.upgrades,
-					rng: deadlines!.rng,
-					nextInstanceNumber: execution.nextInstanceNumber,
-					events: state.events,
-					world: deadlines!.world,
-					characters: deadlines!.characters,
-					relationships: deadlines!.relationships,
-					career: deadlines!.career,
-					staff: team!.entourage.staff,
-					shortlists: team!.entourage.shortlists
+					player: deadlines.player,
+					resources: deadlines.resources,
+					world: deadlines.world,
+					career: deadlines.career,
+					entourage: {
+						...team!.entourage,
+						characters: deadlines.characters,
+						relationships: deadlines.relationships
+					},
+					facts: state.facts,
+					cases: state.cases,
+					rng: deadlines.rng
 				},
+				resolvedTurn,
 				content
 			)
 		: null;
+	const settled = justice?.parts ?? null;
+
+	// 6. Passage à T+1, puis suites dues et tirage des événements (sauf fin de carrière).
+	const frontier =
+		settled && !justice!.end
+			? resolveEventFrontier(
+					{
+						turn: nextTurn,
+						player: settled.player,
+						resources: settled.resources,
+						upgrades: execution.upgrades,
+						rng: settled.rng,
+						nextInstanceNumber: execution.nextInstanceNumber,
+						events: {
+							...state.events,
+							scheduled: [...state.events.scheduled, ...justice!.scheduled]
+						},
+						world: settled.world,
+						characters: settled.entourage.characters,
+						relationships: settled.entourage.relationships,
+						career: settled.career,
+						staff: settled.entourage.staff,
+						shortlists: settled.entourage.shortlists,
+						facts: settled.facts,
+						cases: settled.cases
+					},
+					content
+				)
+			: null;
 
 	const entry: HistoryEntry = {
 		type: 'turn.resolved',
@@ -244,15 +286,18 @@ function commitTurn(
 		world: world?.record ?? null,
 		supports: supports?.record ?? null,
 		deadlines: deadlines?.record ?? null,
+		exposure: exposure?.delta ?? null,
+		justice: justice?.record ?? null,
 		events: frontier?.records ?? []
 	};
 
 	// 7. Phase suivante.
 	const end: EndState | null = wellbeing.record.deathCause
 		? { turn: resolvedTurn, reason: 'death', cause: wellbeing.record.deathCause }
-		: frontier?.deathCause
-			? { turn: nextTurn, reason: 'death', cause: frontier.deathCause }
-			: null;
+		: (justice?.end ??
+			(frontier?.deathCause
+				? { turn: nextTurn, reason: 'death', cause: frontier.deathCause }
+				: null));
 	const events = frontier?.events ?? { ...state.events, pending: [], scheduled: [] };
 	return {
 		ok: true,
@@ -261,19 +306,30 @@ function commitTurn(
 			turn: nextTurn,
 			phase: end ? 'ended' : events.pending.length > 0 ? 'decision' : 'planning',
 			end,
-			rng: frontier?.rng ?? wellbeing.rng,
-			player: frontier?.player ?? wellbeing.player,
-			resources: frontier?.resources ?? production.resources,
-			world: frontier?.world ?? production.world,
-			characters: frontier?.characters ?? production.entourage.characters,
-			relationships: frontier?.relationships ?? production.entourage.relationships,
-			staff: frontier?.staff ?? production.entourage.staff,
-			shortlists: frontier?.shortlists ?? production.entourage.shortlists,
-			mandates: frontier?.career.mandates ?? production.career.mandates,
-			ballots: frontier?.career.ballots ?? production.career.ballots,
-			campaigns: frontier?.career.campaigns ?? production.career.campaigns,
-			institutions: frontier?.career.institutions ?? production.career.institutions,
+			rng: frontier?.rng ?? settled?.rng ?? wellbeing.rng,
+			player: frontier?.player ?? settled?.player ?? wellbeing.player,
+			resources: frontier?.resources ?? settled?.resources ?? production.resources,
+			world: frontier?.world ?? settled?.world ?? production.world,
+			characters:
+				frontier?.characters ?? settled?.entourage.characters ?? production.entourage.characters,
+			relationships:
+				frontier?.relationships ??
+				settled?.entourage.relationships ??
+				production.entourage.relationships,
+			staff: frontier?.staff ?? settled?.entourage.staff ?? production.entourage.staff,
+			shortlists:
+				frontier?.shortlists ?? settled?.entourage.shortlists ?? production.entourage.shortlists,
+			mandates: frontier?.career.mandates ?? settled?.career.mandates ?? production.career.mandates,
+			ballots: frontier?.career.ballots ?? settled?.career.ballots ?? production.career.ballots,
+			campaigns:
+				frontier?.career.campaigns ?? settled?.career.campaigns ?? production.career.campaigns,
+			institutions:
+				frontier?.career.institutions ??
+				settled?.career.institutions ??
+				production.career.institutions,
 			upgrades: execution.upgrades,
+			facts: frontier?.facts ?? state.facts,
+			cases: settled?.cases ?? state.cases,
 			nextInstanceNumber: frontier?.nextInstanceNumber ?? execution.nextInstanceNumber,
 			events,
 			history: [...state.history, entry]

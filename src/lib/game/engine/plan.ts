@@ -29,7 +29,7 @@ import {
 import type { PlanStep, TurnPlan } from './commands.ts';
 import { evaluateCondition } from './conditions.ts';
 import { resolveEconomy, type ProducerForecast } from './economy.ts';
-import { applyGauge, effectRange, resolveEffect, type EffectRange } from './effects.ts';
+import { applyGauge, effectRange, gaugeKey, resolveEffect, type EffectRange } from './effects.ts';
 import { forecastWellbeing, type WellbeingForecast } from './health.ts';
 import type { RngState } from './random.ts';
 import type {
@@ -396,7 +396,9 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 										mandates: workingCareer.mandates,
 										campaigns: workingCareer.campaigns,
 										staff: workingEntourage.staff,
-										institutions: workingCareer.institutions
+										institutions: workingCareer.institutions,
+										facts: state.facts,
+										cases: state.cases
 									},
 									content
 								)
@@ -453,7 +455,9 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			mandates: workingCareer.mandates,
 			campaigns: workingCareer.campaigns,
 			institutions: workingCareer.institutions,
-			staff: workingEntourage.staff
+			staff: workingEntourage.staff,
+			facts: state.facts,
+			cases: state.cases
 		};
 		if (requires && !evaluateCondition(context, requires)) {
 			fail('condition_not_met', unavailableReason ?? `« ${label} » n’est pas disponible.`);
@@ -675,6 +679,8 @@ export function executePlan(
 					throw new Error(`Effet sur un personnage hors événement : ${step.id}`);
 				} else if (resolved.kind === 'release') {
 					throw new Error(`Départ non développé : ${step.id}`);
+				} else if (resolved.kind === 'fact') {
+					throw new Error(`Fait hors événement : ${step.id}`);
 				} else {
 					const applied = applyStateEffects(
 						[resolved.effect],
@@ -728,7 +734,7 @@ function applyGaugeEffect(
 	gauge: GaugeId,
 	delta: number
 ): { player: PlayerState; delta: number } {
-	const key = gauge === 'player.health' ? 'health' : 'stress';
+	const key = gaugeKey(gauge);
 	const { value, applied } = applyGauge(player[key], delta);
 	return { player: { ...player, [key]: value }, delta: applied };
 }

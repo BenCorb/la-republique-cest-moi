@@ -14,6 +14,7 @@ import {
 	fixtureEntourage,
 	fixtureEvents,
 	fixtureProfiles,
+	fixtureJustice,
 	fixtureCareer,
 	fixtureSupports,
 	fixtureTraits,
@@ -74,7 +75,8 @@ describe('validation de contenu', () => {
 				'career.json',
 				'supports.json',
 				'entourage.json',
-				'profiles.json'
+				'profiles.json',
+				'justice.json'
 			])
 		);
 	});
@@ -91,7 +93,8 @@ describe('validation de contenu', () => {
 			{ file: 'career.json', message: 'catalogue obligatoire manquant' },
 			{ file: 'supports.json', message: 'catalogue obligatoire manquant' },
 			{ file: 'entourage.json', message: 'catalogue obligatoire manquant' },
-			{ file: 'profiles.json', message: 'catalogue obligatoire manquant' }
+			{ file: 'profiles.json', message: 'catalogue obligatoire manquant' },
+			{ file: 'justice.json', message: 'catalogue obligatoire manquant' }
 		]);
 	});
 
@@ -110,6 +113,7 @@ describe('validation de contenu', () => {
 		writeFileSync(join(dir, 'supports.json'), JSON.stringify(fixtureSupports));
 		writeFileSync(join(dir, 'entourage.json'), JSON.stringify(fixtureEntourage));
 		writeFileSync(join(dir, 'profiles.json'), JSON.stringify(fixtureProfiles));
+		writeFileSync(join(dir, 'justice.json'), JSON.stringify(fixtureJustice));
 		mkdirSync(join(dir, 'events'));
 		for (const [file, catalog] of Object.entries(fixtureEvents)) {
 			writeFileSync(join(dir, file), JSON.stringify(catalog));

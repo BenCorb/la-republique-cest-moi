@@ -49,6 +49,12 @@
 							"op": "addSupport",
 							"group": "support.working_class",
 							"value": -2
+						},
+						{
+							"op": "recordFact",
+							"offense": "offense.illegal_financing",
+							"severity": 1,
+							"accomplices": ["donor"]
 						}
 					],
 					"followUp": {
@@ -145,6 +151,12 @@
 							"op": "addSupport",
 							"group": "support.business",
 							"value": 5
+						},
+						{
+							"op": "recordFact",
+							"offense": "offense.favoritism",
+							"severity": 2,
+							"accomplices": ["donor"]
 						}
 					],
 					"followUp": {
@@ -221,6 +233,12 @@
 							"op": "addResource",
 							"resource": "personalCashCents",
 							"value": 15000
+						},
+						{
+							"op": "recordFact",
+							"offense": "offense.misuse_of_assets",
+							"severity": 1,
+							"divertedCents": 15000
 						}
 					],
 					"followUp": {
@@ -285,7 +303,8 @@
 					"effects": [
 						{ "op": "addResource", "resource": "politicalBudgetCents", "value": 200000 },
 						{ "op": "addSupport", "group": "support.business", "value": 3 },
-						{ "op": "addStat", "stat": "player.stress", "value": 3 }
+						{ "op": "addStat", "stat": "player.stress", "value": 3 },
+						{ "op": "recordFact", "offense": "offense.favoritism", "severity": 3 }
 					]
 				},
 				{

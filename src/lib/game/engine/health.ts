@@ -49,7 +49,12 @@ interface Gauges {
 class ContributionLog {
 	readonly entries: WellbeingContribution[] = [];
 
-	apply(gauges: Gauges, gauge: GaugeId, source: WellbeingSource, delta: number): void {
+	apply(
+		gauges: Gauges,
+		gauge: Extract<GaugeId, 'player.health' | 'player.stress'>,
+		source: WellbeingSource,
+		delta: number
+	): void {
 		const key = gauge === 'player.health' ? 'health' : 'stress';
 		const { value, applied } = applyGauge(gauges[key], delta);
 		gauges[key] = value;

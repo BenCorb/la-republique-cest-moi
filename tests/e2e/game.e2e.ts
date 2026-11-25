@@ -347,6 +347,43 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 25 ans');
 	});
 
+	test('présente l’exposition, le risque judiciaire et le registre des faits', async ({
+		page
+	}, testInfo) => {
+		const content = loadContentFromFiles();
+		const base = createGame({ seed: 'e2e-justice' }, content);
+		const state = {
+			...base,
+			player: { ...base.player, exposure: 40 },
+			facts: [
+				{
+					factId: 'fact.1',
+					offenseId: 'offense.illegal_financing',
+					turn: 0,
+					severity: 2,
+					divertedCents: 60_000,
+					authorId: null,
+					accompliceIds: [],
+					eventId: 'finance.generous_donor'
+				}
+			]
+		};
+		const exported = exportSave(createEnvelope(state, content, '2026-11-25T10:00:00.000Z'));
+		const file = testInfo.outputPath(exported.fileName);
+		writeFileSync(file, exported.text);
+
+		await page.goto('./');
+		await page.getByTestId('import-input').setInputFiles(file);
+		await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
+		const card = page.getByRole('region', { name: 'Exposition et justice' });
+		await expect(card.getByText('Exposition médiatique', { exact: true })).toBeVisible();
+		await expect(card.getByText('Risque judiciaire', { exact: true })).toBeVisible();
+		const facts = card.getByTestId('facts');
+		await expect(facts.getByRole('rowheader')).toContainText('Financement occulte');
+		await expect(facts).toContainText('auteur');
+		await expect(card).toContainText('Fonds détournés cumulés');
+	});
+
 	test('montre les relations sans dévoiler les traits cachés', async ({ page }, testInfo) => {
 		const content = loadContentFromFiles();
 		const base = createGame({ seed: 'e2e-relations' }, content);

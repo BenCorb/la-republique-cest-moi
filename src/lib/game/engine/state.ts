@@ -20,6 +20,7 @@ import { createCast } from './characters.ts';
 import { computePopularity, startingSupports } from './supports.ts';
 import { EMPTY_FAMILY, createFamily, type FamilyRecord } from './family.ts';
 import { applyPoliticalEffect } from './world.ts';
+import { gaugeKey } from './effects.ts';
 import { createWorld } from './world.ts';
 
 /** Version du format de l'état, à incrémenter avec une migration explicite. */
@@ -49,6 +50,12 @@ export interface PlayerState {
 	readonly health: number;
 	/** Stress, entier de 0 à 100. */
 	readonly stress: number;
+	/** Exposition médiatique, entier de 0 à 100 (P3-01). */
+	readonly exposure: number;
+	/** Préparation de la défense, entier de 0 à 100 (P3-01). */
+	readonly defense: number;
+	/** Inéligible jusqu'à ce trimestre exclu, `null` sinon (P3-01). */
+	readonly ineligibleUntil: Turn | null;
 	/** Parti du joueur, `null` s'il n'est pas encarté. */
 	readonly partyId: string | null;
 	/** Historique des adhésions, dans l'ordre ; seule la dernière peut être en cours. */
@@ -311,7 +318,77 @@ export type PoliticalChange =
 			readonly ballotId: string;
 			readonly electionId: string;
 			readonly turn: Turn;
-	  };
+	  }
+	/** Acte douteux inscrit au registre des faits (P3-01). */
+	| { readonly kind: 'fact'; readonly factId: string; readonly offenseId: string };
+
+/**
+ * Fait du registre (P3-01) : acte douteux daté, avec ses protagonistes et sa
+ * gravité. Justice, presse et bilan s'appuient sur ce même registre ; un fait
+ * n'est jamais supprimé. Il ne dit rien d'une enquête ni d'une culpabilité
+ * établie : ce sont des états distincts (ARCHITECTURE.md §8.4).
+ */
+export interface Fact {
+	/** `fact.N`, N étant le rang d'inscription (jamais réutilisé). */
+	readonly factId: string;
+	readonly offenseId: string;
+	readonly turn: Turn;
+	/** Gravité de 1 à 3. */
+	readonly severity: number;
+	/** Fonds détournés, en centimes (statistique de bilan, pas une monnaie). */
+	readonly divertedCents: number;
+	/** Auteur : `null` pour le joueur, sinon un personnage (le joueur est alors complice). */
+	readonly authorId: string | null;
+	/** Autres protagonistes (donateur, bénéficiaire…), sans le joueur. */
+	readonly accompliceIds: readonly string[];
+	/** Événement dont le choix a produit le fait. */
+	readonly eventId: string;
+}
+
+/**
+ * Étape d'un dossier judiciaire (P3-01) : enquête après la révélation, mise en
+ * examen dans l'attente du procès, appel après une première condamnation du
+ * joueur, puis clôture. Une enquête n'établit aucune culpabilité.
+ */
+export type CaseStage = 'investigation' | 'indicted' | 'appeal' | 'closed';
+
+export type CaseOutcome = 'dismissed' | 'acquitted' | 'convicted';
+
+export interface Sentence {
+	/** Amende prononcée, en centimes (prélevée dans la limite de l'argent personnel). */
+	readonly fineCents: number;
+	/** Inéligibilité, en trimestres (0 : aucune). */
+	readonly ineligibilityTurns: number;
+	readonly prison: 'none' | 'suspended' | 'firm';
+}
+
+/** Dossier judiciaire ouvert par la révélation d'un fait (instance `case.N`). */
+export interface LegalCase {
+	readonly caseId: string;
+	readonly factId: string;
+	/** Personne poursuivie : `null` pour le joueur, sinon l'auteur du fait. */
+	readonly defendantId: string | null;
+	/** Trimestre de la révélation. */
+	readonly openedTurn: Turn;
+	readonly stage: CaseStage;
+	/** Trimestre à la fin duquel l'étape en cours se conclut, `null` une fois clos. */
+	readonly dueTurn: Turn | null;
+	readonly outcome: CaseOutcome | null;
+	readonly closedTurn: Turn | null;
+	/** Peine définitive, en cas de condamnation. */
+	readonly sentence: Sentence | null;
+}
+
+export type CaseEventKind =
+	'revealed' | 'dismissed' | 'indicted' | 'appealed' | 'acquitted' | 'convicted';
+
+/** Justice à la frontière du trimestre : étapes franchies et conséquences. */
+export interface JusticeRecord {
+	readonly cases: readonly { readonly caseId: string; readonly kind: CaseEventKind }[];
+	readonly changes: readonly ResourceChange[];
+	readonly gauges: readonly GaugeChange[];
+	readonly politics: readonly PoliticalChange[];
+}
 
 /** Échéances résolues à la fin du trimestre (étape 5 de l'ordre de tour). */
 export interface DeadlinesRecord {
@@ -494,6 +571,10 @@ export interface HistoryEntry {
 	readonly supports: readonly { readonly groupId: string; readonly delta: number }[] | null;
 	/** Échéances (fins de mandat, scrutins), `null` si la carrière s'est terminée avant. */
 	readonly deadlines: DeadlinesRecord | null;
+	/** Retour de l'exposition vers sa référence, `null` si la carrière s'est terminée avant. */
+	readonly exposure: number | null;
+	/** Dossiers judiciaires, `null` si la carrière s'est terminée avant. */
+	readonly justice: JusticeRecord | null;
 	/** Événements créés (ou suites annulées) au passage à T+1. */
 	readonly events: readonly EventRecord[];
 }
@@ -518,12 +599,15 @@ export interface ChoiceRecord {
 
 export type JournalEntry = HistoryEntry | ChoiceRecord;
 
-export interface EndState {
-	/** Trimestre au cours duquel la carrière s'est terminée. */
-	readonly turn: Turn;
-	readonly reason: 'death';
-	readonly cause: DeathCause;
-}
+export type EndState =
+	| {
+			/** Trimestre au cours duquel la carrière s'est terminée. */
+			readonly turn: Turn;
+			readonly reason: 'death';
+			readonly cause: DeathCause;
+	  }
+	/** Condamnation définitive à de la prison ferme (P3-01). */
+	| { readonly turn: Turn; readonly reason: 'prison'; readonly caseId: string };
 
 export interface GameState {
 	readonly schemaVersion: typeof STATE_SCHEMA_VERSION;
@@ -554,6 +638,10 @@ export interface GameState {
 	readonly staff: readonly StaffMember[];
 	/** Présélections ouvertes, par poste vacant. */
 	readonly shortlists: Readonly<Record<string, readonly ShortlistEntry[]>>;
+	/** Registre des faits, dans l'ordre d'inscription (P3-01). */
+	readonly facts: readonly Fact[];
+	/** Dossiers judiciaires, dans l'ordre d'ouverture (P3-01). */
+	readonly cases: readonly LegalCase[];
 	/** Journal : trimestres résolus et choix, dans l'ordre chronologique. */
 	readonly history: readonly JournalEntry[];
 	readonly end: EndState | null;
@@ -587,6 +675,9 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		birthTurn: START_TURN - PROTOTYPE_STARTING_AGE * TURNS_PER_YEAR,
 		health: content.balance.wellbeing.startingHealth,
 		stress: content.balance.wellbeing.startingStress,
+		exposure: content.justice.baseExposure,
+		defense: 0,
+		ineligibleUntil: null,
 		partyId: null,
 		affiliations: [],
 		supports: startingSupports(content),
@@ -600,8 +691,13 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		if (effect.op === 'addResource') {
 			resources[effect.resource] = Math.max(0, resources[effect.resource] + effect.value);
 		} else if (effect.op === 'addStat') {
-			const key = effect.stat === 'player.health' ? 'health' : 'stress';
-			player = { ...player, [key]: Math.min(GAUGE_MAX, Math.max(1, player[key] + effect.value)) };
+			const key = gaugeKey(effect.stat);
+			// Santé et stress d'au moins 1 au départ (règle de l'alpha) ; autres jauges dès 0.
+			const floor = key === 'health' || key === 'stress' ? 1 : 0;
+			player = {
+				...player,
+				[key]: Math.min(GAUGE_MAX, Math.max(floor, player[key] + effect.value))
+			};
 		} else if (effect.op === 'addSupport') {
 			player = applyPoliticalEffect(effect, player, world.world, START_TURN, null, content).player;
 		}
@@ -645,6 +741,8 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 				})
 			)
 		},
+		facts: [],
+		cases: [],
 		history: [],
 		end: null
 	};

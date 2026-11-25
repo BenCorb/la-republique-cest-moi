@@ -477,6 +477,92 @@ export const fixtureEvents = {
 	'events/test.json': {
 		events: [
 			{
+				id: 'test.revelation',
+				category: 'press',
+				title: 'Révélations',
+				text: 'Un dossier vous concernant est révélé.',
+				blocking: true,
+				trigger: 'followUp',
+				weight: 0,
+				priority: 30,
+				cooldownTurns: 0,
+				unique: false,
+				actors: [],
+				choices: [
+					{
+						id: 'lawyer',
+						label: 'Prendre un avocat',
+						hints: ['Défense renforcée'],
+						costs: [],
+						effects: [{ op: 'addStat', stat: 'player.defense', value: 50 }]
+					},
+					{ id: 'deny', label: 'Nier', hints: [], costs: [], effects: [] }
+				]
+			},
+			{
+				id: 'test.entourage_revelation',
+				category: 'press',
+				title: 'Un proche mis en cause',
+				text: '{defendant} est mis en cause.',
+				blocking: true,
+				trigger: 'followUp',
+				weight: 0,
+				priority: 30,
+				cooldownTurns: 0,
+				unique: false,
+				actors: [{ role: 'defendant', tags: ['family'] }],
+				choices: [
+					{ id: 'distance', label: 'Prendre ses distances', hints: [], costs: [], effects: [] }
+				]
+			},
+			{
+				id: 'test.shady_offer',
+				category: 'opportunity',
+				title: 'Une offre douteuse',
+				text: '{cousin} propose un arrangement.',
+				blocking: true,
+				trigger: 'random',
+				weight: 5,
+				priority: 0,
+				cooldownTurns: 0,
+				unique: false,
+				actors: [{ role: 'cousin', tags: ['family'] }],
+				choices: [
+					{
+						id: 'accept',
+						label: 'Accepter',
+						hints: ['Budget en hausse'],
+						costs: [],
+						effects: [
+							{ op: 'addResource', resource: 'politicalBudgetCents', value: 1_000 },
+							{
+								op: 'recordFact',
+								offense: 'offense.test_financing',
+								severity: 2,
+								divertedCents: 1_000,
+								accomplices: ['cousin']
+							},
+							{ op: 'addStat', stat: 'player.exposure', value: 10 }
+						]
+					},
+					{
+						id: 'delegate',
+						label: 'Le laisser faire',
+						hints: [],
+						costs: [],
+						effects: [
+							{
+								op: 'recordFact',
+								offense: 'offense.test_favour',
+								severity: 3,
+								author: 'cousin'
+							}
+						]
+					},
+					{ id: 'refuse', label: 'Refuser', hints: [], costs: [], effects: [] }
+				]
+			},
+			{
 				id: 'test.stress_alert',
 				category: 'personal',
 				title: 'Alerte',
@@ -767,6 +853,73 @@ export const fixtureUpgrades = {
 	]
 };
 
+/**
+ * Justice neutre : l'exposition ne bouge pas d'elle-même, si bien que les tests
+ * existants restent indépendants des jauges de la justice (`withJustice`).
+ */
+export const fixtureJustice = {
+	offenses: [
+		{
+			id: 'offense.test_financing',
+			label: 'Financement de test',
+			description: 'Des fonds de test.'
+		},
+		{ id: 'offense.test_favour', label: 'Faveur de test', description: 'Une faveur de test.' }
+	],
+	balance: {
+		riskPerSeverity: 8,
+		accompliceRiskPercent: 50,
+		prescriptionTurns: 24,
+		exposureRiskBonusPercent: 50,
+		baseExposure: 0,
+		campaignExposure: 0,
+		mandateExposure: {},
+		exposureDriftPercent: 0,
+		// Aucune révélation par défaut : les tests de dossiers l'activent (`withJustice`).
+		revealPercentPerSeverity: 0,
+		investigationTurns: { min: 2, max: 2 },
+		trialDelayTurns: { min: 2, max: 2 },
+		appealTurns: { min: 3, max: 3 },
+		dismissalBasePercent: 0,
+		dismissalPerSeverityPercent: 0,
+		defenseDismissalPercent: 0,
+		convictionPercentBySeverity: [100, 100, 100],
+		defenseConvictionPercent: 100,
+		sentences: [
+			{
+				fineCents: { min: 1_000, max: 1_000 },
+				ineligibilityTurns: { min: 0, max: 0 },
+				prison: 'none',
+				firmPrisonPercent: 0
+			},
+			{
+				fineCents: { min: 5_000, max: 5_000 },
+				ineligibilityTurns: { min: 8, max: 8 },
+				prison: 'suspended',
+				firmPrisonPercent: 0
+			},
+			{
+				fineCents: { min: 10_000, max: 10_000 },
+				ineligibilityTurns: { min: 20, max: 20 },
+				prison: 'firm_possible',
+				firmPrisonPercent: 100
+			}
+		],
+		revelationExposure: 10,
+		revelationSupport: 2,
+		revelationStress: 4,
+		indictmentStress: 3,
+		indictmentSupport: 1,
+		convictionSupport: 3,
+		convictionStress: 5,
+		acquittalRelief: 5,
+		entourageImpactPercent: 50,
+		defenseDecayPercent: 10,
+		revelationEvent: 'test.revelation',
+		entourageRevelationEvent: 'test.entourage_revelation'
+	}
+};
+
 function load(): Content {
 	const result = validateContent({
 		actions: fixtureActions,
@@ -779,13 +932,19 @@ function load(): Content {
 		career: fixtureCareer,
 		supports: fixtureSupports,
 		entourage: fixtureEntourage,
-		profiles: fixtureProfiles
+		profiles: fixtureProfiles,
+		justice: fixtureJustice
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;
 }
 
 export const fixtureContent: Content = load();
+
+/** Contenu de test avec des règles de justice modifiées. */
+export function withJustice(changes: Partial<Content['justice']>): Content {
+	return { ...fixtureContent, justice: { ...fixtureContent.justice, ...changes } };
+}
 
 /** Contenu de test avec un modèle de santé modifié. */
 export function withWellbeing(changes: Partial<Content['balance']['wellbeing']>): Content {

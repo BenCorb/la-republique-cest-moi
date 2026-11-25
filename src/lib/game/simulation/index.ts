@@ -26,7 +26,7 @@ import {
 	previewPlan,
 	transition,
 	validateSeed,
-	type DeathCause,
+	type EndCause,
 	type EventChoiceView,
 	type GameState,
 	type PendingEventView,
@@ -65,7 +65,7 @@ export interface SimulationRun {
 	readonly status: SimulationRunStatus;
 	readonly turns: number;
 	readonly endingAge: number;
-	readonly endCause: DeathCause | null;
+	readonly endCause: EndCause | null;
 	readonly decisions: number;
 	readonly alertEpisodes: number;
 	readonly significantInterventions: number;

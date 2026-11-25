@@ -19,6 +19,7 @@ import {
 	supportCatalogSchema,
 	entourageCatalogSchema,
 	profileCatalogSchema,
+	justiceCatalogSchema,
 	upgradeCatalogSchema,
 	worldSchema
 } from './schemas.ts';
@@ -42,6 +43,8 @@ import {
 	type PostDefinition,
 	type SupportGroupDefinition,
 	type PartyDefinition,
+	type JusticeDefinition,
+	type OffenseDefinition,
 	type ResourceAmount,
 	type TraitDefinition,
 	type UpgradeDefinition,
@@ -79,6 +82,8 @@ export interface RawContent {
 	readonly entourage: unknown;
 	/** Origines, professions et profil par défaut (`profiles.json`). */
 	readonly profiles: unknown;
+	/** Infractions du registre des faits et jauges de la justice (`justice.json`). */
+	readonly justice: unknown;
 }
 
 export type ContentValidation =
@@ -252,6 +257,7 @@ interface Refs {
 	readonly groups: ReadonlySet<string>;
 	readonly origins: ReadonlySet<string>;
 	readonly professions: ReadonlySet<string>;
+	readonly offenses: ReadonlySet<string>;
 }
 
 /** Vérifie les partis et mandats cités par une condition. */
@@ -470,6 +476,36 @@ function effectIssues(
 					});
 				}
 				break;
+			case 'recordFact': {
+				if (!refs.offenses.has(effect.offense)) {
+					issues.push({
+						source,
+						path: `${at}.offense`,
+						message: `infraction inconnue : ${effect.offense}`
+					});
+				}
+				if (roles === null) {
+					issues.push({ source, path: at, message: 'fait réservé aux événements' });
+					break;
+				}
+				const cited = [
+					...(effect.author === undefined ? [] : [effect.author]),
+					...(effect.accomplices ?? [])
+				];
+				if (new Set(cited).size !== cited.length) {
+					issues.push({ source, path: at, message: 'protagoniste cité deux fois' });
+				}
+				for (const role of cited) {
+					if (!roles.has(role)) {
+						issues.push({
+							source,
+							path: at,
+							message: `rôle inconnu de l’événement : ${role}`
+						});
+					}
+				}
+				break;
+			}
 			default:
 				break;
 		}
@@ -834,7 +870,9 @@ function crossCheckEvents(
 	cast: readonly CastMember[],
 	knownIds: Set<string>,
 	traitIds: ReadonlySet<string> = new Set(),
-	dynamicTags: ReadonlySet<string> = new Set()
+	dynamicTags: ReadonlySet<string> = new Set(),
+	/** Suites déclenchées par le moteur lui-même (révélations judiciaires, P3-01). */
+	engineFollowUps: ReadonlySet<string> = new Set()
 ): ContentIssue[] {
 	const issues: ContentIssue[] = [];
 	const eventIds = new Set(events.map(({ event }) => event.id));
@@ -997,14 +1035,15 @@ function crossCheckEvents(
 		}
 	}
 
-	// Une suite `followUp` doit être atteignable par au moins un choix.
-	const reachable = new Set(
-		events.flatMap(({ event }) =>
+	// Une suite `followUp` doit être atteignable par au moins un choix ou par le moteur.
+	const reachable = new Set([
+		...engineFollowUps,
+		...events.flatMap(({ event }) =>
 			event.blocking
 				? event.choices.flatMap((choice) => (choice.followUp ? [choice.followUp.eventId] : []))
 				: []
 		)
-	);
+	]);
 	for (const { source, index, event } of events) {
 		if (event.trigger === 'followUp' && !reachable.has(event.id)) {
 			issues.push({
@@ -1028,6 +1067,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	const supportCatalog = supportCatalogSchema.safeParse(raw.supports);
 	const entourageCatalog = entourageCatalogSchema.safeParse(raw.entourage);
 	const profileCatalog = profileCatalogSchema.safeParse(raw.profiles);
+	const justiceCatalog = justiceCatalogSchema.safeParse(raw.justice);
 	const eventFiles = Object.keys(raw.events)
 		.sort()
 		.map((source) => ({ source, parsed: eventCatalogSchema.safeParse(raw.events[source]) }));
@@ -1045,6 +1085,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 		issues.push(...zodIssues('entourage.json', entourageCatalog.error));
 	}
 	if (!profileCatalog.success) issues.push(...zodIssues('profiles.json', profileCatalog.error));
+	if (!justiceCatalog.success) issues.push(...zodIssues('justice.json', justiceCatalog.error));
 	for (const { source, parsed } of eventFiles) {
 		if (!parsed.success) issues.push(...zodIssues(source, parsed.error));
 	}
@@ -1059,6 +1100,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 		!supportCatalog.success ||
 		!entourageCatalog.success ||
 		!profileCatalog.success ||
+		!justiceCatalog.success ||
 		eventFiles.some(({ parsed }) => !parsed.success)
 	) {
 		return { ok: false, issues };
@@ -1103,6 +1145,10 @@ export function validateContent(raw: RawContent): ContentValidation {
 				'partner',
 				'child',
 				...(entourageCatalog.data.posts ?? []).map((post) => post.tag)
+			]),
+			new Set([
+				justiceCatalog.data.balance.revelationEvent,
+				justiceCatalog.data.balance.entourageRevelationEvent
 			])
 		)
 	);
@@ -1133,8 +1179,10 @@ export function validateContent(raw: RawContent): ContentValidation {
 		groups: new Set(groupList.map((group) => group.id)),
 		parties: new Set(world.data.parties.map((party) => party.id)),
 		mandates: new Set(career.mandates.map((mandate) => mandate.id)),
-		elections: new Set(career.elections.map((election) => election.id))
+		elections: new Set(career.elections.map((election) => election.id)),
+		offenses: new Set(justiceCatalog.data.offenses.map((offense) => offense.id))
 	};
+	issues.push(...crossCheckJustice(justiceCatalog.data, refs, knownIds, sourcedEvents));
 	issues.push(...crossCheckPolitics(actionList, upgradeList, sourcedEvents, refs));
 	issues.push(
 		...crossCheckProfiles(
@@ -1197,6 +1245,8 @@ export function validateContent(raw: RawContent): ContentValidation {
 	for (const group of groupList) supportGroups[group.id] = group;
 	const parties: Record<string, PartyDefinition> = {};
 	for (const party of world.data.parties) parties[party.id] = party;
+	const offenses: Record<string, OffenseDefinition> = {};
+	for (const offense of justiceCatalog.data.offenses) offenses[offense.id] = offense;
 	return {
 		ok: true,
 		content: {
@@ -1211,6 +1261,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 				supports: supportCatalog.data,
 				entourage: entourageCatalog.data,
 				profiles: profileData,
+				justice: justiceCatalog.data,
 				events: Object.fromEntries(eventFiles.map(({ source, parsed }) => [source, parsed.data]))
 			}),
 			balance: balance.data,
@@ -1246,7 +1297,75 @@ export function validateContent(raw: RawContent): ContentValidation {
 				...groupList.filter((group) => group.kind === 'influence')
 			].map((group) => group.id),
 			parties,
-			partyIds: world.data.parties.map((party) => party.id)
+			partyIds: world.data.parties.map((party) => party.id),
+			offenses,
+			offenseIds: justiceCatalog.data.offenses.map((offense) => offense.id),
+			justice: justiceCatalog.data.balance
 		}
 	};
+}
+
+/** Infractions uniques, mandats connus dans les expositions de référence. */
+function crossCheckJustice(
+	justice: JusticeDefinition,
+	refs: Refs,
+	knownIds: Set<string>,
+	events: readonly SourcedEvent[]
+): ContentIssue[] {
+	const issues: ContentIssue[] = [];
+	const rules = justice.balance;
+	for (const key of ['investigationTurns', 'trialDelayTurns', 'appealTurns'] as const) {
+		if (rules[key].min < 1) {
+			issues.push({
+				source: 'justice.json',
+				path: `balance.${key}.min`,
+				message: 'une étape dure au moins un trimestre'
+			});
+		}
+	}
+	for (const [key, role] of [
+		['revelationEvent', null],
+		['entourageRevelationEvent', 'defendant']
+	] as const) {
+		const event = events.find((entry) => entry.event.id === rules[key])?.event;
+		if (!event) {
+			issues.push({
+				source: 'justice.json',
+				path: `balance.${key}`,
+				message: `événement inconnu : ${rules[key]}`
+			});
+		} else if (!event.blocking || event.trigger !== 'followUp') {
+			issues.push({
+				source: 'justice.json',
+				path: `balance.${key}`,
+				message: 'la révélation doit être un événement bloquant de type « followUp »'
+			});
+		} else if (role !== null && !event.actors.some((slot) => slot.role === role)) {
+			issues.push({
+				source: 'justice.json',
+				path: `balance.${key}`,
+				message: `l’événement doit avoir un rôle « ${role} »`
+			});
+		}
+	}
+	justice.offenses.forEach((offense, index) => {
+		if (knownIds.has(offense.id)) {
+			issues.push({
+				source: 'justice.json',
+				path: `offenses[${index}].id`,
+				message: `identifiant en double : ${offense.id}`
+			});
+		}
+		knownIds.add(offense.id);
+	});
+	for (const mandateId of Object.keys(justice.balance.mandateExposure)) {
+		if (!refs.mandates.has(mandateId)) {
+			issues.push({
+				source: 'justice.json',
+				path: `balance.mandateExposure.${mandateId}`,
+				message: `mandat inconnu : ${mandateId}`
+			});
+		}
+	}
+	return issues;
 }

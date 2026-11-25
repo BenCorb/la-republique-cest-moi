@@ -15,6 +15,7 @@ import {
 	AXIS_MAX,
 	AXIS_MIN,
 	COMPARISON_OPS,
+	FACT_SEVERITY_MAX,
 	INDICATOR_IDS,
 	GAUGE_IDS,
 	GAUGE_MAX,
@@ -38,6 +39,10 @@ import {
 	type ElectionDefinition,
 	type ElectionsBalance,
 	type InstitutionsDefinition,
+	type JusticeBalance,
+	type JusticeDefinition,
+	type OffenseDefinition,
+	type SentenceRule,
 	type MandateDefinition,
 	type SupportGroupDefinition,
 	type SupportsBalance,
@@ -168,6 +173,20 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 	z.strictObject({
 		op: z.literal('prepareCampaign'),
 		value: safeInt.refine((value) => value > 0 && value <= 100, 'préparation de 1 à 100')
+	}),
+	z.strictObject({
+		op: z.literal('recordFact'),
+		offense: contentId,
+		severity: safeInt.refine(
+			(value) => value >= 1 && value <= FACT_SEVERITY_MAX,
+			`gravité de 1 à ${FACT_SEVERITY_MAX}`
+		),
+		divertedCents: nonNegativeInt.optional(),
+		author: z
+			.string()
+			.regex(/^[a-z][a-z0-9_]*$/, 'rôle en minuscules')
+			.optional(),
+		accomplices: z.array(z.string().regex(/^[a-z][a-z0-9_]*$/, 'rôle en minuscules')).optional()
 	}),
 	z.strictObject({
 		op: z.literal('callEarlyElection'),
@@ -582,6 +601,62 @@ export const supportGroupSchema: z.ZodType<SupportGroupDefinition> = z
 
 export const supportCatalogSchema = z.strictObject({
 	groups: z.array(supportGroupSchema).min(1)
+});
+
+export const offenseSchema: z.ZodType<OffenseDefinition> = z.strictObject({
+	id: contentId,
+	label: frenchText,
+	description: frenchText
+});
+
+const intRange = z
+	.strictObject({ min: nonNegativeInt, max: nonNegativeInt })
+	.refine((range) => range.min <= range.max, { message: 'min doit être inférieur ou égal à max' });
+
+const sentenceRuleSchema: z.ZodType<SentenceRule> = z.strictObject({
+	fineCents: intRange,
+	ineligibilityTurns: intRange,
+	prison: z.enum(['none', 'suspended', 'firm_possible']),
+	firmPrisonPercent: percent
+});
+
+export const justiceBalanceSchema: z.ZodType<JusticeBalance> = z.strictObject({
+	riskPerSeverity: gaugeValue,
+	accompliceRiskPercent: percent,
+	prescriptionTurns: positiveInt,
+	exposureRiskBonusPercent: percent,
+	baseExposure: gaugeValue,
+	campaignExposure: gaugeValue,
+	mandateExposure: z.record(contentId, gaugeValue),
+	exposureDriftPercent: percent,
+	revealPercentPerSeverity: percent,
+	investigationTurns: intRange,
+	trialDelayTurns: intRange,
+	appealTurns: intRange,
+	dismissalBasePercent: percent,
+	dismissalPerSeverityPercent: percent,
+	defenseDismissalPercent: percent,
+	convictionPercentBySeverity: z.array(percent).length(FACT_SEVERITY_MAX),
+	defenseConvictionPercent: percent,
+	sentences: z.array(sentenceRuleSchema).length(FACT_SEVERITY_MAX),
+	revelationExposure: gaugeValue,
+	revelationSupport: gaugeValue,
+	revelationStress: gaugeValue,
+	indictmentStress: gaugeValue,
+	indictmentSupport: gaugeValue,
+	convictionSupport: gaugeValue,
+	convictionStress: gaugeValue,
+	acquittalRelief: gaugeValue,
+	entourageImpactPercent: percent,
+	defenseDecayPercent: percent,
+	revelationEvent: contentId,
+	entourageRevelationEvent: contentId
+});
+
+/** Registre des faits et jauges de la justice (`justice.json`, P3-01). */
+export const justiceCatalogSchema: z.ZodType<JusticeDefinition> = z.strictObject({
+	offenses: z.array(offenseSchema).min(1),
+	balance: justiceBalanceSchema
 });
 
 export const campaignsBalanceSchema: z.ZodType<CampaignsBalance> = z.strictObject({

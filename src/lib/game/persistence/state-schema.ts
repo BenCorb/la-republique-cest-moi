@@ -55,7 +55,8 @@ const politicalChange = z.discriminatedUnion('kind', [
 		characterId: id,
 		postId: id,
 		reason: staffLeaveReason
-	})
+	}),
+	z.strictObject({ kind: z.literal('fact'), factId: id, offenseId: id })
 ]);
 
 const peopleChange = z.discriminatedUnion('kind', [
@@ -182,6 +183,20 @@ const turnEntry = z.strictObject({
 			people: z.array(peopleChange)
 		})
 		.nullable(),
+	exposure: int.nullable(),
+	justice: z
+		.strictObject({
+			cases: z.array(
+				z.strictObject({
+					caseId: id,
+					kind: z.enum(['revealed', 'dismissed', 'indicted', 'appealed', 'acquitted', 'convicted'])
+				})
+			),
+			changes: z.array(resourceChange),
+			gauges: z.array(gaugeChange),
+			politics: z.array(politicalChange)
+		})
+		.nullable(),
 	events: z.array(
 		z.strictObject({
 			eventId: id,
@@ -225,6 +240,9 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 		birthTurn: int,
 		health: int,
 		stress: int,
+		exposure: int,
+		defense: int,
+		ineligibleUntil: int.nullable(),
 		partyId: id.nullable(),
 		affiliations: z.array(z.strictObject({ partyId: id, fromTurn: int, toTurn: int.nullable() })),
 		supports: z.record(id, int),
@@ -338,6 +356,42 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 		maxMandates: int,
 		prerequisites: z.record(id, z.array(id))
 	}),
+	facts: z.array(
+		z.strictObject({
+			factId: id,
+			offenseId: id,
+			turn: int,
+			severity: int,
+			divertedCents: int,
+			authorId: id.nullable(),
+			accompliceIds: z.array(id),
+			eventId: id
+		})
+	),
+	cases: z.array(
+		z.strictObject({
+			caseId: id,
+			factId: id,
+			defendantId: id.nullable(),
+			openedTurn: int,
+			stage: z.enum(['investigation', 'indicted', 'appeal', 'closed']),
+			dueTurn: int.nullable(),
+			outcome: z.enum(['dismissed', 'acquitted', 'convicted']).nullable(),
+			closedTurn: int.nullable(),
+			sentence: z
+				.strictObject({
+					fineCents: int,
+					ineligibilityTurns: int,
+					prison: z.enum(['none', 'suspended', 'firm'])
+				})
+				.nullable()
+		})
+	),
 	history: z.array(z.discriminatedUnion('type', [turnEntry, choiceEntry])),
-	end: z.strictObject({ turn: int, reason: z.literal('death'), cause: deathCause }).nullable()
+	end: z
+		.discriminatedUnion('reason', [
+			z.strictObject({ turn: int, reason: z.literal('death'), cause: deathCause }),
+			z.strictObject({ turn: int, reason: z.literal('prison'), caseId: id })
+		])
+		.nullable()
 });

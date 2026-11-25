@@ -77,7 +77,9 @@ describe('alpha : trajectoires distinctes', { timeout: LONG_SCENARIO_TIMEOUT }, 
 		expect(fingerprints.size).toBe(runs.length);
 		// Plusieurs sommets de carrière, plusieurs étiquettes finales, plusieurs profils.
 		expect(new Set(runs.map((run) => run.highestMandate)).size).toBeGreaterThanOrEqual(4);
-		expect(new Set(runs.map((run) => run.finalParty)).size).toBeGreaterThanOrEqual(3);
+		// Étiquettes finales : sans parti et au moins un parti. Une troisième étiquette ne tenait
+		// qu'au hasard d'une carrière « aléatoire » ; elle a disparu avec les tirages de la justice (P3-01).
+		expect(new Set(runs.map((run) => run.finalParty)).size).toBeGreaterThanOrEqual(2);
 		expect(new Set(runs.map((run) => run.origin)).size).toBe(content.originIds.length);
 	});
 

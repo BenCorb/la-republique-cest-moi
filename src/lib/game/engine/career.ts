@@ -199,7 +199,7 @@ export function holdIssue(
 	return null;
 }
 
-function endMandates(
+export function endMandates(
 	mandates: readonly MandateInstance[],
 	shouldEnd: (mandate: MandateInstance) => boolean,
 	reason: MandateEndReason,
@@ -267,6 +267,13 @@ function mandatesAfterTerm(
  * du cumul pour le mandat brigué (les mandats qui s'achèvent à ce scrutin sont
  * réputés libérés : un sortant peut se représenter).
  */
+/** Le joueur est-il frappé d'inéligibilité au trimestre `turn` (P3-01) ? */
+export function isIneligible(player: Pick<PlayerState, 'ineligibleUntil'>, turn: Turn): boolean {
+	return player.ineligibleUntil !== null && turn < player.ineligibleUntil;
+}
+
+const INELIGIBLE = 'Vous êtes frappé d’inéligibilité par la justice.';
+
 export function candidacyIssue(
 	ballotIdValue: string,
 	parts: CareerParts,
@@ -285,6 +292,7 @@ export function candidacyIssue(
 	if (ageAt(player.birthTurn, ballot.turn) < definition.minAge) {
 		return `Il faut avoir ${definition.minAge} ans le jour du scrutin.`;
 	}
+	if (isIneligible(player, ballot.turn)) return INELIGIBLE;
 	return eligibilityIssue(ballot, parts, content);
 }
 
@@ -366,7 +374,10 @@ export function applyCareerEffect(
 		}
 		case 'grantMandate': {
 			const replace = effect.replaceIncompatible === true;
-			if (holdIssue(effect.mandate, parts.mandates, parts.institutions, content, replace)) {
+			if (
+				isIneligible(player, turn) ||
+				holdIssue(effect.mandate, parts.mandates, parts.institutions, content, replace)
+			) {
 				return { parts, changes: [] };
 			}
 			const ended = replace
@@ -472,9 +483,12 @@ export function applyCareerEffect(
 export function careerEffectIssue(
 	effect: Effect,
 	parts: CareerParts,
-	content: Content | null
+	content: Content | null,
+	player: Pick<PlayerState, 'ineligibleUntil'> | null = null,
+	turn: Turn = 0
 ): string | null {
 	if (effect.op !== 'grantMandate') return null;
+	if (player && isIneligible(player, turn)) return INELIGIBLE;
 	return holdIssue(
 		effect.mandate,
 		parts.mandates,
@@ -958,7 +972,9 @@ export function resolveDeadlines(
 		// Candidature du joueur : revalidée au jour du scrutin, puis jugée.
 		for (const campaign of runningCampaigns(career.campaigns)) {
 			if (campaign.ballotId !== ballot.ballotId) continue;
-			const issue = eligibilityIssue(ballot, career, content);
+			const issue = isIneligible(player, ballot.turn)
+				? INELIGIBLE
+				: eligibilityIssue(ballot, career, content);
 			let status: Exclude<Campaign['status'], 'running'>;
 			let playerPercent: number | null = null;
 			if (issue) {

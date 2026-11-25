@@ -29,6 +29,7 @@ export function loadContentFromFiles(directory = DEFAULT_CONTENT_DATA_DIR): Cont
 		supports: read('supports.json'),
 		entourage: read('entourage.json'),
 		profiles: read('profiles.json'),
+		justice: read('justice.json'),
 		events
 	});
 	if (!result.ok) {

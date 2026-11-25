@@ -68,6 +68,7 @@ npm run test:e2e:install
 | `npm run format`           | Reformate les fichiers (hors documents de conception)              |
 | `npm run content:validate` | Valide les catalogues JSON de `src/lib/game/content/data/`         |
 | `npm run simulate`         | Simule des lots seedés et produit un rapport JSON ou CSV           |
+| `npm run benchmark`        | Mesure projection et sauvegarde sur une carrière longue            |
 | `npm run test`             | Tests unitaires et de scénarios (Vitest, environnement Node)       |
 | `npm run test:e2e`         | Construit le site puis lance Playwright sur le build statique      |
 | `npm run build`            | Build statique prérendu dans `build/`                              |

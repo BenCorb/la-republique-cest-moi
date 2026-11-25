@@ -293,6 +293,12 @@
 							"op": "addSupport",
 							"group": "support.middle_class",
 							"value": -3
+						},
+						{
+							"op": "recordFact",
+							"offense": "offense.fictitious_job",
+							"severity": 1,
+							"accomplices": ["relative"]
 						}
 					],
 					"followUp": {

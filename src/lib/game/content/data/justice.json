@@ -1,0 +1,114 @@
+{
+	"offenses": [
+		{
+			"id": "offense.fictitious_job",
+			"label": "Emploi fictif",
+			"description": "Un salaire versé pour un travail que personne n’a jamais vu, ou pour un poste taillé sur mesure."
+		},
+		{
+			"id": "offense.illegal_financing",
+			"label": "Financement occulte",
+			"description": "Des fonds entrés dans les comptes politiques sans passer par les règles du financement des campagnes."
+		},
+		{
+			"id": "offense.favoritism",
+			"label": "Favoritisme",
+			"description": "Un marché, un permis ou une subvention attribué à un proche ou à un généreux soutien."
+		},
+		{
+			"id": "offense.conflict_of_interest",
+			"label": "Prise illégale d’intérêts",
+			"description": "Une décision publique prise au bénéfice d’intérêts que l’on sert, ou qui vous servent."
+		},
+		{
+			"id": "offense.misuse_of_assets",
+			"label": "Abus de biens sociaux",
+			"description": "L’argent d’une organisation employé à des fins personnelles."
+		}
+	],
+	"balance": {
+		"riskPerSeverity": 8,
+		"accompliceRiskPercent": 50,
+		"prescriptionTurns": 24,
+		"exposureRiskBonusPercent": 50,
+		"baseExposure": 5,
+		"campaignExposure": 10,
+		"mandateExposure": {
+			"mandate.municipal_councillor": 10,
+			"mandate.mayor": 20,
+			"mandate.regional_councillor": 15,
+			"mandate.deputy": 30,
+			"mandate.senator": 20,
+			"mandate.minister": 50
+		},
+		"exposureDriftPercent": 25,
+		"revealPercentPerSeverity": 2,
+		"investigationTurns": {
+			"min": 2,
+			"max": 6
+		},
+		"trialDelayTurns": {
+			"min": 2,
+			"max": 4
+		},
+		"appealTurns": {
+			"min": 4,
+			"max": 8
+		},
+		"dismissalBasePercent": 45,
+		"dismissalPerSeverityPercent": 10,
+		"defenseDismissalPercent": 20,
+		"convictionPercentBySeverity": [40, 55, 70],
+		"defenseConvictionPercent": 30,
+		"sentences": [
+			{
+				"fineCents": {
+					"min": 200000,
+					"max": 800000
+				},
+				"ineligibilityTurns": {
+					"min": 0,
+					"max": 0
+				},
+				"prison": "none",
+				"firmPrisonPercent": 0
+			},
+			{
+				"fineCents": {
+					"min": 1000000,
+					"max": 3000000
+				},
+				"ineligibilityTurns": {
+					"min": 4,
+					"max": 16
+				},
+				"prison": "suspended",
+				"firmPrisonPercent": 0
+			},
+			{
+				"fineCents": {
+					"min": 3000000,
+					"max": 10000000
+				},
+				"ineligibilityTurns": {
+					"min": 12,
+					"max": 40
+				},
+				"prison": "firm_possible",
+				"firmPrisonPercent": 50
+			}
+		],
+		"revelationExposure": 10,
+		"revelationSupport": 2,
+		"revelationStress": 4,
+		"indictmentStress": 3,
+		"indictmentSupport": 1,
+		"convictionSupport": 3,
+		"convictionStress": 5,
+		"acquittalRelief": 5,
+		"entourageImpactPercent": 50,
+		"defenseDecayPercent": 10,
+		"revelationEvent": "justice.revelation",
+		"entourageRevelationEvent": "justice.entourage_revelation"
+	}
+}

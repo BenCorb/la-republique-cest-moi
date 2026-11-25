@@ -22,6 +22,7 @@
  * réelle. Les coûts d'un choix, eux, doivent être couverts.
  */
 import {
+	GAUGE_IDS,
 	RESOURCE_IDS,
 	WORLD_TEMPLATE_VARIABLES,
 	type Content,
@@ -36,7 +37,8 @@ import {
 import type { Turn } from './calendar.ts';
 import type { ChooseEventCommand, CommandError, TransitionResult } from './commands.ts';
 import { evaluateCondition, type ConditionContext } from './conditions.ts';
-import { applyGauge, resolveEffect } from './effects.ts';
+import { applyGauge, gaugeKey, resolveEffect } from './effects.ts';
+import { createFact } from './justice.ts';
 import { nextFloat, nextInt, type RngState } from './random.ts';
 import {
 	addRelation,
@@ -179,6 +181,8 @@ interface EffectParts {
 	/** Collaborateurs et présélections (P2-05). */
 	readonly staff: GameState['staff'];
 	readonly shortlists: GameState['shortlists'];
+	/** Registre des faits (P3-01). */
+	readonly facts: GameState['facts'];
 	readonly rng: RngState;
 }
 
@@ -194,11 +198,12 @@ function applyAutomaticEffects(
 	costs: readonly ResourceAmount[],
 	parts: EffectParts,
 	actors: Readonly<Record<string, string>>,
+	eventId: string,
 	turn: Turn,
 	content: Content
 ): EffectOutcome {
 	const current: Record<ResourceId, number> = { ...parts.resources };
-	let { player, world, characters, relationships, career, staff, rng } = parts;
+	let { player, world, characters, relationships, career, staff, facts, rng } = parts;
 	const { shortlists } = parts;
 	const politics: PoliticalChange[] = [];
 	const people: PeopleChange[] = [];
@@ -274,8 +279,12 @@ function applyAutomaticEffects(
 			throw new Error(`Embauche ou renvoi hors du plan : ${resolved.effect.op}`);
 		} else if (resolved.kind === 'release') {
 			throw new Error('Départ d’un élément de l’organisation hors du plan.');
+		} else if (resolved.kind === 'fact') {
+			const fact = createFact(resolved.effect, facts, actors, eventId, turn);
+			facts = [...facts, fact];
+			politics.push({ kind: 'fact', factId: fact.factId, offenseId: fact.offenseId });
 		} else {
-			const key = resolved.gauge === 'player.health' ? 'health' : 'stress';
+			const key = gaugeKey(resolved.gauge);
 			const { value, applied } = applyGauge(player[key], resolved.delta);
 			player = { ...player, [key]: value };
 			gaugeDeltas.set(resolved.gauge, (gaugeDeltas.get(resolved.gauge) ?? 0) + applied);
@@ -291,6 +300,7 @@ function applyAutomaticEffects(
 		career,
 		staff,
 		shortlists,
+		facts,
 		rng,
 		politics,
 		people,
@@ -298,7 +308,7 @@ function applyAutomaticEffects(
 			const delta = deltas.get(resource) ?? 0;
 			return delta === 0 ? [] : [{ resource, delta }];
 		}),
-		gauges: (['player.health', 'player.stress'] as const).flatMap((gauge) => {
+		gauges: GAUGE_IDS.flatMap((gauge) => {
 			const delta = gaugeDeltas.get(gauge) ?? 0;
 			return delta === 0 ? [] : [{ gauge, delta }];
 		})
@@ -407,6 +417,9 @@ export interface FrontierInput {
 	readonly career: CareerParts;
 	readonly staff: GameState['staff'];
 	readonly shortlists: GameState['shortlists'];
+	readonly facts: GameState['facts'];
+	/** Dossiers judiciaires, lisibles par les conditions (P3-01). */
+	readonly cases: GameState['cases'];
 }
 
 export interface FrontierResult {
@@ -418,6 +431,7 @@ export interface FrontierResult {
 	readonly career: CareerParts;
 	readonly staff: GameState['staff'];
 	readonly shortlists: GameState['shortlists'];
+	readonly facts: GameState['facts'];
 	readonly rng: RngState;
 	readonly nextInstanceNumber: number;
 	readonly events: EventsState;
@@ -435,7 +449,8 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		characters,
 		relationships,
 		career,
-		staff
+		staff,
+		facts
 	} = input;
 	const { shortlists } = input;
 	const pool = (): CastPool => ({ characters, relationships });
@@ -456,7 +471,9 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		mandates: career.mandates,
 		campaigns: career.campaigns,
 		staff,
-		institutions: career.institutions
+		institutions: career.institutions,
+		facts,
+		cases: input.cases
 	});
 
 	const create = (definition: EventDefinition, actors: Record<string, string>): void => {
@@ -496,12 +513,24 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		const outcome = applyAutomaticEffects(
 			definition.effects,
 			[],
-			{ resources, player, world, characters, relationships, career, staff, shortlists, rng },
+			{
+				resources,
+				player,
+				world,
+				characters,
+				relationships,
+				career,
+				staff,
+				shortlists,
+				facts,
+				rng
+			},
 			actors,
+			definition.id,
 			turn,
 			content
 		);
-		({ resources, player, rng, world, characters, relationships, career, staff } = outcome);
+		({ resources, player, rng, world, characters, relationships, career, staff, facts } = outcome);
 		records.push({
 			eventId: definition.id,
 			instanceId: instance.instanceId,
@@ -612,6 +641,7 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		career,
 		staff,
 		shortlists,
+		facts,
 		rng,
 		nextInstanceNumber,
 		events: {
@@ -656,7 +686,7 @@ export function choiceAvailability(
 		institutions: state.institutions
 	};
 	for (const effect of choice.effects) {
-		const issue = careerEffectIssue(effect, career, content ?? null);
+		const issue = careerEffectIssue(effect, career, content ?? null, state.player, state.turn);
 		if (issue) return { available: false, reason: issue };
 	}
 	return { available: true, reason: null };
@@ -713,9 +743,11 @@ export function chooseEvent(
 			},
 			staff: state.staff,
 			shortlists: state.shortlists,
+			facts: state.facts,
 			rng: state.rng
 		},
 		instance.actors,
+		instance.eventId,
 		state.turn,
 		content
 	);
@@ -751,7 +783,9 @@ export function chooseEvent(
 		mandates: outcome.career.mandates,
 		campaigns: outcome.career.campaigns,
 		institutions: outcome.career.institutions,
-		staff: outcome.staff
+		staff: outcome.staff,
+		facts: outcome.facts,
+		cases: state.cases
 	};
 	const cancelled: { instanceId: string; reason: string }[] = [];
 	const remaining = state.events.pending.slice(1).filter((other) => {
@@ -799,6 +833,7 @@ export function chooseEvent(
 			campaigns: outcome.career.campaigns,
 			institutions: outcome.career.institutions,
 			staff: outcome.staff,
+			facts: outcome.facts,
 			rng: outcome.rng,
 			phase: deathCause ? 'ended' : remaining.length > 0 ? 'decision' : 'planning',
 			end: deathCause ? { turn: state.turn, reason: 'death', cause: deathCause } : null,

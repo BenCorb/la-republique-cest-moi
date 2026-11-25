@@ -8,6 +8,7 @@
 import {
 	ATTITUDE_MAX,
 	ATTITUDE_MIN,
+	FACT_SEVERITY_MAX,
 	GAUGE_MAX,
 	GAUGE_MIN,
 	INDICATOR_IDS,
@@ -18,6 +19,7 @@ import {
 import { RNG_ALGORITHM, validateSeed } from './random.ts';
 import { activeMandates, conflictingMandates, cumulatedMandates } from './career.ts';
 import { computePopularity } from './supports.ts';
+import { caseInstanceId, factInstanceId } from './justice.ts';
 import { START_TURN, STATE_SCHEMA_VERSION, type GameState } from './state.ts';
 
 const PHASES = new Set(['planning', 'decision', 'ended']);
@@ -55,7 +57,7 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
 		violations.push(`naissance invalide : ${state.player.birthTurn}`);
 	}
 
-	for (const gauge of ['health', 'stress'] as const) {
+	for (const gauge of ['health', 'stress', 'exposure', 'defense'] as const) {
 		const value = state.player[gauge];
 		if (!Number.isSafeInteger(value) || value < GAUGE_MIN || value > GAUGE_MAX) {
 			violations.push(`jauge invalide : ${gauge} = ${value}`);
@@ -120,7 +122,96 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
 	violations.push(...checkEventInvariants(state, instanceIds));
 	violations.push(...checkWorldInvariants(state));
 	violations.push(...checkCareerInvariants(state));
+	violations.push(...checkFactInvariants(state));
+	violations.push(...checkCaseInvariants(state));
 	if (content) violations.push(...checkContentReferences(state, content));
+	return violations;
+}
+
+/** Dossiers : rangs en séquence, un dossier par fait, étapes et issues cohérentes. */
+function checkCaseInvariants(state: GameState): string[] {
+	const violations: string[] = [];
+	const seen = new Set<string>();
+	state.cases.forEach((legalCase, index) => {
+		const id = legalCase.caseId;
+		if (id !== caseInstanceId(index + 1)) violations.push(`dossier hors séquence : ${id}`);
+		const fact = state.facts.find((entry) => entry.factId === legalCase.factId);
+		if (!fact) violations.push(`fait inconnu pour ${id} : ${legalCase.factId}`);
+		else if (fact.authorId !== legalCase.defendantId) {
+			violations.push(`personne poursuivie incohérente : ${id}`);
+		}
+		if (seen.has(legalCase.factId))
+			violations.push(`fait poursuivi deux fois : ${legalCase.factId}`);
+		seen.add(legalCase.factId);
+		if (legalCase.openedTurn > state.turn || (fact && legalCase.openedTurn <= fact.turn)) {
+			violations.push(`date d’ouverture invalide : ${id}`);
+		}
+		const closed = legalCase.stage === 'closed';
+		if (closed !== (legalCase.outcome !== null) || closed !== (legalCase.closedTurn !== null)) {
+			violations.push(`clôture incohérente : ${id}`);
+		}
+		if (closed === (legalCase.dueTurn !== null)) violations.push(`échéance incohérente : ${id}`);
+		if (
+			state.phase !== 'ended' &&
+			!closed &&
+			legalCase.dueTurn !== null &&
+			legalCase.dueTurn < state.turn
+		) {
+			violations.push(`étape échue non traitée : ${id}`);
+		}
+		if ((legalCase.outcome === 'convicted') !== (legalCase.sentence !== null)) {
+			violations.push(`peine incohérente : ${id}`);
+		}
+		if (legalCase.stage === 'appeal' && legalCase.defendantId !== null) {
+			violations.push(`appel d’un proche : ${id}`);
+		}
+	});
+	const end = state.end;
+	if (
+		end?.reason === 'prison' &&
+		!state.cases.some((entry) => entry.caseId === end.caseId && entry.sentence?.prison === 'firm')
+	) {
+		violations.push('fin de carrière en prison sans peine ferme');
+	}
+	return violations;
+}
+
+/** Registre des faits : rangs en séquence, dates passées, protagonistes connus. */
+function checkFactInvariants(state: GameState): string[] {
+	const violations: string[] = [];
+	state.facts.forEach((fact, index) => {
+		if (fact.factId !== factInstanceId(index + 1)) {
+			violations.push(`fait hors séquence : ${fact.factId} en position ${index}`);
+		}
+		if (!Number.isSafeInteger(fact.turn) || fact.turn < START_TURN || fact.turn > state.turn) {
+			violations.push(`date de fait invalide : ${fact.factId}`);
+		}
+		if (index > 0 && fact.turn < state.facts[index - 1]!.turn) {
+			violations.push(`faits hors ordre chronologique : ${fact.factId}`);
+		}
+		if (
+			!Number.isSafeInteger(fact.severity) ||
+			fact.severity < 1 ||
+			fact.severity > FACT_SEVERITY_MAX
+		) {
+			violations.push(`gravité de fait invalide : ${fact.factId}`);
+		}
+		if (!Number.isSafeInteger(fact.divertedCents) || fact.divertedCents < 0) {
+			violations.push(`fonds détournés invalides : ${fact.factId}`);
+		}
+		const protagonists = [
+			...(fact.authorId === null ? [] : [fact.authorId]),
+			...fact.accompliceIds
+		];
+		if (new Set(protagonists).size !== protagonists.length) {
+			violations.push(`protagoniste en double : ${fact.factId}`);
+		}
+		for (const id of protagonists) {
+			if (!Object.hasOwn(state.characters, id)) {
+				violations.push(`protagoniste inconnu pour ${fact.factId} : ${id}`);
+			}
+		}
+	});
 	return violations;
 }
 
@@ -478,6 +569,14 @@ function checkCareerInvariants(state: GameState): string[] {
  */
 export function checkContentReferences(state: GameState, content: Content): string[] {
 	const violations: string[] = [];
+	for (const fact of state.facts) {
+		if (!Object.hasOwn(content.offenses, fact.offenseId)) {
+			violations.push(`infraction inconnue du catalogue : ${fact.offenseId}`);
+		}
+		if (!Object.hasOwn(content.events, fact.eventId)) {
+			violations.push(`événement inconnu du catalogue pour ${fact.factId} : ${fact.eventId}`);
+		}
+	}
 	const counts = new Map<string, number>();
 	for (const upgrade of state.upgrades) {
 		if (!Object.hasOwn(content.upgrades, upgrade.upgradeId)) {
