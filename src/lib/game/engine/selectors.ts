@@ -59,7 +59,7 @@ export function careerSummary(state: GameState): CareerSummary {
 		actionsPerformed: steps.filter((step) => step.kind === 'action').length,
 		purchases: steps.filter((step) => step.kind === 'purchase').length,
 		quartersWithSuspension: quarters.filter((entry) =>
-			entry.economy.producers.some((producer) => producer.status === 'suspended')
+			entry.economy.producers.some((producer) => producer.suspended > 0)
 		).length,
 		eventsExperienced: applied.length + decisions.length
 	};

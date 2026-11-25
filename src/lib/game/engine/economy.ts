@@ -91,26 +91,38 @@ export function resolveEconomy(
 	return { producers, resources: current, changes: netChanges(deltas) };
 }
 
-/** Journal du trimestre : exemplaires actifs ou suspendus, avec leurs variations. */
+/**
+ * Journal du trimestre : un relevé par définition, dans l'ordre de première
+ * acquisition : nombres d'exemplaires actifs et suspendus, variation cumulée.
+ */
 export function economyRecords(result: EconomyResult): ProducerRecord[] {
-	return result.producers.flatMap((producer) => {
-		if (producer.status === 'pending') return [];
-		const deltas = new Map<ResourceId, number>();
-		if (producer.status === 'active') {
-			for (const cost of producer.upkeep) {
-				deltas.set(cost.resource, (deltas.get(cost.resource) ?? 0) - cost.amount);
-			}
-			for (const output of producer.production) {
-				deltas.set(output.resource, (deltas.get(output.resource) ?? 0) + output.amount);
-			}
+	const groups = new Map<
+		string,
+		{ active: number; suspended: number; deltas: Map<ResourceId, number> }
+	>();
+	for (const producer of result.producers) {
+		if (producer.status === 'pending') continue;
+		let group = groups.get(producer.upgradeId);
+		if (!group) {
+			group = { active: 0, suspended: 0, deltas: new Map() };
+			groups.set(producer.upgradeId, group);
 		}
-		return [
-			{
-				instanceId: producer.instanceId,
-				upgradeId: producer.upgradeId,
-				status: producer.status,
-				changes: netChanges(deltas)
-			}
-		];
-	});
+		if (producer.status === 'suspended') {
+			group.suspended += 1;
+			continue;
+		}
+		group.active += 1;
+		for (const cost of producer.upkeep) {
+			group.deltas.set(cost.resource, (group.deltas.get(cost.resource) ?? 0) - cost.amount);
+		}
+		for (const output of producer.production) {
+			group.deltas.set(output.resource, (group.deltas.get(output.resource) ?? 0) + output.amount);
+		}
+	}
+	return [...groups].map(([upgradeId, group]) => ({
+		upgradeId,
+		active: group.active,
+		suspended: group.suspended,
+		changes: netChanges(group.deltas)
+	}));
 }

@@ -163,7 +163,7 @@ describe('scénario : reproductibilité', { timeout: LONG_SCENARIO_TIMEOUT }, ()
 		expect(play('économie', commands)).toStrictEqual(first);
 		expect(first.upgrades).toHaveLength(2);
 		const statuses = quarterEntries(first.history).flatMap((entry) =>
-			entry.economy.producers.map((producer) => producer.status)
+			entry.economy.producers.map((producer) => producer.active + producer.suspended)
 		);
 		expect(statuses.length).toBeGreaterThan(0);
 	});

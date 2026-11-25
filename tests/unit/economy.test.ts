@@ -91,9 +91,9 @@ describe('achat d’une amélioration', () => {
 		const next = commit(bought.state);
 		expect(quarterLog(next).economy.producers).toEqual([
 			{
-				instanceId: 'upgrade.1',
 				upgradeId: 'test.donors',
-				status: 'active',
+				active: 1,
+				suspended: 0,
 				changes: [{ resource: 'politicalBudgetCents', delta: 3_000 }]
 			}
 		]);
@@ -193,7 +193,7 @@ describe('trésoreries séparées', () => {
 			1
 		);
 		const next = commit(state);
-		expect(quarterLog(next).economy.producers[0]?.status).toBe('suspended');
+		expect(quarterLog(next).economy.producers[0]?.suspended).toBe(1);
 		expect(next.state.resources.personalCashCents).toBe(1_000_000);
 	});
 });
@@ -203,7 +203,7 @@ describe('charges impayées', () => {
 		const state = game({ politicalBudgetCents: 3_999 }, [owned(1, 'test.volunteer')], 1);
 		const suspended = commit(state);
 		expect(quarterLog(suspended).economy.producers).toEqual([
-			{ instanceId: 'upgrade.1', upgradeId: 'test.volunteer', status: 'suspended', changes: [] }
+			{ upgradeId: 'test.volunteer', active: 0, suspended: 1, changes: [] }
 		]);
 		expect(suspended.state.resources).toEqual(state.resources);
 
@@ -211,7 +211,7 @@ describe('charges impayées', () => {
 			...suspended.state,
 			resources: { ...suspended.state.resources, politicalBudgetCents: 4_000 }
 		});
-		expect(quarterLog(funded).economy.producers[0]?.status).toBe('active');
+		expect(quarterLog(funded).economy.producers[0]?.active).toBe(1);
 		expect(funded.state.resources).toMatchObject({ politicalBudgetCents: 0, influence: 1 });
 	});
 
@@ -222,9 +222,17 @@ describe('charges impayées', () => {
 			1
 		);
 		const next = commit(state);
-		expect(quarterLog(next).economy.producers.map((producer) => producer.status)).toEqual([
-			'active',
-			'suspended'
+		// Deux exemplaires d'une même définition : un seul relevé, le plus ancien payé d'abord.
+		expect(quarterLog(next).economy.producers).toEqual([
+			{
+				upgradeId: 'test.volunteer',
+				active: 1,
+				suspended: 1,
+				changes: [
+					{ resource: 'influence', delta: 1 },
+					{ resource: 'politicalBudgetCents', delta: -4_000 }
+				]
+			}
 		]);
 		expect(next.state.resources).toMatchObject({ politicalBudgetCents: 1_000, influence: 1 });
 	});
@@ -237,9 +245,15 @@ describe('charges impayées', () => {
 			1
 		);
 		const next = commit(state);
-		expect(quarterLog(next).economy.producers.map((producer) => producer.status)).toEqual([
-			'active',
-			'suspended'
+		expect(
+			quarterLog(next).economy.producers.map((producer) => [
+				producer.upgradeId,
+				producer.active,
+				producer.suspended
+			])
+		).toEqual([
+			['test.donors', 1, 0],
+			['test.volunteer', 0, 1]
 		]);
 		expect(next.state.resources.politicalBudgetCents).toBe(4_000);
 	});
@@ -253,7 +267,7 @@ describe('charges impayées', () => {
 			expect.objectContaining({ code: 'upkeep_at_risk', instanceId: 'upgrade.1' })
 		]);
 		const next = commit(state, turnPlan);
-		expect(quarterLog(next).economy.producers[0]?.status).toBe('suspended');
+		expect(quarterLog(next).economy.producers[0]?.suspended).toBe(1);
 	});
 });
 

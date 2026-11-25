@@ -1023,13 +1023,19 @@ function journalOfQuarter(entry: HistoryEntry, state: GameState, content: Conten
 	}
 	for (const producer of entry.economy.producers) {
 		const label = content.upgrades[producer.upgradeId]?.label ?? producer.upgradeId;
-		lines.push({
-			kind: 'economy',
-			text:
-				producer.status === 'suspended'
-					? `${label} : charges impayées, production suspendue`
-					: `${label} — ${changesText(producer.changes) || 'aucune variation'}`
-		});
+		const count = (value: number): string => (value > 1 ? ` ×${value}` : '');
+		if (producer.active > 0) {
+			lines.push({
+				kind: 'economy',
+				text: `${label}${count(producer.active)} — ${changesText(producer.changes) || 'aucune variation'}`
+			});
+		}
+		if (producer.suspended > 0) {
+			lines.push({
+				kind: 'economy',
+				text: `${label}${count(producer.suspended)} : charges impayées, production suspendue`
+			});
+		}
 	}
 	const byGauge = new Map<string, string[]>();
 	for (const contribution of entry.wellbeing.contributions) {

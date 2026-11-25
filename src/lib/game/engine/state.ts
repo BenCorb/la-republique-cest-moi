@@ -464,12 +464,21 @@ export interface StepRecord {
 	readonly politics: readonly PoliticalChange[];
 }
 
-/** Résultat d'un producteur actif au trimestre résolu. */
+/**
+ * Production d'une définition d'amélioration au trimestre résolu : les
+ * exemplaires sont regroupés pour garder le journal compact (ARCHITECTURE.md §15.3).
+ */
 export interface ProducerRecord {
-	readonly instanceId: string;
 	readonly upgradeId: string;
-	/** `suspended` : charges impayées, aucune production ce trimestre. */
-	readonly status: 'active' | 'suspended';
+	/** Nombre d'exemplaires qui ont payé leurs charges et produit. */
+	readonly active: number;
+	/**
+	 * Nombre d'exemplaires suspendus faute de trésorerie (ni charge prélevée ni
+	 * production). Les charges étant payées dans l'ordre d'acquisition, ce sont
+	 * les plus récents qui le sont.
+	 */
+	readonly suspended: number;
+	/** Variation nette cumulée des exemplaires actifs. */
 	readonly changes: readonly ResourceChange[];
 }
 
