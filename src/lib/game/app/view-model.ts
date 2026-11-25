@@ -39,6 +39,9 @@ import {
 	type StaffLeaveReason,
 	activeMandates,
 	activeStaff,
+	countsTowardCumul,
+	cumulatedMandates,
+	type MandateInstance,
 	campaignPoll,
 	livingChildren,
 	pollingCompetence,
@@ -290,6 +293,11 @@ export interface MandateView {
 	readonly resignPlanned: boolean;
 	readonly resignable: boolean;
 	readonly resignReason: string | null;
+	/**
+	 * Mandat au sein duquel cette fonction s'exerce (la mairie au sein du conseil
+	 * municipal) : elle ne compte pas à part dans le cumul. `null` sinon.
+	 */
+	readonly within: string | null;
 }
 
 export interface BallotView {
@@ -331,6 +339,8 @@ export interface CareerView {
 	readonly reservedTime: number;
 	readonly resignActionId: string | null;
 	readonly maxMandates: number;
+	/** Mandats comptés dans le cumul (une fonction exercée au sein d'un mandat n'y compte pas). */
+	readonly cumulCount: number;
 	readonly incompatibilities: readonly string[];
 	readonly prerequisites: readonly string[];
 	readonly calendar: readonly BallotView[];
@@ -1272,7 +1282,14 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 	const scheduled = state.ballots
 		.filter((ballot) => ballot.status === 'scheduled')
 		.sort((a, b) => a.turn - b.turn);
-	const active = activeMandates(state.mandates);
+	// Une fonction exercée au sein d'un mandat (la mairie) suit ce mandat dans la liste.
+	const unsorted = activeMandates(state.mandates);
+	const hostOf = (mandate: MandateInstance): string | null =>
+		state.institutions.prerequisites[mandate.mandateId]?.[0] ?? null;
+	const active = unsorted
+		.filter((mandate) => hostOf(mandate) === null)
+		.flatMap((host) => [host, ...unsorted.filter((mandate) => hostOf(mandate) === host.mandateId)]);
+	active.push(...unsorted.filter((mandate) => !active.includes(mandate)));
 	const main = mainMandate(state.mandates, content);
 	return {
 		mainFunction: main ? label(main.mandateId) : 'Sans mandat',
@@ -1308,12 +1325,16 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 						step.target === mandate.instanceId
 				),
 				resignable: resign.addable,
-				resignReason: resign.reason
+				resignReason: resign.reason,
+				within: countsTowardCumul(mandate.mandateId, state.institutions)
+					? null
+					: (state.institutions.prerequisites[mandate.mandateId] ?? []).map(label).join(', ')
 			};
 		}),
 		reservedTime: reservedTime(state.mandates, content),
 		resignActionId,
 		maxMandates: state.institutions.maxMandates,
+		cumulCount: cumulatedMandates(state.mandates, state.institutions).length,
 		incompatibilities: state.institutions.incompatibilities.map(
 			([left, right]) => `${label(left)} et ${label(right)}`
 		),

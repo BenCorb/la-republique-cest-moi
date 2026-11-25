@@ -90,3 +90,92 @@ exporter la sauvegarde pour garder une trace.
 
 _À compléter après la session : testeur, seeds, durée, âge et cause de fin, sommet de carrière,
 bugs, irritants classés (bloquant, gênant, mineur) et décisions._
+
+#### Retours en cours de session
+
+- **Mairie et conseil municipal (26 novembre 2026, gênant).** Être à la fois maire et membre du
+  conseil municipal est voulu (le maire est élu par le conseil parmi ses membres), mais le jeu
+  compte deux mandats dans le cumul (2 places sur 3) et les affiche séparément. Correction
+  retenue pour la série de corrections du playtest : compter « conseil municipal + mairie » pour
+  un seul mandat dans le cumul et les afficher ensemble (« Mairie (et siège au conseil
+  municipal) »). Temps réservé et indemnités restent cumulés. **Corrigé** (ARCHITECTURE §8.3
+  undecies) : la mairie s’affiche sous le conseil municipal, hors du décompte du cumul.
+- **Composer le plan est trop laborieux (26 novembre 2026, gênant).** L’agenda affiche une
+  longue liste de cartes (≈ 18 actions), chacune avec description, coûts et effets, dans un ordre
+  sans logique visible. Les actions inaccessibles y figurent aussi : actions des autres
+  professions, actions de parti sans adhésion, actions de campagne sans candidature. Trouver
+  l’action voulue demande de parcourir toute la liste. Pistes proposées :
+  1. **Masquer ce qui est hors de portée.** Une action dont la condition n’est pas remplie
+     (`condition_not_met` : autre profession, pas d’adhésion, pas de campagne, pas de mandat)
+     disparaît de la liste ; un lien « Afficher les actions indisponibles » la montre à la
+     demande, avec son motif. Une action seulement bloquée ce trimestre (temps, argent, limite
+     atteinte) reste visible mais grisée, avec ce qui manque.
+  2. **Regrouper par thème**, groupes déclarés dans le catalogue (`category` de chaque action) et
+     repliables : militantisme, parti, campagne, réseau, finances politiques, revenus et métier,
+     vie personnelle. Un groupe sans action disponible est masqué.
+  3. **Lignes compactes** au lieu de cartes : nom, temps, coût et effet principal sur une ligne,
+     bouton « + » ; description et détail des effets au survol ou en dépliant. Compteur
+     « − 2 + » pour les actions répétables.
+  4. Plus tard (P3-08) : épinglage des étapes du plan, aide contextuelle, composition plus
+     graphique du trimestre.
+
+  Recommandation : faire 1 à 3 dans la série de corrections du playtest (interface et catalogue,
+  sans changement de règle) ; 4 reste en P3-08.
+
+- **Budget politique trop difficile à faire grossir (26 novembre 2026, gênant).** Constat
+  chiffré :
+  - recettes avant un mandat national : collecte de 100 à 400 € pour 25 points de temps
+    (influence 5 requise), fichier de donateurs à 120 € par trimestre (un seul), don depuis
+    l’argent personnel (1 € pour 1 €), mission de collecte du trésorier (1 500 € à compétence 60,
+    pour 1 000 € de salaire) ;
+  - les mandats locaux (conseil municipal, mairie, conseil régional) et le ministère ne
+    rapportent aucun budget politique ; seuls l’Assemblée (5 000 € par trimestre) et le Sénat
+    (3 000 €) en rapportent ;
+  - dépenses courantes de 300 à 1 500 € : réunion publique, meeting, salaires de l’entourage,
+    attaché de presse ;
+  - en simulation (P2-10), le budget est le goulot d’étranglement jusqu’au premier mandat
+    national, puis déborde : budget final médian ≈ 45 000 € pour les stratégies élues, 430 €
+    pour la stratégie patrimoniale, en charges impayées les trois quarts du temps.
+
+  Pistes (réglages provisoires, à choisir) :
+  1. **Moyens des mandats locaux** : mairie 600 €, conseil régional 300 €, conseil municipal 50 €
+     par trimestre.
+  2. **Remboursement des frais de campagne** : à partir de 5 % des voix, une partie des dépenses
+     de campagne est remboursée après le scrutin (règle française, matière à satire).
+  3. **Dotation du parti** : un adhérent investi reçoit une aide de campagne de son parti,
+     selon la force de celui-ci.
+  4. **Gala de levée de fonds** : action de milieu de carrière (influence 20) rapportant 1 000 à
+     3 000 €, avec un risque d’événement sur les donateurs.
+  5. **Collecte proportionnée** : son rendement croît avec l’influence ou le soutien des
+     militants.
+  6. **Trésorier plus rentable** : mission de collecte portée à 2 500 €.
+
+  Recommandation : 1, 2 et 4 corrigent la marche d’escalier entre le début de carrière et le
+  premier mandat national, sans rendre le budget gratuit ; vérifier ensuite par simulation que
+  les charges impayées baissent sans que le budget déborde davantage.
+
+  **Décision du créateur (26 novembre 2026) :** retenir les pistes 1 (moyens des mandats
+  locaux), 2 (remboursement des frais de campagne) et 4 (gala de levée de fonds) pour la série
+  de corrections du playtest, avec les chiffres ci-dessus comme point de départ ; les pistes 3, 5
+  et 6 restent en réserve si la simulation montre que cela ne suffit pas.
+
+- **Presse impossible à consulter (26 novembre 2026, mineur).** La colonne « La presse », à
+  droite, n’apparaît qu’à partir de 1 100 px de large et ne montre que les titres des six
+  derniers événements, sans article ni archive ; il n’y a pas d’écran de presse. Comportement
+  attendu de l’alpha : les médias fictifs, le fil de presse et les articles fondés sur les faits
+  sont prévus en P3-03. Pistes d’ici là, si utile : un onglet « Actualités » qui reprend le fil
+  complet avec le texte des événements (DESIGN §3), visible quelle que soit la largeur.
+
+#### Tri des premiers retours (26 novembre 2026)
+
+| Retour                                           | Avant la phase 3 ?  | Raison                                                                                                                                                                                                                                                                  | Taille                                            |
+| ------------------------------------------------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Composer le plan (masquer, regrouper, compacter) | **Oui, en premier** | La phase 3 ajoute des dizaines d’actions (défense, patrimoine, médias, promesses) : sans groupes ni filtre, l’agenda deviendra inutilisable. Mieux vaut poser la structure (`category` des actions) avant d’y verser du contenu.                                        | Moyenne (catalogue, projection, écran)            |
+| Budget politique (pistes 1, 2, 4)                | **Oui**             | L’équilibre économique sert de base à tout le réglage de la phase 3 ; P3-02 traite la fortune personnelle, pas le budget politique. Remboursement forfaitaire par élection (sans suivi des dépenses, donc sans changement d’état), à valider par un lot de simulations. | Moyenne (catalogue, règle de scrutin, simulation) |
+| Mairie et conseil municipal                      | **Oui**             | P3-05 rendra le plafond du cumul réformable : le modèle doit d’abord compter juste. Correction localisée (mairie hors du décompte du cumul, affichage commun).                                                                                                          | Petite                                            |
+| Presse                                           | Non                 | P3-03 crée la vraie presse ; un écran intermédiaire serait refait. Au plus, afficher la colonne aussi sous 1 100 px.                                                                                                                                                    | Très petite si fait                               |
+
+Ordre proposé : une pull request par correction (mairie, budget, agenda), chacune vérifiée et
+publiée, puis reprise du playtest sur ces points avant P3-01. Restent à mesurer pendant la fin
+du playtest : durée active, rythme des arrêts d’accélération, vie de famille, besoin
+d’épinglage.

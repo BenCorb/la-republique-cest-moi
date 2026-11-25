@@ -124,6 +124,25 @@ export function mainMandate(
 	return best;
 }
 
+/**
+ * Une fonction qui exige un autre mandat (prérequis) s'exerce au sein de ce
+ * mandat : la mairie, élue par le conseil municipal parmi ses membres, ne
+ * compte pas à part dans le cumul.
+ */
+export function countsTowardCumul(mandateId: string, institutions: InstitutionsState): boolean {
+	return (institutions.prerequisites[mandateId] ?? []).length === 0;
+}
+
+/** Mandats en cours comptés dans le cumul. */
+export function cumulatedMandates(
+	mandates: readonly MandateInstance[],
+	institutions: InstitutionsState
+): MandateInstance[] {
+	return activeMandates(mandates).filter((mandate) =>
+		countsTowardCumul(mandate.mandateId, institutions)
+	);
+}
+
 function incompatible(institutions: InstitutionsState, left: string, right: string): boolean {
 	return institutions.incompatibilities.some(
 		([a, b]) => (a === left && b === right) || (a === right && b === left)
@@ -167,8 +186,12 @@ export function holdIssue(
 	if (conflicts.length > 0 && !replaceIncompatible) {
 		return `Incompatible avec : ${conflicts.map((mandate) => label(mandate.mandateId)).join(', ')}.`;
 	}
-	const remaining = active.length - (replaceIncompatible ? conflicts.length : 0);
-	if (remaining + 1 > institutions.maxMandates) {
+	const counted = (mandate: MandateInstance): boolean =>
+		countsTowardCumul(mandate.mandateId, institutions);
+	const remaining =
+		cumulatedMandates(mandates, institutions).length -
+		(replaceIncompatible ? conflicts.filter(counted).length : 0);
+	if (countsTowardCumul(mandateId, institutions) && remaining + 1 > institutions.maxMandates) {
 		return `Cumul limité à ${institutions.maxMandates} mandats.`;
 	}
 	return null;

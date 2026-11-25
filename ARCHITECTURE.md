@@ -491,6 +491,12 @@ Les candidatures sont librement initiées avant la clôture si éligible. Une ca
 - **Mesure (500 carrières, seed `p2-10`) :** 500 fins, aucune erreur ni violation ; 174 trimestres, 33,8 décisions et 56,5 événements par carrière ; un même événement revient au plus 8 fois (9 en P2-09). Âge médian de fin : 46 ans (ambitieuse), 62 (aléatoire), 81–82 (prudente, patrimoniale, mixte). Sommets les plus fréquents : mairie (prudente), Assemblée (ambitieuse, mixte), Sénat (aléatoire), conseil municipal (patrimoniale).
 - **Interface :** la barre d’état de l’accueil indique « Alpha ».
 
+### 8.3 undecies Correction du playtest : mairie et cumul (26 novembre 2026)
+
+- **Règle :** une fonction qui exige un autre mandat (prérequis du catalogue) s’exerce au sein de ce mandat et ne compte pas à part dans le cumul : la mairie, élue par le conseil municipal parmi ses membres, n’occupe pas de place au cumul (`countsTowardCumul`, `cumulatedMandates`). Le plafond, les invariants et la statistique `player.mandates` utilisent ce décompte ; un maire seul ne déclenche donc plus la « surcharge du cumul ». Temps réservé, indemnités et stress restent cumulés. La règle se lit dans les prérequis copiés dans l’état : format inchangé, sauvegardes lisibles.
+- **Interface :** l’onglet Carrière range la mairie sous le conseil municipal (« Exercée au sein du mandat… : ne compte pas à part dans le cumul ») et affiche le décompte (« Cumul : 2 mandats sur 3 au plus »).
+- **Versions et tests :** `RULES_VERSION = '0.18.0'` ; `tests/unit/career.test.ts` (plafond, mairie hors cumul, statistique, projection), scénario alpha (cumul contrôlé à chaque trimestre selon ce décompte), E2E du décompte. Lot de 200 carrières (seed `cumul-mairie`) : aucune erreur ni violation.
+
 ### 8.4 V1 : médias, justice, patrimoine et institutions
 
 Les dossiers judiciaires sont des machines à états avec échéances, références aux faits et issues, plutôt qu’un tirage de condamnation à chaque tour. Les transitions permises sont explicites ; des dossiers simultanés peuvent concerner le joueur ou son entourage. Une enquête et une culpabilité sont des états distincts. Les médias génèrent des articles à partir de faits et du contexte ; les actifs médias n’annulent pas les autres médias. Les promesses sont des objets historisés et réutilisables dans les événements. Les réformes institutionnelles modifient des paramètres du monde et persistent après changement de gouvernement. Aucun de ces modules n’est requis pour commencer le prototype.
@@ -657,7 +663,7 @@ Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défa
 ### 15.1 Règles provisoires à confirmer
 
 - **Format de sauvegarde.** `STATE_SCHEMA_VERSION = 1` et `SAVE_VERSION = 1`. Toute modification de `GameState` doit mettre à jour `persistence/state-schema.ts` (la compilation l’impose). **Décision du créateur (25 novembre 2026) : l’alpha publiée est jetable.** Pendant l’alpha et la phase 3, le format reste en version 1 et une sauvegarde écrite par d’autres règles devenue illisible est refusée explicitement (`outdated_rules`, §8.3 decies), jamais réparée ni effacée ; l’accueil prévient les joueurs. Les migrations testées (`SAVE_VERSION` incrémentée à chaque changement de format) commenceront avec la première version publiée dont les parties doivent survivre aux mises à jour (au plus tard la V1, P3-10).
-- **Version des règles.** `RULES_VERSION = '0.17.0'` (départ d’un élément de l’organisation, §8.1 ter), incrémentée à chaque changement de règle ; elle n’est qu’informative à la lecture d’une sauvegarde.
+- **Version des règles.** `RULES_VERSION = '0.18.0'` (mairie hors du cumul, §8.3 undecies), incrémentée à chaque changement de règle ; elle n’est qu’informative à la lecture d’une sauvegarde.
 - **Paramètre `?seed=`.** Réservé aux essais et à la reproduction ; à masquer ou documenter auprès des joueurs avant diffusion large.
 
 ### 15.2 Limites fonctionnelles connues (alpha)

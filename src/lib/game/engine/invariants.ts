@@ -16,7 +16,7 @@ import {
 	type Content
 } from '../content/types.ts';
 import { RNG_ALGORITHM, validateSeed } from './random.ts';
-import { activeMandates, conflictingMandates } from './career.ts';
+import { activeMandates, conflictingMandates, cumulatedMandates } from './career.ts';
 import { computePopularity } from './supports.ts';
 import { START_TURN, STATE_SCHEMA_VERSION, type GameState } from './state.ts';
 
@@ -341,8 +341,9 @@ function checkCareerInvariants(state: GameState): string[] {
 		}
 	});
 	const active = activeMandates(mandates);
-	if (active.length > institutions.maxMandates) {
-		violations.push(`cumul dépassé : ${active.length} > ${institutions.maxMandates}`);
+	const cumulated = cumulatedMandates(mandates, institutions).length;
+	if (cumulated > institutions.maxMandates) {
+		violations.push(`cumul dépassé : ${cumulated} > ${institutions.maxMandates}`);
 	}
 	if (new Set(active.map((mandate) => mandate.mandateId)).size !== active.length) {
 		violations.push('le même mandat est exercé deux fois');
