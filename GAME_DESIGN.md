@@ -251,7 +251,7 @@ Exemple fictif : un candidat promet une réforme fiscale ; une fois élu, ses so
 
 ### 8.1 France alternative
 
-Les noms de partis, médias, institutions et organisations sont fictifs et peuvent faire clairement référence à des réalités françaises. Les personnages sont inventés ; éviter d’attribuer des comportements criminels fictifs à des personnes réelles identifiables. La satire porte notamment sur les mécanismes et contradictions du pouvoir.
+Les noms de partis, médias, institutions et organisations sont fictifs et peuvent faire clairement référence à des réalités françaises. Les personnages sont inventés ; éviter d’attribuer des comportements criminels fictifs à des personnes réelles identifiables. La satire porte notamment sur les mécanismes et contradictions du pouvoir. **Satire judiciaire (décision du créateur, 25 novembre 2026) :** ton mordant et grinçant ; affaires, noms et médias entièrement fictifs, sans personne réelle identifiable ; la justice reste crédible (relaxe comme condamnation possibles, impunité jamais garantie).
 
 Le paysage politique initial est globalement le même à chaque partie : mêmes partis, médias, institutions, règles et rapports de force de référence. Les dirigeants, leurs noms, leurs personnalités et leurs relations sont générés ou sélectionnés aléatoirement. Les événements ultérieurs divergent. Les noms parodiques exacts et la composition du catalogue initial restent à écrire et à valider.
 
