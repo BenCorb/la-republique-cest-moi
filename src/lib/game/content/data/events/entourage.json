@@ -70,7 +70,7 @@
 			"text": "{treasurer} propose une « optimisation » : facturer les meetings comme des « séminaires de réflexion », éligibles à une subvention. Personne n’a jamais vérifié.",
 			"blocking": true,
 			"trigger": "random",
-			"weight": 3,
+			"weight": 5,
 			"priority": 5,
 			"cooldownTurns": 16,
 			"unique": false,

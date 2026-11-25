@@ -1,0 +1,417 @@
+{
+	"events": [
+		{
+			"id": "mandate.roundabout_inauguration",
+			"category": "career",
+			"title": "Le rond-point de la discorde",
+			"text": "Le nouveau rond-point est prêt, avec sa sculpture en inox censée évoquer « l’élan du territoire ». Reste à lui donner un nom : le mécène local a des idées, le comité des anciens aussi.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 0,
+			"cooldownTurns": 20,
+			"unique": false,
+			"when": { "op": "holdsMandate", "mandate": "mandate.mayor" },
+			"actors": [],
+			"choices": [
+				{
+					"id": "sponsor",
+					"label": "Rond-point du mécène, avec plaque dorée",
+					"hints": ["Le mécène s’en souviendra", "Les anciens beaucoup moins"],
+					"costs": [],
+					"effects": [
+						{ "op": "addResource", "resource": "politicalBudgetCents", "value": 300000 },
+						{ "op": "addSupport", "group": "support.business", "value": 4 },
+						{ "op": "addSupport", "group": "support.working_class", "value": -3 }
+					]
+				},
+				{
+					"id": "local_hero",
+					"label": "Hommage à l’ancien garde champêtre",
+					"hints": ["Émotion garantie au marché"],
+					"costs": [{ "resource": "politicalBudgetCents", "amount": 50000 }],
+					"effects": [
+						{ "op": "addSupport", "group": "support.working_class", "value": 3 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": 2 }
+					]
+				},
+				{
+					"id": "consultation",
+					"label": "Lancer une consultation citoyenne",
+					"hints": ["Prend du temps", "Personne ne pourra vous le reprocher"],
+					"costs": [{ "resource": "influence", "amount": 2 }],
+					"effects": [
+						{ "op": "addSupport", "group": "support.activists", "value": 3 },
+						{ "op": "addStat", "stat": "player.stress", "value": 2 }
+					]
+				}
+			]
+		},
+		{
+			"id": "mandate.market_bins",
+			"category": "career",
+			"title": "Les poubelles du marché",
+			"text": "Le prestataire de collecte a « réorganisé ses tournées » : depuis trois semaines, le marché du samedi sent le poisson oublié. Les commerçants vous attendent de pied ferme devant la mairie.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 0,
+			"cooldownTurns": 20,
+			"unique": false,
+			"when": {
+				"op": "any",
+				"conditions": [
+					{ "op": "holdsMandate", "mandate": "mandate.mayor" },
+					{ "op": "holdsMandate", "mandate": "mandate.municipal_councillor" }
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "pay",
+					"label": "Payer une tournée exceptionnelle",
+					"hints": ["Problème réglé, budget entamé"],
+					"costs": [{ "resource": "politicalBudgetCents", "amount": 150000 }],
+					"effects": [{ "op": "addSupport", "group": "support.middle_class", "value": 3 }]
+				},
+				{
+					"id": "gloves",
+					"label": "Venir ramasser vous-même, devant les caméras",
+					"hints": ["Belle image", "Dos fragile"],
+					"costs": [],
+					"effects": [
+						{ "op": "addSupport", "group": "support.working_class", "value": 4 },
+						{ "op": "addResource", "resource": "influence", "value": 2 },
+						{ "op": "addStat", "stat": "player.health", "value": -2 }
+					]
+				},
+				{
+					"id": "blame",
+					"label": "Accuser la communauté de communes",
+					"hints": ["Ça ne coûte rien", "Ça ne règle rien"],
+					"costs": [],
+					"effects": [{ "op": "addSupport", "group": "support.middle_class", "value": -2 }]
+				}
+			]
+		},
+		{
+			"id": "mandate.night_amendment",
+			"category": "career",
+			"title": "L’amendement de trois heures du matin",
+			"text": "Hémicycle presque vide, café froid. Un amendement discret propose une niche fiscale « pour les entreprises de moins de trois salariés possédant un yacht ». Le groupe vous demande de voter pour, sans lire.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 0,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "any",
+				"conditions": [
+					{ "op": "holdsMandate", "mandate": "mandate.deputy" },
+					{ "op": "holdsMandate", "mandate": "mandate.senator" }
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "follow",
+					"label": "Voter comme le groupe",
+					"hints": ["L’appareil apprécie la discipline"],
+					"costs": [],
+					"effects": [
+						{ "op": "addSupport", "group": "support.apparatus", "value": 4 },
+						{ "op": "addSupport", "group": "support.business", "value": 2 }
+					]
+				},
+				{
+					"id": "oppose",
+					"label": "Prendre la parole contre",
+					"hints": ["Un extrait qui tourne en ligne", "Le groupe fera la tête"],
+					"costs": [{ "resource": "influence", "amount": 2 }],
+					"effects": [
+						{ "op": "addSupport", "group": "support.apparatus", "value": -5 },
+						{ "op": "addSupport", "group": "support.working_class", "value": 3 },
+						{ "op": "addSupport", "group": "support.activists", "value": 3 }
+					]
+				},
+				{
+					"id": "sleep",
+					"label": "Être opportunément aux toilettes",
+					"hints": ["Personne ne vous en voudra vraiment"],
+					"costs": [],
+					"effects": [{ "op": "addStat", "stat": "player.stress", "value": -2 }]
+				}
+			]
+		},
+		{
+			"id": "mandate.government_questions",
+			"category": "career",
+			"title": "Questions au gouvernement",
+			"text": "Votre question au gouvernement passe à la télévision à 15 h 12, entre deux applaudissements de groupe. Votre tante l’a enregistrée ; le ministre a répondu à une autre question.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": { "op": "holdsMandate", "mandate": "mandate.deputy" },
+			"actors": [],
+			"effects": [
+				{ "op": "addResourceRandom", "resource": "influence", "min": 1, "max": 4 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 }
+			]
+		},
+		{
+			"id": "mandate.parliament_buvette",
+			"category": "career",
+			"title": "La buvette du Palais",
+			"text": "Au Palais, les vraies décisions se prennent paraît-il entre le fromage et la poire. Un collègue chevronné vous explique la navette parlementaire avec trois carafes et un rond de serviette.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 5,
+			"priority": 0,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "any",
+				"conditions": [
+					{ "op": "holdsMandate", "mandate": "mandate.deputy" },
+					{ "op": "holdsMandate", "mandate": "mandate.senator" }
+				]
+			},
+			"actors": [],
+			"effects": [
+				{ "op": "addSupport", "group": "support.apparatus", "value": 2 },
+				{ "op": "addStat", "stat": "player.stress", "value": -3 }
+			]
+		},
+		{
+			"id": "mandate.ghost_train",
+			"category": "career",
+			"title": "Le TER fantôme",
+			"text": "Le train régional de 7 h 04 n’est plus arrivé à l’heure depuis le dernier changement de logo. Une association d’usagers occupe la gare et réclame « un élu régional, n’importe lequel ».",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 0,
+			"cooldownTurns": 20,
+			"unique": false,
+			"when": { "op": "holdsMandate", "mandate": "mandate.regional_councillor" },
+			"actors": [],
+			"choices": [
+				{
+					"id": "commute",
+					"label": "Prendre le train avec eux toute une semaine",
+					"hints": ["Fatigant", "Les usagers s’en souviendront"],
+					"costs": [],
+					"effects": [
+						{ "op": "addSupport", "group": "support.working_class", "value": 3 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": 3 },
+						{ "op": "addStat", "stat": "player.stress", "value": 4 }
+					]
+				},
+				{
+					"id": "study",
+					"label": "Commander une étude sur la ponctualité",
+					"hints": ["Résultats dans dix-huit mois"],
+					"costs": [{ "resource": "politicalBudgetCents", "amount": 100000 }],
+					"effects": [{ "op": "addSupport", "group": "support.apparatus", "value": 2 }]
+				}
+			]
+		},
+		{
+			"id": "mandate.lobby_breakfast",
+			"category": "career",
+			"title": "Petit-déjeuner d’influence",
+			"text": "Une fédération professionnelle vous invite à « un échange informel » dans un salon feutré. Les croissants sont excellents, la note de synthèse déjà rédigée, avec votre nom en bas de page.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 5,
+			"priority": 0,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": { "op": "holdsMandate", "mandate": "mandate.minister" },
+			"actors": [],
+			"choices": [
+				{
+					"id": "sign",
+					"label": "Reprendre la note telle quelle",
+					"hints": ["Des amis puissants", "Un dossier qui pourrait ressortir"],
+					"costs": [],
+					"effects": [
+						{ "op": "addSupport", "group": "support.business", "value": 6 },
+						{ "op": "addResource", "resource": "politicalBudgetCents", "value": 500000 },
+						{ "op": "addSupport", "group": "support.activists", "value": -4 }
+					]
+				},
+				{
+					"id": "listen",
+					"label": "Écouter poliment, ne rien promettre",
+					"hints": ["Le juste milieu"],
+					"costs": [],
+					"effects": [{ "op": "addResource", "resource": "influence", "value": 2 }]
+				},
+				{
+					"id": "leak",
+					"label": "Raconter le petit-déjeuner à la presse",
+					"hints": ["Coup d’éclat", "Matignon n’aime pas les surprises"],
+					"costs": [],
+					"effects": [
+						{ "op": "addSupport", "group": "support.working_class", "value": 4 },
+						{ "op": "addSupport", "group": "support.business", "value": -6 },
+						{ "op": "addIndicator", "indicator": "stability", "value": -2 }
+					]
+				}
+			]
+		},
+		{
+			"id": "mandate.evening_news_gaffe",
+			"category": "career",
+			"title": "Le prix de la baguette",
+			"text": "Au journal de 20 h, on vous demande le prix d’une baguette. Vous répondez avec assurance « environ quatre euros ». Le boulanger du coin a déjà affiché la séquence en vitrine.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 24,
+			"unique": false,
+			"when": { "op": "holdsMandate", "mandate": "mandate.minister" },
+			"actors": [],
+			"effects": [
+				{ "op": "addSupport", "group": "support.working_class", "value": -4 },
+				{ "op": "addStat", "stat": "player.stress", "value": 3 }
+			]
+		},
+		{
+			"id": "mandate.festival_committee",
+			"category": "career",
+			"title": "La commission des fêtes",
+			"text": "La commission des fêtes doit trancher le dossier le plus explosif du mandat : feu d’artifice ou concert de l’harmonie municipale pour le 14 juillet. Le budget ne permet pas les deux.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 24,
+			"unique": false,
+			"when": { "op": "holdsMandate", "mandate": "mandate.municipal_councillor" },
+			"actors": [],
+			"choices": [
+				{
+					"id": "fireworks",
+					"label": "Le feu d’artifice, évidemment",
+					"hints": ["Les enfants ravis", "L’harmonie vexée"],
+					"costs": [],
+					"effects": [
+						{ "op": "addSupport", "group": "support.working_class", "value": 2 },
+						{ "op": "addSupport", "group": "support.activists", "value": -1 }
+					]
+				},
+				{
+					"id": "band",
+					"label": "L’harmonie municipale, par fidélité",
+					"hints": ["Les anciens apprécient"],
+					"costs": [],
+					"effects": [{ "op": "addSupport", "group": "support.middle_class", "value": 2 }]
+				}
+			]
+		},
+		{
+			"id": "mandate.sunday_market",
+			"category": "campaign",
+			"title": "Le marché du dimanche",
+			"text": "Dimanche, 9 h : trois équipes de campagne se disputent le même carrefour entre le fromager et le stand de poulets rôtis. Votre adversaire distribue des tracts ; vous avez des mains à serrer.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 0,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": { "op": "gte", "stat": "player.campaigning", "value": 1 },
+			"actors": [],
+			"choices": [
+				{
+					"id": "hands",
+					"label": "Serrer toutes les mains, même grasses",
+					"hints": ["Préparation de campagne", "Fatigue"],
+					"costs": [],
+					"effects": [
+						{ "op": "prepareCampaign", "value": 4 },
+						{ "op": "addStat", "stat": "player.stress", "value": 2 }
+					]
+				},
+				{
+					"id": "chicken",
+					"label": "Offrir les poulets rôtis à la file d’attente",
+					"hints": ["Coûteux", "Très efficace"],
+					"costs": [{ "resource": "politicalBudgetCents", "amount": 80000 }],
+					"effects": [
+						{ "op": "prepareCampaign", "value": 6 },
+						{ "op": "addSupport", "group": "support.working_class", "value": 2 }
+					]
+				},
+				{
+					"id": "sleep_in",
+					"label": "Faire la grasse matinée",
+					"hints": ["Repos mérité", "L’adversaire occupe le terrain"],
+					"costs": [],
+					"effects": [{ "op": "addStat", "stat": "player.stress", "value": -3 }]
+				}
+			]
+		},
+		{
+			"id": "mandate.local_petition",
+			"category": "supports",
+			"title": "La pétition du lotissement",
+			"text": "Les habitants du lotissement des Glycines ont réuni quatre cents signatures contre l’antenne-relais. Les mêmes, dit-on, se plaignent depuis des années de ne pas capter.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 20,
+			"unique": false,
+			"when": { "op": "gte", "stat": "player.popularity", "value": 25 },
+			"actors": [],
+			"choices": [
+				{
+					"id": "sign",
+					"label": "Signer la pétition",
+					"hints": ["Les riverains contents", "Les opérateurs moins"],
+					"costs": [],
+					"effects": [
+						{ "op": "addSupport", "group": "support.middle_class", "value": 3 },
+						{ "op": "addSupport", "group": "support.business", "value": -2 }
+					]
+				},
+				{
+					"id": "explain",
+					"label": "Organiser une réunion d’explication",
+					"hints": ["Une soirée entière", "Respect gagné"],
+					"costs": [],
+					"effects": [
+						{ "op": "addResource", "resource": "influence", "value": 3 },
+						{ "op": "addStat", "stat": "player.stress", "value": 3 }
+					]
+				}
+			]
+		},
+		{
+			"id": "mandate.regional_tv",
+			"category": "career",
+			"title": "Plateau régional",
+			"text": "La télévision régionale cherche « un élu dynamique » pour débattre de l’avenir de la filière du pruneau. Vous ne connaissez rien au pruneau ; le maquillage, lui, est offert.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 20,
+			"unique": false,
+			"when": { "op": "gte", "stat": "player.mandates", "value": 1 },
+			"actors": [],
+			"effects": [
+				{ "op": "addResourceRandom", "resource": "influence", "min": 0, "max": 5 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 }
+			]
+		}
+	]
+}

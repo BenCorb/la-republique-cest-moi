@@ -1,7 +1,7 @@
 # La République, c’est moi ! — Feuille de route
 
 **Version 0.1 — 24 novembre 2026**  
-**Statut :** phases 0 et 1 terminées et intégrées à `main` (PR #4, CI verte, 24 novembre 2026) ; P0-01 à P0-06 et P1-01 à P1-10 réalisées et vérifiées (✅ = tâche terminée dans les tableaux). Phase 2 en cours sur `feat/p2-alpha` (§4.1) : P2-01 à P2-07 réalisées et vérifiées. Le site publié montre encore la phase 0. Reprise : voir §9.
+**Statut :** phases 0 et 1 terminées et intégrées à `main` (PR #4, CI verte, 24 novembre 2026) ; P0-01 à P0-06 et P1-01 à P1-10 réalisées et vérifiées (✅ = tâche terminée dans les tableaux). Phase 2 sur `feat/p2-alpha` (§4.1) : P2-01 à P2-10 réalisées et vérifiées ; reste la pull request de phase vers `main`. Le site publié montre encore la phase 0. Reprise : voir §9.
 
 **Références :** [GAME_DESIGN.md](GAME_DESIGN.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN.md](DESIGN.md), [AGENTS.md](AGENTS.md).
 
@@ -69,7 +69,7 @@ Actions de militantisme, rencontres, recrutement générique, organisation, repo
 | P2-07 ✅ | Groupes de soutien | P2-03/04 | Soutiens électoraux distincts des appuis internes et économiques ; détail public sans fuite de traits cachés |
 | P2-08 ✅ | Origines, professions, famille | P2-04 | Profils initiaux cohérents ; famille légère par statistiques, relations et événements ; âge fixe encore possible |
 | P2-09 ✅ | Accélération complète et interface | P2-02 à 08 | Arrêt motivé sur événements ou échéances ; résumé des tours, onglets carrière/entourage et alertes utiles |
-| P2-10 | Contenu et tests alpha | P2-09 | Plusieurs seeds et stratégies donnent des trajectoires distinctes ; cumul légal selon les règles du jeu ; sauvegardes migrées ou explicitement refusées |
+| P2-10 ✅ | Contenu et tests alpha | P2-09 | Plusieurs seeds et stratégies donnent des trajectoires distinctes ; cumul légal selon les règles du jeu ; sauvegardes migrées ou explicitement refusées |
 
 Éviter un système de simulation individuelle de tous les électeurs ou un moteur d’IA autonome. Les personnages et le monde évoluent via règles, traits et événements. Les valeurs de départ, poids électoraux et fréquences restent calibrables dans le contenu.
 
@@ -152,6 +152,6 @@ Les tâches de phase 0 peuvent également être confiées une par une pour facil
 - **Branche :** `feat/p2-alpha`, créée depuis `main` (`0a59481`, fusion « squash » de la phase 1 via la PR #4, CI verte). La branche distante `feat/p1-prototype` a été supprimée ; la copie locale peut l’être aussi. Le site publié montre encore la phase 0 (aucun déploiement demandé).
 - **État :** phases 0 et 1 terminées et intégrées. Phase 2 planifiée au §4.1 (ordre des lots, préalables techniques, décisions retenues).
 - **Où lire :** décisions de chaque tâche de phase 1 dans `ARCHITECTURE.md` (§5.2 bis, §6.1, §7.1 bis, §7.3, §7.4, §8.1 bis, §8.2 bis, §9.1, §10.1, §11.1 bis, §12.1–12.3) ; protocole humain dans `PLAYTEST.md` ; limites, dette et règles provisoires au §15.
-- **Prochaine étape :** P2-01 à P2-09 terminées (décisions : ARCHITECTURE §8.3 bis à nonies et §5.2 ter ; la dette « plan conservé » du playtest a été soldée en P2-09). Suite : P2-10 (contenu et tests alpha), puis la pull request de phase vers `main`. Ne pas déployer sans demande explicite.
+- **Prochaine étape :** phase 2 terminée (P2-01 à P2-10 ; décisions : ARCHITECTURE §5.2 ter et §8.3 bis à decies). Suite : pull request de phase `feat/p2-alpha` → `main` après CI verte, puis playtest de l’alpha (rythme des arrêts d’accélération, fréquence de la vie de famille, relecture des hypothèses provisoires) avant la phase 3. Ne pas déployer sans demande explicite.
 - **Décisions attendues du créateur :** relecture des hypothèses provisoires du §4.1 ; coût de la vie personnel ; relecture éditoriale des 30 événements ; déplacement du dépôt hors d’iCloud (§15.4).
 - **Avant de commencer :** `git fetch --prune`, `git status`, rechercher les copies de synchronisation (`find . -path ./node_modules -prune -o -name '* [0-9].*' -print`), `npm ci`, puis `npm run check`, `npm run lint`, `npm run content:validate`, `npm run test` et `npm run build`.

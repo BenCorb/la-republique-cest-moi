@@ -154,6 +154,33 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByText('Actif ce trimestre')).toBeVisible();
 	});
 
+	test('refuse explicitement une sauvegarde d’une ancienne version, sans l’effacer', async ({
+		page
+	}) => {
+		await startCareer(page, 'e2e-ancienne');
+		const key = 'la-republique-cest-moi:save';
+		const old = await page.evaluate((saveKey) => {
+			const envelope = JSON.parse(localStorage.getItem(saveKey) ?? '{}') as {
+				rulesVersion: string;
+				state: Record<string, unknown>;
+			};
+			envelope.rulesVersion = '0.7.0';
+			delete envelope.state.world;
+			const raw = JSON.stringify(envelope);
+			localStorage.setItem(saveKey, raw);
+			localStorage.removeItem(`${saveKey}:previous`);
+			return raw;
+		}, key);
+
+		await page.reload();
+		await expect(page.getByRole('alert')).toContainText(
+			'créée par une autre version de développement du jeu (règles 0.7.0'
+		);
+		await expect(page.getByRole('alert')).toContainText('Elle est conservée telle quelle.');
+		await expect(page.getByRole('button', { name: 'Reprendre la carrière' })).toHaveCount(0);
+		expect(await page.evaluate((saveKey) => localStorage.getItem(saveKey), key)).toBe(old);
+	});
+
 	test('s’arrête avant une échéance, résume la période, puis accélère une année', async ({
 		page
 	}) => {
