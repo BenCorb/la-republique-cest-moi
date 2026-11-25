@@ -71,6 +71,8 @@ Le joueur peut passer un trimestre ou plusieurs, avec un arrêt automatique lors
 
 Proposition : boutons « Trimestre suivant », « Année suivante » et « Jusqu’au prochain événement important », avec possibilité d’interrompre ce dernier mode. Ne pas forcer une décision à chaque trimestre. Les nouvelles non critiques peuvent être regroupées dans un résumé.
 
+**Hypothèses provisoires de l’alpha (P2-09, 25 novembre 2026, choix délégués) :** l’accélération s’arrête quand les candidatures sont ouvertes à une élection accessible (au plus quatre trimestres avant la clôture), au dernier trimestre d’une campagne, au résultat, à une nomination ou une fin de mandat, à l’annonce d’élections anticipées, au départ d’un collaborateur, à l’arrivée de candidatures et quand le budget ne couvre plus les salaires, en plus des décisions, de la santé et des charges menacées. Le plan du trimestre est reconduit d’un tour à l’autre ; achats et démarches ponctuelles n’ont lieu qu’une fois. Les trimestres simulés sont résumés au tableau de bord, avec le détail consultable. Fréquence des arrêts à juger en playtest.
+
 ### 2.4 Progression incrémentale
 
 La croissance vient de l’accumulation de collaborateurs, de militants, de mandats, d’actifs et de relations. En début de carrière, le joueur fait lui-même la majorité des tâches ; plus tard, l’organisation produit des ressources et exécute des activités de manière autonome.

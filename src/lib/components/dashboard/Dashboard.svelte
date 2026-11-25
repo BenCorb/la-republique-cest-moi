@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Gauge from '#lib/components/common/Gauge.svelte';
+	import SpanSummary from './SpanSummary.svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 
 	/**
@@ -12,6 +13,7 @@
 
 	let { session }: Props = $props();
 	const view = $derived(session.snapshot.view);
+	const acceleration = $derived(session.snapshot.acceleration);
 	const lastQuarter = $derived(view?.journal[0] ?? null);
 	const active = $derived(
 		view?.producers.filter((producer) => producer.status === 'active').length ?? 0
@@ -23,6 +25,9 @@
 
 {#if view}
 	<div class="grid gap-5 lg:grid-cols-2">
+		{#if acceleration && !acceleration.running && acceleration.summary}
+			<SpanSummary {acceleration} onDismiss={() => session.controller.dismissAcceleration()} />
+		{/if}
 		<section class="card" aria-labelledby="situation-title">
 			<h2 id="situation-title" class="section-title">Situation</h2>
 			<table class="mt-3 w-full text-sm">

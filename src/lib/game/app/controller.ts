@@ -6,7 +6,9 @@
  *
  * Règles :
  *   - le brouillon de plan n'appartient qu'à l'interface ; il n'est jamais
- *     présenté comme validé et peut être perdu au rechargement ;
+ *     présenté comme validé et peut être perdu au rechargement ; après un
+ *     trimestre, manuel ou accéléré, il est reporté selon la règle du moteur
+ *     (`carryOverPlan` : achats et cibles sans objet retirés) ;
  *   - chaque transition réussie est sauvegardée aussitôt (nouvelle partie, tour,
  *     choix, fin) ; tant que la sauvegarde a échoué, aucune transition suivante
  *     n'est permise, sauf si le joueur choisit explicitement de continuer sans
@@ -19,6 +21,7 @@ import type { Content } from '../content/types.ts';
 import {
 	assignMissionCommand,
 	accelerate as accelerateEngine,
+	carryOverPlan,
 	chooseEventCommand,
 	commitTurn,
 	createGame,
@@ -43,7 +46,13 @@ import {
 	type WriteError
 } from '../persistence/index.ts';
 import { formatSavedAt } from './format.ts';
-import { creationOptions, projectView, type PlayerView } from './view-model.ts';
+import {
+	creationOptions,
+	projectView,
+	summarizeSpan,
+	type PlayerView,
+	type SpanSummaryView
+} from './view-model.ts';
 
 export interface ControllerDependencies {
 	readonly content: Content;
@@ -98,6 +107,10 @@ export interface AccelerationStatus {
 	readonly targetTurns: number;
 	readonly stopReason: ControllerAccelerationStopReason | null;
 	readonly message: string;
+	/** Alertes nouvelles qui ont interrompu l'accélération. */
+	readonly alerts: readonly string[];
+	/** Résumé groupé des trimestres simulés, une fois l'accélération terminée. */
+	readonly summary: SpanSummaryView | null;
 }
 
 export interface ControllerSnapshot {
@@ -131,6 +144,8 @@ export class GameController {
 	private notice: Notice | null = null;
 	private acceleration: AccelerationStatus | null = null;
 	private accelerationToken = 0;
+	/** État au lancement de l'accélération en cours, pour le résumé groupé. */
+	private accelerationStart: GameState | null = null;
 	private readonly listeners = new Set<Listener>();
 	private cachedSnapshot: ControllerSnapshot | null = null;
 
@@ -321,6 +336,34 @@ export class GameController {
 		return this.run(commitTurn({ steps: this.plan }), true);
 	}
 
+	/** Libellé lisible d'une étape (notice des étapes retirées du plan). */
+	private stepLabel(step: PlanStep): string {
+		const { content } = this.deps;
+		return step.kind === 'action'
+			? (content.actions[step.id]?.label ?? step.id)
+			: `Achat : ${content.upgrades[step.id]?.label ?? step.id}`;
+	}
+
+	private droppedNotice(dropped: readonly PlanStep[]): Notice | null {
+		if (dropped.length === 0) return null;
+		return {
+			level: 'info',
+			text: 'Plan reconduit pour le trimestre suivant ; étapes ponctuelles retirées :',
+			details: dropped.map((step) => this.stepLabel(step))
+		};
+	}
+
+	/** Report du plan après une transition (règle commune au tour manuel et à l'accélération). */
+	private carryPlan(): readonly PlanStep[] {
+		if (!this.state || this.state.phase === 'ended') {
+			this.plan = [];
+			return [];
+		}
+		const carried = carryOverPlan(this.state, { steps: this.plan }, this.deps.content);
+		this.plan = [...carried.plan.steps];
+		return carried.dropped;
+	}
+
 	/** Change la mission d'un collaborateur (commande hors tour, sauvegardée aussitôt). */
 	assignMission(characterId: string, missionId: string): boolean {
 		if (this.acceleration?.running) return false;
@@ -328,11 +371,11 @@ export class GameController {
 	}
 
 	choose(choiceId: string): boolean {
+		// Le résumé d'une accélération arrêtée par cette décision reste consultable.
 		if (this.acceleration?.running) return false;
-		this.acceleration = null;
 		const instanceId = this.state?.events.pending[0]?.instanceId;
 		if (!instanceId) return false;
-		return this.run(chooseEventCommand(instanceId, choiceId), false);
+		return this.run(chooseEventCommand(instanceId, choiceId), true);
 	}
 
 	// -- Accélération -------------------------------------------------------
@@ -347,8 +390,14 @@ export class GameController {
 				return `${count} : limite demandée atteinte.`;
 			case 'decision_pending':
 				return `${count} : une décision attend votre réponse.`;
-			case 'alert':
-				return `${count} : ${result.alerts[0]?.message ?? 'une nouvelle alerte demande votre attention'}`;
+			case 'alert': {
+				const others = result.alerts.length - 1;
+				const more =
+					others > 0
+						? ` (et ${others} autre${others > 1 ? 's' : ''} alerte${others > 1 ? 's' : ''})`
+						: '';
+				return `${count} : ${result.alerts[0]?.message ?? 'une nouvelle alerte demande votre attention'}${more}`;
+			}
 			case 'game_ended':
 				return `${count} : la carrière est terminée.`;
 			case 'invalid_plan':
@@ -361,7 +410,13 @@ export class GameController {
 		stopReason: ControllerAccelerationStopReason,
 		message: string
 	): void {
-		this.acceleration = { ...running, running: false, stopReason, message };
+		const start = this.accelerationStart;
+		this.accelerationStart = null;
+		const summary =
+			start && this.state && running.turnsAdvanced > 0
+				? summarizeSpan(start, this.state, this.deps.content)
+				: null;
+		this.acceleration = { ...running, running: false, stopReason, message, summary };
 	}
 
 	/**
@@ -373,13 +428,16 @@ export class GameController {
 		if (!this.state || !this.canAct() || this.state.phase !== 'planning') return false;
 
 		const token = ++this.accelerationToken;
-		const recurringPlan = { steps: [...this.plan] };
+		this.accelerationStart = this.state;
+		let dropped: PlanStep[] = [];
 		let running: AccelerationStatus = {
 			running: true,
 			turnsAdvanced: 0,
 			targetTurns: maxTurns,
 			stopReason: null,
-			message: 'Accélération en cours…'
+			message: 'Accélération en cours…',
+			alerts: [],
+			summary: null
 		};
 		this.acceleration = running;
 		this.notice = null;
@@ -389,10 +447,13 @@ export class GameController {
 			if (token !== this.accelerationToken) return true;
 			const batch = accelerateEngine(
 				this.state,
-				{ plan: recurringPlan, maxTurns: 1 },
+				{ plan: { steps: this.plan }, maxTurns: 1 },
 				this.deps.content
 			);
 			this.state = batch.state;
+			this.plan = batch.state.phase === 'ended' ? [] : [...batch.plan.steps];
+			dropped = [...dropped, ...batch.dropped];
+			this.notice = this.droppedNotice(dropped);
 			running = {
 				...running,
 				turnsAdvanced: running.turnsAdvanced + batch.turnsAdvanced
@@ -413,7 +474,7 @@ export class GameController {
 
 			if (batch.stopReason !== 'limit_reached') {
 				this.finishAcceleration(
-					running,
+					{ ...running, alerts: batch.alerts.map((alert) => alert.message) },
 					batch.stopReason,
 					this.accelerationMessage(batch, running.turnsAdvanced)
 				);
@@ -475,8 +536,7 @@ export class GameController {
 			return false;
 		}
 		this.state = result.state;
-		if (clearsPlan) this.plan = [];
-		this.notice = null;
+		this.notice = clearsPlan ? this.droppedNotice(this.carryPlan()) : null;
 		this.persist();
 		this.changed();
 		return true;
@@ -579,6 +639,13 @@ export class GameController {
 
 	cancelImport(): void {
 		this.pendingImport = null;
+		this.changed();
+	}
+
+	/** Masque le résumé et le message de la dernière accélération terminée. */
+	dismissAcceleration(): void {
+		if (this.acceleration?.running) return;
+		this.acceleration = null;
 		this.changed();
 	}
 

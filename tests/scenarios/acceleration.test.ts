@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	accelerate,
 	assertInvariants,
+	carryOverPlan,
 	chooseEventCommand,
 	commitTurn,
 	createGame,
@@ -54,14 +55,43 @@ describe('accélération minimale', () => {
 
 	it('s’arrête avec l’état cohérent lorsque le plan récurrent devient invalide', () => {
 		const start = createGame({ seed: 'accélération-plan' }, fixtureContent);
-		const plan = { steps: [{ kind: 'purchase' as const, id: 'test.donors' }] };
-		const accelerated = accelerate(start, { plan, maxTurns: 4 }, fixtureContent);
+		const fixed = { kind: 'action' as const, id: 'test.fixed' };
+		const accelerated = accelerate(
+			start,
+			{ plan: { steps: [fixed, fixed] }, maxTurns: 40 },
+			fixtureContent
+		);
 
 		expect(accelerated.stopReason).toBe('invalid_plan');
-		expect(accelerated.turnsAdvanced).toBe(1);
-		expect(accelerated.issues.some((issue) => issue.code === 'owned_limit')).toBe(true);
-		expect(accelerated.state.upgrades).toHaveLength(1);
+		expect(accelerated.turnsAdvanced).toBeGreaterThan(0);
+		expect(accelerated.issues.some((issue) => issue.code === 'insufficient_resource')).toBe(true);
 		assertInvariants(accelerated.state, fixtureContent);
+	});
+
+	it('reporte le plan comme un tour manuel : un achat n’a lieu qu’une fois', () => {
+		const start = createGame({ seed: 'accélération-achat' }, fixtureContent);
+		const plan = {
+			steps: [
+				{ kind: 'purchase' as const, id: 'test.donors' },
+				{ kind: 'action' as const, id: 'test.random' }
+			]
+		};
+		const accelerated = accelerate(start, { plan, maxTurns: 4 }, fixtureContent);
+
+		expect(accelerated).toMatchObject({ turnsAdvanced: 4, stopReason: 'limit_reached' });
+		expect(accelerated.state.upgrades).toHaveLength(1);
+		expect(accelerated.plan.steps).toEqual([{ kind: 'action', id: 'test.random' }]);
+		expect(accelerated.dropped).toEqual([{ kind: 'purchase', id: 'test.donors' }]);
+
+		let manual = start;
+		let manualPlan: TurnPlan = plan;
+		for (let turn = 0; turn < 4; turn += 1) {
+			const next = transition(manual, commitTurn(manualPlan), fixtureContent);
+			if (!next.ok) throw new Error(next.error.message);
+			manual = next.state;
+			manualPlan = carryOverPlan(manual, manualPlan, fixtureContent).plan;
+		}
+		expect(accelerated.state).toStrictEqual(manual);
 	});
 
 	it('s’arrête sur une nouvelle alerte mais ignore celle déjà visible au lancement', () => {

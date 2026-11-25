@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.15.0';
+export const RULES_VERSION = '0.16.0';
 
 export {
 	START_YEAR,
@@ -208,6 +208,7 @@ export {
 } from './commands.ts';
 export {
 	RESOURCE_LABELS,
+	carryOverPlan,
 	executePlan,
 	instanceIdFor,
 	previewPlan,
@@ -264,6 +265,7 @@ export {
 	accelerate,
 	accelerationAlerts,
 	type AccelerationAlert,
+	type AccelerationAlertKind,
 	type AccelerationRequest,
 	type AccelerationResult,
 	type AccelerationStopReason

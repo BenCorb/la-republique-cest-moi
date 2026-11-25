@@ -673,3 +673,36 @@ function applyGaugeEffect(
 	const { value, applied } = applyGauge(player[key], delta);
 	return { player: { ...player, [key]: value }, delta: applied };
 }
+
+/** Problèmes qui rendent une étape sans objet au trimestre suivant : elle est retirée du plan. */
+const OBSOLETE_ISSUES: ReadonlySet<PlanIssueCode> = new Set([
+	'invalid_target',
+	'unknown_action',
+	'unknown_upgrade'
+]);
+
+/**
+ * Plan reporté au trimestre suivant (P2-09), même règle pour un tour manuel et
+ * pour l'accélération : les achats sont ponctuels et retirés ; une action dont
+ * la cible n'a plus d'objet (candidat recruté, candidature déposée, parti déjà
+ * rejoint) l'est aussi. Les autres étapes restent, même si elles deviennent
+ * invalides (ressources, temps, condition) : le joueur décide. Sans effet hors
+ * de la planification (décision en attente, fin).
+ */
+export function carryOverPlan(
+	state: GameState,
+	plan: TurnPlan,
+	content: Content
+): { plan: TurnPlan; dropped: PlanStep[] } {
+	if (state.phase !== 'planning') return { plan, dropped: [] };
+	const preview = previewPlan(state, plan, content);
+	const kept: PlanStep[] = [];
+	const dropped: PlanStep[] = [];
+	plan.steps.forEach((step, index) => {
+		const obsolete =
+			step.kind === 'purchase' ||
+			preview.issues.some((issue) => issue.index === index && OBSOLETE_ISSUES.has(issue.code));
+		(obsolete ? dropped : kept).push(step);
+	});
+	return { plan: { steps: kept }, dropped };
+}

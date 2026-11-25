@@ -34,7 +34,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 9;
+export const SIMULATION_REPORT_VERSION = 10;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',

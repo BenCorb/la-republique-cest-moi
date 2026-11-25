@@ -65,6 +65,8 @@ describe('accueil et nouvelle carrière', () => {
 		first.newCareer();
 		first.addStep({ kind: 'action', id: 'test.fixed' });
 		first.commitTurn();
+		// Le brouillon reconduit n'est pas sauvegardé (il se perd au rechargement).
+		first.clearPlan();
 		const second = controller(storage);
 		expect(second.resume()).toBe(true);
 		expect(second.snapshot().view).toEqual(first.snapshot().view);
@@ -83,7 +85,7 @@ describe('accueil et nouvelle carrière', () => {
 });
 
 describe('plan et trimestres', () => {
-	it('compose le plan, l’ordonne, valide le trimestre et vide le brouillon', () => {
+	it('compose le plan, l’ordonne, valide le trimestre et reconduit le plan', () => {
 		const game = controller();
 		game.newCareer();
 		game.addStep({ kind: 'action', id: 'test.earn' });
@@ -96,7 +98,19 @@ describe('plan et trimestres', () => {
 		expect(game.snapshot().plan).toEqual([{ kind: 'action', id: 'test.earn' }]);
 		expect(game.commitTurn()).toBe(true);
 		expect(game.snapshot().view?.dateLabel).toBe('T2 2000');
-		expect(game.snapshot().plan).toEqual([]);
+		expect(game.snapshot().plan).toEqual([{ kind: 'action', id: 'test.earn' }]);
+		expect(game.snapshot().notice).toBeNull();
+	});
+
+	it('retire les achats du plan reconduit et le signale', () => {
+		const game = controller();
+		game.newCareer();
+		game.addStep({ kind: 'action', id: 'test.earn' });
+		game.addStep({ kind: 'purchase', id: 'test.donors' });
+		expect(game.commitTurn()).toBe(true);
+		expect(game.snapshot().plan).toEqual([{ kind: 'action', id: 'test.earn' }]);
+		expect(game.snapshot().notice).toMatchObject({ level: 'info' });
+		expect(game.snapshot().notice?.details).toEqual([expect.stringContaining('Achat')]);
 	});
 
 	it('refuse un plan invalide avec des messages lisibles, sans rien changer', () => {
@@ -237,14 +251,33 @@ describe('accélération', () => {
 	it('s’arrête si le plan récurrent devient invalide', async () => {
 		const game = controller();
 		game.newCareer();
+		game.addStep({ kind: 'action', id: 'test.fixed' });
+		game.addStep({ kind: 'action', id: 'test.fixed' });
+
+		await game.accelerate(40);
+		const acceleration = game.snapshot().acceleration;
+		expect(acceleration?.stopReason).toBe('invalid_plan');
+		expect(acceleration?.turnsAdvanced).toBeGreaterThan(0);
+		expect(game.snapshot().view?.plan.valid).toBe(false);
+	});
+
+	it('n’achète qu’une fois pendant l’accélération et résume la période', async () => {
+		const game = controller();
+		game.newCareer();
 		game.addStep({ kind: 'purchase', id: 'test.donors' });
 
 		await game.accelerate(4);
-		expect(game.snapshot().acceleration).toMatchObject({
-			turnsAdvanced: 1,
-			stopReason: 'invalid_plan'
-		});
-		expect(game.snapshot().view?.plan.valid).toBe(false);
+		const snapshot = game.snapshot();
+		expect(snapshot.acceleration).toMatchObject({ turnsAdvanced: 4, stopReason: 'limit_reached' });
+		expect(snapshot.plan).toEqual([]);
+		expect(snapshot.notice?.details).toEqual([expect.stringContaining('Achat')]);
+		const summary = snapshot.acceleration?.summary;
+		expect(summary).toMatchObject({ turns: 4, period: 'du T1 2000 au T4 2000' });
+		expect(summary?.quarters).toHaveLength(4);
+		expect(summary?.changes.map((change) => change.name)).toContain('Popularité');
+
+		game.dismissAcceleration();
+		expect(game.snapshot().acceleration).toBeNull();
 	});
 
 	it('s’arrête au premier échec de sauvegarde', async () => {

@@ -154,22 +154,40 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByText('Actif ce trimestre')).toBeVisible();
 	});
 
-	test('accélère une année, sauvegarde puis reprend au même trimestre', async ({ page }) => {
+	test('s’arrête avant une échéance, résume la période, puis accélère une année', async ({
+		page
+	}) => {
 		await startCareer(page, 'e2e-year');
 		await page.getByRole('button', { name: 'Année suivante' }).click();
 
+		// Les législatives sont accessibles : le temps s'arrête avant la clôture des candidatures.
+		await expect(page.getByTestId('acceleration-status')).toContainText(
+			'3 trimestres simulés : Élections législatives : candidatures ouvertes'
+		);
+		const summary = page.getByTestId('span-summary');
+		await expect(summary).toContainText('3 trimestres simulés du T1 2000 au T3 2000');
+		await summary.getByText('Détail trimestre par trimestre').click();
+		await expect(summary.getByRole('heading', { name: 'T2 2000' })).toBeVisible();
+		await expect(page.getByTestId('game-date')).toHaveText('T4 2000 · 25 ans');
+
+		await page.getByRole('button', { name: 'Année suivante' }).click();
 		await expect(page.getByTestId('acceleration-status')).toContainText(
 			'4 trimestres simulés : limite demandée atteinte.'
 		);
-		await expect(page.getByTestId('game-date')).toHaveText('T1 2001 · 26 ans');
+		await expect(page.getByTestId('game-date')).toHaveText('T4 2001 · 26 ans');
+		await page.getByRole('button', { name: 'Masquer le résumé' }).click();
+		await expect(summary).toBeHidden();
 
 		await page.reload();
 		await page.getByRole('button', { name: 'Reprendre la carrière' }).click();
-		await expect(page.getByTestId('game-date')).toHaveText('T1 2001 · 26 ans');
+		await expect(page.getByTestId('game-date')).toHaveText('T4 2001 · 26 ans');
 	});
 
 	test('peut interrompre une accélération longue entre deux trimestres', async ({ page }) => {
 		await startCareer(page, 'e2e-year');
+		// Première étape : l'alerte des législatives, reconnue ensuite.
+		await page.getByRole('button', { name: 'Année suivante' }).click();
+		await expect(page.getByTestId('acceleration-status')).toContainText('législatives');
 		await page.getByRole('button', { name: 'Jusqu’à une alerte' }).click();
 		const cancel = page.getByRole('button', { name: 'Interrompre' });
 		await expect(cancel).toBeVisible();
@@ -184,8 +202,13 @@ test.describe('parcours de jeu', () => {
 		page
 	}) => {
 		await startCareer(page, 'e2e-decision');
-		await page.getByRole('button', { name: 'Jusqu’à une alerte' }).click();
-		await expect(page.getByRole('dialog')).toBeVisible();
+		// Les échéances électorales arrêtent aussi le temps : relancer jusqu'à la décision.
+		const dialog = page.getByRole('dialog');
+		for (let attempt = 0; attempt < 6 && !(await dialog.isVisible()); attempt += 1) {
+			await page.getByRole('button', { name: 'Jusqu’à une alerte' }).click();
+			await expect(page.getByTestId('acceleration-status')).not.toContainText('en cours');
+		}
+		await expect(dialog).toBeVisible();
 		await expect(page.getByTestId('acceleration-status')).toContainText(
 			'une décision attend votre réponse'
 		);

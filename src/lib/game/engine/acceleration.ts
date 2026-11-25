@@ -1,24 +1,35 @@
 /**
- * Accélération minimale du calendrier (ARCHITECTURE.md §5.2).
+ * Accélération du calendrier (ARCHITECTURE.md §5.2, P1-09 puis P2-09).
  *
  * Cette fonction ne possède aucune transition propre : elle répète exclusivement
- * `transition(state, commitTurn(plan), content)`. Le plan est récurrent et doit
- * rester valide avant chaque trimestre. Les alertes déjà visibles au lancement
- * sont considérées comme reconnues ; une alerte qui apparaît ensuite interrompt
- * la boucle, tout comme une décision, une fin de carrière ou un plan devenu
- * invalide.
+ * `transition(state, commitTurn(plan), content)`. Entre deux trimestres, le plan
+ * est reporté selon la même règle qu'un tour manuel (`carryOverPlan`) : achats
+ * et étapes devenues sans objet sont retirés, le reste doit rester valide. Les
+ * alertes déjà visibles au lancement sont considérées comme reconnues ; une
+ * alerte qui apparaît ensuite interrompt la boucle (échéance électorale à
+ * préparer, résultat, mandat, départ d'un collaborateur, budget, santé), tout
+ * comme une décision, une fin de carrière ou un plan devenu invalide.
  */
 import type { Content } from '../content/types.ts';
-import { commitTurn, type TurnPlan } from './commands.ts';
-import { previewPlan, type PlanIssue } from './plan.ts';
-import type { GameState } from './state.ts';
+import { formatTurn } from './calendar.ts';
+import { candidacyIssue, runningCampaigns } from './career.ts';
+import { commitTurn, type PlanStep, type TurnPlan } from './commands.ts';
+import { carryOverPlan, previewPlan, type PlanIssue } from './plan.ts';
+import type { GameState, HistoryEntry, PoliticalChange } from './state.ts';
 import { transition } from './turn.ts';
 
 export type AccelerationStopReason =
 	'limit_reached' | 'decision_pending' | 'alert' | 'game_ended' | 'invalid_plan';
 
+/**
+ * Origine d'une alerte : prévision du plan, santé, échéance électorale,
+ * carrière (résultat, mandat), entourage ou finances.
+ */
+export type AccelerationAlertKind = 'plan' | 'health' | 'deadline' | 'career' | 'staff' | 'finance';
+
 export interface AccelerationAlert {
 	readonly id: string;
+	readonly kind: AccelerationAlertKind;
 	readonly message: string;
 }
 
@@ -33,9 +44,159 @@ export interface AccelerationResult {
 	readonly stopReason: AccelerationStopReason;
 	readonly alerts: readonly AccelerationAlert[];
 	readonly issues: readonly PlanIssue[];
+	/** Plan reporté après le dernier trimestre simulé. */
+	readonly plan: TurnPlan;
+	/** Étapes retirées du plan en cours de route (achats, cibles devenues sans objet). */
+	readonly dropped: readonly PlanStep[];
 }
 
-/** Alertes métier susceptibles d'interrompre une accélération. */
+/** Dernier trimestre résolu, s'il vient de l'être (le passage à `state.turn`). */
+function lastQuarter(state: GameState): HistoryEntry | null {
+	for (let index = state.history.length - 1; index >= 0; index -= 1) {
+		const entry = state.history[index]!;
+		if (entry.type === 'turn.resolved') return entry.turn === state.turn - 1 ? entry : null;
+	}
+	return null;
+}
+
+/** Variations politiques d'un trimestre : étapes, échéances et événements informatifs. */
+function quarterPolitics(entry: HistoryEntry): PoliticalChange[] {
+	return [
+		...entry.steps.flatMap((step) => step.politics),
+		...(entry.deadlines?.mandates ?? []),
+		...entry.events.flatMap((event) => event.politics)
+	];
+}
+
+/** Alertes de carrière et d'entourage issues du trimestre qui vient d'être résolu. */
+function quarterAlerts(state: GameState, content: Content): AccelerationAlert[] {
+	const entry = lastQuarter(state);
+	if (!entry) return [];
+	const alerts: AccelerationAlert[] = [];
+	const electionLabel = (electionId: string): string =>
+		content.elections[electionId]?.label ?? electionId;
+	for (const outcome of entry.deadlines?.campaigns ?? []) {
+		const campaign = state.campaigns.find((item) => item.campaignId === outcome.campaignId);
+		const label = electionLabel(campaign?.electionId ?? outcome.campaignId);
+		alerts.push({
+			id: `result:${outcome.campaignId}`,
+			kind: 'career',
+			message:
+				outcome.status === 'won'
+					? `${label} : victoire, un nouveau mandat commence.`
+					: outcome.status === 'lost'
+						? `${label} : défaite${outcome.playerPercent === null ? '' : ` (${outcome.playerPercent} %)`}.`
+						: `${label} : candidature invalidée${outcome.reason ? ` (${outcome.reason})` : ''}.`
+		});
+	}
+	for (const change of quarterPolitics(entry)) {
+		if (change.kind === 'mandateStarted') {
+			const mandate = state.mandates.find((item) => item.instanceId === change.instanceId);
+			if (mandate?.access !== 'nomination') continue; // élection : voir le résultat
+			alerts.push({
+				id: `mandate:${change.instanceId}`,
+				kind: 'career',
+				message: `Nomination : ${content.mandates[change.mandateId]?.label ?? change.mandateId}.`
+			});
+		} else if (change.kind === 'mandateEnded') {
+			alerts.push({
+				id: `mandate_end:${change.instanceId}`,
+				kind: 'career',
+				message: `Fin de mandat : ${content.mandates[change.mandateId]?.label ?? change.mandateId}.`
+			});
+		} else if (change.kind === 'staffLeft') {
+			alerts.push(staffLeftAlert(change.characterId, change.postId, state, content));
+		} else if (change.kind === 'earlyElection') {
+			alerts.push({
+				id: `early:${change.ballotId}`,
+				kind: 'deadline',
+				message: `${electionLabel(change.electionId)} anticipées au ${formatTurn(change.turn)}.`
+			});
+		}
+	}
+	for (const departure of entry.staff?.departures ?? []) {
+		alerts.push(staffLeftAlert(departure.characterId, departure.postId, state, content));
+	}
+	for (const postId of entry.staff?.shortlisted ?? []) {
+		alerts.push({
+			id: `shortlist:${postId}:${entry.turn}`,
+			kind: 'staff',
+			message: `Candidatures reçues pour le poste « ${content.posts[postId]?.label ?? postId} ».`
+		});
+	}
+	// Une même alerte peut venir de deux sources (départ par événement et à la frontière).
+	return alerts.filter(
+		(alert, index) => alerts.findIndex((other) => other.id === alert.id) === index
+	);
+}
+
+function staffLeftAlert(
+	characterId: string,
+	postId: string,
+	state: GameState,
+	content: Content
+): AccelerationAlert {
+	const name = state.characters[characterId]?.name ?? characterId;
+	return {
+		id: `staff_left:${characterId}`,
+		kind: 'staff',
+		message: `${name} quitte le poste « ${content.posts[postId]?.label ?? postId} », désormais vacant.`
+	};
+}
+
+/** Échéances électorales à préparer : candidature encore possible, campagne à son dernier trimestre. */
+function deadlineAlerts(state: GameState, content: Content): AccelerationAlert[] {
+	const lead = content.balance.elections.alertLeadTurns;
+	const alerts: AccelerationAlert[] = [];
+	const running = runningCampaigns(state.campaigns);
+	for (const ballot of state.ballots) {
+		if (ballot.status !== 'scheduled') continue;
+		const label = content.elections[ballot.electionId]?.label ?? ballot.electionId;
+		if (running.some((campaign) => campaign.ballotId === ballot.ballotId)) {
+			if (ballot.turn === state.turn) {
+				alerts.push({
+					id: `vote:${ballot.ballotId}`,
+					kind: 'deadline',
+					message: `${label} : dernier trimestre de campagne avant le scrutin.`
+				});
+			}
+			continue;
+		}
+		const filingLeft = ballot.filingClosesTurn - state.turn;
+		if (filingLeft < 0 || filingLeft > lead) continue;
+		if (candidacyIssue(ballot.ballotId, state, state.player, state.turn, content) !== null)
+			continue;
+		alerts.push({
+			id: `filing:${ballot.ballotId}`,
+			kind: 'deadline',
+			message:
+				filingLeft === 0
+					? `${label} : dernier trimestre pour déposer une candidature.`
+					: `${label} : candidatures ouvertes jusqu’au ${formatTurn(ballot.filingClosesTurn)}.`
+		});
+	}
+	return alerts;
+}
+
+/** Salaires de l'entourage que le budget politique ne couvre plus. */
+function payrollAlert(state: GameState, content: Content): AccelerationAlert[] {
+	const payroll = state.staff
+		.filter((member) => member.status === 'active')
+		.reduce((sum, member) => sum + (content.posts[member.postId]?.salaryCents ?? 0), 0);
+	if (payroll === 0 || state.resources.politicalBudgetCents >= payroll) return [];
+	return [
+		{
+			id: 'payroll_at_risk',
+			kind: 'finance',
+			message: 'Budget politique insuffisant pour payer l’entourage le trimestre prochain.'
+		}
+	];
+}
+
+/**
+ * Alertes métier susceptibles d'interrompre une accélération, dans un ordre
+ * stable : prévision du plan, santé, finances, carrière et entourage, échéances.
+ */
 export function accelerationAlerts(
 	state: GameState,
 	plan: TurnPlan,
@@ -48,25 +209,36 @@ export function accelerationAlerts(
 			warning.code === 'upkeep_at_risk'
 				? `${warning.code}:${warning.instanceId ?? warning.upgradeId ?? 'unknown'}`
 				: warning.code,
+		kind: warning.code === 'stress_high' ? 'health' : 'plan',
 		message: warning.message
 	}));
 	if (state.player.health < content.balance.wellbeing.fragileHealthThreshold) {
 		alerts.push({
 			id: 'health_fragile',
+			kind: 'health',
 			message: 'Santé critique : une intervention est recommandée.'
 		});
 	}
+	alerts.push(...payrollAlert(state, content));
+	alerts.push(...quarterAlerts(state, content));
+	alerts.push(...deadlineAlerts(state, content));
 	return alerts;
 }
 
+interface Progress {
+	readonly state: GameState;
+	readonly turnsAdvanced: number;
+	readonly plan: TurnPlan;
+	readonly dropped: readonly PlanStep[];
+}
+
 function result(
-	state: GameState,
-	turnsAdvanced: number,
+	progress: Progress,
 	stopReason: AccelerationStopReason,
 	alerts: readonly AccelerationAlert[] = [],
 	issues: readonly PlanIssue[] = []
 ): AccelerationResult {
-	return { state, turnsAdvanced, stopReason, alerts, issues };
+	return { ...progress, stopReason, alerts, issues };
 }
 
 export function accelerate(
@@ -77,47 +249,47 @@ export function accelerate(
 	if (!Number.isSafeInteger(request.maxTurns) || request.maxTurns < 1) {
 		throw new RangeError(`Nombre de trimestres invalide : ${request.maxTurns}`);
 	}
-	if (state.phase === 'ended') return result(state, 0, 'game_ended');
-	if (state.phase === 'decision') return result(state, 0, 'decision_pending');
+	const initial: Progress = { state, turnsAdvanced: 0, plan: request.plan, dropped: [] };
+	if (state.phase === 'ended') return result(initial, 'game_ended');
+	if (state.phase === 'decision') return result(initial, 'decision_pending');
 
-	let current = state;
-	let turnsAdvanced = 0;
+	let progress = initial;
 	let acknowledged = new Set(
-		accelerationAlerts(current, request.plan, content).map((alert) => alert.id)
+		accelerationAlerts(state, request.plan, content).map((alert) => alert.id)
 	);
 
-	while (turnsAdvanced < request.maxTurns) {
-		const preview = previewPlan(current, request.plan, content);
-		if (!preview.valid) {
-			return result(current, turnsAdvanced, 'invalid_plan', [], preview.issues);
-		}
+	while (progress.turnsAdvanced < request.maxTurns) {
+		const preview = previewPlan(progress.state, progress.plan, content);
+		if (!preview.valid) return result(progress, 'invalid_plan', [], preview.issues);
 
-		const advanced = transition(current, commitTurn(request.plan), content);
+		const advanced = transition(progress.state, commitTurn(progress.plan), content);
 		if (!advanced.ok) {
 			if (advanced.error.code === 'invalid_plan') {
-				return result(current, turnsAdvanced, 'invalid_plan', [], advanced.error.issues);
+				return result(progress, 'invalid_plan', [], advanced.error.issues);
 			}
 			throw new Error(`Transition d’accélération refusée : ${advanced.error.code}`);
 		}
-		current = advanced.state;
-		turnsAdvanced += 1;
+		const carried = carryOverPlan(advanced.state, progress.plan, content);
+		progress = {
+			state: advanced.state,
+			turnsAdvanced: progress.turnsAdvanced + 1,
+			plan: carried.plan,
+			dropped: [...progress.dropped, ...carried.dropped]
+		};
+		const current = progress.state;
 
-		if (current.phase === 'ended') return result(current, turnsAdvanced, 'game_ended');
-		if (current.phase === 'decision') return result(current, turnsAdvanced, 'decision_pending');
+		if (current.phase === 'ended') return result(progress, 'game_ended');
+		if (current.phase === 'decision') return result(progress, 'decision_pending');
 
-		const nextPreview = previewPlan(current, request.plan, content);
-		if (!nextPreview.valid) {
-			return result(current, turnsAdvanced, 'invalid_plan', [], nextPreview.issues);
-		}
-		const activeAlerts = accelerationAlerts(current, request.plan, content);
+		const nextPreview = previewPlan(current, progress.plan, content);
+		if (!nextPreview.valid) return result(progress, 'invalid_plan', [], nextPreview.issues);
+		const activeAlerts = accelerationAlerts(current, progress.plan, content);
 		const newAlerts = activeAlerts.filter((alert) => !acknowledged.has(alert.id));
-		if (newAlerts.length > 0) {
-			return result(current, turnsAdvanced, 'alert', newAlerts);
-		}
+		if (newAlerts.length > 0) return result(progress, 'alert', newAlerts);
 		acknowledged = new Set(
 			activeAlerts.filter((alert) => acknowledged.has(alert.id)).map((alert) => alert.id)
 		);
 	}
 
-	return result(current, turnsAdvanced, 'limit_reached');
+	return result(progress, 'limit_reached');
 }

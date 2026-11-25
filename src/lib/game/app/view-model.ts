@@ -16,6 +16,7 @@ import {
 	type ResourceId
 } from '../content/types.ts';
 import {
+	accelerationAlerts,
 	ageAt,
 	careerSummary,
 	describePendingEvent,
@@ -47,7 +48,9 @@ import {
 	mainMandate,
 	reservedTime,
 	type WellbeingSource,
-	type WorldRecord
+	type WorldRecord,
+	type FamilyRecord,
+	type StaffRecord
 } from '../engine/index.ts';
 import {
 	GAUGE_NAMES,
@@ -716,6 +719,55 @@ function targetLabel(target: string, state: GameState, content: Content): string
 	return target;
 }
 
+/** Départs de collaborateurs et présélections à la frontière (P2-05). */
+function staffLines(record: StaffRecord | null, state: GameState, content: Content): JournalLine[] {
+	if (!record) return [];
+	const post = (postId: string): string => content.posts[postId]?.label ?? postId;
+	return [
+		...record.departures.map((departure) => {
+			const character = state.characters[departure.characterId];
+			const name = character ? displayName(character) : departure.characterId;
+			return {
+				kind: 'people' as const,
+				text: `${name} quitte le poste « ${post(departure.postId)} » (${STAFF_LEAVE_LABELS[departure.reason]}).`
+			};
+		}),
+		...record.shortlisted.map((postId) => ({
+			kind: 'career' as const,
+			text: `Candidatures reçues pour le poste « ${post(postId)} ».`
+		}))
+	];
+}
+
+/** Famille à la frontière (P2-08) : héritage, veuvage, dépenses et disponibilité. */
+function familyLines(record: FamilyRecord | null, state: GameState): JournalLine[] {
+	if (!record) return [];
+	const lines: JournalLine[] = [];
+	if (record.inheritance > 0) {
+		lines.push({
+			kind: 'people',
+			text: `Héritage familial — ${RESOURCE_NAMES.personalCashCents} ${formatDelta('personalCashCents', record.inheritance)}`
+		});
+	}
+	if (record.widowed) {
+		const partner = state.characters[record.widowed];
+		lines.push({
+			kind: 'people',
+			text: `Deuil : ${partner ? displayName(partner) : 'votre partenaire'} n’est plus.`
+		});
+	}
+	if (record.childCosts < 0) {
+		lines.push({
+			kind: 'economy',
+			text: `Enfants à charge — ${RESOURCE_NAMES.personalCashCents} ${formatDelta('personalCashCents', record.childCosts)}`
+		});
+	}
+	if (record.neglected) {
+		lines.push({ kind: 'people', text: 'Votre famille se sent délaissée par votre agenda.' });
+	}
+	return lines;
+}
+
 function journalOfQuarter(entry: HistoryEntry, state: GameState, content: Content): JournalLine[] {
 	const lines: JournalLine[] = [];
 	for (const step of entry.steps) {
@@ -753,9 +805,11 @@ function journalOfQuarter(entry: HistoryEntry, state: GameState, content: Conten
 	lines.push(...characterLines(entry.characters, state));
 	lines.push(...worldLines(entry.world, state, content));
 	lines.push(...deadlineLines(entry.deadlines, state, content));
+	lines.push(...staffLines(entry.staff, state, content));
+	lines.push(...familyLines(entry.family, state));
 	if (entry.mandates.changes.length > 0) {
 		lines.push({
-			kind: 'career',
+			kind: 'economy',
 			text: `Indemnités et moyens des mandats — ${changesText(entry.mandates.changes)}`
 		});
 	}
@@ -1453,6 +1507,83 @@ export interface ProfileOptionView {
 }
 
 /** Choix proposés à la création d'un personnage (P2-08). */
+/** Résumé groupé d'une série de trimestres simulés (DESIGN.md §5, P2-09). */
+export interface SpanSummaryView {
+	/** « du T1 2003 au T4 2005 ». */
+	readonly period: string;
+	readonly turns: number;
+	/** Variations nettes : ressources, santé, stress, popularité. */
+	readonly changes: readonly { readonly name: string; readonly text: string }[];
+	/** Faits marquants : carrière, entourage, famille, décisions, fin. */
+	readonly highlights: readonly string[];
+	/** Faits marquants non affichés faute de place. */
+	readonly moreHighlights: number;
+	readonly events: number;
+	readonly decisions: number;
+	/** Journal détaillé de la période, du plus récent au plus ancien. */
+	readonly quarters: readonly JournalTurnView[];
+}
+
+const HIGHLIGHT_KINDS: ReadonlySet<JournalLine['kind']> = new Set([
+	'career',
+	'people',
+	'decision',
+	'end'
+]);
+const MAX_HIGHLIGHTS = 8;
+
+/**
+ * Résume la période écoulée entre deux états d'une même partie (`to` dérive de
+ * `from` par des transitions : le journal est un ajout pur). Aucune donnée
+ * cachée : seulement ce que le journal et le tableau de bord montrent déjà.
+ */
+export function summarizeSpan(from: GameState, to: GameState, content: Content): SpanSummaryView {
+	const entries = to.history.slice(from.history.length);
+	const quarterEntries = entries.filter(
+		(entry): entry is HistoryEntry => entry.type === 'turn.resolved'
+	);
+	const turns = quarterEntries.length;
+	const lastTurn = quarterEntries.at(-1)?.turn ?? from.turn;
+	const lines = entries.flatMap((entry) =>
+		entry.type === 'turn.resolved'
+			? journalOfQuarter(entry, to, content)
+			: journalOfChoice(entry, to, content)
+	);
+	const highlights = lines
+		.filter((line) => HIGHLIGHT_KINDS.has(line.kind))
+		.map((line) => line.text);
+	const gauge = (name: string, before: number, after: number) => ({
+		name,
+		text: formatGaugeDelta(after - before)
+	});
+	return {
+		period:
+			turns <= 1
+				? `au ${formatTurn(from.turn)}`
+				: `du ${formatTurn(from.turn)} au ${formatTurn(lastTurn)}`,
+		turns,
+		changes: [
+			...RESOURCE_IDS.map((id) => ({
+				name: RESOURCE_NAMES[id],
+				text: formatDelta(id, to.resources[id] - from.resources[id])
+			})),
+			gauge('Santé', from.player.health, to.player.health),
+			gauge('Stress', from.player.stress, to.player.stress),
+			gauge('Popularité', from.player.popularity, to.player.popularity)
+		],
+		highlights: highlights.slice(0, MAX_HIGHLIGHTS),
+		moreHighlights: Math.max(0, highlights.length - MAX_HIGHLIGHTS),
+		events: quarterEntries.reduce(
+			(sum, entry) => sum + entry.events.filter((event) => event.outcome !== 'cancelled').length,
+			0
+		),
+		decisions: entries.filter((entry) => entry.type === 'event.resolved').length,
+		quarters: buildJournal(to, content).filter((quarter) =>
+			quarterEntries.some((entry) => quarter.key === `t${entry.turn}`)
+		)
+	};
+}
+
 export function creationOptions(content: Content): {
 	readonly origins: readonly ProfileOptionView[];
 	readonly professions: readonly ProfileOptionView[];
@@ -1587,17 +1718,26 @@ export function projectView(
 	if (state.phase === 'planning') {
 		for (const warning of preview.warnings)
 			alerts.push({ level: 'warning', text: warning.message });
+		// Alertes du moteur qui interrompent aussi l'accélération (P2-09) ; échéances et
+		// santé sont présentées plus bas, de façon plus complète.
+		for (const alert of accelerationAlerts(state, { steps: plan }, content)) {
+			if (alert.kind === 'finance' || alert.id.startsWith('staff_left:')) {
+				alerts.push({ level: 'warning', text: alert.message });
+			} else if (alert.kind === 'career' || alert.kind === 'staff') {
+				alerts.push({ level: 'info', text: alert.message });
+			}
+		}
 	}
 	const lead = content.balance.elections.alertLeadTurns;
 	for (const ballot of state.ballots) {
 		const left = ballot.turn - state.turn;
-		if (ballot.status !== 'scheduled' || left < 0 || left > lead || state.phase === 'ended')
-			continue;
+		if (ballot.status !== 'scheduled' || left < 0 || state.phase === 'ended') continue;
 		const label = content.elections[ballot.electionId]?.label ?? ballot.electionId;
 		const candidate = state.campaigns.some(
 			(campaign) => campaign.status === 'running' && campaign.ballotId === ballot.ballotId
 		);
 		const filingLeft = ballot.filingClosesTurn - state.turn;
+		// Les candidatures ferment avant le scrutin : l'alerte suit la plus proche des deux échéances.
 		if (!candidate && filingLeft >= 0 && filingLeft <= lead) {
 			alerts.push({
 				level: 'info',
@@ -1608,6 +1748,7 @@ export function projectView(
 			});
 			continue;
 		}
+		if (left > lead) continue;
 		alerts.push({
 			level: 'info',
 			text:

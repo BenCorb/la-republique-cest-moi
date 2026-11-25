@@ -20,6 +20,10 @@
 {#if view && plan}
 	<section class="card" aria-labelledby="plan-title">
 		<h2 id="plan-title" class="section-title">Plan du trimestre</h2>
+		<p class="mt-1 text-xs text-muted">
+			Le plan est reconduit d’un trimestre à l’autre ; achats et démarches ponctuelles (recrutement,
+			candidature…) n’ont lieu qu’une fois.
+		</p>
 
 		<div class="mt-3">
 			<div class="flex justify-between text-sm">
