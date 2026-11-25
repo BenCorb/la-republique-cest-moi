@@ -49,6 +49,7 @@ import {
 	reservedTime,
 	type WellbeingSource,
 	type WorldRecord,
+	type PlanPreview,
 	type FamilyRecord,
 	type StaffRecord
 } from '../engine/index.ts';
@@ -129,11 +130,34 @@ export interface UpgradeView extends CatalogItemView {
 
 export interface ProducerView {
 	readonly instanceId: string;
+	readonly upgradeId: string;
 	readonly label: string;
 	readonly status: 'active' | 'suspended' | 'pending';
 	readonly statusLabel: string;
 	readonly upkeep: readonly string[];
 	readonly production: readonly string[];
+}
+
+/**
+ * Éléments de l'organisation regroupés par type (« Militant bénévole × 4 ») :
+ * effectifs, charges et production cumulées ce trimestre, départ planifiable.
+ */
+export interface OrganisationGroupView {
+	readonly upgradeId: string;
+	readonly label: string;
+	/** Exemplaires possédés au début du trimestre. */
+	readonly owned: number;
+	readonly active: number;
+	readonly pending: number;
+	readonly suspended: number;
+	/** Départs déjà prévus dans le plan. */
+	readonly releasesPlanned: number;
+	readonly upkeep: readonly string[];
+	readonly production: readonly string[];
+	/** Effets propres d'un départ (par exemple sur les militants). */
+	readonly releaseEffects: readonly string[];
+	/** Prochain départ possible : étape à ajouter au plan, ou motif du refus. */
+	readonly release: { readonly step: PlanStep | null; readonly reason: string | null } | null;
 }
 
 export interface ChoiceView {
@@ -403,6 +427,7 @@ export interface PlayerView {
 	readonly actions: readonly CatalogItemView[];
 	readonly upgrades: readonly UpgradeView[];
 	readonly producers: readonly ProducerView[];
+	readonly organisation: readonly OrganisationGroupView[];
 	readonly decision: DecisionView | null;
 	readonly journal: readonly JournalTurnView[];
 	readonly press: readonly {
@@ -503,6 +528,8 @@ function describeEffect(range: EffectRange, content: Content): string {
 				: range.change === 'dismiss'
 					? 'Renvoi'
 					: 'Départ d’un collaborateur';
+		case 'release':
+			return 'Départ de l’organisation';
 		case 'preparation':
 			return `Préparation de campagne + ${range.value}`;
 	}
@@ -709,6 +736,16 @@ function eventTitle(
 /** Libellé lisible de la cible d'une étape : parti, mandat exercé ou échéance électorale. */
 function targetLabel(target: string, state: GameState, content: Content): string {
 	if (Object.hasOwn(content.parties, target)) return content.parties[target]?.name ?? target;
+	if (target.startsWith('upgrade.')) {
+		// Exemplaire de l'organisation, encore possédé ou parti (retrouvé par son achat).
+		const upgradeId =
+			state.upgrades.find((upgrade) => upgrade.instanceId === target)?.upgradeId ??
+			state.history
+				.flatMap((entry) => (entry.type === 'turn.resolved' ? entry.steps : []))
+				.find((step) => step.kind === 'purchase' && step.instanceId === target)?.id;
+		const definition = upgradeId ? content.upgrades[upgradeId] : undefined;
+		if (definition) return definition.ownedLabel ?? definition.label;
+	}
 	const mandate = state.mandates.find((entry) => entry.instanceId === target);
 	if (mandate) return content.mandates[mandate.mandateId]?.label ?? mandate.mandateId;
 	const ballot = state.ballots.find((entry) => entry.ballotId === target);
@@ -893,6 +930,76 @@ function buildPress(state: GameState, content: Content): PlayerView['press'] {
 		}
 	}
 	return items.reverse().slice(0, 6);
+}
+
+/** Somme des montants par ressource, dans l'ordre des ressources. */
+function sumAmounts(lists: readonly (readonly ResourceAmount[])[]): ResourceAmount[] {
+	return RESOURCE_IDS.flatMap((resource) => {
+		const amount = lists
+			.flat()
+			.filter((item) => item.resource === resource)
+			.reduce((sum, item) => sum + item.amount, 0);
+		return amount === 0 ? [] : [{ resource, amount }];
+	});
+}
+
+/** Organisation regroupée par type d'amélioration, dans l'ordre du catalogue. */
+function buildOrganisation(
+	state: GameState,
+	plan: readonly PlanStep[],
+	preview: PlanPreview,
+	content: Content
+): OrganisationGroupView[] {
+	const releaseActionId =
+		content.actionIds.find((id) => content.actions[id]?.target === 'upgrade') ?? null;
+	return content.upgradeIds.flatMap((upgradeId) => {
+		const definition = content.upgrades[upgradeId]!;
+		const owned = state.upgrades.filter((upgrade) => upgrade.upgradeId === upgradeId);
+		const forecasts = preview.producers.filter((producer) => producer.upgradeId === upgradeId);
+		const releasing = new Set(
+			plan.flatMap((step) =>
+				step.kind === 'action' && step.id === releaseActionId && step.target ? [step.target] : []
+			)
+		);
+		const releasesPlanned = owned.filter((upgrade) => releasing.has(upgrade.instanceId)).length;
+		if (owned.length === 0 && forecasts.length === 0) return [];
+
+		// Le plus récent des exemplaires encore présents part en premier.
+		const candidate = [...owned].reverse().find((upgrade) => !releasing.has(upgrade.instanceId));
+		let release: OrganisationGroupView['release'] = null;
+		if (releaseActionId && state.phase === 'planning' && owned.length > 0) {
+			if (!candidate) {
+				release = { step: null, reason: 'Tous les départs sont déjà prévus.' };
+			} else {
+				const step: PlanStep = {
+					kind: 'action',
+					id: releaseActionId,
+					target: candidate.instanceId
+				};
+				const check = addability(state, plan, step, content);
+				release = check.addable ? { step, reason: null } : { step: null, reason: check.reason };
+			}
+		}
+		const count = (status: string): number =>
+			forecasts.filter((producer) => producer.status === status).length;
+		return [
+			{
+				upgradeId,
+				label: definition.ownedLabel ?? definition.label,
+				owned: owned.length,
+				active: count('active'),
+				pending: count('pending'),
+				suspended: count('suspended'),
+				releasesPlanned,
+				upkeep: amounts(sumAmounts(forecasts.map((producer) => producer.upkeep)), -1),
+				production: amounts(sumAmounts(forecasts.map((producer) => producer.production)), 1),
+				releaseEffects: (definition.releaseEffects ?? []).map((effect) =>
+					describeEffect(effectRange(effect), content)
+				),
+				release
+			}
+		];
+	});
 }
 
 function buildSummary(state: GameState, content: Content): SummaryView | null {
@@ -1679,7 +1786,11 @@ export function projectView(
 
 	const producers: ProducerView[] = preview.producers.map((producer) => ({
 		instanceId: producer.instanceId,
-		label: content.upgrades[producer.upgradeId]?.label ?? producer.upgradeId,
+		upgradeId: producer.upgradeId,
+		label:
+			content.upgrades[producer.upgradeId]?.ownedLabel ??
+			content.upgrades[producer.upgradeId]?.label ??
+			producer.upgradeId,
 		status: producer.status,
 		statusLabel:
 			producer.status === 'active'
@@ -1795,6 +1906,7 @@ export function projectView(
 		actions,
 		upgrades,
 		producers,
+		organisation: buildOrganisation(state, plan, preview, content),
 		decision,
 		journal: buildJournal(state, content),
 		press: buildPress(state, content),

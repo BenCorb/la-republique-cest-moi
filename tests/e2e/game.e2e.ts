@@ -151,7 +151,18 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByText('Actif à partir du trimestre prochain.').first()).toBeVisible();
 		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
 		await page.getByRole('button', { name: 'Organisation', exact: true }).click();
-		await expect(page.getByText('Actif ce trimestre')).toBeVisible();
+		const group = page.getByTestId('group-organization.volunteer');
+		await expect(group).toContainText('Militant bénévole');
+		await expect(group).toContainText('Actif ce trimestre');
+		await expect(group).toContainText('Au départ : Soutien : Militants − 2');
+
+		// Départ gratuit, effectif dès ce trimestre, annulable dans le plan.
+		await page.getByRole('button', { name: 'Prévoir un départ : Militant bénévole' }).click();
+		await expect(group).toContainText('1 départ prévu ce trimestre');
+		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await page.getByRole('button', { name: 'Organisation', exact: true }).click();
+		await expect(group).toHaveCount(0);
+		await expect(page.getByText('Personne ne travaille encore pour vous.')).toBeVisible();
 	});
 
 	test('refuse explicitement une sauvegarde d’une ancienne version, sans l’effacer', async ({

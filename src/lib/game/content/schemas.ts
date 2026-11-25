@@ -160,6 +160,7 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 	z.strictObject({ op: z.literal('separate') }),
 	z.strictObject({ op: z.literal('familyAttitude'), value: nonZeroGaugeDelta }),
 	z.strictObject({ op: z.literal('dismissStaff') }),
+	z.strictObject({ op: z.literal('releaseUpgrade') }),
 	z.strictObject({
 		op: z.literal('staffLeaves'),
 		role: z.string().regex(/^[a-z][a-z0-9_]*$/, 'rôle en minuscules')
@@ -191,7 +192,7 @@ export const actionSchema: z.ZodType<ActionDefinition> = z
 		requires: conditionSchema.optional(),
 		unavailableReason: frenchText.optional(),
 		effects: z.array(effectSchema).min(1),
-		target: z.enum(['party', 'mandate', 'ballot', 'candidate', 'staff']).optional()
+		target: z.enum(['party', 'mandate', 'ballot', 'candidate', 'staff', 'upgrade']).optional()
 	})
 	.refine(
 		(action) => (action.requires === undefined) === (action.unavailableReason === undefined),
@@ -218,7 +219,9 @@ export const upgradeSchema: z.ZodType<UpgradeDefinition> = z
 		upkeep: z.array(resourceAmountSchema),
 		production: z.array(resourceAmountSchema).min(1),
 		requires: conditionSchema.optional(),
-		unavailableReason: frenchText.optional()
+		unavailableReason: frenchText.optional(),
+		ownedLabel: frenchText.optional(),
+		releaseEffects: z.array(effectSchema).optional()
 	})
 	.refine(
 		(upgrade) => (upgrade.requires === undefined) === (upgrade.unavailableReason === undefined),

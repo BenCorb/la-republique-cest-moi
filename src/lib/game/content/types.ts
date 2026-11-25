@@ -195,6 +195,12 @@ export type Effect =
 	| { readonly op: 'hireStaff' }
 	/** Renvoi du collaborateur choisi dans le plan (`target`). */
 	| { readonly op: 'dismissStaff' }
+	/**
+	 * Départ de l'exemplaire d'amélioration choisi dans le plan (`target`) : il
+	 * quitte l'organisation aussitôt, sans charge ni production ce trimestre, et
+	 * applique les `releaseEffects` de sa définition.
+	 */
+	| { readonly op: 'releaseUpgrade' }
 	/** Départ du collaborateur qui tient ce rôle d'événement (débauchage, démission). */
 	| { readonly op: 'staffLeaves'; readonly role: string }
 	/** Arrivée d'un membre de la famille proche, généré (événements seulement, P2-08). */
@@ -229,7 +235,7 @@ export interface ActionDefinition {
 	 * Cible à choisir dans le plan : `party` (identifiant de parti), `mandate`
 	 * (exemplaire de mandat en cours) ou `ballot` (échéance électorale).
 	 */
-	readonly target?: 'party' | 'mandate' | 'ballot' | 'candidate' | 'staff' | undefined;
+	readonly target?: 'party' | 'mandate' | 'ballot' | 'candidate' | 'staff' | 'upgrade' | undefined;
 }
 
 /**
@@ -256,6 +262,10 @@ export interface UpgradeDefinition {
 	readonly production: readonly ResourceAmount[];
 	readonly requires?: Condition | undefined;
 	readonly unavailableReason?: string | undefined;
+	/** Nom d'un exemplaire possédé (« Militant bénévole »), à défaut le libellé d'achat. */
+	readonly ownedLabel?: string | undefined;
+	/** Effets certains d'un départ (`releaseUpgrade`) : ressources, jauges, soutiens. */
+	readonly releaseEffects?: readonly Effect[] | undefined;
 }
 
 /**
