@@ -6,7 +6,7 @@
  * contrôlée par `checkInvariants`.
  */
 import { z } from 'zod';
-import { GAUGE_IDS, INDICATOR_IDS, RESOURCE_IDS } from '../content/types.ts';
+import { GAUGE_IDS, INDICATOR_IDS, PROMISE_STATUSES, RESOURCE_IDS } from '../content/types.ts';
 import { RNG_ALGORITHM, STATE_SCHEMA_VERSION, type GameState } from '../engine/index.ts';
 
 const int = z.number().int().refine(Number.isSafeInteger, 'entier sûr attendu');
@@ -56,7 +56,28 @@ const politicalChange = z.discriminatedUnion('kind', [
 		postId: id,
 		reason: staffLeaveReason
 	}),
-	z.strictObject({ kind: z.literal('fact'), factId: id, offenseId: id })
+	z.strictObject({ kind: z.literal('fact'), factId: id, offenseId: id }),
+	z.strictObject({
+		kind: z.literal('promise'),
+		pledgeId: id,
+		promiseId: id,
+		change: z.enum([
+			'made',
+			'started',
+			'lapsed',
+			'amended',
+			'kept',
+			'partial',
+			'abandoned',
+			'recalled'
+		])
+	}),
+	z.strictObject({
+		kind: z.literal('promiseProgress'),
+		pledgeId: id,
+		promiseId: id,
+		delta: int
+	})
 ]);
 
 const peopleChange = z.discriminatedUnion('kind', [
@@ -186,6 +207,13 @@ const turnEntry = z.strictObject({
 		.nullable(),
 	exposure: int.nullable(),
 	wealth: z.strictObject({ valueChange: int, failed: z.array(id) }).nullable(),
+	promises: z
+		.strictObject({
+			changes: z.array(resourceChange),
+			gauges: z.array(gaugeChange),
+			politics: z.array(politicalChange)
+		})
+		.nullable(),
 	justice: z
 		.strictObject({
 			cases: z.array(
@@ -390,6 +418,21 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 					prison: z.enum(['none', 'suspended', 'firm'])
 				})
 				.nullable()
+		})
+	),
+	promises: z.array(
+		z.strictObject({
+			pledgeId: id,
+			promiseId: id,
+			campaignId: id,
+			announcedTurn: int,
+			status: z.enum(PROMISE_STATUSES),
+			progress: int,
+			amended: z.boolean(),
+			dueTurn: int.nullable(),
+			closedTurn: int.nullable(),
+			recalls: int,
+			lastRecalledTurn: int.nullable()
 		})
 	),
 	history: z.array(z.discriminatedUnion('type', [turnEntry, choiceEntry])),

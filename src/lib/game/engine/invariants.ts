@@ -12,6 +12,8 @@ import {
 	GAUGE_MAX,
 	GAUGE_MIN,
 	INDICATOR_IDS,
+	PROMISE_PROGRESS_MAX,
+	PROMISE_VARIABLE,
 	RESOURCE_IDS,
 	WORLD_TEMPLATE_VARIABLES,
 	type Content
@@ -20,6 +22,7 @@ import { RNG_ALGORITHM, validateSeed } from './random.ts';
 import { activeMandates, conflictingMandates, cumulatedMandates } from './career.ts';
 import { computePopularity } from './supports.ts';
 import { caseInstanceId, factInstanceId } from './justice.ts';
+import { isOpenPledge, pledgeInstanceId } from './promises.ts';
 import { START_TURN, STATE_SCHEMA_VERSION, type GameState } from './state.ts';
 
 const PHASES = new Set(['planning', 'decision', 'ended']);
@@ -131,7 +134,72 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
 	violations.push(...checkCareerInvariants(state));
 	violations.push(...checkFactInvariants(state));
 	violations.push(...checkCaseInvariants(state));
+	violations.push(...checkPromiseInvariants(state));
 	if (content) violations.push(...checkContentReferences(state, content));
+	return violations;
+}
+
+/**
+ * Promesses : rangs en séquence, campagne connue, états cohérents avec la
+ * campagne (annoncée pendant la campagne, en cours après une victoire), issue
+ * datée, échéance non échue tant que la partie continue, au plus une promesse
+ * ouverte par promesse type.
+ */
+function checkPromiseInvariants(state: GameState): string[] {
+	const violations: string[] = [];
+	const open = new Set<string>();
+	const ongoing = state.phase !== 'ended';
+	state.promises.forEach((pledge, index) => {
+		const id = pledge.pledgeId;
+		if (id !== pledgeInstanceId(index + 1)) violations.push(`promesse hors séquence : ${id}`);
+		const campaign = state.campaigns.find((entry) => entry.campaignId === pledge.campaignId);
+		if (!campaign) violations.push(`campagne inconnue pour ${id} : ${pledge.campaignId}`);
+		if (
+			pledge.announcedTurn > state.turn ||
+			(campaign && pledge.announcedTurn < campaign.declaredTurn)
+		) {
+			violations.push(`date d’annonce invalide : ${id}`);
+		}
+		if (
+			!Number.isSafeInteger(pledge.progress) ||
+			pledge.progress < 0 ||
+			pledge.progress > PROMISE_PROGRESS_MAX
+		) {
+			violations.push(`avancement hors bornes : ${id}`);
+		}
+		const inProgress = pledge.status === 'in_progress';
+		if (inProgress !== (pledge.dueTurn !== null)) violations.push(`échéance incohérente : ${id}`);
+		const settled = pledge.status !== 'announced' && !inProgress;
+		if (settled && pledge.closedTurn === null) violations.push(`issue non datée : ${id}`);
+		if (inProgress && pledge.closedTurn !== null)
+			violations.push(`promesse close en cours : ${id}`);
+		if (ongoing && campaign) {
+			if (
+				pledge.status === 'announced' &&
+				(pledge.closedTurn === null) !== (campaign.status === 'running')
+			) {
+				violations.push(`promesse annoncée incohérente avec sa campagne : ${id}`);
+			}
+			if (pledge.status !== 'announced' && campaign.status !== 'won') {
+				violations.push(`promesse réalisée sans victoire : ${id}`);
+			}
+		}
+		if (ongoing && inProgress && pledge.dueTurn !== null && pledge.dueTurn < state.turn) {
+			violations.push(`échéance de promesse non traitée : ${id}`);
+		}
+		if (pledge.status === 'announced' && (pledge.progress !== 0 || pledge.amended)) {
+			violations.push(`promesse annoncée déjà engagée : ${id}`);
+		}
+		if (pledge.recalls < 0 || (pledge.recalls === 0) !== (pledge.lastRecalledTurn === null)) {
+			violations.push(`rappels incohérents : ${id}`);
+		}
+		if (isOpenPledge(pledge)) {
+			if (open.has(pledge.promiseId)) {
+				violations.push(`promesse ouverte en double : ${pledge.promiseId}`);
+			}
+			open.add(pledge.promiseId);
+		}
+	});
 	return violations;
 }
 
@@ -630,10 +698,37 @@ export function checkContentReferences(state: GameState, content: Content): stri
 	const worldVariables = new Set<string>(WORLD_TEMPLATE_VARIABLES);
 	for (const actors of actorSets) {
 		for (const [role, actorId] of Object.entries(actors)) {
+			if (role === PROMISE_VARIABLE) {
+				if (!Object.hasOwn(content.promises, actorId)) {
+					violations.push(`promesse inconnue pour un événement : ${actorId}`);
+				}
+				continue;
+			}
 			const known = worldVariables.has(role)
 				? Object.hasOwn(content.parties, actorId) || Object.hasOwn(state.characters, actorId)
 				: Object.hasOwn(state.characters, actorId);
 			if (!known) violations.push(`acteur inconnu : ${role} = ${actorId}`);
+		}
+	}
+	const perCampaign = new Map<string, number>();
+	for (const pledge of state.promises) {
+		const definition = content.promises[pledge.promiseId];
+		if (!definition) {
+			violations.push(`promesse inconnue du catalogue : ${pledge.promiseId}`);
+			continue;
+		}
+		const campaign = state.campaigns.find((entry) => entry.campaignId === pledge.campaignId);
+		if (campaign && !definition.elections.includes(campaign.electionId)) {
+			violations.push(`promesse étrangère à l’élection : ${pledge.pledgeId}`);
+		}
+		if (pledge.recalls > content.promiseRules.maxRecalls) {
+			violations.push(`trop de rappels : ${pledge.pledgeId}`);
+		}
+		perCampaign.set(pledge.campaignId, (perCampaign.get(pledge.campaignId) ?? 0) + 1);
+	}
+	for (const [campaignId, count] of perCampaign) {
+		if (count > content.promiseRules.maxPerCampaign) {
+			violations.push(`trop de promesses pour ${campaignId} : ${count}`);
 		}
 	}
 	for (const castId of content.castIds) {

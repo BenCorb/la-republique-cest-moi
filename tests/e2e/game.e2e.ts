@@ -122,6 +122,18 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByTestId('opponent-campaign.1')).toContainText('Adversaire : ');
 		await expect(page.getByTestId('opponent-campaign.1')).not.toContainText('prochain trimestre');
 
+		// Engagement de campagne (P3-04) : ajouté au plan, puis inscrit au registre.
+		await page.getByRole('button', { name: 'Promettre : Baisser les impôts' }).click();
+		await expect(page.getByTestId('offer-promise.tax_cut')).toContainText(
+			'Engagement prévu ce trimestre.'
+		);
+		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await settleDecisions(page);
+		await page.getByRole('button', { name: 'Carrière', exact: true }).click();
+		await expect(page.getByTestId('pledge-pledge.1')).toContainText('Baisser les impôts');
+		await expect(page.getByTestId('pledge-pledge.1')).toContainText('Annoncée');
+		await expect(page.getByTestId('pledge-pledge.1')).toContainText('À réaliser si vous êtes élu');
+
 		// Entourage : postes verrouillés tant que l'influence manque.
 		await page.getByRole('button', { name: 'Entourage', exact: true }).click();
 		await expect(page.getByTestId('post-post.chief_of_staff')).toContainText(

@@ -45,6 +45,9 @@ import {
 	type AssetDefinition,
 	type LifestyleDefinition,
 	type WealthDefinition,
+	type PromiseDefinition,
+	type PromisesBalance,
+	type PromisesDefinition,
 	type SentenceRule,
 	type MandateDefinition,
 	type SupportGroupDefinition,
@@ -197,7 +200,14 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 		op: z.literal('callEarlyElection'),
 		election: contentId,
 		delayTurns: safeInt.refine((value) => value >= 1 && value <= 8, 'délai de 1 à 8 trimestres')
-	})
+	}),
+	z.strictObject({ op: z.literal('makePromise') }),
+	z.strictObject({
+		op: z.literal('advancePromise'),
+		value: safeInt.refine((value) => value > 0 && value <= 100, 'avancement de 1 à 100')
+	}),
+	z.strictObject({ op: z.literal('amendPromise') }),
+	z.strictObject({ op: z.literal('abandonPromise') })
 ]);
 
 export const resourceAmountSchema: z.ZodType<ResourceAmount> = z.strictObject({
@@ -217,7 +227,17 @@ export const actionSchema: z.ZodType<ActionDefinition> = z
 		unavailableReason: frenchText.optional(),
 		effects: z.array(effectSchema).min(1),
 		target: z
-			.enum(['party', 'mandate', 'ballot', 'candidate', 'staff', 'upgrade', 'asset'])
+			.enum([
+				'party',
+				'mandate',
+				'ballot',
+				'candidate',
+				'staff',
+				'upgrade',
+				'asset',
+				'promise',
+				'pledge'
+			])
 			.optional(),
 		category: z
 			.string()
@@ -436,7 +456,8 @@ const eventBaseShape = {
 					slot.minAttitude <= slot.maxAttitude,
 				{ message: 'attitude minimale supérieure à la maximale', path: ['maxAttitude'] }
 			)
-	)
+	),
+	subject: z.literal('promise').optional()
 };
 
 export const eventSchema: z.ZodType<EventDefinition> = z
@@ -699,6 +720,36 @@ export const justiceBalanceSchema: z.ZodType<JusticeBalance> = z.strictObject({
 export const justiceCatalogSchema: z.ZodType<JusticeDefinition> = z.strictObject({
 	offenses: z.array(offenseSchema).min(1),
 	balance: justiceBalanceSchema
+});
+
+export const promiseSchema: z.ZodType<PromiseDefinition> = z.strictObject({
+	id: contentId,
+	label: frenchText,
+	theme: frenchText,
+	description: frenchText,
+	elections: z.array(contentId).min(1),
+	dilemmaEvent: contentId,
+	announce: z.array(effectSchema),
+	kept: z.array(effectSchema),
+	partial: z.array(effectSchema),
+	abandoned: z.array(effectSchema)
+});
+
+export const promisesBalanceSchema: z.ZodType<PromisesBalance> = z.strictObject({
+	maxPerCampaign: positiveInt,
+	announcePreparation: nonNegativeInt,
+	deliveryTurns: positiveInt,
+	dilemmaDelayTurns: intRange,
+	partialProgress: safeInt.refine((value) => value >= 1 && value <= 99, 'avancement de 1 à 99'),
+	recallPercent: percent,
+	maxRecalls: nonNegativeInt,
+	recallEvents: z.strictObject({ kept: contentId, abandoned: contentId })
+});
+
+/** Promesses types et règles du registre (`promises.json`, P3-04). */
+export const promisesCatalogSchema: z.ZodType<PromisesDefinition> = z.strictObject({
+	promises: z.array(promiseSchema).min(1),
+	balance: promisesBalanceSchema
 });
 
 export const campaignsBalanceSchema: z.ZodType<CampaignsBalance> = z.strictObject({

@@ -31,6 +31,7 @@ export function loadContentFromFiles(directory = DEFAULT_CONTENT_DATA_DIR): Cont
 		profiles: read('profiles.json'),
 		justice: read('justice.json'),
 		wealth: read('wealth.json'),
+		promises: read('promises.json'),
 		events
 	});
 	if (!result.ok) {

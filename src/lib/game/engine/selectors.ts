@@ -7,6 +7,7 @@ import { ageAt, type Turn } from './calendar.ts';
 import type { DeathCause, GameState, HistoryEntry } from './state.ts';
 import { divertedFunds } from './justice.ts';
 import { netWorth } from './wealth.ts';
+import { promiseCounts } from './promises.ts';
 
 /** Cause de fin de carrière : décès, ou prison ferme (P3-01). */
 export type EndCause = DeathCause | 'prison';
@@ -22,6 +23,8 @@ export interface CareerSummary {
 	readonly divertedCents: number;
 	/** Valeur nette finale : argent personnel et actifs, en centimes (P3-02). */
 	readonly netWorthCents: number;
+	/** Engagements pris et issues des promesses (P3-04). */
+	readonly promises: ReturnType<typeof promiseCounts>;
 	/** Trimestre de fin, ou trimestre courant si la carrière continue. */
 	readonly lastTurn: Turn;
 	readonly age: number;
@@ -55,6 +58,7 @@ export function careerSummary(state: GameState): CareerSummary {
 		).length,
 		divertedCents: divertedFunds(state.facts),
 		netWorthCents: netWorth(state.resources, state.upgrades),
+		promises: promiseCounts(state.promises),
 		lastTurn,
 		age: ageAt(state.player.birthTurn, lastTurn),
 		quartersPlayed: quarters.length,

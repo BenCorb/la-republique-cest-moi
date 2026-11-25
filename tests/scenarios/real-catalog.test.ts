@@ -31,6 +31,9 @@ const declare = (target: string): PlanStep => ({ kind: 'action', id: 'campaign.d
 /** Marqueur : recruter le premier candidat présélectionné qui peut l'être (P2-05). */
 const HIRE = { kind: 'action', id: 'staff.hire', target: '*' } as const;
 const hire = (target: string): PlanStep => ({ kind: 'action', id: 'staff.hire', target });
+/** Marqueurs : prendre un engagement de campagne, préparer les réformes en cours (P3-04). */
+const PROMISE = { kind: 'action', id: 'campaign.pledge', target: '*' } as const;
+const REFORM = { kind: 'action', id: 'mandate.prepare_reform', target: '*' } as const;
 
 function choosePlan(state: GameState, wishes: readonly PlanStep[]): TurnPlan {
 	let candidate: PlanStep[] = wishes.flatMap((step): PlanStep[] => {
@@ -45,6 +48,29 @@ function choosePlan(state: GameState, wishes: readonly PlanStep[]): TurnPlan {
 				if (pick && picks.length < 2) picks.push(hire(pick.characterId));
 			}
 			return picks;
+		}
+		if (step === PROMISE) {
+			// Une promesse différente selon le trimestre, pour parcourir tout le catalogue.
+			const ids = content.promiseIds;
+			const order = ids.map((_id, index) => ids[(index + state.turn) % ids.length]!);
+			const pick = order.find(
+				(id) =>
+					previewPlan(
+						state,
+						{ steps: [{ kind: 'action', id: 'campaign.pledge', target: id }] },
+						content
+					).valid
+			);
+			return pick ? [{ kind: 'action', id: 'campaign.pledge', target: pick }] : [];
+		}
+		if (step === REFORM) {
+			return state.promises
+				.filter((pledge) => pledge.status === 'in_progress')
+				.map((pledge) => ({
+					kind: 'action',
+					id: 'mandate.prepare_reform',
+					target: pledge.pledgeId
+				}));
 		}
 		if (step !== CANDIDACY) return [step];
 		const open = state.ballots.find(
@@ -219,6 +245,8 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 			[
 				{ kind: 'action', id: 'party.join', target: content.world.startingGoverningParty },
 				CANDIDACY,
+				REFORM,
+				PROMISE,
 				HIRE,
 				act('campaign.canvass'),
 				act('party.section_meeting'),

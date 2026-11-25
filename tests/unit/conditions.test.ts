@@ -39,6 +39,7 @@ const context: ConditionContext = {
 	staff: [],
 	facts: [],
 	cases: [],
+	promises: [],
 	institutions: createGame({ seed: 'conditions' }, fixtureContent).institutions,
 	resources: { influence: 12, politicalBudgetCents: 5_000, personalCashCents: 0 },
 	upgrades: [

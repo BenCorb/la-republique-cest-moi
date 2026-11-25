@@ -9,6 +9,7 @@ import type {
 	Content,
 	GaugeId,
 	IndicatorId,
+	PromiseStatus,
 	InstitutionsDefinition,
 	ResourceId,
 	Resources
@@ -322,7 +323,67 @@ export type PoliticalChange =
 			readonly turn: Turn;
 	  }
 	/** Acte douteux inscrit au registre des faits (P3-01). */
-	| { readonly kind: 'fact'; readonly factId: string; readonly offenseId: string };
+	| { readonly kind: 'fact'; readonly factId: string; readonly offenseId: string }
+	/** Étape d'une promesse du registre (P3-04). */
+	| {
+			readonly kind: 'promise';
+			readonly pledgeId: string;
+			readonly promiseId: string;
+			readonly change: PromiseChange;
+	  }
+	| {
+			readonly kind: 'promiseProgress';
+			readonly pledgeId: string;
+			readonly promiseId: string;
+			readonly delta: number;
+	  };
+
+/**
+ * Étapes d'une promesse : annoncée (`made`), en cours après la victoire
+ * (`started`), sans lendemain après une défaite (`lapsed`), amendée par un
+ * compromis, issue (`kept`, `partial`, `abandoned`) ou rappelée en campagne.
+ */
+export type PromiseChange =
+	'made' | 'started' | 'lapsed' | 'amended' | 'kept' | 'partial' | 'abandoned' | 'recalled';
+
+/**
+ * Promesse du registre (P3-04, GDD §7.5) : un engagement pris pendant une
+ * campagne, réalisé une fois élu ou non, et conservé pour les rappels et le
+ * bilan. Jamais supprimée.
+ */
+export interface PromiseRecord {
+	/** `pledge.N`, N étant le rang d'annonce (jamais réutilisé). */
+	readonly pledgeId: string;
+	/** Promesse type (`promise.*`). */
+	readonly promiseId: string;
+	/** Campagne pendant laquelle l'engagement a été pris. */
+	readonly campaignId: string;
+	readonly announcedTurn: Turn;
+	/**
+	 * `announced` pendant la campagne (et après une défaite, close), `in_progress`
+	 * une fois élu, puis l'issue : tenue, partiellement tenue ou abandonnée.
+	 */
+	readonly status: PromiseStatus;
+	/** Avancement de la réalisation, de 0 à 100. */
+	readonly progress: number;
+	/** Compromis accepté : la promesse ne sera au mieux que partiellement tenue. */
+	readonly amended: boolean;
+	/** Trimestre à la fin duquel l'issue est constatée (en cours seulement), sinon `null`. */
+	readonly dueTurn: Turn | null;
+	/** Trimestre de l'issue, ou de la défaite pour une promesse sans lendemain. */
+	readonly closedTurn: Turn | null;
+	/** Nombre de rappels pendant les campagnes suivantes. */
+	readonly recalls: number;
+	readonly lastRecalledTurn: Turn | null;
+}
+
+/** Promesses à la frontière : réalisations, issues, rappels et leurs effets (P3-04). */
+export interface PromisesRecord {
+	readonly changes: readonly ResourceChange[];
+	readonly gauges: readonly GaugeChange[];
+	/** Étapes des promesses, puis variations de soutiens. */
+	readonly politics: readonly PoliticalChange[];
+}
 
 /**
  * Fait du registre (P3-01) : acte douteux daté, avec ses protagonistes et sa
@@ -605,6 +666,8 @@ export interface HistoryEntry {
 	readonly justice: JusticeRecord | null;
 	/** Réévaluation des actifs, `null` si la carrière s'est terminée avant. */
 	readonly wealth: WealthRecord | null;
+	/** Promesses (réalisation, issues, rappels), `null` si la carrière s'est terminée avant. */
+	readonly promises: PromisesRecord | null;
 	/** Événements créés (ou suites annulées) au passage à T+1. */
 	readonly events: readonly EventRecord[];
 }
@@ -672,6 +735,8 @@ export interface GameState {
 	readonly facts: readonly Fact[];
 	/** Dossiers judiciaires, dans l'ordre d'ouverture (P3-01). */
 	readonly cases: readonly LegalCase[];
+	/** Registre des promesses, dans l'ordre d'annonce (P3-04). */
+	readonly promises: readonly PromiseRecord[];
 	/** Journal : trimestres résolus et choix, dans l'ordre chronologique. */
 	readonly history: readonly JournalEntry[];
 	readonly end: EndState | null;
@@ -774,6 +839,7 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		},
 		facts: [],
 		cases: [],
+		promises: [],
 		history: [],
 		end: null
 	};

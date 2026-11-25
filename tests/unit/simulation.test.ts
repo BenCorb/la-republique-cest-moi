@@ -36,7 +36,7 @@ describe('simulateur automatique', () => {
 			invariantViolations: 0,
 			problemSeeds: []
 		});
-		expect(first.unavailableMetrics).toEqual(['promises']);
+		expect(first.unavailableMetrics).toEqual([]);
 	});
 
 	it('distingue explicitement un plafond technique d’une fin de carrière', () => {
@@ -92,7 +92,7 @@ describe('simulateur automatique', () => {
 		const lines = csv.split('\n');
 		expect(lines).toHaveLength(3);
 		expect(lines[0]).toBe(
-			'seed,strategy,status,turns,endingAge,endCause,decisions,alertEpisodes,significantInterventions,influence,politicalBudgetCents,personalCashCents,health,stress,upgradesOwned,actionsPerformed,purchases,quartersWithSuspension,eventsExperienced,eventOccurrences,finalParty,affiliations,quartersAffiliated,leaderChanges,charactersMet,characterDepartures,traitsRevealed,mandatesHeld,highestMandate,ballotsHeld,governmentChanges,campaigns,campaignsWon,campaignsLost,distinctOpponents,maxRivalEncounters,origin,profession,children,separations,staffHired,staffDepartures,finalPopularity,peakPopularity,indicatorRanges,invariantViolations,error'
+			'seed,strategy,status,turns,endingAge,endCause,decisions,alertEpisodes,significantInterventions,influence,politicalBudgetCents,personalCashCents,health,stress,upgradesOwned,actionsPerformed,purchases,quartersWithSuspension,eventsExperienced,eventOccurrences,finalParty,affiliations,quartersAffiliated,leaderChanges,charactersMet,characterDepartures,traitsRevealed,mandatesHeld,highestMandate,ballotsHeld,governmentChanges,campaigns,campaignsWon,campaignsLost,distinctOpponents,maxRivalEncounters,origin,profession,children,separations,promisesMade,promisesKept,promisesPartial,promisesAbandoned,staffHired,staffDepartures,finalPopularity,peakPopularity,indicatorRanges,invariantViolations,error'
 		);
 		expect(lines[1]).toContain('csv-1,mixed,ended');
 		expect(lines[1]).toContain('"[{""eventId""');

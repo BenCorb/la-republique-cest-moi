@@ -30,6 +30,7 @@ import {
 	fixtureProfiles,
 	fixtureJustice,
 	fixtureWealth,
+	fixturePromises,
 	fixtureCareer,
 	fixtureSupports,
 	fixtureTraits,
@@ -113,7 +114,8 @@ function load(): Content {
 		entourage: fixtureEntourage,
 		profiles: fixtureProfiles,
 		justice: fixtureJustice,
-		wealth: fixtureWealth
+		wealth: fixtureWealth,
+		promises: fixturePromises
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;

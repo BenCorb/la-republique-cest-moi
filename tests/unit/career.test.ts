@@ -30,6 +30,7 @@ import {
 	fixtureProfiles,
 	fixtureJustice,
 	fixtureWealth,
+	fixturePromises,
 	fixtureTraits,
 	fixtureUpgrades,
 	fixtureWorld,
@@ -117,7 +118,8 @@ function load(
 		entourage: fixtureEntourage,
 		profiles: fixtureProfiles,
 		justice: fixtureJustice,
-		wealth: fixtureWealth
+		wealth: fixtureWealth,
+		promises: fixturePromises
 	});
 }
 
@@ -275,7 +277,8 @@ describe('calendrier électoral', () => {
 			mandates: base.mandates,
 			ballots: base.ballots,
 			campaigns: base.campaigns,
-			institutions: base.institutions
+			institutions: base.institutions,
+			promises: base.promises
 		};
 		const outcome = applyCareerEffect(
 			{ op: 'callEarlyElection', election: 'election.local', delayTurns: 1 },
@@ -309,7 +312,8 @@ describe('calendrier électoral', () => {
 						mandates: [],
 						ballots: base.ballots.map((ballot) => ({ ...ballot, turn: 0 })),
 						campaigns: [],
-						institutions: base.institutions
+						institutions: base.institutions,
+						promises: []
 					}
 				},
 				0,

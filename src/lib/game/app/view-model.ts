@@ -12,6 +12,8 @@ import {
 	RESOURCE_IDS,
 	type Content,
 	type Effect,
+	PROMISE_PROGRESS_MAX,
+	type PromiseStatus,
 	type ResourceAmount,
 	type ResourceId
 } from '../content/types.ts';
@@ -47,6 +49,9 @@ import {
 	type Ballot,
 	type DeadlinesRecord,
 	type MandateEndReason,
+	type PromiseChange,
+	type PromiseRecord,
+	isOpenPledge,
 	type StaffLeaveReason,
 	activeMandates,
 	activeStaff,
@@ -418,6 +423,50 @@ export interface CareerView {
 	readonly declareActionId: string | null;
 	/** Campagnes passées, de la plus récente à la plus ancienne. */
 	readonly pastCampaigns: readonly CampaignView[];
+	/** Registre des promesses et engagements possibles (P3-04). */
+	readonly promises: PromisesView;
+}
+
+/** Promesse type que le candidat peut annoncer (P3-04). */
+export interface PromiseOfferView {
+	readonly promiseId: string;
+	readonly label: string;
+	readonly theme: string;
+	readonly description: string;
+	/** Effets certains de l'annonce, en clair. */
+	readonly effects: readonly string[];
+	readonly planned: boolean;
+	readonly addable: boolean;
+	readonly reason: string | null;
+}
+
+/** Promesse du registre, en clair. */
+export interface PledgeView {
+	readonly pledgeId: string;
+	readonly label: string;
+	readonly theme: string;
+	readonly status: string;
+	/** Campagne et date de l'annonce. */
+	readonly origin: string;
+	readonly progress: number;
+	readonly inProgress: boolean;
+	readonly amended: boolean;
+	/** Échéance (en cours), issue datée ou rappels. */
+	readonly detail: string;
+	readonly preparePlanned: boolean;
+	readonly prepareAddable: boolean;
+	readonly prepareReason: string | null;
+}
+
+export interface PromisesView {
+	readonly pledgeActionId: string | null;
+	readonly prepareActionId: string | null;
+	readonly maxPerCampaign: number;
+	readonly partialProgress: number;
+	/** Engagements possibles pendant une campagne en cours (vide sinon). */
+	readonly offers: readonly PromiseOfferView[];
+	/** Promesses ouvertes d'abord, puis closes, des plus récentes aux plus anciennes. */
+	readonly pledges: readonly PledgeView[];
 }
 
 export interface SupportGroupView {
@@ -735,8 +784,37 @@ function describeEffect(range: EffectRange, content: Content): string {
 			return 'Départ de l’organisation';
 		case 'preparation':
 			return `Préparation de campagne + ${range.value}`;
+		case 'promise':
+			return range.change === 'make'
+				? 'Engagement inscrit au registre des promesses'
+				: range.change === 'advance'
+					? `Avancement de la promesse + ${range.value}`
+					: range.change === 'amend'
+						? 'Promesse amendée'
+						: 'Promesse abandonnée';
 	}
 }
+
+/** Étapes d'une promesse, en clair (journal). */
+const PROMISE_CHANGE_LABELS: { readonly [K in PromiseChange]: string } = {
+	made: 'engagement pris',
+	started: 'élu, place à la réalisation',
+	lapsed: 'élection perdue, promesse sans lendemain',
+	amended: 'compromis : au mieux partiellement tenue',
+	kept: 'promesse tenue',
+	partial: 'promesse partiellement tenue',
+	abandoned: 'promesse abandonnée',
+	recalled: 'promesse rappelée en campagne'
+};
+
+/** États d'une promesse, en clair (registre). */
+export const PROMISE_STATUS_LABELS: { readonly [K in PromiseStatus]: string } = {
+	announced: 'Annoncée',
+	in_progress: 'En cours',
+	kept: 'Tenue',
+	partial: 'Partiellement tenue',
+	abandoned: 'Abandonnée'
+};
 
 function politicsText(changes: readonly PoliticalChange[], content: Content): string {
 	return changes
@@ -776,6 +854,10 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 					return `${content.elections[change.electionId]?.label ?? change.electionId} anticipées au ${formatTurn(change.turn)}`;
 				case 'fact':
 					return `fait inscrit au registre : ${content.offenses[change.offenseId]?.label ?? change.offenseId}`;
+				case 'promise':
+					return `« ${content.promises[change.promiseId]?.label ?? change.promiseId} » : ${PROMISE_CHANGE_LABELS[change.change]}`;
+				case 'promiseProgress':
+					return `« ${content.promises[change.promiseId]?.label ?? change.promiseId} » : avancement + ${change.delta}`;
 			}
 		})
 		.join(', ');
@@ -977,6 +1059,11 @@ function eventTitle(
 /** Libellé lisible de la cible d'une étape : parti, mandat exercé ou échéance électorale. */
 function targetLabel(target: string, state: GameState, content: Content): string {
 	if (Object.hasOwn(content.parties, target)) return content.parties[target]?.name ?? target;
+	if (Object.hasOwn(content.promises, target)) {
+		return `« ${content.promises[target]?.label ?? target} »`;
+	}
+	const pledge = state.promises.find((entry) => entry.pledgeId === target);
+	if (pledge) return `« ${content.promises[pledge.promiseId]?.label ?? pledge.promiseId} »`;
 	if (target.startsWith('upgrade.')) {
 		// Exemplaire de l'organisation, encore possédé ou parti (retrouvé par son achat).
 		const upgradeId =
@@ -1101,6 +1188,14 @@ function journalOfQuarter(entry: HistoryEntry, state: GameState, content: Conten
 			politicsText(entry.justice.politics, content)
 		);
 		if (effects) lines.push({ kind: 'career', text: `Justice — ${effects}` });
+	}
+	if (entry.promises) {
+		const effects = joinParts(
+			changesText(entry.promises.changes),
+			gaugesText(entry.promises.gauges),
+			politicsText(entry.promises.politics, content)
+		);
+		if (effects) lines.push({ kind: 'career', text: `Promesses — ${effects}` });
 	}
 	if (entry.mandates.changes.length > 0) {
 		lines.push({
@@ -1321,6 +1416,12 @@ function buildOrganisation(
 	});
 }
 
+/** Bilan des promesses en une ligne (P3-04). */
+function promisesSummary(counts: ReturnType<typeof careerSummary>['promises']): string {
+	if (counts.made === 0) return 'Aucun engagement pris';
+	return `${counts.made} engagement(s) : ${counts.kept} tenue(s), ${counts.partial} partiellement, ${counts.abandoned} abandonnée(s)`;
+}
+
 function buildSummary(state: GameState, content: Content): SummaryView | null {
 	if (!state.end) return null;
 	const summary = careerSummary(state);
@@ -1356,6 +1457,7 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 				value: `${summary.cases} dossier(s), ${summary.convictions} condamnation(s)`
 			},
 			{ label: 'Valeur nette (argent et biens)', value: formatMoney(summary.netWorthCents) },
+			{ label: 'Promesses', value: promisesSummary(summary.promises) },
 			{ label: 'Fonds détournés', value: formatMoney(summary.divertedCents) },
 			{
 				label: 'Catalogue',
@@ -1535,6 +1637,97 @@ function buildPeople(state: GameState, content: Content): PersonView[] {
 		.map((entry) => entry.view);
 }
 
+function buildPromises(
+	state: GameState,
+	plan: readonly PlanStep[],
+	content: Content
+): PromisesView {
+	const pledgeActionId =
+		content.actionIds.find((id) => content.actions[id]?.target === 'promise') ?? null;
+	const prepareActionId =
+		content.actionIds.find((id) => content.actions[id]?.target === 'pledge') ?? null;
+	const planned = (id: string | null, target: string): boolean =>
+		plan.some((step) => step.kind === 'action' && step.id === id && step.target === target);
+	const campaigning = state.campaigns.some((campaign) => campaign.status === 'running');
+	const offers =
+		campaigning && pledgeActionId
+			? content.promiseIds.flatMap((promiseId) => {
+					const definition = content.promises[promiseId];
+					if (!definition) return [];
+					const add = addability(
+						state,
+						plan,
+						{ kind: 'action', id: pledgeActionId, target: promiseId },
+						content
+					);
+					return [
+						{
+							promiseId,
+							label: definition.label,
+							theme: definition.theme,
+							description: definition.description,
+							effects: definition.announce.map((effect) =>
+								describeEffect(effectRange(effect), content)
+							),
+							planned: planned(pledgeActionId, promiseId),
+							addable: add.addable,
+							reason: add.reason
+						}
+					];
+				})
+			: [];
+	const order = (pledge: PromiseRecord): number => (isOpenPledge(pledge) ? 0 : 1);
+	const pledges = [...state.promises]
+		.reverse()
+		.sort((left, right) => order(left) - order(right))
+		.map((pledge): PledgeView => {
+			const definition = content.promises[pledge.promiseId];
+			const campaign = state.campaigns.find((entry) => entry.campaignId === pledge.campaignId);
+			const election = campaign ? content.elections[campaign.electionId]?.label : undefined;
+			const inProgress = pledge.status === 'in_progress';
+			const prepare =
+				inProgress && prepareActionId
+					? addability(
+							state,
+							plan,
+							{ kind: 'action', id: prepareActionId, target: pledge.pledgeId },
+							content
+						)
+					: { addable: false, reason: null };
+			const lapsed = pledge.status === 'announced' && pledge.closedTurn !== null;
+			const recalls = pledge.recalls > 0 ? ` · Rappelée ${pledge.recalls} fois en campagne` : '';
+			const detail = inProgress
+				? `Échéance : ${formatTurn(pledge.dueTurn ?? state.turn)} — tenue à ${PROMISE_PROGRESS_MAX}, partiellement à ${content.promiseRules.partialProgress}, abandonnée en dessous`
+				: pledge.status === 'announced'
+					? lapsed
+						? `Élection perdue au ${formatTurn(pledge.closedTurn ?? state.turn)} : promesse sans lendemain`
+						: 'À réaliser si vous êtes élu'
+					: `${PROMISE_STATUS_LABELS[pledge.status]} au ${formatTurn(pledge.closedTurn ?? state.turn)}${recalls}`;
+			return {
+				pledgeId: pledge.pledgeId,
+				label: definition?.label ?? pledge.promiseId,
+				theme: definition?.theme ?? '',
+				status: lapsed ? 'Sans lendemain' : PROMISE_STATUS_LABELS[pledge.status],
+				origin: `${election ?? 'Campagne'} — annoncée au ${formatTurn(pledge.announcedTurn)}`,
+				progress: pledge.progress,
+				inProgress,
+				amended: pledge.amended,
+				detail,
+				preparePlanned: planned(prepareActionId, pledge.pledgeId),
+				prepareAddable: prepare.addable,
+				prepareReason: prepare.reason
+			};
+		});
+	return {
+		pledgeActionId,
+		prepareActionId,
+		maxPerCampaign: content.promiseRules.maxPerCampaign,
+		partialProgress: content.promiseRules.partialProgress,
+		offers,
+		pledges
+	};
+}
+
 function buildCareer(state: GameState, plan: readonly PlanStep[], content: Content): CareerView {
 	const label = (mandateId: string): string => content.mandates[mandateId]?.label ?? mandateId;
 	const resignActionId =
@@ -1709,6 +1902,7 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 				early: ballot.early
 			})),
 		declareActionId,
+		promises: buildPromises(state, plan, content),
 		pastCampaigns: state.campaigns
 			.filter((campaign) => campaign.status !== 'running')
 			.map(campaignView)

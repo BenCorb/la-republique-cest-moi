@@ -2,6 +2,7 @@
 	import { CalendarClock, LogOut, Megaphone, Vote } from '@lucide/svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 	import SupportsCard from './SupportsCard.svelte';
+	import PromisesCard from './PromisesCard.svelte';
 
 	/**
 	 * Carrière (P2-02) : mandats en cours et leur coût en temps, règles du cumul,
@@ -120,6 +121,8 @@
 				</div>
 			{/if}
 		</section>
+
+		<PromisesCard {session} promises={career.promises} {accelerating} />
 
 		<section class="card flex flex-col gap-3" aria-labelledby="calendrier-title">
 			<h2 id="calendrier-title" class="section-title flex items-center gap-2">

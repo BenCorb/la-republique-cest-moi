@@ -23,6 +23,7 @@
  */
 import {
 	GAUGE_IDS,
+	PROMISE_VARIABLE,
 	RESOURCE_IDS,
 	WORLD_TEMPLATE_VARIABLES,
 	type Content,
@@ -53,6 +54,7 @@ import {
 import { applyPoliticalEffect, oppositionPartyId } from './world.ts';
 import { applyCareerEffect, careerEffectIssue, type CareerParts } from './career.ts';
 import { staffLeavesByEvent } from './staff.ts';
+import { applyPromiseEffect, expandPromiseEffects } from './promises.ts';
 import { applyFamilyEffect } from './family.ts';
 import type {
 	Character,
@@ -91,6 +93,8 @@ export function actorName(
 	}
 	if (Object.hasOwn(content.parties, id)) return content.parties[id]?.name;
 	if (Object.hasOwn(content.cast, id)) return content.cast[id]?.name;
+	// Promesse concernée par un événement de sujet `promise` (P3-04).
+	if (Object.hasOwn(content.promises, id)) return content.promises[id]?.label;
 	return undefined;
 }
 
@@ -218,7 +222,9 @@ function applyAutomaticEffects(
 	};
 
 	for (const cost of costs) addResource(cost.resource, -cost.amount);
-	for (const effect of effects) {
+	// Promesse concernée (événement de sujet `promise`) : un renoncement en entraîne les effets.
+	const promiseTarget = actors[PROMISE_VARIABLE] ?? null;
+	for (const effect of expandPromiseEffects(effects, promiseTarget, career.promises, content)) {
 		const resolved = resolveEffect(effect, rng);
 		rng = resolved.rng;
 		if (resolved.kind === 'resource') {
@@ -285,6 +291,10 @@ function applyAutomaticEffects(
 			const fact = createFact(resolved.effect, facts, actors, eventId, turn);
 			facts = [...facts, fact];
 			politics.push({ kind: 'fact', factId: fact.factId, offenseId: fact.offenseId });
+		} else if (resolved.kind === 'promise') {
+			const outcome = applyPromiseEffect(resolved.effect, career, turn, promiseTarget, content);
+			career = outcome.parts;
+			politics.push(...outcome.changes);
 		} else {
 			const key = gaugeKey(resolved.gauge);
 			const { value, applied } = applyGauge(player[key], resolved.delta);
@@ -475,7 +485,8 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		staff,
 		institutions: career.institutions,
 		facts,
-		cases: input.cases
+		cases: input.cases,
+		promises: career.promises
 	});
 
 	const create = (definition: EventDefinition, actors: Record<string, string>): void => {
@@ -572,6 +583,12 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 			cancel(entry, 'Les conditions de cette suite ne sont plus réunies.');
 			continue;
 		}
+		// Un événement de sujet `promise` reçoit la promesse concernée de son origine.
+		const promise = entry.actors[PROMISE_VARIABLE];
+		if (definition.subject === 'promise' && promise === undefined) {
+			cancel(entry, 'Cette suite ne concerne plus aucune promesse.');
+			continue;
+		}
 		const resolved = resolveActors(definition, entry.actors, rng, pool());
 		const bound = bindWorldVariables(definition, entry.actors, player, world, content);
 		if (!resolved || !bound) {
@@ -579,7 +596,13 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 			continue;
 		}
 		rng = resolved.rng;
-		create(definition, { ...resolved.actors, ...bound });
+		create(definition, {
+			...resolved.actors,
+			...bound,
+			...(definition.subject === 'promise' && promise !== undefined
+				? { [PROMISE_VARIABLE]: promise }
+				: {})
+		});
 	}
 
 	// 2. Tirages ordinaires.
@@ -685,7 +708,8 @@ export function choiceAvailability(
 		mandates: state.mandates,
 		ballots: state.ballots,
 		campaigns: state.campaigns,
-		institutions: state.institutions
+		institutions: state.institutions,
+		promises: state.promises
 	};
 	for (const effect of choice.effects) {
 		const issue = careerEffectIssue(effect, career, content ?? null, state.player, state.turn);
@@ -741,7 +765,8 @@ export function chooseEvent(
 				mandates: state.mandates,
 				ballots: state.ballots,
 				campaigns: state.campaigns,
-				institutions: state.institutions
+				institutions: state.institutions,
+				promises: state.promises
 			},
 			staff: state.staff,
 			shortlists: state.shortlists,
@@ -787,7 +812,8 @@ export function chooseEvent(
 		institutions: outcome.career.institutions,
 		staff: outcome.staff,
 		facts: outcome.facts,
-		cases: state.cases
+		cases: state.cases,
+		promises: outcome.career.promises
 	};
 	const cancelled: { instanceId: string; reason: string }[] = [];
 	const remaining = state.events.pending.slice(1).filter((other) => {
@@ -834,6 +860,7 @@ export function chooseEvent(
 			ballots: outcome.career.ballots,
 			campaigns: outcome.career.campaigns,
 			institutions: outcome.career.institutions,
+			promises: outcome.career.promises,
 			staff: outcome.staff,
 			facts: outcome.facts,
 			rng: outcome.rng,

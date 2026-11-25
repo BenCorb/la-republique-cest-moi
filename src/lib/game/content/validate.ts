@@ -21,11 +21,13 @@ import {
 	profileCatalogSchema,
 	justiceCatalogSchema,
 	wealthCatalogSchema,
+	promisesCatalogSchema,
 	upgradeCatalogSchema,
 	worldSchema
 } from './schemas.ts';
 import {
 	PARTY_REFERENCES,
+	PROMISE_VARIABLE,
 	TREASURY_IDS,
 	WORLD_TEMPLATE_VARIABLES,
 	type ActionDefinition,
@@ -48,6 +50,8 @@ import {
 	type OffenseDefinition,
 	type LifestyleDefinition,
 	type WealthDefinition,
+	type PromiseDefinition,
+	type PromisesDefinition,
 	type ResourceAmount,
 	type TraitDefinition,
 	type UpgradeDefinition,
@@ -89,6 +93,8 @@ export interface RawContent {
 	readonly justice: unknown;
 	/** Trains de vie (`wealth.json`). */
 	readonly wealth: unknown;
+	/** Promesses types et règles du registre (`promises.json`). */
+	readonly promises: unknown;
 }
 
 export type ContentValidation =
@@ -338,10 +344,12 @@ function conditionIssues(
 function effectIssues(
 	effects: readonly Effect[],
 	refs: Refs,
-	targetKind: 'party' | 'mandate' | 'ballot' | 'candidate' | 'staff' | 'upgrade' | 'asset' | null,
+	targetKind: ActionDefinition['target'] | null,
 	source: string,
 	path: string,
-	roles: ReadonlySet<string> | null = null
+	roles: ReadonlySet<string> | null = null,
+	/** Événement de sujet `promise` : il agit sur la promesse que le moteur lui transmet. */
+	promiseSubject = false
 ): ContentIssue[] {
 	const issues: ContentIssue[] = [];
 	effects.forEach((effect, index) => {
@@ -501,6 +509,35 @@ function effectIssues(
 					});
 				}
 				break;
+			case 'makePromise':
+				if (targetKind !== 'promise') {
+					issues.push({
+						source,
+						path: at,
+						message: 'engagement réservé aux actions ciblant une promesse type'
+					});
+				}
+				break;
+			case 'advancePromise':
+				if (targetKind !== 'pledge' && !promiseSubject) {
+					issues.push({
+						source,
+						path: at,
+						message:
+							'avancement réservé aux actions ciblant une promesse en cours et aux événements de sujet « promise »'
+					});
+				}
+				break;
+			case 'amendPromise':
+			case 'abandonPromise':
+				if (!promiseSubject) {
+					issues.push({
+						source,
+						path: at,
+						message: 'compromis et renoncement réservés aux événements de sujet « promise »'
+					});
+				}
+				break;
 			case 'recordFact': {
 				if (!refs.offenses.has(effect.offense)) {
 					issues.push({
@@ -578,7 +615,9 @@ function crossCheckPolitics(
 				effect.op === 'declareCandidacy' ||
 				effect.op === 'hireStaff' ||
 				effect.op === 'dismissStaff' ||
-				effect.op === 'releaseUpgrade'
+				effect.op === 'releaseUpgrade' ||
+				effect.op === 'makePromise' ||
+				(effect.op === 'advancePromise' && targetKind === 'pledge')
 		);
 		if (targetKind !== null && !usesTarget) {
 			issues.push({
@@ -609,16 +648,27 @@ function crossCheckPolitics(
 		const path = `events[${index}]`;
 		issues.push(...conditionIssues(event.when, refs, source, `${path}.when`));
 		const roles = new Set(event.actors.map((slot) => slot.role));
+		const subject = event.subject === 'promise';
 		if (event.blocking) {
 			event.choices.forEach((choice, choiceIndex) => {
 				const choicePath = `${path}.choices[${choiceIndex}]`;
 				issues.push(...conditionIssues(choice.requires, refs, source, `${choicePath}.requires`));
 				issues.push(
-					...effectIssues(choice.effects, refs, null, source, `${choicePath}.effects`, roles)
+					...effectIssues(
+						choice.effects,
+						refs,
+						null,
+						source,
+						`${choicePath}.effects`,
+						roles,
+						subject
+					)
 				);
 			});
 		} else {
-			issues.push(...effectIssues(event.effects, refs, null, source, `${path}.effects`, roles));
+			issues.push(
+				...effectIssues(event.effects, refs, null, source, `${path}.effects`, roles, subject)
+			);
 		}
 	}
 	return issues;
@@ -933,6 +983,13 @@ function crossCheckEvents(
 					message: `rôle réservé aux variables du monde : ${slot.role}`
 				});
 			}
+			if (slot.role === PROMISE_VARIABLE) {
+				issues.push({
+					source,
+					path: `${path}.actors[${slotIndex}].role`,
+					message: `rôle réservé à la promesse concernée : ${slot.role}`
+				});
+			}
 			if (roles.has(slot.role)) {
 				issues.push({
 					source,
@@ -1002,6 +1059,16 @@ function crossCheckEvents(
 					}
 					continue;
 				}
+				if (role === PROMISE_VARIABLE) {
+					if (event.subject !== 'promise') {
+						issues.push({
+							source,
+							path: textPath,
+							message: `{${role}} réservé aux événements de sujet « promise »`
+						});
+					}
+					continue;
+				}
 				if (!roles.has(role)) {
 					issues.push({
 						source,
@@ -1048,6 +1115,15 @@ function crossCheckEvents(
 						message: `suite inconnue : ${choice.followUp.eventId}`
 					});
 				}
+				// Une suite qui traite d'une promesse ne la reçoit que d'un événement qui en traite.
+				const next = events.find(({ event: other }) => other.id === choice.followUp?.eventId);
+				if (next?.event.subject === 'promise' && event.subject !== 'promise') {
+					issues.push({
+						source,
+						path: `${choicePath}.followUp.eventId`,
+						message: `suite de sujet « promise » depuis un événement qui n’en traite pas : ${next.event.id}`
+					});
+				}
 			});
 			// Toujours une issue : au moins un choix sans prérequis ni coût.
 			if (!event.choices.some((choice) => !choice.requires && choice.costs.length === 0)) {
@@ -1070,6 +1146,13 @@ function crossCheckEvents(
 		)
 	]);
 	for (const { source, index, event } of events) {
+		if (event.subject === 'promise' && event.trigger !== 'followUp') {
+			issues.push({
+				source,
+				path: `events[${index}].trigger`,
+				message: 'un événement de sujet « promise » est programmé par le moteur (« followUp »)'
+			});
+		}
 		if (event.trigger === 'followUp' && !reachable.has(event.id)) {
 			issues.push({
 				source,
@@ -1094,6 +1177,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	const profileCatalog = profileCatalogSchema.safeParse(raw.profiles);
 	const justiceCatalog = justiceCatalogSchema.safeParse(raw.justice);
 	const wealthCatalog = wealthCatalogSchema.safeParse(raw.wealth);
+	const promisesCatalog = promisesCatalogSchema.safeParse(raw.promises);
 	const eventFiles = Object.keys(raw.events)
 		.sort()
 		.map((source) => ({ source, parsed: eventCatalogSchema.safeParse(raw.events[source]) }));
@@ -1113,6 +1197,9 @@ export function validateContent(raw: RawContent): ContentValidation {
 	if (!profileCatalog.success) issues.push(...zodIssues('profiles.json', profileCatalog.error));
 	if (!justiceCatalog.success) issues.push(...zodIssues('justice.json', justiceCatalog.error));
 	if (!wealthCatalog.success) issues.push(...zodIssues('wealth.json', wealthCatalog.error));
+	if (!promisesCatalog.success) {
+		issues.push(...zodIssues('promises.json', promisesCatalog.error));
+	}
 	for (const { source, parsed } of eventFiles) {
 		if (!parsed.success) issues.push(...zodIssues(source, parsed.error));
 	}
@@ -1129,6 +1216,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 		!profileCatalog.success ||
 		!justiceCatalog.success ||
 		!wealthCatalog.success ||
+		!promisesCatalog.success ||
 		eventFiles.some(({ parsed }) => !parsed.success)
 	) {
 		return { ok: false, issues };
@@ -1176,7 +1264,10 @@ export function validateContent(raw: RawContent): ContentValidation {
 			]),
 			new Set([
 				justiceCatalog.data.balance.revelationEvent,
-				justiceCatalog.data.balance.entourageRevelationEvent
+				justiceCatalog.data.balance.entourageRevelationEvent,
+				...promisesCatalog.data.promises.map((promise) => promise.dilemmaEvent),
+				promisesCatalog.data.balance.recallEvents.kept,
+				promisesCatalog.data.balance.recallEvents.abandoned
 			])
 		)
 	);
@@ -1214,6 +1305,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	issues.push(...crossCheckWealth(wealthCatalog.data, upgradeList, knownIds));
 	issues.push(...crossCheckJustice(justiceCatalog.data, refs, knownIds, sourcedEvents));
 	issues.push(...crossCheckPolitics(actionList, upgradeList, sourcedEvents, refs));
+	issues.push(...crossCheckPromises(promisesCatalog.data, refs, knownIds, sourcedEvents));
 	issues.push(
 		...crossCheckProfiles(
 			profileData.origins,
@@ -1282,6 +1374,8 @@ export function validateContent(raw: RawContent): ContentValidation {
 	for (const lifestyle of lifestyleList) lifestyles[lifestyle.id] = lifestyle;
 	const offenses: Record<string, OffenseDefinition> = {};
 	for (const offense of justiceCatalog.data.offenses) offenses[offense.id] = offense;
+	const promises: Record<string, PromiseDefinition> = {};
+	for (const promise of promisesCatalog.data.promises) promises[promise.id] = promise;
 	return {
 		ok: true,
 		content: {
@@ -1298,6 +1392,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 				profiles: profileData,
 				justice: justiceCatalog.data,
 				wealth: wealthCatalog.data,
+				promises: promisesCatalog.data,
 				events: Object.fromEntries(eventFiles.map(({ source, parsed }) => [source, parsed.data]))
 			}),
 			balance: balance.data,
@@ -1342,9 +1437,88 @@ export function validateContent(raw: RawContent): ContentValidation {
 			wealth: {
 				defaultLifestyle: wealthCatalog.data.defaultLifestyle,
 				unpaidLifestyleStress: wealthCatalog.data.unpaidLifestyleStress
-			}
+			},
+			promises,
+			promiseIds: promisesCatalog.data.promises.map((promise) => promise.id),
+			promiseRules: promisesCatalog.data.balance
 		}
 	};
+}
+
+/** Effets permis dans une promesse : certains, sur les ressources, jauges et soutiens. */
+const PROMISE_EFFECT_OPS: ReadonlySet<string> = new Set(['addResource', 'addStat', 'addSupport']);
+
+/**
+ * Promesses types (P3-04) : identifiants uniques, élections connues, effets
+ * certains (ressources, jauges, soutiens), dilemmes et rappels existants,
+ * bloquants pour les dilemmes, de sujet `promise` et programmés par le moteur ;
+ * dilemme présenté avant l'échéance de réalisation.
+ */
+function crossCheckPromises(
+	catalog: PromisesDefinition,
+	refs: Refs,
+	knownIds: Set<string>,
+	events: readonly SourcedEvent[]
+): ContentIssue[] {
+	const source = 'promises.json';
+	const issues: ContentIssue[] = [];
+	const rules = catalog.balance;
+	const checkEvent = (eventId: string, path: string, blocking: boolean): void => {
+		const event = events.find((entry) => entry.event.id === eventId)?.event;
+		if (!event) {
+			issues.push({ source, path, message: `événement inconnu : ${eventId}` });
+		} else if (event.subject !== 'promise' || (blocking && !event.blocking)) {
+			issues.push({
+				source,
+				path,
+				message: blocking
+					? 'le dilemme doit être un événement bloquant de sujet « promise »'
+					: 'le rappel doit être un événement de sujet « promise »'
+			});
+		}
+	};
+	catalog.promises.forEach((promise, index) => {
+		const path = `promises[${index}]`;
+		if (knownIds.has(promise.id)) {
+			issues.push({ source, path: `${path}.id`, message: `identifiant en double : ${promise.id}` });
+		}
+		knownIds.add(promise.id);
+		promise.elections.forEach((electionId, electionIndex) => {
+			if (!refs.elections.has(electionId)) {
+				issues.push({
+					source,
+					path: `${path}.elections[${electionIndex}]`,
+					message: `élection inconnue : ${electionId}`
+				});
+			}
+		});
+		if (new Set(promise.elections).size !== promise.elections.length) {
+			issues.push({ source, path: `${path}.elections`, message: 'élection en double' });
+		}
+		checkEvent(promise.dilemmaEvent, `${path}.dilemmaEvent`, true);
+		for (const key of ['announce', 'kept', 'partial', 'abandoned'] as const) {
+			issues.push(...effectIssues(promise[key], refs, null, source, `${path}.${key}`));
+			promise[key].forEach((effect, effectIndex) => {
+				if (!PROMISE_EFFECT_OPS.has(effect.op)) {
+					issues.push({
+						source,
+						path: `${path}.${key}[${effectIndex}]`,
+						message: 'une promesse n’a que des effets certains : ressources, jauges ou soutiens'
+					});
+				}
+			});
+		}
+	});
+	checkEvent(rules.recallEvents.kept, 'balance.recallEvents.kept', false);
+	checkEvent(rules.recallEvents.abandoned, 'balance.recallEvents.abandoned', false);
+	if (rules.dilemmaDelayTurns.min < 1 || rules.dilemmaDelayTurns.max >= rules.deliveryTurns) {
+		issues.push({
+			source,
+			path: 'balance.dilemmaDelayTurns',
+			message: 'le dilemme arrive au moins un trimestre après l’élection et avant l’échéance'
+		});
+	}
+	return issues;
 }
 
 /**
