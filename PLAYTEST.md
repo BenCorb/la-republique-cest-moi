@@ -164,3 +164,17 @@ bugs, irritants classés (bloquant, gênant, mineur) et décisions._
   attendu de l’alpha : les médias fictifs, le fil de presse et les articles fondés sur les faits
   sont prévus en P3-03. Pistes d’ici là, si utile : un onglet « Actualités » qui reprend le fil
   complet avec le texte des événements (DESIGN §3), visible quelle que soit la largeur.
+
+#### Tri des premiers retours (26 novembre 2026)
+
+| Retour                                           | Avant la phase 3 ?  | Raison                                                                                                                                                                                                                                                                  | Taille                                            |
+| ------------------------------------------------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Composer le plan (masquer, regrouper, compacter) | **Oui, en premier** | La phase 3 ajoute des dizaines d’actions (défense, patrimoine, médias, promesses) : sans groupes ni filtre, l’agenda deviendra inutilisable. Mieux vaut poser la structure (`category` des actions) avant d’y verser du contenu.                                        | Moyenne (catalogue, projection, écran)            |
+| Budget politique (pistes 1, 2, 4)                | **Oui**             | L’équilibre économique sert de base à tout le réglage de la phase 3 ; P3-02 traite la fortune personnelle, pas le budget politique. Remboursement forfaitaire par élection (sans suivi des dépenses, donc sans changement d’état), à valider par un lot de simulations. | Moyenne (catalogue, règle de scrutin, simulation) |
+| Mairie et conseil municipal                      | **Oui**             | P3-05 rendra le plafond du cumul réformable : le modèle doit d’abord compter juste. Correction localisée (mairie hors du décompte du cumul, affichage commun).                                                                                                          | Petite                                            |
+| Presse                                           | Non                 | P3-03 crée la vraie presse ; un écran intermédiaire serait refait. Au plus, afficher la colonne aussi sous 1 100 px.                                                                                                                                                    | Très petite si fait                               |
+
+Ordre proposé : une pull request par correction (mairie, budget, agenda), chacune vérifiée et
+publiée, puis reprise du playtest sur ces points avant P3-01. Restent à mesurer pendant la fin
+du playtest : durée active, rythme des arrêts d’accélération, vie de famille, besoin
+d’épinglage.
