@@ -119,6 +119,7 @@
 		"victoryInfluence": 5,
 		"defeatInfluence": 1,
 		"defeatStress": 4,
+		"refundMinPercent": 5,
 		"rivalExperienceBonus": 2,
 		"rivalExperienceCap": 2,
 		"rivalryAttitude": -8,

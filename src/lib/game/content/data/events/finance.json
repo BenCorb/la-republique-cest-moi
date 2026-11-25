@@ -256,6 +256,46 @@
 					"value": 12000
 				}
 			]
+		},
+		{
+			"id": "finance.gala_table",
+			"category": "finance",
+			"title": "La table d’honneur",
+			"text": "Le plus généreux convive de votre dernier gala vous fait savoir, entre deux compliments, que l’appel d’offres de la nouvelle médiathèque « intéresse beaucoup son beau-frère ».",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 0,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{ "op": "gte", "stat": "resources.influence", "value": 20 },
+					{ "op": "support", "group": "support.business", "cmp": "gte", "value": 30 }
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "help",
+					"label": "Glisser un mot en commission",
+					"hints": ["Les donateurs reviendront", "Le genre de service qui laisse des traces"],
+					"costs": [],
+					"effects": [
+						{ "op": "addResource", "resource": "politicalBudgetCents", "value": 200000 },
+						{ "op": "addSupport", "group": "support.business", "value": 3 },
+						{ "op": "addStat", "stat": "player.stress", "value": 3 }
+					]
+				},
+				{
+					"id": "decline",
+					"label": "Sourire et changer de sujet",
+					"hints": ["Le beau-frère boudera"],
+					"costs": [],
+					"effects": [{ "op": "addSupport", "group": "support.business", "value": -3 }]
+				}
+			]
 		}
 	]
 }

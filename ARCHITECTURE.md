@@ -497,6 +497,18 @@ Les candidatures sont librement initiées avant la clôture si éligible. Une ca
 - **Interface :** l’onglet Carrière range la mairie sous le conseil municipal (« Exercée au sein du mandat… : ne compte pas à part dans le cumul ») et affiche le décompte (« Cumul : 2 mandats sur 3 au plus »).
 - **Versions et tests :** `RULES_VERSION = '0.18.0'` ; `tests/unit/career.test.ts` (plafond, mairie hors cumul, statistique, projection), scénario alpha (cumul contrôlé à chaque trimestre selon ce décompte), E2E du décompte. Lot de 200 carrières (seed `cumul-mairie`) : aucune erreur ni violation.
 
+### 8.3 duodecies Correction du playtest : budget politique (26 novembre 2026)
+
+Le playtest a jugé le budget politique trop difficile à faire grossir ; le créateur a retenu trois pistes (`PLAYTEST.md`).
+
+- **Moyens des mandats locaux** (catalogue) : conseil municipal 50 €, mairie 600 €, conseil régional 300 € de budget politique par trimestre, en plus des indemnités existantes.
+- **Remboursement forfaitaire des frais de campagne** : chaque élection déclare un forfait (`campaignRefundCents` : municipales 800 €, sénatoriales 500 €, législatives 1 500 €, régionales 1 000 €), versé sur le budget politique après le scrutin si la candidature a été jugée avec au moins `refundMinPercent` (5 %) des voix ; jamais après une invalidation. Forfait plutôt que remboursement des dépenses réelles : les campagnes ne suivent pas leurs dépenses, et le forfait se déduit du résultat (`campaignRefund`) sans changer l’état ni le tirage. Le journal note le remboursement ; le calendrier de l’onglet Carrière l’annonce.
+- **Gala de levée de fonds** (`organization.gala`) : influence 20, 40 points de temps, 200 € de location ; rapporte 1 000 à 3 000 €, mais stress + 3, milieux d’affaires + 2, militants − 1. L’événement « La table d’honneur » (influence 20, milieux d’affaires ≥ 30) en est le revers : un donateur demande un service.
+- **Tests du catalogue** : le plafond de 30 événements dans les catégories du prototype (P1-06) est levé, le minimum de 20 reste.
+- **Simulateur** (rapport v11) : les stratégies patrimoniale et mixte organisent un gala seulement sous 1 000 € de budget ; à chaque trimestre, le gala épuisait la stratégie patrimoniale (94 % de morts d’épuisement).
+- **Mesure (500 carrières, seed `p2-10`, avant → après)** : aucune erreur ni violation. Trimestres de charges impayées : patrimoniale 196 → 36, aléatoire 100 → 62, mixte 14 → 2. Budget final médian : prudente 46 000 → 86 000 €, ambitieuse 44 000 → 99 000 €, mixte 135 000 → 255 000 €. Âge médian de fin inchangé, sauf patrimoniale 81 → 74 et aléatoire 62 → 58. **Points ouverts :** le budget des carrières élues déborde davantage (surtout par les 5 000 € trimestriels de l’Assemblée) ; les stratégies patrimoniale et aléatoire recrutent puis perdent leurs collaborateurs en boucle (29,5 recrutements et 27,2 départs par carrière pour la patrimoniale, contre 4,4 et 4,3) : un pic de budget permet d’embaucher, puis le salaire n’est plus payé.
+- **Versions et tests :** `RULES_VERSION = '0.19.0'` ; `tests/unit/campaigns.test.ts` (seuil, invalidation, élection sans forfait, versement sans effet sur le tirage, journal, calendrier) ; scénario alpha ajusté (le patrimonial se distingue par son organisation).
+
 ### 8.4 V1 : médias, justice, patrimoine et institutions
 
 Les dossiers judiciaires sont des machines à états avec échéances, références aux faits et issues, plutôt qu’un tirage de condamnation à chaque tour. Les transitions permises sont explicites ; des dossiers simultanés peuvent concerner le joueur ou son entourage. Une enquête et une culpabilité sont des états distincts. Les médias génèrent des articles à partir de faits et du contexte ; les actifs médias n’annulent pas les autres médias. Les promesses sont des objets historisés et réutilisables dans les événements. Les réformes institutionnelles modifient des paramètres du monde et persistent après changement de gouvernement. Aucun de ces modules n’est requis pour commencer le prototype.
@@ -663,7 +675,7 @@ Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défa
 ### 15.1 Règles provisoires à confirmer
 
 - **Format de sauvegarde.** `STATE_SCHEMA_VERSION = 1` et `SAVE_VERSION = 1`. Toute modification de `GameState` doit mettre à jour `persistence/state-schema.ts` (la compilation l’impose). **Décision du créateur (25 novembre 2026) : l’alpha publiée est jetable.** Pendant l’alpha et la phase 3, le format reste en version 1 et une sauvegarde écrite par d’autres règles devenue illisible est refusée explicitement (`outdated_rules`, §8.3 decies), jamais réparée ni effacée ; l’accueil prévient les joueurs. Les migrations testées (`SAVE_VERSION` incrémentée à chaque changement de format) commenceront avec la première version publiée dont les parties doivent survivre aux mises à jour (au plus tard la V1, P3-10).
-- **Version des règles.** `RULES_VERSION = '0.18.0'` (mairie hors du cumul, §8.3 undecies), incrémentée à chaque changement de règle ; elle n’est qu’informative à la lecture d’une sauvegarde.
+- **Version des règles.** `RULES_VERSION = '0.19.0'` (budget politique, §8.3 duodecies), incrémentée à chaque changement de règle ; elle n’est qu’informative à la lecture d’une sauvegarde.
 - **Paramètre `?seed=`.** Réservé aux essais et à la reproduction ; à masquer ou documenter auprès des joueurs avant diffusion large.
 
 ### 15.2 Limites fonctionnelles connues (alpha)

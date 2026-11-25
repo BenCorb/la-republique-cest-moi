@@ -34,7 +34,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 10;
+export const SIMULATION_REPORT_VERSION = 11;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -325,6 +325,7 @@ const STRATEGY_WISHES: Readonly<
 		purchase('communication.press_officer'),
 		purchase('organization.volunteer'),
 		action('personal.freelance'),
+		action('organization.gala'),
 		action('organization.fundraising'),
 		action('personal.rest')
 	],
@@ -333,6 +334,7 @@ const STRATEGY_WISHES: Readonly<
 		purchase('organization.donor_file'),
 		purchase('organization.volunteer'),
 		action('network.meet_officials'),
+		action('organization.gala'),
 		action('organization.fundraising'),
 		action('personal.freelance')
 	]
@@ -361,13 +363,20 @@ function wishesFor(
 	if (strategy === 'random-valid') return [...party, ...randomWishes(seed, state.turn, content)];
 	return [
 		...party,
-		...STRATEGY_WISHES[strategy].filter((step) =>
-			step.kind === 'action'
-				? Object.hasOwn(content.actions, step.id)
-				: Object.hasOwn(content.upgrades, step.id)
+		...STRATEGY_WISHES[strategy].filter(
+			(step) =>
+				(step.kind === 'action'
+					? Object.hasOwn(content.actions, step.id)
+					: Object.hasOwn(content.upgrades, step.id)) &&
+				// Le gala épuise : seulement quand le budget politique est bas.
+				(step.id !== GALA_ACTION || state.resources.politicalBudgetCents < GALA_BUDGET_BELOW)
 		)
 	];
 }
+
+const GALA_ACTION = 'organization.gala';
+/** Seuil sous lequel les stratégies organisent un gala (1 000 €). */
+const GALA_BUDGET_BELOW = 100_000;
 
 /** Construit gloutonnement un plan dont chaque ajout reste valide. */
 export function chooseSimulationPlan(

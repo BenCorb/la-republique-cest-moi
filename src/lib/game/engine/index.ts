@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.18.0';
+export const RULES_VERSION = '0.19.0';
 
 export {
 	START_YEAR,
@@ -139,6 +139,7 @@ export {
 	ballotId,
 	campaignId,
 	campaignPoll,
+	campaignRefund,
 	campaignScore,
 	candidacyIssue,
 	careerEffectIssue,

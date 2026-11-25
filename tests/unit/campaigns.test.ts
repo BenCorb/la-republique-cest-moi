@@ -3,6 +3,7 @@ import type { Content } from '../../src/lib/game/content/types.ts';
 import { validateContent } from '../../src/lib/game/content/validate.ts';
 import {
 	campaignPoll,
+	campaignRefund,
 	candidacyIssue,
 	checkInvariants,
 	commitTurn,
@@ -379,6 +380,76 @@ describe('invariants des campagnes', () => {
 		};
 		expect(checkInvariants(state, catalog).join('\n')).toContain(
 			'campagne en cours pour une échéance passée'
+		);
+	});
+});
+
+describe('remboursement des frais de campagne', () => {
+	const refunded = (() => {
+		const result = validateContent({
+			actions: { actions: [...fixtureActions.actions, ...campaignActions] },
+			upgrades: fixtureUpgrades,
+			balance: fixtureBalance,
+			cast: fixtureCast,
+			events: { ...fixtureEvents, 'events/dissolution.json': dissolution },
+			world: fixtureWorld,
+			traits: fixtureTraits,
+			career: {
+				...fixtureCareer,
+				elections: fixtureCareer.elections.map((election) =>
+					election.id === 'election.local' ? { ...election, campaignRefundCents: 80_000 } : election
+				)
+			},
+			supports: fixtureSupports,
+			entourage: fixtureEntourage,
+			profiles: fixtureProfiles
+		});
+		if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
+		return result.content;
+	})();
+	const local = refunded.elections['election.local']!;
+
+	it('rembourse au forfait une candidature jugée à partir du seuil, jamais une invalidation', () => {
+		expect(campaignRefund(local, 'won', 62, refunded)).toBe(80_000);
+		expect(campaignRefund(local, 'lost', 5, refunded)).toBe(80_000);
+		expect(campaignRefund(local, 'lost', 4, refunded)).toBe(0);
+		expect(campaignRefund(local, 'lost', null, refunded)).toBe(0);
+		expect(campaignRefund(local, 'disqualified', 60, refunded)).toBe(0);
+		expect(campaignRefund(catalog.elections['election.local']!, 'won', 62, catalog)).toBe(0);
+	});
+
+	it('verse le remboursement après le scrutin, sans changer le tirage, et le note au journal', () => {
+		const strong = withSupport(
+			withSupport(
+				member(createGame({ seed: 'victoire' }, refunded), 'party.left'),
+				'support.members',
+				20
+			),
+			'support.workers',
+			80
+		);
+		const play = (used: Content) => {
+			const declared = commit(strong, [declare('ballot.1')], used).state;
+			return commit(advanceTo(declared, 40, [], used), [], used);
+		};
+		const without = play(catalog);
+		const withRefund = play(refunded);
+		expect(withRefund.state.campaigns[0]).toMatchObject({ status: 'won' });
+		expect(withRefund.state.rng).toEqual(without.state.rng);
+		expect(withRefund.state.resources.politicalBudgetCents).toBe(
+			without.state.resources.politicalBudgetCents + 80_000
+		);
+		const lines = projectView(withRefund.state, [], refunded).journal[0]!.lines.map((line) =>
+			line.text.replace(/\s/gu, ' ')
+		);
+		expect(lines).toContain('Frais de campagne remboursés — Budget politique + 800 €');
+	});
+
+	it('annonce le remboursement dans le calendrier électoral', () => {
+		const view = projectView(createGame({ seed: 'calendrier' }, refunded), [], refunded);
+		const ballot = view.career.calendar.find((entry) => entry.label === local.label);
+		expect(ballot?.refund?.replace(/\s/gu, ' ')).toBe(
+			'Frais de campagne remboursés 800 € à partir de 5 % des voix'
 		);
 	});
 });

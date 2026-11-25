@@ -18,6 +18,7 @@ import {
 	GAUGE_MIN,
 	type Content,
 	type Effect,
+	type ElectionDefinition,
 	type ResourceAmount,
 	type ResourceId,
 	type Resources
@@ -29,6 +30,7 @@ import type {
 	Ballot,
 	BallotShare,
 	Campaign,
+	CampaignStatus,
 	Character,
 	PeopleChange,
 	PlayerState,
@@ -770,6 +772,23 @@ export interface FrontierDeadlines extends DeadlineParts {
 }
 
 /**
+ * Remboursement forfaitaire des frais de campagne après un scrutin : versé si la
+ * candidature a été jugée (victoire ou défaite) avec au moins `refundMinPercent`
+ * des voix ; jamais après une invalidation. Déduit du résultat, sans état propre.
+ */
+export function campaignRefund(
+	definition: ElectionDefinition,
+	status: CampaignStatus,
+	playerPercent: number | null,
+	content: Content
+): number {
+	if (status !== 'won' && status !== 'lost') return 0;
+	if (playerPercent === null || playerPercent < content.balance.campaigns.refundMinPercent)
+		return 0;
+	return definition.campaignRefundCents ?? 0;
+}
+
+/**
  * Échéances de la fin du trimestre `turn` (T), dans un ordre fixe : préparation
  * passive et stress des campagnes en cours, fins de mandats liées aux scrutins
  * du trimestre, puis scrutins dans l'ordre du catalogue — parts des partis,
@@ -991,6 +1010,8 @@ export function resolveDeadlines(
 					stress: Math.min(GAUGE_MAX, player.stress + campaignBalance.defeatStress)
 				};
 			}
+			// Frais de campagne remboursés au forfait à partir d'un score minimal.
+			resources.politicalBudgetCents += campaignRefund(definition, status, playerPercent, content);
 			// La rivalité laisse des traces : attitude en baisse et souvenir daté.
 			const opponent = campaign.opponentId ? characters[campaign.opponentId] : undefined;
 			if (opponent && status !== 'disqualified') {

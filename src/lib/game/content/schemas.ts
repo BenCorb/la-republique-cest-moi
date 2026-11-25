@@ -504,7 +504,8 @@ export const electionSchema: z.ZodType<ElectionDefinition> = z
 		grants: contentId,
 		bonusGrant: z.strictObject({ mandate: contentId, minPercent: gaugeValue }).optional(),
 		requiresAnyMandate: z.array(contentId),
-		rivalStrength: gaugeValue
+		rivalStrength: gaugeValue,
+		campaignRefundCents: nonNegativeInt.optional()
 	})
 	.refine((election) => election.filingLeadTurns < election.cycleTurns, {
 		message: 'la clôture des candidatures doit précéder le scrutin dans le cycle',
@@ -584,6 +585,7 @@ export const campaignsBalanceSchema: z.ZodType<CampaignsBalance> = z.strictObjec
 	victoryInfluence: nonNegativeInt,
 	defeatInfluence: nonNegativeInt,
 	defeatStress: nonNegativeInt,
+	refundMinPercent: gaugeValue,
 	rivalExperienceBonus: nonNegativeInt,
 	rivalExperienceCap: nonNegativeInt,
 	rivalryAttitude: safeInt.refine((value) => Math.abs(value) <= 100, 'variation de -100 à 100'),
