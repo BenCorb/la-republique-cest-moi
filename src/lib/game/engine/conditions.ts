@@ -7,7 +7,7 @@
  */
 import type { Condition, StatId } from '../content/types.ts';
 import { ageAt, quarterOf, yearOf } from './calendar.ts';
-import { activeMandates, holdIssue } from './career.ts';
+import { activeMandates, cumulatedMandates, holdIssue } from './career.ts';
 import type { GameState } from './state.ts';
 
 /** Sous-ensemble de l'état suffisant pour évaluer une condition. */
@@ -62,7 +62,8 @@ export function readStat(context: ConditionContext, stat: StatId): number {
 				? 1
 				: 0;
 		case 'player.mandates':
-			return activeMandates(context.mandates).length;
+			// Comptés comme pour le cumul : la mairie s'exerce au sein du conseil municipal.
+			return cumulatedMandates(context.mandates, context.institutions).length;
 		case 'player.popularity':
 			return context.player.popularity;
 		case 'player.hasPartner':

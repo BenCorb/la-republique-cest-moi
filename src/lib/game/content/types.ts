@@ -87,7 +87,10 @@ export const STAT_IDS = [
 	'player.partyStrength',
 	/** 1 si le parti du joueur conduit le gouvernement, sinon 0. */
 	'player.partyGoverning',
-	/** Nombre de mandats en cours du joueur (P2-02). */
+	/**
+	 * Nombre de mandats en cours du joueur (P2-02), comptés comme pour le cumul :
+	 * une fonction exercée au sein d'un mandat (la mairie) ne compte pas à part.
+	 */
 	'player.mandates',
 	/** Popularité : synthèse pondérée des soutiens électoraux, de 0 à 100 (P2-07). */
 	'player.popularity',

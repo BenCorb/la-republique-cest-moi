@@ -98,7 +98,8 @@ bugs, irritants classés (bloquant, gênant, mineur) et décisions._
   compte deux mandats dans le cumul (2 places sur 3) et les affiche séparément. Correction
   retenue pour la série de corrections du playtest : compter « conseil municipal + mairie » pour
   un seul mandat dans le cumul et les afficher ensemble (« Mairie (et siège au conseil
-  municipal) »). Temps réservé et indemnités restent cumulés.
+  municipal) »). Temps réservé et indemnités restent cumulés. **Corrigé** (ARCHITECTURE §8.3
+  undecies) : la mairie s’affiche sous le conseil municipal, hors du décompte du cumul.
 - **Composer le plan est trop laborieux (26 novembre 2026, gênant).** L’agenda affiche une
   longue liste de cartes (≈ 18 actions), chacune avec description, coûts et effets, dans un ordre
   sans logique visible. Les actions inaccessibles y figurent aussi : actions des autres

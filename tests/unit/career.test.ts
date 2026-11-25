@@ -330,10 +330,19 @@ describe('mandats et cumul', () => {
 			'Incompatible avec : Siège national.'
 		);
 		expect(holdIssue('mandate.minister', deputy.mandates, rules, catalog, true)).toBeNull();
+		// La mairie s'exerce au sein du conseil municipal : trois fonctions, deux mandats au cumul.
 		const full = holding(base, 'mandate.councillor', 'mandate.mayor', 'mandate.deputy');
+		const two = { ...rules, incompatibilities: [], maxMandates: 2 };
+		expect(holdIssue('mandate.minister', full.mandates, two, catalog)).toBe(
+			'Cumul limité à 2 mandats.'
+		);
 		expect(
 			holdIssue('mandate.minister', full.mandates, { ...rules, incompatibilities: [] }, catalog)
-		).toBe('Cumul limité à 3 mandats.');
+		).toBeNull();
+		// Devenir maire ne consomme pas de place au cumul.
+		const local = holding(base, 'mandate.councillor', 'mandate.deputy');
+		expect(holdIssue('mandate.mayor', local.mandates, two, catalog)).toBeNull();
+		expect(readStat(full, 'player.mandates')).toBe(2);
 		expect(holdIssue('mandate.deputy', deputy.mandates, rules, catalog)).toBe(
 			'Vous exercez déjà : Siège national.'
 		);
@@ -429,6 +438,19 @@ describe('projection et alertes', () => {
 			'Élection locale au T1 2010, dans 1 trimestre.'
 		);
 	});
+
+	it('range la mairie sous le conseil municipal, hors du décompte du cumul', () => {
+		const base = createGame({ seed: 'mairie' }, catalog);
+		// Ordre d'attribution volontairement désordonné : la mairie suit tout de même son conseil.
+		const state = holding(base, 'mandate.deputy', 'mandate.councillor', 'mandate.mayor');
+		const career = projectView(state, [], catalog).career;
+		expect(career.mandates.map((mandate) => [mandate.label, mandate.within])).toEqual([
+			['Siège national', null],
+			['Siège local', null],
+			['Mairie', 'Siège local']
+		]);
+		expect(career.cumulCount).toBe(2);
+	});
 });
 
 describe('validation du contenu de carrière', () => {
@@ -488,7 +510,7 @@ describe('invariants de carrière', () => {
 			'cumul dépassé',
 			{
 				...holding(base, 'mandate.councillor', 'mandate.mayor', 'mandate.deputy'),
-				institutions: { ...base.institutions, maxMandates: 2 }
+				institutions: { ...base.institutions, maxMandates: 1 }
 			},
 			'cumul dépassé'
 		],

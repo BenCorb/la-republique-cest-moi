@@ -90,7 +90,7 @@ test.describe('parcours de jeu', () => {
 		await expect(municipal).toContainText('Élections municipales');
 		await expect(municipal).toContainText('T1 2001');
 		await expect(municipal).toContainText('Candidatures closes au T3 2000');
-		await expect(page.getByText('Cumul : 3 mandats au plus.')).toBeVisible();
+		await expect(page.getByTestId('cumul')).toHaveText('Cumul : 0 mandat sur 3 au plus.');
 		await expect(page.getByTestId('support-support.working_class')).toContainText(
 			'Classes populaires (40 % de l’électorat)'
 		);

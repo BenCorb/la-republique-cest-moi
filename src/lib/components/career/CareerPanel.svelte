@@ -38,7 +38,10 @@
 				</p>
 				<ul class="flex flex-col gap-3">
 					{#each career.mandates as mandate (mandate.instanceId)}
-						<li class="rounded border border-line p-3" data-testid="mandate-{mandate.instanceId}">
+						<li
+							class="rounded border border-line p-3 {mandate.within ? 'ml-6 border-dashed' : ''}"
+							data-testid="mandate-{mandate.instanceId}"
+						>
 							<div class="flex items-start justify-between gap-3">
 								<h3 class="font-serif text-base">{mandate.label}</h3>
 								<span class="shrink-0 rounded bg-sidebar px-2 py-0.5 text-xs tabular-nums">
@@ -46,6 +49,11 @@
 								</span>
 							</div>
 							<p class="text-xs text-muted">Depuis le {mandate.since} · {mandate.ends}</p>
+							{#if mandate.within}
+								<p class="text-xs text-muted">
+									Exercée au sein du mandat « {mandate.within} » : ne compte pas à part dans le cumul.
+								</p>
+							{/if}
 							<ul class="mt-1 text-sm">
 								{#each mandate.income as income (income)}
 									<li>Chaque trimestre : {income}</li>
@@ -90,7 +98,10 @@
 				</ul>
 			{/if}
 			<div class="text-xs text-muted">
-				<p>Cumul : {career.maxMandates} mandats au plus.</p>
+				<p data-testid="cumul">
+					Cumul : {career.cumulCount} mandat{career.cumulCount > 1 ? 's' : ''} sur {career.maxMandates}
+					au plus.
+				</p>
 				{#if career.incompatibilities.length > 0}
 					<p>Incompatibles : {career.incompatibilities.join(' ; ')}.</p>
 				{/if}

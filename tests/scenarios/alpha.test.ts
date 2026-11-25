@@ -11,6 +11,7 @@ import {
 	RULES_VERSION,
 	activeMandates,
 	checkInvariants,
+	cumulatedMandates,
 	chooseEventCommand,
 	commitTurn,
 	createGame,
@@ -141,7 +142,10 @@ describe('alpha : cumul légal à chaque trimestre', { timeout: LONG_SCENARIO_TI
 			for (let index = 0; index < SEEDS; index += 1) {
 				playCareer(`cumul-${strategy}-${index}`, strategy, (state) => {
 					const held = activeMandates(state.mandates).map((mandate) => mandate.mandateId);
-					expect(held.length).toBeLessThanOrEqual(maxMandates);
+					// La mairie s'exerce au sein du conseil municipal et ne compte pas à part.
+					expect(cumulatedMandates(state.mandates, state.institutions).length).toBeLessThanOrEqual(
+						maxMandates
+					);
 					for (const [first, second] of incompatibilities) {
 						expect(held.includes(first) && held.includes(second), `${first} + ${second}`).toBe(
 							false
