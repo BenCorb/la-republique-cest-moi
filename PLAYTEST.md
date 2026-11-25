@@ -90,3 +90,12 @@ exporter la sauvegarde pour garder une trace.
 
 _À compléter après la session : testeur, seeds, durée, âge et cause de fin, sommet de carrière,
 bugs, irritants classés (bloquant, gênant, mineur) et décisions._
+
+#### Retours en cours de session
+
+- **Mairie et conseil municipal (26 novembre 2026, gênant).** Être à la fois maire et membre du
+  conseil municipal est voulu (le maire est élu par le conseil parmi ses membres), mais le jeu
+  compte deux mandats dans le cumul (2 places sur 3) et les affiche séparément. Correction
+  retenue pour la série de corrections du playtest : compter « conseil municipal + mairie » pour
+  un seul mandat dans le cumul et les afficher ensemble (« Mairie (et siège au conseil
+  municipal) »). Temps réservé et indemnités restent cumulés.
