@@ -51,6 +51,13 @@
 							{#if choice.costs.length > 0}
 								<span class="block">Coût certain : {choice.costs.join(', ')}.</span>
 							{/if}
+							{#if decision.advice && (decision.advice.choices[choice.id]?.length ?? 0) > 0}
+								<span class="block text-xs" data-testid="advice-{choice.id}">
+									Avis de {decision.advice.adviser}{decision.advice.quality === 'poor'
+										? ' (à prendre avec prudence)'
+										: ''} : {decision.advice.choices[choice.id]?.join(' ; ')}.
+								</span>
+							{/if}
 							{#if !choice.available && choice.reason}
 								<span class="block font-medium text-warning">Indisponible : {choice.reason}</span>
 							{/if}

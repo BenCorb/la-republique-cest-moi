@@ -6,7 +6,13 @@
  * choisissent les décisions depuis `PendingEventView`, qui n'expose aucun effet
  * caché. Elles ne lisent jamais le PRNG de la partie.
  */
-import type { Content, ResourceId, Resources } from '../content/types.ts';
+import {
+	INDICATOR_IDS,
+	type Content,
+	type IndicatorId,
+	type ResourceId,
+	type Resources
+} from '../content/types.ts';
 import {
 	RULES_VERSION,
 	accelerationAlerts,
@@ -28,7 +34,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 1;
+export const SIMULATION_REPORT_VERSION = 10;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -72,6 +78,45 @@ export interface SimulationRun {
 	readonly quartersWithSuspension: number;
 	readonly eventsExperienced: number;
 	readonly eventOccurrences: readonly EventFrequency[];
+	/** Parti du joueur en fin de carrière (`null` : sans étiquette). */
+	readonly finalParty: string | null;
+	/** Nombre d'adhésions successives (changements de camp compris). */
+	readonly affiliations: number;
+	readonly quartersAffiliated: number;
+	/** Changements de direction des partis au fil de la carrière. */
+	readonly leaderChanges: number;
+	/** Personnages rencontrés, départs (retraites et décès) et traits cachés révélés. */
+	readonly charactersMet: number;
+	readonly characterDepartures: number;
+	readonly traitsRevealed: number;
+	/** Mandats exercés au fil de la carrière et plus haute fonction (rang le plus élevé). */
+	readonly mandatesHeld: number;
+	readonly highestMandate: string | null;
+	/** Scrutins tenus et alternances au gouvernement pendant la carrière. */
+	readonly ballotsHeld: number;
+	readonly governmentChanges: number;
+	/** Candidatures déposées, victoires et défaites. */
+	readonly campaigns: number;
+	readonly campaignsWon: number;
+	readonly campaignsLost: number;
+	/** Adversaires différents affrontés et plus grand nombre d'affrontements avec le même. */
+	readonly distinctOpponents: number;
+	/** Profil de départ et famille en fin de carrière (P2-08). */
+	readonly origin: string;
+	readonly profession: string;
+	readonly children: number;
+	readonly separations: number;
+	/** Collaborateurs recrutés et départs (démission, renvoi, débauchage…). */
+	readonly staffHired: number;
+	readonly staffDepartures: number;
+	readonly maxRivalEncounters: number;
+	/** Popularité en fin de carrière et la plus haute atteinte. */
+	readonly finalPopularity: number;
+	readonly peakPopularity: number;
+	/** Plus bas et plus haut atteints par chaque indicateur national. */
+	readonly indicatorRanges: Readonly<
+		Record<IndicatorId, { readonly min: number; readonly max: number }>
+	>;
 	readonly invariantViolations: readonly string[];
 	readonly error: string | null;
 }
@@ -99,6 +144,7 @@ export interface StrategySummary {
 	readonly significantInterventions: Distribution;
 	readonly quartersWithSuspension: Distribution;
 	readonly upgradesOwned: Distribution;
+	readonly quartersAffiliated: Distribution;
 	readonly resources: { readonly [K in ResourceId]: Distribution };
 }
 
@@ -128,6 +174,25 @@ export interface SimulationAggregate {
 	readonly significantInterventions: Distribution;
 	readonly resources: { readonly [K in ResourceId]: Distribution };
 	readonly endCauses: Readonly<Record<string, number>>;
+	readonly leaderChanges: Distribution;
+	readonly charactersMet: Distribution;
+	readonly characterDepartures: Distribution;
+	readonly traitsRevealed: Distribution;
+	readonly mandatesHeld: Distribution;
+	readonly governmentChanges: Distribution;
+	readonly campaigns: Distribution;
+	readonly campaignsWon: Distribution;
+	readonly maxRivalEncounters: Distribution;
+	readonly staffHired: Distribution;
+	readonly finalPopularity: Distribution;
+	readonly peakPopularity: Distribution;
+	/** Plus haute fonction atteinte, `none` pour les carrières sans mandat. */
+	readonly highestMandates: Readonly<Record<string, number>>;
+	/** Parti en fin de carrière, `none` pour les carrières sans étiquette. */
+	readonly finalParties: Readonly<Record<string, number>>;
+	readonly indicatorExtremes: Readonly<
+		Record<IndicatorId, { readonly min: number; readonly max: number }>
+	>;
 	readonly strategies: readonly StrategySummary[];
 	readonly events: readonly AggregateEventFrequency[];
 	readonly problemSeeds: readonly ProblemSeed[];
@@ -139,7 +204,7 @@ export interface SimulationReport {
 	readonly contentVersion: string;
 	readonly config: SimulationConfig;
 	/** Systèmes absents du prototype, donc volontairement non simulés. */
-	readonly unavailableMetrics: readonly ['mandates', 'promises'];
+	readonly unavailableMetrics: readonly ['promises'];
 	readonly aggregate: SimulationAggregate;
 	readonly runs: readonly SimulationRun[];
 }
@@ -147,17 +212,105 @@ export interface SimulationReport {
 const action = (id: string): PlanStep => ({ kind: 'action', id });
 const purchase = (id: string): PlanStep => ({ kind: 'purchase', id });
 
+/**
+ * Choix d'un parti par politique, d'après les seules forces publiques : les
+ * ambitieux rejoignent le parti le plus fort, les profils mixtes le parti au
+ * gouvernement, l'aléatoire un parti tiré de la seed ; les prudents et les
+ * patrimoniaux restent sans étiquette.
+ */
+function partyWish(
+	strategy: SimulationStrategy,
+	state: GameState,
+	seed: string,
+	content: Content
+): PlanStep[] {
+	const joinId = content.actionIds.find((id) => content.actions[id]?.target === 'party');
+	if (!joinId || state.player.partyId !== null) return [];
+	let target: string | undefined;
+	if (strategy === 'ambitious') {
+		target = [...content.partyIds].sort(
+			(left, right) =>
+				(state.world.parties[right]?.strength ?? 0) - (state.world.parties[left]?.strength ?? 0)
+		)[0];
+	} else if (strategy === 'mixed') {
+		target = state.world.governingPartyId;
+	} else if (strategy === 'random-valid') {
+		target = content.partyIds[hashSeed(`${seed}:parti`) % content.partyIds.length];
+	}
+	return target ? [{ kind: 'action', id: joinId, target }] : [];
+}
+
+/**
+ * Candidature par politique : les ambitieux et l'aléatoire visent toute
+ * échéance ouverte, les profils mixtes les municipales et les législatives,
+ * les prudents les seules municipales ; les patrimoniaux ne se présentent pas.
+ */
+const CANDIDACY_TARGETS: Readonly<Record<SimulationStrategy, readonly string[] | 'all'>> = {
+	prudent: ['election.municipal'],
+	ambitious: 'all',
+	patrimonial: [],
+	mixed: ['election.municipal', 'election.legislative'],
+	'random-valid': 'all'
+};
+
+function candidacyWish(
+	strategy: SimulationStrategy,
+	state: GameState,
+	content: Content
+): PlanStep[] {
+	const declareId = content.actionIds.find((id) => content.actions[id]?.target === 'ballot');
+	const targets = CANDIDACY_TARGETS[strategy];
+	if (!declareId || (targets !== 'all' && targets.length === 0)) return [];
+	const ballots = [...state.ballots]
+		.filter(
+			(ballot) =>
+				ballot.status === 'scheduled' && (targets === 'all' || targets.includes(ballot.electionId))
+		)
+		.sort((left, right) => left.turn - right.turn);
+	for (const ballot of ballots) {
+		const step: PlanStep = { kind: 'action', id: declareId, target: ballot.ballotId };
+		if (previewPlan(state, { steps: [step] }, content).valid) return [step];
+	}
+	return [];
+}
+
+/**
+ * Recrutement par politique : sauf la prudente, chaque politique recrute le
+ * candidat de meilleure compétence visible (CV) d'un poste ouvert.
+ */
+function hireWish(strategy: SimulationStrategy, state: GameState, content: Content): PlanStep[] {
+	const hireId = content.actionIds.find((id) => content.actions[id]?.target === 'candidate');
+	if (!hireId || strategy === 'prudent') return [];
+	const candidates = Object.values(state.shortlists)
+		.flat()
+		.sort(
+			(left, right) =>
+				(state.characters[right.characterId]?.competence ?? 0) -
+					(state.characters[left.characterId]?.competence ?? 0) ||
+				left.characterId.localeCompare(right.characterId)
+		);
+	for (const candidate of candidates) {
+		const step: PlanStep = { kind: 'action', id: hireId, target: candidate.characterId };
+		if (previewPlan(state, { steps: [step] }, content).valid) return [step];
+	}
+	return [];
+}
+
 const STRATEGY_WISHES: Readonly<
 	Record<Exclude<SimulationStrategy, 'random-valid'>, readonly PlanStep[]>
 > = {
+	// Le repos passe en premier : élu, le temps manque et la prudence protège la santé.
 	prudent: [
+		action('personal.rest'),
 		action('network.meet_officials'),
 		action('organization.fundraising'),
 		action('personal.freelance'),
-		action('personal.rest'),
 		action('personal.rest')
 	],
 	ambitious: [
+		action('campaign.rally'),
+		action('campaign.canvass'),
+		action('party.section_meeting'),
 		action('activism.public_meeting'),
 		action('organization.fundraising'),
 		action('network.meet_officials'),
@@ -176,37 +329,44 @@ const STRATEGY_WISHES: Readonly<
 		action('personal.rest')
 	],
 	mixed: [
+		action('personal.rest'),
 		purchase('organization.donor_file'),
 		purchase('organization.volunteer'),
 		action('network.meet_officials'),
 		action('organization.fundraising'),
-		action('personal.freelance'),
-		action('personal.rest')
+		action('personal.freelance')
 	]
 };
 
 function randomWishes(seed: string, turn: number, content: Content): PlanStep[] {
-	return [...content.actionIds.map(action), ...content.upgradeIds.map(purchase)].sort(
-		(left, right) => {
-			const leftRank = hashSeed(`${seed}:${turn}:${left.kind}:${left.id}`);
-			const rightRank = hashSeed(`${seed}:${turn}:${right.kind}:${right.id}`);
-			return leftRank - rightRank || left.id.localeCompare(right.id);
-		}
-	);
+	const untargeted = content.actionIds.filter((id) => !content.actions[id]?.target);
+	return [...untargeted.map(action), ...content.upgradeIds.map(purchase)].sort((left, right) => {
+		const leftRank = hashSeed(`${seed}:${turn}:${left.kind}:${left.id}`);
+		const rightRank = hashSeed(`${seed}:${turn}:${right.kind}:${right.id}`);
+		return leftRank - rightRank || left.id.localeCompare(right.id);
+	});
 }
 
 function wishesFor(
 	strategy: SimulationStrategy,
+	state: GameState,
 	seed: string,
-	turn: number,
 	content: Content
 ): readonly PlanStep[] {
-	if (strategy === 'random-valid') return randomWishes(seed, turn, content);
-	return STRATEGY_WISHES[strategy].filter((step) =>
-		step.kind === 'action'
-			? Object.hasOwn(content.actions, step.id)
-			: Object.hasOwn(content.upgrades, step.id)
-	);
+	const party = [
+		...partyWish(strategy, state, seed, content),
+		...candidacyWish(strategy, state, content),
+		...hireWish(strategy, state, content)
+	];
+	if (strategy === 'random-valid') return [...party, ...randomWishes(seed, state.turn, content)];
+	return [
+		...party,
+		...STRATEGY_WISHES[strategy].filter((step) =>
+			step.kind === 'action'
+				? Object.hasOwn(content.actions, step.id)
+				: Object.hasOwn(content.upgrades, step.id)
+		)
+	];
 }
 
 /** Construit gloutonnement un plan dont chaque ajout reste valide. */
@@ -217,7 +377,7 @@ export function chooseSimulationPlan(
 	content: Content
 ): TurnPlan {
 	const steps: PlanStep[] = [];
-	for (const candidate of wishesFor(strategy, seed, state.turn, content)) {
+	for (const candidate of wishesFor(strategy, state, seed, content)) {
 		const next = { steps: [...steps, candidate] };
 		if (previewPlan(state, next, content).valid) steps.push(candidate);
 	}
@@ -253,6 +413,13 @@ function eventFrequencies(state: GameState): EventFrequency[] {
 		.sort((left, right) => left.eventId.localeCompare(right.eventId));
 }
 
+function affiliatedQuarters(state: GameState): number {
+	return state.player.affiliations.reduce(
+		(total, affiliation) => total + (affiliation.toTurn ?? state.turn) - affiliation.fromTurn,
+		0
+	);
+}
+
 function finalizeRun(
 	state: GameState,
 	strategy: SimulationStrategy,
@@ -261,7 +428,9 @@ function finalizeRun(
 	decisions: number,
 	alertEpisodes: number,
 	invariantViolations: readonly string[],
-	error: string | null
+	error: string | null,
+	content: Content,
+	peakPopularity: number
 ): SimulationRun {
 	const summary = careerSummary(state);
 	return {
@@ -283,9 +452,108 @@ function finalizeRun(
 		quartersWithSuspension: summary.quartersWithSuspension,
 		eventsExperienced: summary.eventsExperienced,
 		eventOccurrences: eventFrequencies(state),
+		finalParty: state.player.partyId,
+		affiliations: state.player.affiliations.length,
+		quartersAffiliated: affiliatedQuarters(state),
+		leaderChanges: state.history.reduce(
+			(total, entry) =>
+				total + (entry.type === 'turn.resolved' ? (entry.world?.leaderChanges.length ?? 0) : 0),
+			0
+		),
+		indicatorRanges: indicatorRanges(state),
+		charactersMet: Object.keys(state.relationships).length,
+		characterDepartures: Object.values(state.characters).filter(
+			(character) => character.status !== 'active'
+		).length,
+		traitsRevealed: Object.values(state.characters).reduce(
+			(total, character) =>
+				total +
+				character.knownTraits.filter((trait) => content.traits[trait]?.hidden === true).length,
+			0
+		),
+		mandatesHeld: state.mandates.length,
+		highestMandate:
+			[...state.mandates].sort(
+				(left, right) =>
+					(content.mandates[right.mandateId]?.rank ?? 0) -
+					(content.mandates[left.mandateId]?.rank ?? 0)
+			)[0]?.mandateId ?? null,
+		campaigns: state.campaigns.length,
+		campaignsWon: state.campaigns.filter((campaign) => campaign.status === 'won').length,
+		campaignsLost: state.campaigns.filter((campaign) => campaign.status === 'lost').length,
+		distinctOpponents: new Set(
+			state.campaigns.flatMap((campaign) => (campaign.opponentId ? [campaign.opponentId] : []))
+		).size,
+		origin: state.player.origin,
+		profession: state.player.profession,
+		children: state.player.family.childrenIds.length,
+		separations: state.history.reduce(
+			(total, entry) =>
+				total +
+				(entry.type === 'event.resolved'
+					? entry.politics.filter((change) => change.kind === 'separated').length
+					: 0),
+			0
+		),
+		staffHired: state.staff.length,
+		staffDepartures: state.staff.filter((member) => member.status === 'left').length,
+		maxRivalEncounters: Math.max(
+			0,
+			...Object.values(
+				state.campaigns.reduce<Record<string, number>>((counts, campaign) => {
+					if (campaign.opponentId && campaign.status !== 'running') {
+						counts[campaign.opponentId] = (counts[campaign.opponentId] ?? 0) + 1;
+					}
+					return counts;
+				}, {})
+			)
+		),
+		finalPopularity: state.player.popularity,
+		peakPopularity,
+		ballotsHeld: state.ballots.filter((ballot) => ballot.status === 'held').length,
+		governmentChanges: state.history.reduce(
+			(total, entry) =>
+				total +
+				(entry.type === 'turn.resolved'
+					? (entry.deadlines?.ballots.filter(
+							(ballot) => ballot.governingAfter !== ballot.governingBefore
+						).length ?? 0)
+					: 0),
+			0
+		),
 		invariantViolations,
 		error
 	};
+}
+
+/** Extrêmes des indicateurs, reconstitués depuis l'état final et le journal. */
+function indicatorRanges(state: GameState): SimulationRun['indicatorRanges'] {
+	const current = { ...state.world.indicators };
+	const ranges = Object.fromEntries(
+		INDICATOR_IDS.map((id) => [id, { min: current[id], max: current[id] }])
+	) as Record<IndicatorId, { min: number; max: number }>;
+	// Remonte le temps : chaque variation journalisée est annulée dans l'ordre inverse.
+	for (const entry of [...state.history].reverse()) {
+		const changes =
+			entry.type === 'turn.resolved'
+				? [
+						...entry.events.flatMap((event) => event.politics),
+						...(entry.world?.indicators.map((change) => ({
+							kind: 'indicator' as const,
+							...change
+						})) ?? []),
+						...entry.steps.flatMap((step) => step.politics)
+					]
+				: entry.politics;
+		for (const change of changes) {
+			if (change.kind !== 'indicator') continue;
+			current[change.indicator] -= change.delta;
+			const range = ranges[change.indicator];
+			range.min = Math.min(range.min, current[change.indicator]);
+			range.max = Math.max(range.max, current[change.indicator]);
+		}
+	}
+	return ranges;
 }
 
 /** Simule une carrière avec les mêmes transitions que le jeu interactif. */
@@ -298,8 +566,18 @@ export function simulateCareer(
 	if (!Number.isSafeInteger(maxTurns) || maxTurns < 1) {
 		throw new RangeError(`Plafond de tours invalide : ${maxTurns}`);
 	}
-	let state = createGame({ seed }, content);
+	// Origine et profession tirées de la seed du lot (P2-08), sans toucher au PRNG de la partie.
+	let state = createGame(
+		{
+			seed,
+			origin: content.originIds[hashSeed(`${seed}:origine`) % content.originIds.length]!,
+			profession:
+				content.professionIds[hashSeed(`${seed}:profession`) % content.professionIds.length]!
+		},
+		content
+	);
 	let decisions = 0;
+	let peakPopularity = state.player.popularity;
 	let alertEpisodes = 0;
 	let activeAlertIds = new Set<string>();
 	let error: string | null = null;
@@ -322,6 +600,7 @@ export function simulateCareer(
 			break;
 		}
 		state = advanced.state;
+		peakPopularity = Math.max(peakPopularity, state.player.popularity);
 		violations = checkInvariants(state, content);
 
 		while (state.phase === 'decision' && error === null && violations.length === 0) {
@@ -348,7 +627,18 @@ export function simulateCareer(
 
 	const status: SimulationRunStatus =
 		error !== null || violations.length > 0 ? 'error' : state.end !== null ? 'ended' : 'capped';
-	return finalizeRun(state, strategy, seed, status, decisions, alertEpisodes, violations, error);
+	return finalizeRun(
+		state,
+		strategy,
+		seed,
+		status,
+		decisions,
+		alertEpisodes,
+		violations,
+		error,
+		content,
+		peakPopularity
+	);
 }
 
 function percentile(sorted: readonly number[], ratio: number): number {
@@ -397,6 +687,7 @@ function strategySummary(
 		significantInterventions: distribution(selected.map((run) => run.significantInterventions)),
 		quartersWithSuspension: distribution(selected.map((run) => run.quartersWithSuspension)),
 		upgradesOwned: distribution(selected.map((run) => run.upgradesOwned)),
+		quartersAffiliated: distribution(selected.map((run) => run.quartersAffiliated)),
 		resources: {
 			influence: resources('influence'),
 			politicalBudgetCents: resources('politicalBudgetCents'),
@@ -446,6 +737,37 @@ function aggregateRuns(runs: readonly SimulationRun[]): SimulationAggregate {
 			personalCashCents: resources('personalCashCents')
 		},
 		endCauses: causes,
+		leaderChanges: distribution(runs.map((run) => run.leaderChanges)),
+		charactersMet: distribution(runs.map((run) => run.charactersMet)),
+		characterDepartures: distribution(runs.map((run) => run.characterDepartures)),
+		traitsRevealed: distribution(runs.map((run) => run.traitsRevealed)),
+		mandatesHeld: distribution(runs.map((run) => run.mandatesHeld)),
+		governmentChanges: distribution(runs.map((run) => run.governmentChanges)),
+		campaigns: distribution(runs.map((run) => run.campaigns)),
+		campaignsWon: distribution(runs.map((run) => run.campaignsWon)),
+		maxRivalEncounters: distribution(runs.map((run) => run.maxRivalEncounters)),
+		staffHired: distribution(runs.map((run) => run.staffHired)),
+		finalPopularity: distribution(runs.map((run) => run.finalPopularity)),
+		peakPopularity: distribution(runs.map((run) => run.peakPopularity)),
+		highestMandates: runs.reduce<Record<string, number>>((totals, run) => {
+			const key = run.highestMandate ?? 'none';
+			totals[key] = (totals[key] ?? 0) + 1;
+			return totals;
+		}, {}),
+		finalParties: runs.reduce<Record<string, number>>((totals, run) => {
+			const key = run.finalParty ?? 'none';
+			totals[key] = (totals[key] ?? 0) + 1;
+			return totals;
+		}, {}),
+		indicatorExtremes: Object.fromEntries(
+			INDICATOR_IDS.map((id) => [
+				id,
+				{
+					min: Math.min(...runs.map((run) => run.indicatorRanges[id].min)),
+					max: Math.max(...runs.map((run) => run.indicatorRanges[id].max))
+				}
+			])
+		) as SimulationAggregate['indicatorExtremes'],
 		strategies: SIMULATION_STRATEGIES.filter((strategy) =>
 			runs.some((run) => run.strategy === strategy)
 		).map((strategy) => strategySummary(strategy, runs)),
@@ -502,7 +824,7 @@ export function simulateBatch(config: SimulationConfig, content: Content): Simul
 		rulesVersion: RULES_VERSION,
 		contentVersion: content.version,
 		config,
-		unavailableMetrics: ['mandates', 'promises'],
+		unavailableMetrics: ['promises'],
 		aggregate: aggregateRuns(runs),
 		runs
 	};
@@ -536,6 +858,31 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'quartersWithSuspension',
 		'eventsExperienced',
 		'eventOccurrences',
+		'finalParty',
+		'affiliations',
+		'quartersAffiliated',
+		'leaderChanges',
+		'charactersMet',
+		'characterDepartures',
+		'traitsRevealed',
+		'mandatesHeld',
+		'highestMandate',
+		'ballotsHeld',
+		'governmentChanges',
+		'campaigns',
+		'campaignsWon',
+		'campaignsLost',
+		'distinctOpponents',
+		'maxRivalEncounters',
+		'origin',
+		'profession',
+		'children',
+		'separations',
+		'staffHired',
+		'staffDepartures',
+		'finalPopularity',
+		'peakPopularity',
+		'indicatorRanges',
 		'invariantViolations',
 		'error'
 	];
@@ -560,6 +907,31 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.quartersWithSuspension,
 		run.eventsExperienced,
 		JSON.stringify(run.eventOccurrences),
+		run.finalParty,
+		run.affiliations,
+		run.quartersAffiliated,
+		run.leaderChanges,
+		run.charactersMet,
+		run.characterDepartures,
+		run.traitsRevealed,
+		run.mandatesHeld,
+		run.highestMandate,
+		run.ballotsHeld,
+		run.governmentChanges,
+		run.campaigns,
+		run.campaignsWon,
+		run.campaignsLost,
+		run.distinctOpponents,
+		run.maxRivalEncounters,
+		run.origin,
+		run.profession,
+		run.children,
+		run.separations,
+		run.staffHired,
+		run.staffDepartures,
+		run.finalPopularity,
+		run.peakPopularity,
+		JSON.stringify(run.indicatorRanges),
 		JSON.stringify(run.invariantViolations),
 		run.error
 	]);

@@ -16,14 +16,44 @@ import {
 	type TurnPlan
 } from '../../src/lib/game/engine/index.ts';
 
+/** Scénarios longs : le runner de CI est deux à trois fois plus lent qu'un poste local. */
+const LONG_SCENARIO_TIMEOUT = 60_000;
+
 const content = loadContent();
 
 /** Stratégie simple : propose des actions, retire celles que la prévision refuse. */
 const act = (id: string): PlanStep => ({ kind: 'action', id });
 const buy = (id: string): PlanStep => ({ kind: 'purchase', id });
 
+/** Marqueur : déclarer une candidature à la première échéance ouverte (P2-03). */
+const CANDIDACY = { kind: 'action', id: 'campaign.declare', target: '*' } as const;
+const declare = (target: string): PlanStep => ({ kind: 'action', id: 'campaign.declare', target });
+/** Marqueur : recruter le premier candidat présélectionné qui peut l'être (P2-05). */
+const HIRE = { kind: 'action', id: 'staff.hire', target: '*' } as const;
+const hire = (target: string): PlanStep => ({ kind: 'action', id: 'staff.hire', target });
+
 function choosePlan(state: GameState, wishes: readonly PlanStep[]): TurnPlan {
-	let candidate: PlanStep[] = [...wishes];
+	let candidate: PlanStep[] = wishes.flatMap((step): PlanStep[] => {
+		if (step === HIRE) {
+			// Un candidat par poste ouvert, dans l'ordre des postes, au plus deux par trimestre.
+			const picks: PlanStep[] = [];
+			for (const entries of Object.values(state.shortlists)) {
+				const pick = entries.find(
+					(entry) =>
+						previewPlan(state, { steps: [...picks, hire(entry.characterId)] }, content).valid
+				);
+				if (pick && picks.length < 2) picks.push(hire(pick.characterId));
+			}
+			return picks;
+		}
+		if (step !== CANDIDACY) return [step];
+		const open = state.ballots.find(
+			(ballot) =>
+				ballot.status === 'scheduled' &&
+				previewPlan(state, { steps: [declare(ballot.ballotId)] }, content).valid
+		);
+		return open ? [declare(open.ballotId)] : [];
+	});
 	for (;;) {
 		const turnPlan: TurnPlan = { steps: candidate };
 		const preview = previewPlan(state, turnPlan, content);
@@ -39,7 +69,15 @@ function career(
 	turns: number,
 	choicePolicy = 0
 ): GameState {
-	let state = createGame({ seed }, content);
+	// Origines et professions variées d'une carrière à l'autre (P2-08).
+	let state = createGame(
+		{
+			seed,
+			origin: content.originIds[choicePolicy % content.originIds.length]!,
+			profession: content.professionIds[choicePolicy % content.professionIds.length]!
+		},
+		content
+	);
 	for (let turn = 0; turn < turns && state.end === null; turn += 1) {
 		const result = transition(state, commitTurn(choosePlan(state, wishes)), content);
 		if (!result.ok) throw new Error(`${formatTurn(state.turn)} : ${result.error.message}`);
@@ -72,7 +110,7 @@ function answerEvents(start: GameState, policy: number): GameState {
 	return state;
 }
 
-describe('scénario : catalogue réel', () => {
+describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () => {
 	// Ordre de priorité : la réunion publique (50 points de temps) passe en premier.
 	const militant = [
 		act('activism.public_meeting'),
@@ -162,6 +200,7 @@ describe('scénario : catalogue réel', () => {
 				act('personal.rest')
 			],
 			[
+				HIRE,
 				buy('organization.donor_file'),
 				buy('organization.volunteer'),
 				buy('organization.local_office'),
@@ -175,11 +214,23 @@ describe('scénario : catalogue réel', () => {
 				act('network.meet_officials'),
 				act('activism.leaflets'),
 				act('personal.freelance')
+			],
+			// Militant encarté au parti du gouvernement de départ (P2-01), candidat (P2-03).
+			[
+				{ kind: 'action', id: 'party.join', target: content.world.startingGoverningParty },
+				CANDIDACY,
+				HIRE,
+				act('campaign.canvass'),
+				act('party.section_meeting'),
+				act('network.meet_officials'),
+				act('organization.fundraising'),
+				act('personal.freelance'),
+				act('personal.rest')
 			]
 		];
 		const seen = new Set<string>();
 		strategies.forEach((wishes, strategy) => {
-			for (let seed = 0; seed < 20; seed += 1) {
+			for (let seed = 0; seed < 40; seed += 1) {
 				const state = career(`atteinte-${strategy}-${seed}`, wishes, 400, seed);
 				for (const entry of quarters(state.history)) {
 					for (const event of entry.events) {

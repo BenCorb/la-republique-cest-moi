@@ -71,6 +71,8 @@ Le joueur peut passer un trimestre ou plusieurs, avec un arrêt automatique lors
 
 Proposition : boutons « Trimestre suivant », « Année suivante » et « Jusqu’au prochain événement important », avec possibilité d’interrompre ce dernier mode. Ne pas forcer une décision à chaque trimestre. Les nouvelles non critiques peuvent être regroupées dans un résumé.
 
+**Hypothèses provisoires de l’alpha (P2-09, 25 novembre 2026, choix délégués) :** l’accélération s’arrête quand les candidatures sont ouvertes à une élection accessible (au plus quatre trimestres avant la clôture), au dernier trimestre d’une campagne, au résultat, à une nomination ou une fin de mandat, à l’annonce d’élections anticipées, au départ d’un collaborateur, à l’arrivée de candidatures et quand le budget ne couvre plus les salaires, en plus des décisions, de la santé et des charges menacées. Le plan du trimestre est reconduit d’un tour à l’autre ; achats et démarches ponctuelles n’ont lieu qu’une fois. Les trimestres simulés sont résumés au tableau de bord, avec le détail consultable. Fréquence des arrêts à juger en playtest.
+
 ### 2.4 Progression incrémentale
 
 La croissance vient de l’accumulation de collaborateurs, de militants, de mandats, d’actifs et de relations. En début de carrière, le joueur fait lui-même la majorité des tâches ; plus tard, l’organisation produit des ressources et exécute des activités de manière autonome.
@@ -93,15 +95,21 @@ L’âge ne garantit ni richesse ni compétence : le passé professionnel et soc
 
 Exemples d’origines : milieu populaire, classe moyenne, grande bourgeoisie, dynastie politique. Exemples de professions : ouvrier, enseignant, avocat, journaliste, entrepreneur, haut fonctionnaire, permanent de parti, sans emploi. Les bonus sont liés aux expériences fictives du personnage plutôt qu’à des jugements automatiques sur les catégories sociales.
 
+**Hypothèses provisoires de l’alpha (P2-08, 24 novembre 2026, choix délégués) :** quatre origines (milieu populaire, classe moyenne, grande bourgeoisie, dynastie politique) et six professions (ouvrier, enseignant, avocat, journaliste, entrepreneur, haut fonctionnaire), chacune avec des effets de départ chiffrés (argent, influence, soutiens, stress) et une action propre ; l’origine fixe la famille de départ et l’héritage. Âge de départ toujours 25 ans. Valeurs modifiables à l’équilibrage.
+
 ### 3.2 Orientation politique
 
 Le joueur peut partir avec des convictions initiales, rejoindre un parti fictif, le quitter, changer de camp, rester indépendant ou fonder un mouvement. Les décisions modifient progressivement le profil idéologique et la cohérence perçue par les autres acteurs.
 
 Axes proposés, à retenir en nombre limité pour la V1 : économie (interventionnisme/libéralisme), société (progressisme/conservatisme), environnement (productivisme/écologie), institutions (concentration du pouvoir/démocratie participative), international (souverainisme/internationalisme). Ces axes décrivent la compatibilité politique, pas la moralité. Il n’est pas nécessaire d’exposer des scores numériques pour chacun.
 
+**Décision du 24 novembre 2026 (alpha, déléguée par le créateur) :** trois axes retenus — économie (interventionnisme/libéralisme), société (progressisme/conservatisme), souveraineté (construction européenne et ouverture/souverainisme). L’environnement et les institutions passent par les sujets d’actualité et les événements plutôt que par des axes. Les positions sont internes et affichées seulement en termes qualitatifs.
+
 ### 3.3 Famille et vie privée
 
 La famille fait partie de la simulation, mais sans système de vie domestique exhaustif. Parents, conjoint, enfants et autres proches peuvent apporter un réseau, des revenus, des dépenses, du soutien ou du stress. Des événements permettent notamment de gérer des tensions familiales, un divorce, une demande de poste, un héritage ou une révélation embarrassante. Les liens familiaux alimentent le moteur de personnages et d’événements existant.
+
+**Hypothèses provisoires de l’alpha (P2-08) :** famille légère — parents et fratrie générés à la création, rencontre, naissance et séparation par événements ; enfants à charge coûteux jusqu’à 20 ans ; héritage au décès d’un parent ; une famille délaissée quand le joueur surcharge son agenda ; un partenaire bien disposé apaise le stress, un partenaire hostile l’aggrave.
 
 ## 4. Ressources, jauges et données de simulation
 
@@ -137,6 +145,8 @@ Une échelle de 0 à 100 est une hypothèse de prototype pour ces jauges. Les so
 ### 4.4 Groupes de soutien
 
 Deux catégories sont distinguées : les groupes électoraux et les groupes d’influence. Exemples de groupes à tester : classes populaires, classes moyennes, électeurs aisés ; militants, cadres de parti, acteurs économiques et réseaux fortunés. La popularité générale est une synthèse électorale ; les soutiens internes, médiatiques ou économiques ne sont pas directement des voix.
+
+**Hypothèses provisoires de l’alpha (P2-07, 24 novembre 2026, choix délégués) :** trois groupes électoraux pondérés (classes populaires 40 %, classes moyennes 40 %, électeurs aisés 20 %) forment la popularité ; trois appuis d’influence (militants, appareil du parti, milieux d’affaires) ne comptent pas dans les voix. Chaque soutien tend vers une référence qui dépend de l’affinité entre le parti du joueur et les attentes du groupe, de l’adhésion, des mandats et de la notoriété ; actions et décisions l’en écartent temporairement.
 
 Une décision peut renforcer certains groupes et fragiliser d’autres, selon leurs attentes dans la partie. Une personnalité peu populaire peut conserver des appuis institutionnels ; une personnalité populaire peut rester isolée dans son parti. Le détail est consultable à la demande, sans encombrer le tableau de bord principal. Les groupes ne doivent pas être traités comme des blocs parfaitement homogènes.
 
@@ -191,7 +201,7 @@ Caractéristiques principales : identité, âge, parcours, compétences par doma
 | Conseiller politique | Influence, alliances et anticipation des réactions |
 | Responsable juridique | Analyse des risques et gestion des dossiers |
 
-Cinq postes constituent la base proposée ; un sixième peut être ajouté si réellement utile. Ils deviennent accessibles progressivement. Le recrutement propose plusieurs profils : une personne compétente mais indépendante, un candidat disposant d’un réseau familial important mais peu qualifié, ou un collaborateur ambitieux et brillant. Les caractéristiques doivent créer des arbitrages, pas un classement univoque.
+Cinq postes constituent la base proposée ; un sixième peut être ajouté si réellement utile. *(Alpha, P2-05 : les cinq postes ci-dessus, chacun avec un salaire, une condition de déblocage et deux missions ; trois profils de candidats contrastés ; conseils précis, indicatifs ou parfois faux selon la compétence. Hypothèses provisoires.)* Ils deviennent accessibles progressivement. Le recrutement propose plusieurs profils : une personne compétente mais indépendante, un candidat disposant d’un réseau familial important mais peu qualifié, ou un collaborateur ambitieux et brillant. Les caractéristiques doivent créer des arbitrages, pas un classement univoque.
 
 ### 6.3 Informations partielles et conseils
 
@@ -211,6 +221,8 @@ La progression n’est pas un arbre d’améliorations imposé. Un personnage pe
 
 Le personnage possède une fonction principale et potentiellement plusieurs fonctions secondaires. Les combinaisons autorisées dépendent des règles institutionnelles en vigueur dans l’univers du jeu. Chaque mandat porte ses propres avantages et contraintes (revenus, influence, visibilité, stress, charges et échéances). Le cumul est une source de croissance incrémentale, mais aussi un arbitrage de disponibilité et de risque.
 
+**Hypothèses provisoires de l’alpha (P2-02, 24 novembre 2026, choix délégués par le créateur) :** six fonctions — siège au conseil municipal, mairie (réservée aux membres du conseil), siège au conseil régional, siège à l’Assemblée nationale, siège au Sénat, portefeuille ministériel (nomination, fin avec le gouvernement). Assemblée et Sénat sont incompatibles, le ministère est incompatible avec les deux (le siège passe au suppléant), trois mandats au plus. Chaque mandat réserve du temps chaque trimestre, rapporte des indemnités et de l’influence et ajoute du stress. Calendrier fictif régulier : municipales et régionales tous les six ans, législatives tous les cinq ans (elles désignent le gouvernement), sénatoriales tous les six ans ; une dissolution peut provoquer des législatives anticipées. Chiffres modifiables à l’équilibrage.
+
 ### 7.3 Calendrier et liberté de candidature
 
 Les élections régulières sont annoncées longtemps à l’avance dans un calendrier consultable. Le joueur peut décider librement de préparer sa candidature, dès lors que les conditions d’éligibilité fictives sont remplies. Les élections anticipées et les nominations peuvent aussi ouvrir des opportunités inattendues.
@@ -223,7 +235,9 @@ La campagne utilise les ressources et le budget de temps existants : recherche d
 
 Le scrutin fictif combine le soutien électoral, la position du parti, la préparation de campagne, le contexte national, les adversaires, les événements récents et une part d’incertitude bornée. Les estimations doivent informer sans garantir le résultat. La modélisation des tours de scrutin sera simplifiée pour rester jouable ; aucune simulation de chaque électeur n’est prévue.
 
-Une défaite peut entraîner une perte de ressources, mais aussi apporter de la notoriété, de l’expérience, des relations ou de nouvelles opportunités. Le personnage poursuit sa carrière sauf condition de fin explicite.
+Une défaite peut entraîner une perte de ressources, mais aussi apporter de la notoriété, de l’expérience, des relations ou de nouvelles opportunités.
+
+**Hypothèses provisoires de l’alpha (P2-03, 24 novembre 2026, choix délégués) :** âge minimal par élection (18, 23 ou 30 ans), un siège local exigé pour les sénatoriales, investiture accordée selon le soutien de l’appareil du parti (sinon candidature dissidente sans l’apport du parti), sondage publié en fourchette, scrutin simplifié à un seul tour face à un adversaire principal : popularité, poids du parti si investi, préparation de campagne plafonnée, prime du sortant et part de hasard bornée. La tête de liste municipale bien élue devient maire. Le personnage poursuit sa carrière sauf condition de fin explicite.
 
 ### 7.5 Gouverner et tenir ses promesses
 
@@ -238,6 +252,21 @@ Exemple fictif : un candidat promet une réforme fiscale ; une fois élu, ses so
 Les noms de partis, médias, institutions et organisations sont fictifs et peuvent faire clairement référence à des réalités françaises. Les personnages sont inventés ; éviter d’attribuer des comportements criminels fictifs à des personnes réelles identifiables. La satire porte notamment sur les mécanismes et contradictions du pouvoir.
 
 Le paysage politique initial est globalement le même à chaque partie : mêmes partis, médias, institutions, règles et rapports de force de référence. Les dirigeants, leurs noms, leurs personnalités et leurs relations sont générés ou sélectionnés aléatoirement. Les événements ultérieurs divergent. Les noms parodiques exacts et la composition du catalogue initial restent à écrire et à valider.
+
+**Catalogue initial de l’alpha (24 novembre 2026, consigne du créateur : noms proches du paysage français réel mais distincts et humoristiques ; poids de départ provisoires) :**
+
+| Parti fictif | Sigle | Famille | Clin d’œil |
+|---|---|---|---|
+| Lutte Toujours Intransigeante | LTI | Extrême gauche | Prépare le grand soir depuis 1968 |
+| Parti Camarade Français | PCF | Gauche communiste | Mairies de banlieue et nostalgie militante |
+| Parti des Synthèses | PS | Gauche de gouvernement | Fusionne dix-sept motions en une phrase |
+| Les Verts Divisés | LVD | Écologistes | Plus de courants que de rivières propres |
+| Union des Démocrates Flottants | UDF | Centre | Centre de gravité, tant qu’il ne faut pas choisir |
+| Rassemblement pour la Réélection | RPR | Droite de gouvernement | Gaulliste de tradition, réélectionniste de conviction |
+| Chasse, Pêche, Nature et Apéro | CPNA | Ruralistes | Défend les traditions, surtout celle de 18 h |
+| Front du Non | FN | Extrême droite | Contre, par principe, et contre le principe aussi |
+
+En 2000, le Parti des Synthèses conduit le gouvernement. Les dirigeants sont générés à chaque partie ; aucun personnage réel n’est représenté. Les fusions, scissions et créations de partis passeront par des événements.
 
 ### 8.2 Évolution du monde
 

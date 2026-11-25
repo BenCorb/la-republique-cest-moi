@@ -1,0 +1,333 @@
+{
+	"events": [
+		{
+			"id": "family.meeting",
+			"category": "family",
+			"title": "Une rencontre",
+			"text": "À un vernissage où vous ne deviez que serrer des mains, une conversation sur l’art contemporain dure trois heures. Ni l’un ni l’autre n’a regardé les tableaux.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 4,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "eq",
+						"stat": "player.hasPartner",
+						"value": 0
+					},
+					{
+						"op": "lte",
+						"stat": "player.age",
+						"value": 50
+					}
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "commit",
+					"label": "Laisser une chance à cette histoire",
+					"hints": ["Une vie à deux", "Un agenda à partager"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "familyJoins",
+							"relation": "partner"
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -3
+						}
+					]
+				},
+				{
+					"id": "single",
+					"label": "Rester concentré sur la carrière",
+					"hints": ["Rien ne change"],
+					"costs": [],
+					"effects": []
+				}
+			]
+		},
+		{
+			"id": "family.birth",
+			"category": "family",
+			"title": "Une naissance",
+			"text": "{partner} et vous accueillez un enfant. Les nuits raccourcissent, les priorités aussi, et votre attaché de presse demande déjà une photo.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "lte",
+						"stat": "player.children",
+						"value": 2
+					},
+					{
+						"op": "lte",
+						"stat": "player.age",
+						"value": 45
+					}
+				]
+			},
+			"actors": [
+				{
+					"role": "partner",
+					"tags": ["partner"],
+					"minAttitude": 5
+				}
+			],
+			"effects": [
+				{
+					"op": "familyJoins",
+					"relation": "child"
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				},
+				{
+					"op": "familyAttitude",
+					"value": 5
+				}
+			]
+		},
+		{
+			"id": "family.argument",
+			"category": "family",
+			"title": "Une scène de ménage",
+			"text": "{partner} a compté : vous avez dîné à la maison quatre fois ce trimestre, dont deux au téléphone. La discussion qui suit n’est pas un débat contradictoire.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 4,
+			"cooldownTurns": 8,
+			"unique": false,
+			"actors": [
+				{
+					"role": "partner",
+					"tags": ["partner"],
+					"maxAttitude": -5
+				}
+			],
+			"choices": [
+				{
+					"id": "holiday",
+					"label": "Partir en vacances ensemble",
+					"hints": ["Réconciliation probable", "Coûteux"],
+					"costs": [
+						{
+							"resource": "personalCashCents",
+							"amount": 150000
+						}
+					],
+					"effects": [
+						{
+							"op": "familyAttitude",
+							"value": 15
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -3
+						}
+					]
+				},
+				{
+					"id": "promise",
+					"label": "Promettre plus de présence",
+					"hints": ["Un sursis"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "partner",
+							"value": 5,
+							"memory": "Vous avez promis plus de présence."
+						}
+					]
+				},
+				{
+					"id": "separate",
+					"label": "Se séparer",
+					"hints": ["Une page se tourne", "Un trimestre difficile"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "separate"
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 6
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "family.dynasty_endorsement",
+			"category": "family",
+			"title": "Un parrainage familial",
+			"text": "{parent} vous présente à ses anciens collègues d’assemblée : « Mon successeur, en mieux. » Les vieux élus sourient ; la presse compare déjà.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 4,
+			"cooldownTurns": 24,
+			"unique": false,
+			"when": {
+				"op": "origin",
+				"origin": "origin.political_dynasty"
+			},
+			"actors": [
+				{
+					"role": "parent",
+					"tags": ["parent", "politician"],
+					"minAttitude": 0
+				}
+			],
+			"choices": [
+				{
+					"id": "accept",
+					"label": "Accepter le parrainage",
+					"hints": ["Réseau et appareil en hausse", "On parlera de népotisme"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 5
+						},
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": 4
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": -2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": "decline",
+					"label": "Préférer tracer votre propre route",
+					"hints": ["Indépendance affirmée", "Une vexation familiale"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "parent",
+							"value": -5,
+							"memory": "Vous avez décliné son parrainage."
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 2
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "family.sunday_lunch",
+			"category": "family",
+			"title": "Le repas du dimanche",
+			"text": "Rôti, débat sur l’actualité et commentaires de {parent} sur votre dernière apparition télévisée : « Tu as une petite mine. »",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 16,
+			"unique": false,
+			"actors": [
+				{
+					"role": "parent",
+					"tags": ["parent"]
+				}
+			],
+			"effects": [
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": -2
+				},
+				{
+					"op": "addRelation",
+					"role": "parent",
+					"value": 3
+				}
+			]
+		},
+		{
+			"id": "family.school_meeting",
+			"category": "family",
+			"title": "Une réunion de parents d’élèves",
+			"text": "La réunion parents-professeurs de {child} tombe le même soir qu’un conseil important. L’enseignant a lu vos déclarations sur l’école.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 4,
+			"cooldownTurns": 12,
+			"unique": false,
+			"actors": [
+				{
+					"role": "child",
+					"tags": ["child"]
+				}
+			],
+			"choices": [
+				{
+					"id": "go",
+					"label": "Aller à la réunion",
+					"hints": ["Votre enfant apprécie", "Le conseil se tiendra sans vous"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "familyAttitude",
+							"value": 5
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -1
+						}
+					]
+				},
+				{
+					"id": "skip",
+					"label": "Envoyer un mot d’excuse",
+					"hints": ["Rien de grave… a priori"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "child",
+							"value": -5,
+							"memory": "Vous avez manqué la réunion de parents d’élèves."
+						}
+					]
+				}
+			]
+		}
+	]
+}

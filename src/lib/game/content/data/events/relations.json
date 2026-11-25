@@ -1,0 +1,436 @@
+{
+	"events": [
+		{
+			"id": "relations.grudge_portrait",
+			"category": "relations",
+			"title": "Un portrait au vitriol",
+			"text": "{journalist} n’a pas oublié. Son nouvel article vous décrit comme « une ambition en costume trop grand », photo prise sous le plus mauvais angle à l’appui.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 0,
+			"cooldownTurns": 16,
+			"unique": false,
+			"actors": [
+				{
+					"role": "journalist",
+					"tags": ["journalist"],
+					"met": true,
+					"maxAttitude": -8
+				}
+			],
+			"effects": [
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 3
+				},
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": -2
+				}
+			]
+		},
+		{
+			"id": "relations.friendly_tip",
+			"category": "relations",
+			"title": "Un coup de fil amical",
+			"text": "{journalist} vous appelle avant le bouclage : un article peu flatteur sur votre organisation paraîtra demain. « Je vous préviens, c’est tout. Vous ne m’avez rien demandé. »",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 5,
+			"cooldownTurns": 16,
+			"unique": false,
+			"actors": [
+				{
+					"role": "journalist",
+					"tags": ["journalist"],
+					"met": true,
+					"minAttitude": 10
+				}
+			],
+			"choices": [
+				{
+					"id": "prepare",
+					"label": "Préparer une réponse dans la nuit",
+					"hints": ["Riposte prête", "Nuit blanche"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					]
+				},
+				{
+					"id": "thank",
+					"label": "Remercier chaleureusement",
+					"hints": ["La relation se renforce"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "journalist",
+							"value": 5,
+							"memory": "Vous avez su remercier pour l’avertissement."
+						}
+					]
+				},
+				{
+					"id": "ignore",
+					"label": "Laisser paraître",
+					"hints": ["Rien ne change"],
+					"costs": [],
+					"effects": []
+				}
+			]
+		},
+		{
+			"id": "relations.loyal_friend",
+			"category": "relations",
+			"title": "Un soutien inattendu",
+			"text": "Lors d’un repas de famille houleux, {friend} prend votre défense avec une fougue que personne n’attendait. Ça ne règle rien, mais ça fait du bien.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 16,
+			"unique": false,
+			"actors": [
+				{
+					"role": "friend",
+					"tags": ["friend"],
+					"met": true,
+					"minAttitude": 20
+				}
+			],
+			"effects": [
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": -4
+				}
+			]
+		},
+		{
+			"id": "relations.donor_returns",
+			"category": "relations",
+			"title": "Une nouvelle proposition",
+			"text": "{donor} revient avec une offre « gagnant-gagnant » : un financement confortable pour votre organisation, contre un mot de soutien à un projet de lotissement dont personne ne veut.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 20,
+			"unique": false,
+			"actors": [
+				{
+					"role": "donor",
+					"tags": ["donor"],
+					"met": true,
+					"minAttitude": 15,
+					"traits": ["trait.venality"]
+				}
+			],
+			"choices": [
+				{
+					"id": "accept",
+					"label": "Accepter et prononcer le mot de soutien",
+					"hints": ["Trésorerie confortable", "Promesse embarrassante"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "politicalBudgetCents",
+							"value": 60000
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 3
+						},
+						{
+							"op": "addRelation",
+							"role": "donor",
+							"value": 15,
+							"memory": "Vous avez soutenu son projet de lotissement."
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 6
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": -4
+						}
+					]
+				},
+				{
+					"id": "refuse",
+					"label": "Refuser, cette fois",
+					"hints": ["Relation refroidie"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "donor",
+							"value": -15,
+							"memory": "Vous avez refusé de soutenir son lotissement."
+						}
+					]
+				},
+				{
+					"id": "stall",
+					"label": "Promettre d’y réfléchir",
+					"hints": ["Rien n’est réglé"],
+					"costs": [],
+					"effects": []
+				}
+			]
+		},
+		{
+			"id": "relations.leaky_volunteer",
+			"category": "relations",
+			"title": "Une langue bien pendue",
+			"text": "{volunteer} a raconté à la boulangère le contenu de la dernière réunion stratégique. La boulangère l’a raconté au marché. Le marché l’a raconté à vos adversaires.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 20,
+			"unique": false,
+			"actors": [
+				{
+					"role": "volunteer",
+					"tags": ["volunteer"],
+					"met": true,
+					"traits": ["trait.indiscretion"]
+				}
+			],
+			"choices": [
+				{
+					"id": "confront",
+					"label": "Avoir une explication franche",
+					"hints": ["Vous saurez à qui vous avez affaire", "Ambiance tendue"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						},
+						{
+							"op": "revealTraits",
+							"role": "volunteer"
+						},
+						{
+							"op": "addRelation",
+							"role": "volunteer",
+							"value": -10,
+							"memory": "Vous avez reproché ses bavardages."
+						}
+					]
+				},
+				{
+					"id": "laugh",
+					"label": "En rire et changer de boulangerie",
+					"hints": ["Quelques secrets en moins"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -1
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "relations.rival_reminder",
+			"category": "relations",
+			"title": "Une pique en séance",
+			"text": "{rival} rappelle en public votre « absence remarquée » sur le dossier du rond-point des Tilleuls. La salle rit. Vous, moins.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 0,
+			"cooldownTurns": 16,
+			"unique": false,
+			"actors": [
+				{
+					"role": "rival",
+					"tags": ["rival"],
+					"met": true,
+					"maxAttitude": -5
+				}
+			],
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": -2
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				}
+			]
+		},
+		{
+			"id": "relations.section_promotion",
+			"category": "relations",
+			"title": "Une place au bureau de section",
+			"text": "{official} vous propose d’entrer au bureau de la section. L’offre est flatteuse ; reste à savoir ce que {official} attend en retour.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 24,
+			"unique": false,
+			"when": {
+				"op": "eq",
+				"stat": "player.affiliated",
+				"value": 1
+			},
+			"actors": [
+				{
+					"role": "official",
+					"tags": ["party_official"],
+					"met": true,
+					"minAttitude": 5
+				}
+			],
+			"choices": [
+				{
+					"id": "inquire",
+					"label": "Se renseigner discrètement d’abord",
+					"hints": ["Coûte un dîner bien choisi", "Vous en saurez davantage"],
+					"costs": [
+						{
+							"resource": "personalCashCents",
+							"amount": 5000
+						}
+					],
+					"effects": [
+						{
+							"op": "revealTraits",
+							"role": "official"
+						}
+					]
+				},
+				{
+					"id": "accept",
+					"label": "Accepter avec gratitude",
+					"hints": ["Influence en hausse", "Une dette de reconnaissance"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 3
+						},
+						{
+							"op": "addRelation",
+							"role": "official",
+							"value": 10,
+							"memory": "Vous avez accepté sa proposition d’entrer au bureau."
+						}
+					]
+				},
+				{
+					"id": "decline",
+					"label": "Décliner pour l’instant",
+					"hints": ["Liberté préservée"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "official",
+							"value": -5,
+							"memory": "Vous avez décliné sa proposition d’entrer au bureau."
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "relations.rival_handshake",
+			"category": "relations",
+			"title": "Une poignée de main au marché",
+			"text": "Au marché du dimanche, vous tombez nez à nez avec {rival}, votre adversaire de la dernière campagne. Les étals se taisent ; même le fromager attend la suite.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 16,
+			"unique": false,
+			"actors": [
+				{
+					"role": "rival",
+					"tags": ["rival"],
+					"met": true,
+					"maxAttitude": -5
+				}
+			],
+			"choices": [
+				{
+					"id": "reach_out",
+					"label": "Tendre la main et proposer un café",
+					"hints": ["Une rivalité peut s’apaiser", "Vos militants s’interrogent"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "rival",
+							"value": 25,
+							"memory": "Vous avez tendu la main au marché après la campagne."
+						},
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": -2
+						}
+					]
+				},
+				{
+					"id": "ignore",
+					"label": "Faire mine d’examiner les poireaux",
+					"hints": ["Rien ne change"],
+					"costs": [],
+					"effects": []
+				},
+				{
+					"id": "taunt",
+					"label": "Lancer une pique devant témoins",
+					"hints": ["Les militants adorent", "La rivalité s’envenime"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "rival",
+							"value": -10,
+							"memory": "Vous avez lancé une pique au marché, devant témoins."
+						},
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": 3
+						}
+					]
+				}
+			]
+		}
+	]
+}

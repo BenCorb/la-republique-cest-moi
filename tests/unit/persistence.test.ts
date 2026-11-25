@@ -171,6 +171,31 @@ describe('lecture validée', () => {
 				return JSON.stringify({ ...raw, state: { ...raw.state, upgrades, nextInstanceNumber: 2 } });
 			},
 			'incompatible_content'
+		],
+		[
+			// Politique de l'alpha (ROADMAP §4.1) : pas de migration, refus explicite.
+			'sauvegarde de développement du prototype (sans monde politique)',
+			() => {
+				const raw = rawEnvelope();
+				const state: Record<string, unknown> = { ...raw.state };
+				delete state.world;
+				delete state.characters;
+				return JSON.stringify({ ...raw, state });
+			},
+			'invalid_state'
+		],
+		[
+			'parti inconnu du catalogue',
+			() => {
+				const raw = rawEnvelope();
+				const world = raw.state.world as { parties: Record<string, unknown> };
+				const parties = {
+					...world.parties,
+					'party.disparu': { strength: 3, leaderId: 'character.1' }
+				};
+				return JSON.stringify({ ...raw, state: { ...raw.state, world: { ...world, parties } } });
+			},
+			'invalid_state'
 		]
 	])('refuse : %s', (_label, text, code) => {
 		const result = parseSaveText(text(), fixtureContent);

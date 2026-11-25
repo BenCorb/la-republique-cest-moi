@@ -32,7 +32,14 @@ function game(
 			turn: index,
 			steps: [],
 			economy: { producers: [], changes: [] },
+			mandates: { changes: [], stress: 0 },
+			staff: null,
+			family: null,
 			wellbeing: { contributions: [], deathCause: null },
+			characters: null,
+			world: null,
+			supports: null,
+			deadlines: null,
 			events: []
 		})),
 		resources: { ...base.resources, ...resources },
@@ -69,7 +76,9 @@ describe('achat d’une amélioration', () => {
 				id: 'test.donors',
 				instanceId: 'upgrade.1',
 				changes: [{ resource: 'politicalBudgetCents', delta: -5_000 }],
-				gauges: []
+				gauges: [],
+				target: null,
+				politics: []
 			}
 		]);
 		// Trimestre T : aucune production.

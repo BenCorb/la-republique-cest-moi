@@ -1,0 +1,234 @@
+{
+	"posts": [
+		{
+			"id": "post.chief_of_staff",
+			"label": "Direction de cabinet",
+			"description": "Tient l’agenda, filtre les appels et décide qui vous verrez. Le vrai pouvoir, disent les mauvaises langues.",
+			"tag": "staff_chief",
+			"salaryCents": 150000,
+			"requires": {
+				"op": "gte",
+				"stat": "resources.influence",
+				"value": 15
+			},
+			"unavailableReason": "Il faut au moins 15 points d’influence pour attirer quelqu’un à ce poste.",
+			"adviceCategories": ["organization", "personal"],
+			"missions": [
+				{
+					"id": "mission.chief.agenda",
+					"label": "Tenir votre agenda",
+					"description": "Dégage du temps en écartant les rendez-vous inutiles, y compris certains utiles.",
+					"effects": [],
+					"timeBonus": 10,
+					"pollPrecision": false
+				},
+				{
+					"id": "mission.chief.campaign",
+					"label": "Préparer les campagnes",
+					"description": "Coordonne bénévoles, affiches et salles des fêtes pour la prochaine élection.",
+					"effects": [
+						{
+							"op": "prepareCampaign",
+							"value": 2
+						}
+					],
+					"timeBonus": 0,
+					"pollPrecision": false
+				}
+			]
+		},
+		{
+			"id": "post.communication",
+			"label": "Communication",
+			"description": "Trouve la bonne formule, le bon angle et parfois le bon démenti.",
+			"tag": "staff_communication",
+			"salaryCents": 120000,
+			"requires": {
+				"op": "gte",
+				"stat": "resources.influence",
+				"value": 25
+			},
+			"unavailableReason": "Il faut au moins 25 points d’influence pour justifier un service de communication.",
+			"adviceCategories": ["press", "campaign"],
+			"missions": [
+				{
+					"id": "mission.communication.image",
+					"label": "Soigner votre image",
+					"description": "Portraits, petites phrases et photos au marché pour plaire aux classes moyennes.",
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 1
+						}
+					],
+					"timeBonus": 0,
+					"pollPrecision": false
+				},
+				{
+					"id": "mission.communication.press",
+					"label": "Démarcher la presse",
+					"description": "Déjeuners avec les journalistes et confidences savamment dosées.",
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 1
+						}
+					],
+					"timeBonus": 0,
+					"pollPrecision": false
+				}
+			]
+		},
+		{
+			"id": "post.treasurer",
+			"label": "Trésorerie",
+			"description": "Compte, recompte et vous rappelle que le budget n’est pas extensible.",
+			"tag": "staff_treasurer",
+			"salaryCents": 100000,
+			"requires": {
+				"op": "gte",
+				"stat": "resources.influence",
+				"value": 20
+			},
+			"unavailableReason": "Il faut au moins 20 points d’influence pour que des fonds méritent d’être gérés.",
+			"adviceCategories": ["finance"],
+			"missions": [
+				{
+					"id": "mission.treasurer.fundraising",
+					"label": "Lever des fonds",
+					"description": "Relance les adhérents et organise des dîners à couverts payants.",
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "politicalBudgetCents",
+							"value": 150000
+						}
+					],
+					"timeBonus": 0,
+					"pollPrecision": false
+				},
+				{
+					"id": "mission.treasurer.donors",
+					"label": "Entretenir les donateurs",
+					"description": "Cultive les milieux d’affaires, avec tact et petits fours.",
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 1
+						}
+					],
+					"timeBonus": 0,
+					"pollPrecision": false
+				}
+			]
+		},
+		{
+			"id": "post.political_adviser",
+			"label": "Conseil politique",
+			"description": "Anticipe les réactions, négocie les alliances et lit les sondages entre les lignes.",
+			"tag": "staff_adviser",
+			"salaryCents": 120000,
+			"requires": {
+				"op": "eq",
+				"stat": "player.affiliated",
+				"value": 1
+			},
+			"unavailableReason": "Un conseil politique n’a de sens qu’avec une étiquette.",
+			"adviceCategories": ["national", "career", "supports", "relations", "opportunity"],
+			"missions": [
+				{
+					"id": "mission.adviser.party",
+					"label": "Cultiver l’appareil",
+					"description": "Fréquente les permanences et les commissions d’investiture à votre place.",
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": 1
+						}
+					],
+					"timeBonus": 0,
+					"pollPrecision": false
+				},
+				{
+					"id": "mission.adviser.polling",
+					"label": "Sonder l’électorat",
+					"description": "Commande des études et resserre la fourchette des sondages de campagne.",
+					"effects": [],
+					"timeBonus": 0,
+					"pollPrecision": true
+				}
+			]
+		},
+		{
+			"id": "post.legal",
+			"label": "Affaires juridiques",
+			"description": "Relit tout, s’inquiète de tout, et vous évite parfois le pire.",
+			"tag": "staff_legal",
+			"salaryCents": 100000,
+			"requires": {
+				"op": "gte",
+				"stat": "player.mandates",
+				"value": 1
+			},
+			"unavailableReason": "Il faut exercer un mandat pour avoir besoin d’un service juridique.",
+			"adviceCategories": ["finance", "press"],
+			"missions": [
+				{
+					"id": "mission.legal.shield",
+					"label": "Désamorcer les ennuis",
+					"description": "Traite courriers anonymes et menaces de procès avant qu’ils ne vous empêchent de dormir.",
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -1
+						}
+					],
+					"timeBonus": 0,
+					"pollPrecision": false
+				},
+				{
+					"id": "mission.legal.compliance",
+					"label": "Veiller à la conformité",
+					"description": "Vérifie chaque note de frais : une probité rassurante pour les classes moyennes.",
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 1
+						}
+					],
+					"timeBonus": 0,
+					"pollPrecision": false
+				}
+			]
+		}
+	],
+	"profiles": [
+		{
+			"id": "profile.expert",
+			"label": "Parcours solide, franc-parler assumé",
+			"minCompetence": 65,
+			"maxCompetence": 90,
+			"traits": ["trait.bluntness"]
+		},
+		{
+			"id": "profile.connected",
+			"label": "Peu d’expérience, mais un carnet d’adresses familial",
+			"minCompetence": 15,
+			"maxCompetence": 40,
+			"traits": ["trait.network"]
+		},
+		{
+			"id": "profile.rising",
+			"label": "Brillant et pressé de monter",
+			"minCompetence": 60,
+			"maxCompetence": 85,
+			"traits": ["trait.ambition"]
+		}
+	]
+}

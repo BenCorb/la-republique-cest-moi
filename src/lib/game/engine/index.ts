@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.7.0';
+export const RULES_VERSION = '0.16.0';
 
 export {
 	START_YEAR,
@@ -62,11 +62,139 @@ export {
 	type StepRecord,
 	type WellbeingContribution,
 	type WellbeingRecord,
-	type WellbeingSource
+	type WellbeingSource,
+	type Affiliation,
+	type Ballot,
+	type BallotShare,
+	type Campaign,
+	type CampaignStatus,
+	type FamilyState,
+	type ShortlistEntry,
+	type StaffLeaveReason,
+	type StaffMember,
+	type StaffProductionRecord,
+	type StaffRecord,
+	type DeadlinesRecord,
+	type InstitutionsState,
+	type MandateEndReason,
+	type MandateInstance,
+	type Character,
+	type CharacterStatus,
+	type CharactersRecord,
+	type Memory,
+	type PeopleChange,
+	type Relationship,
+	type LeaderChange,
+	type PartyState,
+	type PoliticalChange,
+	type WorldRecord,
+	type WorldState
 } from './state.ts';
 export {
+	EMPTY_FAMILY,
+	applyFamilyEffect,
+	closeFamily,
+	createFamily,
+	isFamilyEffect,
+	livingChildren,
+	resolveFamily,
+	shiftFamily,
+	type FamilyEffect,
+	type FamilyParts,
+	type FamilyRecord
+} from './family.ts';
+export {
+	activeStaff,
+	applyStaffEffect,
+	dismissIssue,
+	hireIssue,
+	isStaffEffect,
+	missionIssue,
+	occupantOf,
+	pollingCompetence,
+	postUnlocked,
+	resolveStaffFrontier,
+	resolveStaffProduction,
+	scaledValue,
+	staffLeavesByEvent,
+	staffTimeBonus,
+	type EntourageParts,
+	type ProductionParts,
+	type StaffEffect
+} from './staff.ts';
+export {
+	computePopularity,
+	partyAffinity,
+	resolveSupports,
+	startingSupports,
+	supportReference,
+	withPopularity,
+	type FrontierSupports
+} from './supports.ts';
+export {
+	activeMandates,
+	applyCareerEffect,
+	ballotId,
+	campaignId,
+	campaignPoll,
+	campaignScore,
+	candidacyIssue,
+	careerEffectIssue,
+	opponentStrength,
+	partyPollShare,
+	rivalWins,
+	runningCampaigns,
+	conflictingMandates,
+	createCalendar,
+	holdIssue,
+	isCareerEffect,
+	mainMandate,
+	mandateIncome,
+	reservedTime,
+	resolveDeadlines,
+	scheduledBallot,
+	termId,
+	type CareerEffect,
+	type CareerParts,
+	type DeadlineParts,
+	type FrontierDeadlines
+} from './career.ts';
+export {
+	addRelation,
+	COMPETENCE_MAX,
+	COMPETENCE_MIN,
+	characterId,
+	completeCastingExists,
+	createCast,
+	displayName,
+	encounterReveal,
+	fitsSlot,
+	generatePerson,
+	meet,
+	modulatedDelta,
+	resolveCharacters,
+	revealAll,
+	sortedIds,
+	type FrontierCharacters,
+	type PersonSpec
+} from './characters.ts';
+export {
+	applyPoliticalEffect,
+	createWorld,
+	isPoliticalEffect,
+	oppositionPartyId,
+	resolvePartyReference,
+	resolveWorld,
+	type FrontierWorld,
+	type PoliticalEffect,
+	type PoliticalOutcome,
+	type WorldCreation
+} from './world.ts';
+export {
+	assignMissionCommand,
 	chooseEventCommand,
 	commitTurn,
+	type AssignMissionCommand,
 	type ChooseEventCommand,
 	type CommandError,
 	type CommandErrorCode,
@@ -80,6 +208,7 @@ export {
 } from './commands.ts';
 export {
 	RESOURCE_LABELS,
+	carryOverPlan,
 	executePlan,
 	instanceIdFor,
 	previewPlan,
@@ -119,6 +248,7 @@ export {
 } from './health.ts';
 export { careerSummary, type CareerSummary } from './selectors.ts';
 export {
+	actorName,
 	choiceAvailability,
 	describePendingEvent,
 	eventInstanceId,
@@ -135,6 +265,7 @@ export {
 	accelerate,
 	accelerationAlerts,
 	type AccelerationAlert,
+	type AccelerationAlertKind,
 	type AccelerationRequest,
 	type AccelerationResult,
 	type AccelerationStopReason

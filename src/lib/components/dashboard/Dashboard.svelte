@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Gauge from '#lib/components/common/Gauge.svelte';
+	import SpanSummary from './SpanSummary.svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 
 	/**
@@ -12,6 +13,7 @@
 
 	let { session }: Props = $props();
 	const view = $derived(session.snapshot.view);
+	const acceleration = $derived(session.snapshot.acceleration);
 	const lastQuarter = $derived(view?.journal[0] ?? null);
 	const active = $derived(
 		view?.producers.filter((producer) => producer.status === 'active').length ?? 0
@@ -23,6 +25,9 @@
 
 {#if view}
 	<div class="grid gap-5 lg:grid-cols-2">
+		{#if acceleration && !acceleration.running && acceleration.summary}
+			<SpanSummary {acceleration} onDismiss={() => session.controller.dismissAcceleration()} />
+		{/if}
 		<section class="card" aria-labelledby="situation-title">
 			<h2 id="situation-title" class="section-title">Situation</h2>
 			<table class="mt-3 w-full text-sm">
@@ -57,6 +62,24 @@
 				Un trimestre trop chargé fait monter le stress ; un stress élevé use la santé. Le repos et
 				les vacances aident à récupérer.
 			</p>
+		</section>
+
+		<section class="card flex flex-col gap-1 lg:col-span-2" aria-labelledby="profil-title">
+			<h2 id="profil-title" class="section-title">Profil</h2>
+			<p class="text-sm" data-testid="profile">
+				{view.profile.origin} · {view.profile.profession} · {view.profile.family}
+			</p>
+		</section>
+
+		<section class="card flex flex-col gap-3" aria-labelledby="national-title">
+			<h2 id="national-title" class="section-title">Contexte national</h2>
+			<p class="text-sm">
+				Gouvernement : <span class="font-semibold">{view.world.governingParty}</span> · Vous :
+				<span class="font-semibold">{view.world.affiliation}</span>
+			</p>
+			{#each view.world.indicators as indicator (indicator.id)}
+				<Gauge name={indicator.name} gauge={indicator.gauge} />
+			{/each}
 		</section>
 
 		<section class="card" aria-labelledby="orga-title">

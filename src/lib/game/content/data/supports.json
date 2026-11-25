@@ -1,0 +1,100 @@
+{
+	"groups": [
+		{
+			"id": "support.working_class",
+			"label": "Classes populaires",
+			"description": "Ouvriers, employés, chômeurs : attendent du concret, se méfient des promesses et des cravates.",
+			"kind": "electoral",
+			"weight": 40,
+			"startingSupport": 12,
+			"preferences": {
+				"economy": -50,
+				"society": 15,
+				"sovereignty": 35
+			},
+			"judgesParty": true,
+			"affiliationBonus": 0,
+			"mandateBonus": 3
+		},
+		{
+			"id": "support.middle_class",
+			"label": "Classes moyennes",
+			"description": "Cadres, enseignants, artisans : votent beaucoup, hésitent longtemps et lisent les programmes, parfois.",
+			"kind": "electoral",
+			"weight": 40,
+			"startingSupport": 12,
+			"preferences": {
+				"economy": 5,
+				"society": -10,
+				"sovereignty": -15
+			},
+			"judgesParty": true,
+			"affiliationBonus": 0,
+			"mandateBonus": 3
+		},
+		{
+			"id": "support.wealthy",
+			"label": "Électeurs aisés",
+			"description": "Professions libérales et rentiers : peu nombreux, très attentifs à la fiscalité, toujours présents au bureau de vote.",
+			"kind": "electoral",
+			"weight": 20,
+			"startingSupport": 10,
+			"preferences": {
+				"economy": 60,
+				"society": 10,
+				"sovereignty": -35
+			},
+			"judgesParty": true,
+			"affiliationBonus": 0,
+			"mandateBonus": 2
+		},
+		{
+			"id": "support.activists",
+			"label": "Militants",
+			"description": "Ceux qui collent les affiches à minuit et attendent qu’on s’en souvienne.",
+			"kind": "influence",
+			"weight": 0,
+			"startingSupport": 5,
+			"preferences": {
+				"economy": 0,
+				"society": 0,
+				"sovereignty": 0
+			},
+			"judgesParty": false,
+			"affiliationBonus": 20,
+			"mandateBonus": 0
+		},
+		{
+			"id": "support.apparatus",
+			"label": "Appareil du parti",
+			"description": "Cadres, permanents et grands électeurs internes : distribuent investitures et places sur les listes.",
+			"kind": "influence",
+			"weight": 0,
+			"startingSupport": 0,
+			"preferences": {
+				"economy": 0,
+				"society": 0,
+				"sovereignty": 0
+			},
+			"judgesParty": false,
+			"affiliationBonus": 15,
+			"mandateBonus": 4
+		},
+		{
+			"id": "support.business",
+			"label": "Milieux d’affaires",
+			"description": "Chefs d’entreprise et réseaux fortunés : financent volontiers ceux qui leur ressemblent.",
+			"kind": "influence",
+			"weight": 0,
+			"startingSupport": 8,
+			"preferences": {
+				"economy": 70,
+				"society": 0,
+				"sovereignty": -20
+			},
+			"judgesParty": true,
+			"affiliationBonus": 0,
+			"mandateBonus": 3
+		}
+	]
+}

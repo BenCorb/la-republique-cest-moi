@@ -37,15 +37,438 @@ export const fixtureBalance = {
 	startingResources: { influence: 0, politicalBudgetCents: 10_000, personalCashCents: 100_000 },
 	wellbeing: neutralWellbeing,
 	// Aucun tirage ordinaire par défaut : les tests d'événements l'activent (`withEvents`).
-	events: { ordinaryDrawsPerTurn: 0, ordinaryEventChance: 0 }
+	events: { ordinaryDrawsPerTurn: 0, ordinaryEventChance: 0 },
+	// Monde immobile par défaut : les tests du monde l'activent (`withWorld`).
+	world: neutralWorld(),
+	// Personnages immobiles par défaut : ni retraite, ni révélation fortuite.
+	characters: {
+		traitsPerCharacter: 2,
+		retirementAge: 150,
+		replacementMinAge: 30,
+		replacementMaxAge: 40,
+		revealChancePerEncounter: 0,
+		maxMemories: 3
+	},
+	// Scrutins sans aléa par défaut : le parti le plus fort l'emporte.
+	elections: { voteVolatility: 0, momentum: 1, newGovernmentStability: 60, alertLeadTurns: 2 },
+	// Soutiens immobiles par défaut : les tests de soutiens activent le retour à la référence.
+	supports: { reversionPercent: 0, partyAlignmentMax: 10, influencePerPoint: 10, notorietyMax: 20 },
+	// Scrutin du joueur sans aléa par défaut ; préparation passive et stress de campagne nuls.
+	campaigns: {
+		popularityWeightPercent: 50,
+		partyWeightPercent: 50,
+		preparationWeightPercent: 100,
+		preparationCap: 20,
+		incumbentBonus: 5,
+		volatility: 0,
+		passivePreparation: 0,
+		stressPerTurn: 0,
+		investitureMinApparatus: 10,
+		apparatusGroup: 'support.members',
+		victoryInfluence: 5,
+		defeatInfluence: 1,
+		defeatStress: 4,
+		rivalExperienceBonus: 3,
+		rivalExperienceCap: 3,
+		rivalryAttitude: -8,
+		opponentMaxAge: 72
+	},
+	entourage: {
+		candidatesPerPost: 2,
+		competenceReference: 50,
+		hireAttitude: 10,
+		unpaidAttitude: -5,
+		dismissAttitude: -20,
+		resignAttitude: -30,
+		preciseAdviceCompetence: 70,
+		fairAdviceCompetence: 40,
+		poorAdviceErrorChance: 0.5
+	},
+	family: {
+		childCostCents: 10_000,
+		childIndependenceAge: 20,
+		neglectThreshold: 90,
+		neglectAttitude: -2,
+		supportiveAttitude: 15,
+		hostileAttitude: -15,
+		partnerStress: 1,
+		partnerAgeSpread: 5
+	}
+};
+
+/**
+ * Profils de test : par défaut, une origine et une profession sans effet ni
+ * famille (les autres tests restent indépendants de la création) ; une origine
+ * avec famille et héritage pour les tests de famille.
+ */
+export const fixtureProfiles = {
+	origins: [
+		{
+			id: 'origin.neutral',
+			label: 'Neutre',
+			description: 'Origine de test sans effet.',
+			effects: [],
+			family: [],
+			inheritanceCents: 0
+		},
+		{
+			id: 'origin.heirs',
+			label: 'Héritiers',
+			description: 'Origine de test avec famille.',
+			effects: [
+				{ op: 'addResource', resource: 'personalCashCents', value: 50_000 },
+				{ op: 'addSupport', group: 'support.owners', value: 10 }
+			],
+			family: [
+				{ relation: 'parent', minAge: 60, maxAge: 60, attitude: 20, tags: [] },
+				{ relation: 'parent', minAge: 60, maxAge: 60, attitude: 20, tags: ['politician'] },
+				{ relation: 'sibling', minAge: 28, maxAge: 28, attitude: 5, tags: [] }
+			],
+			inheritanceCents: 1_000_000
+		}
+	],
+	professions: [
+		{
+			id: 'profession.none',
+			label: 'Aucune',
+			description: 'Profession de test sans effet.',
+			effects: []
+		},
+		{
+			id: 'profession.press',
+			label: 'Presse',
+			description: 'Profession de test.',
+			effects: [
+				{ op: 'addResource', resource: 'influence', value: 6 },
+				{ op: 'addStat', stat: 'player.stress', value: 2 }
+			]
+		}
+	],
+	defaults: { origin: 'origin.neutral', profession: 'profession.none' }
+};
+
+/** Deux postes de test : un ouvert avec de l'influence, un réservé aux élus. */
+export const fixtureEntourage = {
+	posts: [
+		{
+			id: 'post.aide',
+			label: 'Assistance',
+			description: 'Poste de test ouvert dès 50 points d’influence.',
+			tag: 'staff_aide',
+			salaryCents: 1_000,
+			// Fermé par défaut : aucune présélection (donc aucun tirage) dans les autres tests.
+			requires: { op: 'gte', stat: 'resources.influence', value: 50 },
+			unavailableReason: 'Il faut 50 points d’influence.',
+			adviceCategories: ['personal'],
+			missions: [
+				{
+					id: 'mission.aide.budget',
+					label: 'Collecter',
+					description: 'Rapporte du budget.',
+					effects: [{ op: 'addResource', resource: 'politicalBudgetCents', value: 2_000 }],
+					timeBonus: 0,
+					pollPrecision: false
+				},
+				{
+					id: 'mission.aide.agenda',
+					label: 'Agenda',
+					description: 'Libère du temps.',
+					effects: [],
+					timeBonus: 10,
+					pollPrecision: false
+				}
+			]
+		},
+		{
+			id: 'post.lawyer',
+			label: 'Conseil juridique',
+			description: 'Poste de test réservé aux élus.',
+			tag: 'staff_lawyer',
+			salaryCents: 1_000,
+			requires: { op: 'gte', stat: 'player.mandates', value: 1 },
+			unavailableReason: 'Réservé aux élus.',
+			adviceCategories: [],
+			missions: [
+				{
+					id: 'mission.lawyer.calm',
+					label: 'Apaiser',
+					description: 'Retire du stress.',
+					effects: [{ op: 'addStat', stat: 'player.stress', value: -2 }],
+					timeBonus: 0,
+					pollPrecision: false
+				}
+			]
+		}
+	],
+	profiles: [
+		{
+			id: 'profile.expert',
+			label: 'Expert',
+			minCompetence: 80,
+			maxCompetence: 90,
+			traits: ['trait.open']
+		},
+		{ id: 'profile.novice', label: 'Novice', minCompetence: 10, maxCompetence: 20, traits: [] }
+	]
+};
+
+/** Deux groupes électoraux (poids 3 et 1) et un groupe d'influence. */
+export const fixtureSupports = {
+	groups: [
+		{
+			id: 'support.workers',
+			label: 'Travailleurs',
+			description: 'Groupe électoral de test, plutôt interventionniste.',
+			kind: 'electoral',
+			weight: 3,
+			startingSupport: 20,
+			preferences: { economy: -50, society: 0, sovereignty: 0 },
+			judgesParty: true,
+			affiliationBonus: 0,
+			mandateBonus: 2
+		},
+		{
+			id: 'support.owners',
+			label: 'Possédants',
+			description: 'Groupe électoral de test, plutôt libéral.',
+			kind: 'electoral',
+			weight: 1,
+			startingSupport: 40,
+			preferences: { economy: 50, society: 0, sovereignty: 0 },
+			judgesParty: true,
+			affiliationBonus: 0,
+			mandateBonus: 0
+		},
+		{
+			id: 'support.members',
+			label: 'Militants',
+			description: 'Groupe d’influence de test.',
+			kind: 'influence',
+			weight: 0,
+			startingSupport: 0,
+			preferences: { economy: 0, society: 0, sovereignty: 0 },
+			judgesParty: false,
+			affiliationBonus: 20,
+			mandateBonus: 0
+		}
+	]
+};
+
+/** Calendrier et mandats de test : scrutins éloignés pour ne pas gêner les autres tests. */
+export const fixtureCareer = {
+	elections: [
+		{
+			id: 'election.local',
+			label: 'Élection locale',
+			firstTurn: 40,
+			cycleTurns: 24,
+			filingLeadTurns: 2,
+			scope: 'local',
+			decidesGovernment: false,
+			minAge: 18,
+			grants: 'mandate.councillor',
+			bonusGrant: { mandate: 'mandate.mayor', minPercent: 60 },
+			requiresAnyMandate: [],
+			rivalStrength: 30
+		},
+		{
+			id: 'election.national',
+			label: 'Élection nationale',
+			firstTurn: 60,
+			cycleTurns: 20,
+			filingLeadTurns: 2,
+			scope: 'national',
+			decidesGovernment: true,
+			minAge: 30,
+			grants: 'mandate.deputy',
+			requiresAnyMandate: ['mandate.councillor'],
+			rivalStrength: 40
+		}
+	],
+	mandates: [
+		{
+			id: 'mandate.councillor',
+			label: 'Siège local',
+			rank: 10,
+			election: 'election.local',
+			endsWithGovernment: false,
+			requires: [],
+			timePerTurn: 10,
+			income: [{ resource: 'influence', amount: 1 }],
+			stressPerTurn: 0
+		},
+		{
+			id: 'mandate.mayor',
+			label: 'Mairie',
+			rank: 30,
+			election: 'election.local',
+			endsWithGovernment: false,
+			requires: ['mandate.councillor'],
+			timePerTurn: 20,
+			income: [{ resource: 'personalCashCents', amount: 50_000 }],
+			stressPerTurn: 2
+		},
+		{
+			id: 'mandate.deputy',
+			label: 'Siège national',
+			rank: 40,
+			election: 'election.national',
+			endsWithGovernment: false,
+			requires: [],
+			timePerTurn: 30,
+			income: [{ resource: 'influence', amount: 4 }],
+			stressPerTurn: 1
+		},
+		{
+			id: 'mandate.minister',
+			label: 'Ministère',
+			rank: 60,
+			election: null,
+			endsWithGovernment: true,
+			requires: [],
+			timePerTurn: 40,
+			income: [{ resource: 'influence', amount: 6 }],
+			stressPerTurn: 3
+		}
+	],
+	institutions: {
+		incompatibilities: [['mandate.minister', 'mandate.deputy']],
+		maxMandates: 3
+	}
+};
+
+export const fixtureTraits = {
+	traits: [
+		{
+			id: 'trait.open',
+			label: 'Franchise',
+			description: 'Trait public de test.',
+			hidden: false,
+			positiveRelationPercent: 100,
+			negativeRelationPercent: 100,
+			campaignBonus: 2
+		},
+		{
+			id: 'trait.grudge',
+			label: 'Rancune',
+			description: 'Trait caché de test : double les rancœurs.',
+			hidden: true,
+			positiveRelationPercent: 100,
+			negativeRelationPercent: 200,
+			campaignBonus: 0
+		},
+		{
+			id: 'trait.loyal',
+			label: 'Loyauté',
+			description: 'Trait caché de test : amplifie la gratitude.',
+			hidden: true,
+			positiveRelationPercent: 150,
+			negativeRelationPercent: 50,
+			campaignBonus: 0
+		}
+	]
+};
+
+/** Évolution du monde neutre : ni retour à la référence, ni aléa, ni changement de direction. */
+export function neutralWorld() {
+	return {
+		startingIndicators: { economy: 50, socialClimate: 50, stability: 50 },
+		indicatorBaseline: 50,
+		indicatorReversionPercent: 0,
+		indicatorVolatility: 0,
+		minPartyStrength: 1,
+		maxPartyStrength: 60,
+		strengthReversionPercent: 0,
+		strengthVolatility: 0,
+		governingIndicatorDivisor: 5,
+		leaderChangeChance: 0,
+		leaderMinAge: 40,
+		leaderMaxAge: 60,
+		leaderRetirementAge: 200
+	};
+}
+
+export const fixtureWorld = {
+	axes: [
+		{
+			id: 'economy',
+			label: 'Économie',
+			negativeLabel: 'interventionniste',
+			positiveLabel: 'libéral'
+		},
+		{
+			id: 'society',
+			label: 'Société',
+			negativeLabel: 'progressiste',
+			positiveLabel: 'conservateur'
+		},
+		{
+			id: 'sovereignty',
+			label: 'Souveraineté',
+			negativeLabel: 'pro-européen',
+			positiveLabel: 'souverainiste'
+		}
+	],
+	parties: [
+		{
+			id: 'party.left',
+			name: 'Parti de Gauche Test',
+			acronym: 'PGT',
+			family: 'Gauche',
+			description: 'Parti de test.',
+			positions: { economy: -50, society: -40, sovereignty: -20 },
+			baseStrength: 30
+		},
+		{
+			id: 'party.right',
+			name: 'Parti de Droite Test',
+			acronym: 'PDT',
+			family: 'Droite',
+			description: 'Parti de test.',
+			positions: { economy: 50, society: 40, sovereignty: 20 },
+			baseStrength: 25
+		},
+		{
+			id: 'party.small',
+			name: 'Petit Parti Test',
+			acronym: 'PPT',
+			family: 'Centre',
+			description: 'Parti de test.',
+			positions: { economy: 0, society: 0, sovereignty: -60 },
+			baseStrength: 5
+		}
+	],
+	startingGoverningParty: 'party.left',
+	names: {
+		first: ['Alix', 'Camille', 'Dominique', 'Sacha', 'Claude', 'Maxime'],
+		last: ['Martin', 'Bernard', 'Durand', 'Petit', 'Moreau', 'Laurent']
+	}
 };
 
 export const fixtureCast = {
 	cast: [
-		{ id: 'test.doc_a', name: 'Docteure A', tags: ['medical'] },
-		{ id: 'test.doc_b', name: 'Docteur B', tags: ['medical'] },
-		{ id: 'test.reporter', name: 'Reporter', tags: ['journalist'] },
-		{ id: 'test.cousin', name: 'Cousin', tags: ['family'] }
+		{
+			id: 'test.doc_a',
+			name: 'Docteure A',
+			tags: ['medical'],
+			age: 50,
+			renewal: { epithet: 'médecin' }
+		},
+		{
+			id: 'test.doc_b',
+			name: 'Docteur B',
+			tags: ['medical'],
+			age: 40,
+			renewal: { epithet: 'médecin' }
+		},
+		{
+			id: 'test.reporter',
+			name: 'Reporter',
+			tags: ['journalist'],
+			age: 35,
+			renewal: { epithet: 'reporter' }
+		},
+		{ id: 'test.cousin', name: 'Cousin', tags: ['family'], age: 30 }
 	]
 };
 
@@ -349,7 +772,13 @@ function load(): Content {
 		upgrades: fixtureUpgrades,
 		balance: fixtureBalance,
 		cast: fixtureCast,
-		events: fixtureEvents
+		events: fixtureEvents,
+		world: fixtureWorld,
+		traits: fixtureTraits,
+		career: fixtureCareer,
+		supports: fixtureSupports,
+		entourage: fixtureEntourage,
+		profiles: fixtureProfiles
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;
@@ -383,6 +812,39 @@ export function withEvents(
 			(id) => eventIds.includes(id) || base.events[id]?.trigger === 'followUp'
 		),
 		balance: { ...base.balance, events }
+	};
+}
+
+/** Contenu de test avec des paramètres de personnages modifiés. */
+export function withCharacters(changes: Partial<Content['balance']['characters']>): Content {
+	return {
+		...fixtureContent,
+		balance: {
+			...fixtureContent.balance,
+			characters: { ...fixtureContent.balance.characters, ...changes }
+		}
+	};
+}
+
+/** Contenu de test avec une évolution des soutiens modifiée. */
+export function withSupports(changes: Partial<Content['balance']['supports']>): Content {
+	return {
+		...fixtureContent,
+		balance: {
+			...fixtureContent.balance,
+			supports: { ...fixtureContent.balance.supports, ...changes }
+		}
+	};
+}
+
+/** Contenu de test avec une évolution du monde modifiée. */
+export function withWorld(changes: Partial<Content['balance']['world']>): Content {
+	return {
+		...fixtureContent,
+		balance: {
+			...fixtureContent.balance,
+			world: { ...fixtureContent.balance.world, ...changes }
+		}
 	};
 }
 

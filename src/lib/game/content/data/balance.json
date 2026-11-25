@@ -65,5 +65,84 @@
 	"events": {
 		"ordinaryDrawsPerTurn": 1,
 		"ordinaryEventChance": 0.3
+	},
+	"world": {
+		"startingIndicators": {
+			"economy": 58,
+			"socialClimate": 50,
+			"stability": 55
+		},
+		"indicatorBaseline": 50,
+		"indicatorReversionPercent": 5,
+		"indicatorVolatility": 4,
+		"minPartyStrength": 1,
+		"maxPartyStrength": 45,
+		"strengthReversionPercent": 10,
+		"strengthVolatility": 1,
+		"governingIndicatorDivisor": 5,
+		"leaderChangeChance": 0.012,
+		"leaderMinAge": 42,
+		"leaderMaxAge": 66,
+		"leaderRetirementAge": 77
+	},
+	"characters": {
+		"traitsPerCharacter": 2,
+		"retirementAge": 70,
+		"replacementMinAge": 26,
+		"replacementMaxAge": 55,
+		"revealChancePerEncounter": 0.3,
+		"maxMemories": 6
+	},
+	"elections": {
+		"voteVolatility": 3,
+		"momentum": 1,
+		"newGovernmentStability": 62,
+		"alertLeadTurns": 4
+	},
+	"supports": {
+		"reversionPercent": 6,
+		"partyAlignmentMax": 12,
+		"influencePerPoint": 5,
+		"notorietyMax": 30
+	},
+	"campaigns": {
+		"popularityWeightPercent": 40,
+		"partyWeightPercent": 60,
+		"preparationWeightPercent": 50,
+		"preparationCap": 30,
+		"incumbentBonus": 6,
+		"volatility": 8,
+		"passivePreparation": 1,
+		"stressPerTurn": 1,
+		"investitureMinApparatus": 15,
+		"apparatusGroup": "support.apparatus",
+		"victoryInfluence": 5,
+		"defeatInfluence": 1,
+		"defeatStress": 4,
+		"rivalExperienceBonus": 2,
+		"rivalExperienceCap": 2,
+		"rivalryAttitude": -8,
+		"opponentMaxAge": 72
+	},
+	"entourage": {
+		"candidatesPerPost": 3,
+		"competenceReference": 60,
+		"hireAttitude": 10,
+		"unpaidAttitude": -5,
+		"dismissAttitude": -20,
+		"resignAttitude": -30,
+		"preciseAdviceCompetence": 70,
+		"fairAdviceCompetence": 45,
+		"poorAdviceErrorChance": 0.35
+	},
+	"family": {
+		"childCostCents": 40000,
+		"childIndependenceAge": 20,
+		"neglectThreshold": 90,
+		"neglectAttitude": -2,
+		"supportiveAttitude": 15,
+		"hostileAttitude": -15,
+		"partnerStress": 1,
+		"partnerAgeSpread": 5
 	}
 }

@@ -11,8 +11,14 @@ import {
 	fixtureActions,
 	fixtureBalance,
 	fixtureCast,
+	fixtureEntourage,
 	fixtureEvents,
-	fixtureUpgrades
+	fixtureProfiles,
+	fixtureCareer,
+	fixtureSupports,
+	fixtureTraits,
+	fixtureUpgrades,
+	fixtureWorld
 } from '../fixtures/content.ts';
 
 const temporaryDirs: string[] = [];
@@ -58,7 +64,18 @@ describe('validation de contenu', () => {
 		const report = validateGameContent(DEFAULT_CONTENT_DIR);
 		expect(report.issues).toEqual([]);
 		expect(report.files).toEqual(
-			expect.arrayContaining(['actions.json', 'upgrades.json', 'balance.json', 'cast.json'])
+			expect.arrayContaining([
+				'actions.json',
+				'upgrades.json',
+				'balance.json',
+				'cast.json',
+				'world.json',
+				'traits.json',
+				'career.json',
+				'supports.json',
+				'entourage.json',
+				'profiles.json'
+			])
 		);
 	});
 
@@ -68,7 +85,13 @@ describe('validation de contenu', () => {
 		expect(validateGameContent(dir).issues).toEqual([
 			{ file: 'actions.json', message: 'catalogue obligatoire manquant' },
 			{ file: 'upgrades.json', message: 'catalogue obligatoire manquant' },
-			{ file: 'cast.json', message: 'catalogue obligatoire manquant' }
+			{ file: 'cast.json', message: 'catalogue obligatoire manquant' },
+			{ file: 'world.json', message: 'catalogue obligatoire manquant' },
+			{ file: 'traits.json', message: 'catalogue obligatoire manquant' },
+			{ file: 'career.json', message: 'catalogue obligatoire manquant' },
+			{ file: 'supports.json', message: 'catalogue obligatoire manquant' },
+			{ file: 'entourage.json', message: 'catalogue obligatoire manquant' },
+			{ file: 'profiles.json', message: 'catalogue obligatoire manquant' }
 		]);
 	});
 
@@ -81,6 +104,12 @@ describe('validation de contenu', () => {
 		writeFileSync(join(dir, 'balance.json'), JSON.stringify(fixtureBalance));
 		writeFileSync(join(dir, 'upgrades.json'), JSON.stringify(fixtureUpgrades));
 		writeFileSync(join(dir, 'cast.json'), JSON.stringify(fixtureCast));
+		writeFileSync(join(dir, 'world.json'), JSON.stringify(fixtureWorld));
+		writeFileSync(join(dir, 'traits.json'), JSON.stringify(fixtureTraits));
+		writeFileSync(join(dir, 'career.json'), JSON.stringify(fixtureCareer));
+		writeFileSync(join(dir, 'supports.json'), JSON.stringify(fixtureSupports));
+		writeFileSync(join(dir, 'entourage.json'), JSON.stringify(fixtureEntourage));
+		writeFileSync(join(dir, 'profiles.json'), JSON.stringify(fixtureProfiles));
 		mkdirSync(join(dir, 'events'));
 		for (const [file, catalog] of Object.entries(fixtureEvents)) {
 			writeFileSync(join(dir, file), JSON.stringify(catalog));

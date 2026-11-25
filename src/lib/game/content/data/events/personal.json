@@ -38,6 +38,12 @@
 							"op": "addResource",
 							"resource": "influence",
 							"value": -2
+						},
+						{
+							"op": "addRelation",
+							"role": "doctor",
+							"value": 5,
+							"memory": "Vous avez suivi ses conseils."
 						}
 					]
 				},
@@ -51,6 +57,12 @@
 							"op": "addStat",
 							"stat": "player.stress",
 							"value": 4
+						},
+						{
+							"op": "addRelation",
+							"role": "doctor",
+							"value": -5,
+							"memory": "Vous avez ignoré ses conseils."
 						}
 					]
 				}
@@ -99,6 +111,12 @@
 							"op": "addResource",
 							"resource": "influence",
 							"value": -3
+						},
+						{
+							"op": "addRelation",
+							"role": "doctor",
+							"value": 5,
+							"memory": "Vous avez accepté l’arrêt de travail prescrit."
 						}
 					]
 				},
@@ -117,6 +135,12 @@
 							"op": "addStat",
 							"stat": "player.health",
 							"value": -3
+						},
+						{
+							"op": "addRelation",
+							"role": "doctor",
+							"value": -8,
+							"memory": "Vous avez quitté l’hôpital contre son avis."
 						}
 					]
 				}
@@ -185,6 +209,12 @@
 							"op": "addStat",
 							"stat": "player.stress",
 							"value": -8
+						},
+						{
+							"op": "addRelation",
+							"role": "friend",
+							"value": 15,
+							"memory": "Vous avez honoré le dîner entre vieux amis."
 						}
 					]
 				},
@@ -198,6 +228,12 @@
 							"op": "addStat",
 							"stat": "player.stress",
 							"value": 2
+						},
+						{
+							"op": "addRelation",
+							"role": "friend",
+							"value": -10,
+							"memory": "Vous avez annulé le dîner pour une réunion."
 						}
 					]
 				}
@@ -241,6 +277,22 @@
 							"op": "addResource",
 							"resource": "politicalBudgetCents",
 							"value": -15000
+						},
+						{
+							"op": "addRelation",
+							"role": "relative",
+							"value": 20,
+							"memory": "Vous lui avez offert un poste."
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": -3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": -3
 						}
 					],
 					"followUp": {
@@ -263,6 +315,12 @@
 							"op": "addResource",
 							"resource": "influence",
 							"value": 1
+						},
+						{
+							"op": "addRelation",
+							"role": "relative",
+							"value": -5,
+							"memory": "Vous avez soumis sa candidature à une sélection ouverte."
 						}
 					]
 				},
@@ -276,6 +334,12 @@
 							"op": "addStat",
 							"stat": "player.stress",
 							"value": 4
+						},
+						{
+							"op": "addRelation",
+							"role": "relative",
+							"value": -20,
+							"memory": "Vous lui avez refusé un poste."
 						}
 					]
 				}

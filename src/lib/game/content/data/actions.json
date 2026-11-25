@@ -18,6 +18,11 @@
 					"resource": "influence",
 					"min": 1,
 					"max": 3
+				},
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": 1
 				}
 			]
 		},
@@ -33,6 +38,11 @@
 					"op": "addResource",
 					"resource": "influence",
 					"value": 3
+				},
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
+					"value": 1
 				}
 			]
 		},
@@ -65,6 +75,16 @@
 					"op": "addStat",
 					"stat": "player.stress",
 					"value": 6
+				},
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": 2
+				},
+				{
+					"op": "addSupport",
+					"group": "support.middle_class",
+					"value": 1
 				}
 			]
 		},
@@ -92,6 +112,11 @@
 					"op": "addStat",
 					"stat": "player.stress",
 					"value": 2
+				},
+				{
+					"op": "addSupport",
+					"group": "support.business",
+					"value": 1
 				}
 			]
 		},
@@ -167,6 +192,411 @@
 					"op": "addStat",
 					"stat": "player.health",
 					"value": 2
+				},
+				{
+					"op": "familyAttitude",
+					"value": 5
+				}
+			]
+		},
+		{
+			"id": "party.join",
+			"label": "Adhérer à un parti",
+			"description": "Remplir le bulletin, régler la cotisation et recevoir une carte plastifiée qui vous engage pour la vie, ou jusqu’au prochain congrès.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [
+				{
+					"resource": "personalCashCents",
+					"amount": 3000
+				}
+			],
+			"requires": {
+				"op": "eq",
+				"stat": "player.affiliated",
+				"value": 0
+			},
+			"unavailableReason": "Vous avez déjà une carte : rendez-la avant d’en prendre une autre.",
+			"effects": [
+				{
+					"op": "joinParty",
+					"party": "target"
+				},
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 2
+				},
+				{
+					"op": "addSupport",
+					"group": "support.activists",
+					"value": 5
+				},
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
+					"value": 3
+				}
+			],
+			"target": "party"
+		},
+		{
+			"id": "party.section_meeting",
+			"label": "Assister à la réunion de section",
+			"description": "Deux heures sur l’ordre du jour, une heure sur la motion de soutien, dix minutes de vrai débat près de la machine à café.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "eq",
+				"stat": "player.affiliated",
+				"value": 1
+			},
+			"unavailableReason": "Il faut être membre d’un parti pour assister à ses réunions.",
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "influence",
+					"min": 1,
+					"max": 3
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 1
+				},
+				{
+					"op": "addSupport",
+					"group": "support.activists",
+					"value": 2
+				},
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "party.leave",
+			"label": "Rendre sa carte",
+			"description": "Annoncer votre départ par un communiqué digne, sobre, et relu sept fois. Les anciens camarades, eux, ne relisent rien.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "eq",
+				"stat": "player.affiliated",
+				"value": 1
+			},
+			"unavailableReason": "Vous n’êtes membre d’aucun parti.",
+			"effects": [
+				{
+					"op": "leaveParty"
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 3
+				},
+				{
+					"op": "addSupport",
+					"group": "support.activists",
+					"value": -10
+				},
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
+					"value": -10
+				}
+			]
+		},
+		{
+			"id": "mandate.resign",
+			"label": "Démissionner d’un mandat",
+			"description": "Libérer du temps et un siège, en promettant de « se consacrer pleinement » à autre chose. Le suppléant, lui, se consacre déjà pleinement à sa joie.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "gte",
+				"stat": "player.mandates",
+				"value": 1
+			},
+			"unavailableReason": "Vous n’exercez aucun mandat.",
+			"effects": [
+				{
+					"op": "endMandate",
+					"mandate": "target"
+				}
+			],
+			"target": "mandate"
+		},
+		{
+			"id": "campaign.declare",
+			"label": "Déclarer sa candidature",
+			"description": "Une conférence de presse, un slogan testé auprès de trois cousins et un dépôt de candidature en préfecture. Plus tôt on se déclare, plus longtemps on est exposé.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [
+				{
+					"resource": "politicalBudgetCents",
+					"amount": 5000
+				}
+			],
+			"effects": [
+				{
+					"op": "declareCandidacy"
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 1
+				}
+			],
+			"target": "ballot"
+		},
+		{
+			"id": "campaign.canvass",
+			"label": "Faire du porte-à-porte",
+			"description": "Sonner, sourire, laisser un tract, éviter le chien. Recommencer quatre cents fois.",
+			"timeCost": 25,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "gte",
+				"stat": "player.campaigning",
+				"value": 1
+			},
+			"unavailableReason": "Il faut être en campagne.",
+			"effects": [
+				{
+					"op": "prepareCampaign",
+					"value": 3
+				},
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "campaign.rally",
+			"label": "Tenir un meeting de campagne",
+			"description": "Une salle des fêtes, une sono capricieuse, un discours applaudi aux bons endroits par des militants bien placés.",
+			"timeCost": 35,
+			"maxPerTurn": 1,
+			"costs": [
+				{
+					"resource": "politicalBudgetCents",
+					"amount": 40000
+				}
+			],
+			"requires": {
+				"op": "gte",
+				"stat": "player.campaigning",
+				"value": 1
+			},
+			"unavailableReason": "Il faut être en campagne.",
+			"effects": [
+				{
+					"op": "prepareCampaign",
+					"value": 6
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				},
+				{
+					"op": "addSupport",
+					"group": "support.middle_class",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "staff.hire",
+			"label": "Recruter un collaborateur",
+			"description": "Un entretien, une poignée de main et une promesse de « missions passionnantes ». Le salaire, lui, est bien réel.",
+			"timeCost": 10,
+			"maxPerTurn": 2,
+			"costs": [],
+			"effects": [
+				{
+					"op": "hireStaff"
+				}
+			],
+			"target": "candidate"
+		},
+		{
+			"id": "staff.dismiss",
+			"label": "Se séparer d’un collaborateur",
+			"description": "Un entretien pénible, un pot de départ gêné et quelqu’un qui se souviendra longtemps de vous.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [],
+			"effects": [
+				{
+					"op": "dismissStaff"
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				}
+			],
+			"target": "staff"
+		},
+		{
+			"id": "profession.union_office",
+			"label": "Tenir la permanence syndicale",
+			"description": "Écouter les collègues, remplir des dossiers et rappeler à la direction l’existence du Code du travail.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "profession",
+				"profession": "profession.factory"
+			},
+			"unavailableReason": "Réservé à qui vient de l’usine et des chantiers.",
+			"effects": [
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": 2
+				},
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "profession.evening_classes",
+			"label": "Donner des cours du soir",
+			"description": "Expliquer la règle de trois à des adultes fatigués, et repartir avec quelques électeurs.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "profession",
+				"profession": "profession.teacher"
+			},
+			"unavailableReason": "Réservé à qui vient de l’enseignement.",
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "personalCashCents",
+					"value": 40000
+				},
+				{
+					"op": "addSupport",
+					"group": "support.middle_class",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "profession.plead",
+			"label": "Plaider une affaire",
+			"description": "Une audience, une plaidoirie inspirée et une note d’honoraires qui l’est tout autant.",
+			"timeCost": 30,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "profession",
+				"profession": "profession.lawyer"
+			},
+			"unavailableReason": "Réservé à qui vient du barreau.",
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "personalCashCents",
+					"min": 100000,
+					"max": 250000
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				}
+			]
+		},
+		{
+			"id": "profession.op_ed",
+			"label": "Signer une tribune",
+			"description": "Huit mille signes sur l’avenir du pays, relus par trois amis et un dictionnaire des citations.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "profession",
+				"profession": "profession.journalist"
+			},
+			"unavailableReason": "Réservé à qui vient de la presse.",
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 2
+				},
+				{
+					"op": "addSupport",
+					"group": "support.middle_class",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "profession.consulting",
+			"label": "Conseiller une entreprise",
+			"description": "Une journée de conseil facturée au prix d’une semaine, avec un tableur très coloré.",
+			"timeCost": 25,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "profession",
+				"profession": "profession.entrepreneur"
+			},
+			"unavailableReason": "Réservé à qui vient de l’entreprise.",
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "personalCashCents",
+					"value": 150000
+				},
+				{
+					"op": "addSupport",
+					"group": "support.business",
+					"value": 2
+				}
+			]
+		},
+		{
+			"id": "profession.old_networks",
+			"label": "Activer les anciens réseaux",
+			"description": "Un déjeuner avec d’anciens camarades de promotion devenus indispensables dans des ministères.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "profession",
+				"profession": "profession.civil_servant"
+			},
+			"unavailableReason": "Réservé à qui vient de la haute administration.",
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 3
+				},
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
+					"value": 1
 				}
 			]
 		}

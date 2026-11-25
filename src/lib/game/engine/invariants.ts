@@ -5,8 +5,19 @@
  * chargement (sauvegarde, import). Ne corrige rien : signale toutes les violations.
  * Avec le contenu, vérifie aussi les références vers le catalogue.
  */
-import { GAUGE_MAX, GAUGE_MIN, RESOURCE_IDS, type Content } from '../content/types.ts';
+import {
+	ATTITUDE_MAX,
+	ATTITUDE_MIN,
+	GAUGE_MAX,
+	GAUGE_MIN,
+	INDICATOR_IDS,
+	RESOURCE_IDS,
+	WORLD_TEMPLATE_VARIABLES,
+	type Content
+} from '../content/types.ts';
 import { RNG_ALGORITHM, validateSeed } from './random.ts';
+import { activeMandates, conflictingMandates } from './career.ts';
+import { computePopularity } from './supports.ts';
 import { START_TURN, STATE_SCHEMA_VERSION, type GameState } from './state.ts';
 
 const PHASES = new Set(['planning', 'decision', 'ended']);
@@ -17,6 +28,10 @@ function isUint32(value: unknown): boolean {
 
 const INSTANCE_ID = /^upgrade\.([1-9][0-9]*)$/;
 const EVENT_INSTANCE_ID = /^event\.([1-9][0-9]*)$/;
+const CHARACTER_ID = /^character\.([1-9][0-9]*)$/;
+/** Personnage initial : identifiant de la distribution (`cast.x`), contrôlé avec le contenu. */
+const CAST_ID = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
+const STATUSES = new Set(['active', 'retired', 'dead']);
 
 export function checkInvariants(state: GameState, content?: Content): string[] {
 	const violations: string[] = [];
@@ -103,6 +118,8 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
 	}
 
 	violations.push(...checkEventInvariants(state, instanceIds));
+	violations.push(...checkWorldInvariants(state));
+	violations.push(...checkCareerInvariants(state));
 	if (content) violations.push(...checkContentReferences(state, content));
 	return violations;
 }
@@ -150,6 +167,308 @@ function checkEventInvariants(state: GameState, usedInstanceIds: Set<string>): s
 	return violations;
 }
 
+/** Monde, personnages et adhésions du joueur (P2-01). */
+function checkWorldInvariants(state: GameState): string[] {
+	const violations: string[] = [];
+	const { world, characters, player } = state;
+
+	for (const indicator of INDICATOR_IDS) {
+		const value = world.indicators[indicator];
+		if (!Number.isSafeInteger(value) || value < GAUGE_MIN || value > GAUGE_MAX) {
+			violations.push(`indicateur invalide : ${indicator} = ${value}`);
+		}
+	}
+	if (!Object.hasOwn(world.parties, world.governingPartyId)) {
+		violations.push(`parti au gouvernement inconnu : ${world.governingPartyId}`);
+	}
+
+	const characterCount = Object.keys(characters).length;
+	for (const [key, character] of Object.entries(characters)) {
+		// Rangs de création 1..N, sans trou : aucun personnage n'est supprimé.
+		const match = CHARACTER_ID.exec(character.id);
+		const valid = match ? Number(match[1]) <= characterCount : CAST_ID.test(character.id);
+		if (key !== character.id || !valid) {
+			violations.push(`identifiant de personnage invalide : ${key}`);
+		}
+		if (!STATUSES.has(character.status)) {
+			violations.push(`statut de personnage inconnu : ${character.id}`);
+		}
+		if ((character.status === 'active') !== (character.leftTurn === null)) {
+			violations.push(`départ incohérent avec le statut : ${character.id}`);
+		}
+		if (character.leftTurn !== null && character.leftTurn > state.turn) {
+			violations.push(`départ futur : ${character.id}`);
+		}
+		if (new Set(character.traits).size !== character.traits.length) {
+			violations.push(`trait en double : ${character.id}`);
+		}
+		if (character.knownTraits.some((trait) => !character.traits.includes(trait))) {
+			violations.push(`trait connu absent des traits réels : ${character.id}`);
+		}
+		if (character.successorOf !== null && !Object.hasOwn(characters, character.successorOf)) {
+			violations.push(`prédécesseur inconnu : ${character.id}`);
+		}
+		if (!Number.isSafeInteger(character.birthTurn) || character.birthTurn > state.turn) {
+			violations.push(`naissance de personnage invalide : ${character.id}`);
+		}
+		if (character.partyId !== null && !Object.hasOwn(world.parties, character.partyId)) {
+			violations.push(`parti inconnu pour ${character.id} : ${character.partyId}`);
+		}
+	}
+	const leaders = new Set<string>();
+	for (const [partyId, party] of Object.entries(world.parties)) {
+		if (!Number.isSafeInteger(party.strength) || party.strength < 0) {
+			violations.push(`force invalide : ${partyId} = ${party.strength}`);
+		}
+		const leader = characters[party.leaderId];
+		if (!leader) {
+			violations.push(`dirigeant inconnu pour ${partyId} : ${party.leaderId}`);
+		} else if (leader.partyId !== partyId) {
+			violations.push(`dirigeant d’un autre parti à la tête de ${partyId} : ${leader.id}`);
+		} else if (leader.status !== 'active') {
+			violations.push(`dirigeant parti à la tête de ${partyId} : ${leader.id}`);
+		}
+		if (leaders.has(party.leaderId)) {
+			violations.push(`dirigeant à la tête de deux partis : ${party.leaderId}`);
+		}
+		leaders.add(party.leaderId);
+	}
+
+	for (const [characterId, relationship] of Object.entries(state.relationships)) {
+		if (!Object.hasOwn(characters, characterId)) {
+			violations.push(`relation avec un personnage inconnu : ${characterId}`);
+		}
+		const { attitude, metTurn, memories } = relationship;
+		if (!Number.isSafeInteger(attitude) || attitude < ATTITUDE_MIN || attitude > ATTITUDE_MAX) {
+			violations.push(`attitude invalide : ${characterId} = ${attitude}`);
+		}
+		if (!Number.isSafeInteger(metTurn) || metTurn > state.turn) {
+			violations.push(`rencontre future : ${characterId}`);
+		}
+		memories.forEach((memory, index) => {
+			const previous = memories[index - 1];
+			if (
+				memory.turn < metTurn ||
+				memory.turn > state.turn ||
+				(previous && memory.turn < previous.turn)
+			) {
+				violations.push(`souvenir hors chronologie : ${characterId}`);
+			}
+		});
+	}
+
+	for (const [groupId, value] of Object.entries(player.supports)) {
+		if (!Number.isSafeInteger(value) || value < GAUGE_MIN || value > GAUGE_MAX) {
+			violations.push(`soutien invalide : ${groupId} = ${value}`);
+		}
+	}
+	if (
+		!Number.isSafeInteger(player.popularity) ||
+		player.popularity < GAUGE_MIN ||
+		player.popularity > GAUGE_MAX
+	) {
+		violations.push(`popularité invalide : ${player.popularity}`);
+	}
+
+	const { family } = player;
+	const kin = [
+		...(family.partnerId ? [family.partnerId] : []),
+		...family.childrenIds,
+		...family.parentIds,
+		...family.siblingIds,
+		...family.formerPartnerIds
+	];
+	for (const id of kin) {
+		if (!state.characters[id]) violations.push(`membre de la famille inconnu : ${id}`);
+	}
+	if (new Set(kin).size !== kin.length) violations.push('membre de la famille compté deux fois');
+	if (
+		family.partnerId &&
+		state.characters[family.partnerId]?.status === 'dead' &&
+		state.phase !== 'ended'
+	) {
+		violations.push(`partenaire décédé encore en couple : ${family.partnerId}`);
+	}
+
+	// Adhésions : chronologiques, une seule en cours, cohérente avec le parti actuel.
+	let previousEnd = -Infinity;
+	player.affiliations.forEach((affiliation, index) => {
+		const last = index === player.affiliations.length - 1;
+		if (!Object.hasOwn(world.parties, affiliation.partyId)) {
+			violations.push(`adhésion à un parti inconnu : ${affiliation.partyId}`);
+		}
+		if (affiliation.fromTurn < previousEnd || affiliation.fromTurn > state.turn) {
+			violations.push(`adhésion hors chronologie : ${affiliation.partyId}`);
+		}
+		if (affiliation.toTurn === null && !last) {
+			violations.push(`adhésion en cours qui n’est pas la dernière : ${affiliation.partyId}`);
+		}
+		if (affiliation.toTurn !== null && affiliation.toTurn < affiliation.fromTurn) {
+			violations.push(`adhésion terminée avant d’avoir commencé : ${affiliation.partyId}`);
+		}
+		previousEnd = affiliation.toTurn ?? affiliation.fromTurn;
+	});
+	const current = player.affiliations.at(-1);
+	const expected = current && current.toTurn === null ? current.partyId : null;
+	if (player.partyId !== expected) {
+		violations.push(`parti du joueur incohérent avec ses adhésions : ${String(player.partyId)}`);
+	}
+	return violations;
+}
+
+const TERM_ID = /^term\.([1-9][0-9]*)$/;
+const BALLOT_ID = /^ballot\.([1-9][0-9]*)$/;
+
+/** Mandats et calendrier électoral (P2-02) : cumul respecté, échéances cohérentes. */
+function checkCareerInvariants(state: GameState): string[] {
+	const violations: string[] = [];
+	const { mandates, ballots, institutions } = state;
+
+	mandates.forEach((mandate, index) => {
+		const match = TERM_ID.exec(mandate.instanceId);
+		if (!match || Number(match[1]) !== index + 1) {
+			violations.push(`identifiant de mandat invalide : ${mandate.instanceId}`);
+		}
+		if (mandate.startTurn > state.turn) violations.push(`mandat futur : ${mandate.instanceId}`);
+		if ((mandate.status === 'active') !== (mandate.endTurn === null)) {
+			violations.push(`fin de mandat incohérente : ${mandate.instanceId}`);
+		}
+		if ((mandate.endTurn === null) !== (mandate.endReason === null)) {
+			violations.push(`motif de fin de mandat incohérent : ${mandate.instanceId}`);
+		}
+		if (mandate.endTurn !== null && mandate.endTurn < mandate.startTurn) {
+			violations.push(`mandat terminé avant d’avoir commencé : ${mandate.instanceId}`);
+		}
+	});
+	const active = activeMandates(mandates);
+	if (active.length > institutions.maxMandates) {
+		violations.push(`cumul dépassé : ${active.length} > ${institutions.maxMandates}`);
+	}
+	if (new Set(active.map((mandate) => mandate.mandateId)).size !== active.length) {
+		violations.push('le même mandat est exercé deux fois');
+	}
+	for (const mandate of active) {
+		if (conflictingMandates(mandate.mandateId, mandates, institutions).length > 0) {
+			violations.push(`mandats incompatibles exercés ensemble : ${mandate.mandateId}`);
+		}
+		for (const required of institutions.prerequisites[mandate.mandateId] ?? []) {
+			if (!active.some((other) => other.mandateId === required)) {
+				violations.push(`prérequis absent pour ${mandate.mandateId} : ${required}`);
+			}
+		}
+	}
+
+	ballots.forEach((ballot, index) => {
+		const match = BALLOT_ID.exec(ballot.ballotId);
+		if (!match || Number(match[1]) !== index + 1) {
+			violations.push(`identifiant d’échéance invalide : ${ballot.ballotId}`);
+		}
+		// Après un décès en cours de trimestre, l'échéance de ce trimestre n'est jamais tenue.
+		if (ballot.status === 'scheduled' && ballot.turn < state.turn && state.phase !== 'ended') {
+			violations.push(`échéance passée non tenue : ${ballot.ballotId}`);
+		}
+		if (
+			ballot.status === 'held' &&
+			(ballot.turn >= state.turn || !ballot.shares || !ballot.winnerPartyId)
+		) {
+			violations.push(`scrutin tenu incohérent : ${ballot.ballotId}`);
+		}
+		if (ballot.shares && ballot.shares.reduce((total, share) => total + share.percent, 0) !== 100) {
+			violations.push(`parts de voix dont la somme diffère de 100 : ${ballot.ballotId}`);
+		}
+		if ((ballot.status === 'cancelled') !== (ballot.cancelReason !== null)) {
+			violations.push(`annulation incohérente : ${ballot.ballotId}`);
+		}
+		if (ballot.filingClosesTurn > ballot.turn) {
+			violations.push(`clôture des candidatures après le scrutin : ${ballot.ballotId}`);
+		}
+	});
+	state.campaigns.forEach((campaign, index) => {
+		if (campaign.campaignId !== `campaign.${index + 1}`) {
+			violations.push(`identifiant de campagne invalide : ${campaign.campaignId}`);
+		}
+		const ballot = ballots.find((entry) => entry.ballotId === campaign.ballotId);
+		if (!ballot) {
+			violations.push(`campagne pour une échéance inconnue : ${campaign.campaignId}`);
+		} else if (campaign.status === 'running' && ballot.status !== 'scheduled') {
+			violations.push(`campagne en cours pour une échéance passée : ${campaign.campaignId}`);
+		} else if (campaign.status !== 'running' && ballot.status === 'scheduled') {
+			violations.push(`campagne jugée avant son scrutin : ${campaign.campaignId}`);
+		}
+		if (
+			campaign.declaredTurn > state.turn ||
+			!Number.isSafeInteger(campaign.preparation) ||
+			campaign.preparation < 0
+		) {
+			violations.push(`campagne incohérente : ${campaign.campaignId}`);
+		}
+		if (
+			(campaign.status === 'won' || campaign.status === 'lost') !==
+			(campaign.playerPercent !== null)
+		) {
+			violations.push(`score de campagne incohérent : ${campaign.campaignId}`);
+		}
+	});
+	for (const campaign of state.campaigns) {
+		if (campaign.opponentId === null) continue;
+		const opponent = state.characters[campaign.opponentId];
+		if (!opponent) {
+			violations.push(`adversaire inconnu : ${campaign.campaignId}`);
+		} else if (campaign.status === 'running' && opponent.status !== 'active') {
+			violations.push(`adversaire parti encore en campagne : ${campaign.campaignId}`);
+		}
+	}
+	const occupied = new Set<string>();
+	for (const member of state.staff) {
+		const character = state.characters[member.characterId];
+		if (!character) {
+			violations.push(`collaborateur inconnu : ${member.characterId}`);
+			continue;
+		}
+		if ((member.status === 'active') !== (member.leftTurn === null)) {
+			violations.push(`départ de collaborateur incohérent : ${member.characterId}`);
+		}
+		if (member.hiredTurn > state.turn) violations.push(`embauche future : ${member.characterId}`);
+		if (member.status !== 'active') continue;
+		if (occupied.has(member.postId)) violations.push(`poste occupé deux fois : ${member.postId}`);
+		occupied.add(member.postId);
+		if (character.status !== 'active') {
+			violations.push(`collaborateur parti encore en poste : ${member.characterId}`);
+		}
+		if (!character.tags.includes('staff')) {
+			violations.push(`collaborateur sans étiquette d’entourage : ${member.characterId}`);
+		}
+	}
+	for (const [postId, entries] of Object.entries(state.shortlists)) {
+		if (occupied.has(postId)) violations.push(`présélection pour un poste pourvu : ${postId}`);
+		for (const entry of entries) {
+			if (!state.characters[entry.characterId]) {
+				violations.push(`candidat inconnu : ${entry.characterId}`);
+			}
+		}
+	}
+	for (const character of Object.values(state.characters)) {
+		if (
+			!Number.isSafeInteger(character.competence) ||
+			character.competence < 0 ||
+			character.competence > 100
+		) {
+			violations.push(`compétence invalide : ${character.id}`);
+		}
+	}
+	const running = state.campaigns.filter((campaign) => campaign.status === 'running');
+	if (new Set(running.map((campaign) => campaign.ballotId)).size !== running.length) {
+		violations.push('deux campagnes en cours pour une même échéance');
+	}
+	const scheduledTypes = ballots
+		.filter((ballot) => ballot.status === 'scheduled')
+		.map((ballot) => ballot.electionId);
+	if (new Set(scheduledTypes).size !== scheduledTypes.length) {
+		violations.push('plusieurs échéances programmées pour un même type d’élection');
+	}
+	return violations;
+}
+
 /**
  * Références de l'état vers le catalogue : améliorations, événements en attente
  * ou programmés, occurrences, acteurs et nombres maximaux d'exemplaires. Une
@@ -192,11 +511,84 @@ export function checkContentReferences(state: GameState, content: Content): stri
 		...pending.map((instance) => instance.actors),
 		...scheduled.map((entry) => entry.actors)
 	];
+	const worldVariables = new Set<string>(WORLD_TEMPLATE_VARIABLES);
 	for (const actors of actorSets) {
-		for (const castId of Object.values(actors)) {
-			if (!Object.hasOwn(content.cast, castId)) {
-				violations.push(`acteur inconnu de la distribution : ${castId}`);
-			}
+		for (const [role, actorId] of Object.entries(actors)) {
+			const known = worldVariables.has(role)
+				? Object.hasOwn(content.parties, actorId) || Object.hasOwn(state.characters, actorId)
+				: Object.hasOwn(state.characters, actorId);
+			if (!known) violations.push(`acteur inconnu : ${role} = ${actorId}`);
+		}
+	}
+	for (const castId of content.castIds) {
+		if (!Object.hasOwn(state.characters, castId)) {
+			violations.push(`membre de la distribution absent de l’état : ${castId}`);
+		}
+	}
+	for (const character of Object.values(state.characters)) {
+		if (!CHARACTER_ID.test(character.id) && !Object.hasOwn(content.cast, character.id)) {
+			violations.push(`personnage inconnu de la distribution : ${character.id}`);
+		}
+		for (const trait of character.traits) {
+			if (!Object.hasOwn(content.traits, trait)) violations.push(`trait inconnu : ${trait}`);
+		}
+	}
+	for (const [characterId, relationship] of Object.entries(state.relationships)) {
+		if (relationship.memories.length > content.balance.characters.maxMemories) {
+			violations.push(`trop de souvenirs : ${characterId}`);
+		}
+	}
+	const groups = Object.keys(state.player.supports).sort().join(',');
+	if (groups !== [...content.supportGroupIds].sort().join(',')) {
+		violations.push('groupes de soutien de l’état différents de ceux du catalogue');
+	}
+	if (state.player.popularity !== computePopularity(state.player.supports, content)) {
+		violations.push(`popularité incohérente avec les soutiens : ${state.player.popularity}`);
+	}
+	if (!Object.hasOwn(content.origins, state.player.origin)) {
+		violations.push(`origine inconnue du catalogue : ${state.player.origin}`);
+	}
+	if (!Object.hasOwn(content.professions, state.player.profession)) {
+		violations.push(`profession inconnue du catalogue : ${state.player.profession}`);
+	}
+	for (const member of state.staff) {
+		const post = content.posts[member.postId];
+		if (!post) violations.push(`poste inconnu du catalogue : ${member.postId}`);
+		else if (!post.missions.some((mission) => mission.id === member.missionId)) {
+			violations.push(`mission étrangère au poste : ${member.missionId}`);
+		}
+	}
+	for (const postId of Object.keys(state.shortlists)) {
+		if (!Object.hasOwn(content.posts, postId))
+			violations.push(`présélection pour un poste inconnu : ${postId}`);
+	}
+	for (const mandate of state.mandates) {
+		if (!Object.hasOwn(content.mandates, mandate.mandateId)) {
+			violations.push(`mandat inconnu du catalogue : ${mandate.mandateId}`);
+		}
+	}
+	for (const electionId of content.electionIds) {
+		const scheduled = state.ballots.filter(
+			(ballot) => ballot.electionId === electionId && ballot.status === 'scheduled'
+		);
+		if (scheduled.length !== 1) {
+			violations.push(`échéance programmée manquante ou multiple : ${electionId}`);
+		}
+	}
+	for (const ballot of state.ballots) {
+		if (!Object.hasOwn(content.elections, ballot.electionId)) {
+			violations.push(`élection inconnue du catalogue : ${ballot.electionId}`);
+		}
+	}
+	const partyIds = Object.keys(state.world.parties).sort();
+	const catalogIds = [...content.partyIds].sort();
+	if (partyIds.join(',') !== catalogIds.join(',')) {
+		violations.push('partis de l’état différents de ceux du catalogue');
+	}
+	const { minPartyStrength, maxPartyStrength } = content.balance.world;
+	for (const [partyId, party] of Object.entries(state.world.parties)) {
+		if (party.strength < minPartyStrength || party.strength > maxPartyStrength) {
+			violations.push(`force hors bornes : ${partyId} = ${party.strength}`);
 		}
 	}
 	return violations;

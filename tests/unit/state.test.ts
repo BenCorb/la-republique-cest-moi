@@ -72,7 +72,14 @@ describe('contrôle des invariants', () => {
 						turn: 1,
 						steps: [],
 						economy: { producers: [], changes: [] },
+						mandates: { changes: [], stress: 0 },
+						staff: null,
+						family: null,
 						wellbeing: { contributions: [], deathCause: null },
+						characters: null,
+						world: null,
+						supports: null,
+						deadlines: null,
 						events: []
 					},
 					{
@@ -80,7 +87,14 @@ describe('contrôle des invariants', () => {
 						turn: 0,
 						steps: [],
 						economy: { producers: [], changes: [] },
+						mandates: { changes: [], stress: 0 },
+						staff: null,
+						family: null,
 						wellbeing: { contributions: [], deathCause: null },
+						characters: null,
+						world: null,
+						supports: null,
+						deadlines: null,
 						events: []
 					}
 				]

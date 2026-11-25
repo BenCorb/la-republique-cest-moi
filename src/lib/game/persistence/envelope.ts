@@ -41,6 +41,8 @@ export type SaveErrorCode =
 	| 'wrong_format'
 	| 'future_version'
 	| 'unsupported_version'
+	/** Sauvegarde de même format mais écrite par d'autres règles, incompatible (alpha, P2-10). */
+	| 'outdated_rules'
 	| 'invalid_state'
 	| 'incompatible_content';
 
@@ -123,8 +125,23 @@ export function readEnvelope(
 		return fail('wrong_format', 'Les informations de cette sauvegarde sont incomplètes.');
 	}
 
+	// Pendant l'alpha, le format reste en version 1 (ROADMAP §4.1) : un état écrit par
+	// d'autres règles et devenu illisible est refusé explicitement, sans être modifié,
+	// plutôt que présenté comme endommagé.
+	const outdated = (details: readonly string[]): ReadResult =>
+		fail(
+			'outdated_rules',
+			`Cette sauvegarde a été créée par une autre version de développement du jeu (règles ${String(current.rulesVersion)}, version actuelle ${RULES_VERSION}) et n’est plus compatible.`,
+			details
+		);
+	const otherRules = current.rulesVersion !== RULES_VERSION;
+
 	const parsed = gameStateSchema.safeParse(current.state);
 	if (!parsed.success) {
+		const details = parsed.error.issues
+			.slice(0, 20)
+			.map((issue) => `${issue.path.join('.')} : ${issue.message}`);
+		if (otherRules) return outdated(details);
 		return fail(
 			'invalid_state',
 			'Cette sauvegarde est endommagée ou a été modifiée.',
@@ -133,10 +150,12 @@ export function readEnvelope(
 	}
 
 	const violations = checkInvariants(parsed.data);
+	if (violations.length > 0 && otherRules) return outdated(violations);
 	if (violations.length > 0) {
 		return fail('invalid_state', 'Cette sauvegarde est incohérente.', violations);
 	}
 	const references = checkContentReferences(parsed.data, content);
+	if (references.length > 0 && otherRules) return outdated(references);
 	if (references.length > 0) {
 		return fail(
 			'incompatible_content',

@@ -99,6 +99,6 @@
 	</div>
 
 	{#snippet status()}
-		<p>Prototype · une carrière complète, sauvegardée dans ce navigateur</p>
+		<p>Alpha · une carrière complète, sauvegardée dans ce navigateur</p>
 	{/snippet}
 </GameShell>

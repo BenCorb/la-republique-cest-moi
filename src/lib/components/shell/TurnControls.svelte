@@ -62,7 +62,7 @@
 			</span>
 		</p>
 		<p class="text-sm text-muted" data-testid="save-status" aria-live="polite">{saveText}</p>
-		{#if acceleration}
+		{#if acceleration && (acceleration.running || acceleration.stopReason !== 'decision_pending' || view.phase === 'decision')}
 			<p class="text-sm text-primary" data-testid="acceleration-status" aria-live="polite">
 				{acceleration.message}
 			</p>

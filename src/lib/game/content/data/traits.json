@@ -1,0 +1,94 @@
+{
+	"traits": [
+		{
+			"id": "trait.ambition",
+			"label": "Ambition",
+			"description": "Vise plus haut et le fait savoir.",
+			"hidden": false,
+			"positiveRelationPercent": 100,
+			"negativeRelationPercent": 100,
+			"campaignBonus": 2
+		},
+		{
+			"id": "trait.charisma",
+			"label": "Charisme",
+			"description": "Attire les regards et les micros.",
+			"hidden": false,
+			"positiveRelationPercent": 110,
+			"negativeRelationPercent": 100,
+			"campaignBonus": 4
+		},
+		{
+			"id": "trait.bluntness",
+			"label": "Franc-parler",
+			"description": "Dit ce qu’il pense, y compris de vous.",
+			"hidden": false,
+			"positiveRelationPercent": 100,
+			"negativeRelationPercent": 120,
+			"campaignBonus": 1
+		},
+		{
+			"id": "trait.network",
+			"label": "Carnet d’adresses",
+			"description": "Connaît quelqu’un partout, surtout là où il ne faut pas.",
+			"hidden": false,
+			"positiveRelationPercent": 100,
+			"negativeRelationPercent": 100,
+			"campaignBonus": 3
+		},
+		{
+			"id": "trait.grudge",
+			"label": "Rancune",
+			"description": "N’oublie rien, et surtout pas les affronts.",
+			"hidden": true,
+			"positiveRelationPercent": 80,
+			"negativeRelationPercent": 200,
+			"campaignBonus": 0
+		},
+		{
+			"id": "trait.loyalty",
+			"label": "Loyauté",
+			"description": "Reste fidèle quand d’autres retournent leur veste.",
+			"hidden": true,
+			"positiveRelationPercent": 130,
+			"negativeRelationPercent": 50,
+			"campaignBonus": 0
+		},
+		{
+			"id": "trait.opportunism",
+			"label": "Opportunisme",
+			"description": "Suit le vent, quel qu’il soit.",
+			"hidden": true,
+			"positiveRelationPercent": 120,
+			"negativeRelationPercent": 120,
+			"campaignBonus": 2
+		},
+		{
+			"id": "trait.indiscretion",
+			"label": "Indiscrétion",
+			"description": "Les confidences ne restent jamais longtemps confidentielles.",
+			"hidden": true,
+			"positiveRelationPercent": 100,
+			"negativeRelationPercent": 100,
+			"campaignBonus": -1
+		},
+		{
+			"id": "trait.venality",
+			"label": "Vénalité",
+			"description": "Tout a un prix, l’amitié comprise.",
+			"hidden": true,
+			"positiveRelationPercent": 90,
+			"negativeRelationPercent": 110,
+			"campaignBonus": -2
+		},
+		{
+			"id": "trait.kindness",
+			"label": "Bienveillance",
+			"description": "Pardonne facilement et rend service sans compter.",
+			"hidden": true,
+			"positiveRelationPercent": 120,
+			"negativeRelationPercent": 60,
+			"campaignBonus": 1
+		}
+	]
+}

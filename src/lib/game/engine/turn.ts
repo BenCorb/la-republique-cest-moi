@@ -7,7 +7,13 @@
  *   2. étapes du plan dans l'ordre (actions, achats) ............ P1-02, P1-03
  *   3. charges puis production des améliorations actives ........ P1-03
  *   4. stress, santé, vieillissement, décès ..................... P1-04
- *   5. échéances ................................................ alpha
+ *      puis vieillissement et départs des personnages ........... P2-04
+ *      puis évolution autonome du monde (indicateurs, partis) ... P2-01
+ *      puis entourage et famille (départs, héritage, dépenses) .. P2-05, P2-08
+ *      puis retour des soutiens vers leur référence ............. P2-07
+ *   3 bis. revenus et stress des mandats ......................... P2-02
+ *   3 ter. salaires et missions de l'entourage ................... P2-05
+ *   5. échéances : fins de mandat, scrutins, calendrier ........... P2-02
  *   6. passage à T+1 (une seule fois), journal du trimestre T,
  *      suites dues et tirage des événements ......................... P1-01, P1-05
  *   7. phase `decision` si un choix bloquant attend, sinon `planning`  P1-01, P1-05
@@ -22,7 +28,22 @@ import { economyRecords, resolveEconomy } from './economy.ts';
 import { chooseEvent, resolveEventFrontier } from './events.ts';
 import { resolveWellbeing } from './health.ts';
 import { executePlan, previewPlan } from './plan.ts';
-import type { CommandError, CommitTurnCommand, GameCommand, TransitionResult } from './commands.ts';
+import { resolveCharacters } from './characters.ts';
+import { mandateIncome, reservedTime, resolveDeadlines } from './career.ts';
+import { applyGauge } from './effects.ts';
+import { RESOURCE_IDS, type ResourceId } from '../content/types.ts';
+import { resolveWorld } from './world.ts';
+import { resolveSupports } from './supports.ts';
+import { resolveStaffFrontier, resolveStaffProduction } from './staff.ts';
+import { resolveFamily } from './family.ts';
+import type {
+	AssignMissionCommand,
+	CommandError,
+	CommitTurnCommand,
+	GameCommand,
+	TransitionResult
+} from './commands.ts';
+import { missionIssue } from './staff.ts';
 import type { EndState, GameState, HistoryEntry } from './state.ts';
 
 function reject(state: GameState, error: CommandError): TransitionResult {
@@ -75,38 +96,154 @@ function commitTurn(
 	const resolvedTurn = state.turn;
 	const economy = resolveEconomy(execution.resources, execution.upgrades, resolvedTurn, content);
 
-	// 4. Stress, santé, vieillissement et décès à la frontière T/T+1.
+	// 3 bis. Revenus et stress des mandats exercés pendant T (démissions du plan comprises).
+	const mandates = mandateIncome(execution.career.mandates, resolvedTurn, content);
+	const afterMandates: Record<ResourceId, number> = { ...economy.resources };
+	for (const amount of mandates.income) afterMandates[amount.resource] += amount.amount;
+	const stressed = applyGauge(execution.player.stress, mandates.stress);
+	const mandateRecord = {
+		changes: RESOURCE_IDS.flatMap((resource) => {
+			const amount = mandates.income.find((entry) => entry.resource === resource)?.amount ?? 0;
+			return amount === 0 ? [] : [{ resource, delta: amount }];
+		}),
+		stress: stressed.applied
+	};
+
+	// 3 ter. Salaires puis missions des collaborateurs embauchés avant T.
+	const production = resolveStaffProduction(
+		{
+			resources: afterMandates,
+			player: { ...execution.player, stress: stressed.value },
+			world: execution.world,
+			career: execution.career,
+			entourage: execution.entourage
+		},
+		resolvedTurn,
+		content
+	);
+
+	// 4. Stress, santé, vieillissement et décès à la frontière T/T+1. Le temps
+	// réservé par les mandats (en début de trimestre) compte dans la charge.
 	const wellbeing = resolveWellbeing(
-		execution.player,
-		execution.timeUsed,
+		production.player,
+		execution.timeUsed + reservedTime(state.mandates, content),
 		resolvedTurn,
 		execution.rng,
 		content.balance.wellbeing
 	);
 	const nextTurn = resolvedTurn + 1;
 
-	// 6. Passage à T+1, puis suites dues et tirage des événements (sauf décès en 4).
-	const frontier = wellbeing.record.deathCause
+	// 4 bis. Personnages puis monde (sauf décès) : ils évoluent même si le joueur ne fait rien.
+	const people = wellbeing.record.deathCause
 		? null
-		: resolveEventFrontier(
+		: resolveCharacters(production.entourage.characters, nextTurn, wellbeing.rng, content);
+	const world = people
+		? resolveWorld(production.world, people.characters, nextTurn, people.rng, content)
+		: null;
+
+	// 4 bis (suite). Entourage : départs, puis présélections pour les postes vacants.
+	const team = world
+		? resolveStaffFrontier(
+				{ ...production.entourage, characters: world.characters },
 				{
 					turn: nextTurn,
 					player: wellbeing.player,
-					resources: economy.resources,
+					resources: production.resources,
 					upgrades: execution.upgrades,
-					rng: wellbeing.rng,
+					world: world.world,
+					mandates: production.career.mandates,
+					campaigns: production.career.campaigns,
+					institutions: production.career.institutions,
+					staff: production.entourage.staff
+				},
+				nextTurn,
+				world.rng,
+				content
+			)
+		: null;
+
+	// 4 bis (fin). Famille : héritage, veuvage, enfants à charge, disponibilité.
+	const family = team
+		? resolveFamily(
+				{
+					player: wellbeing.player,
+					characters: team.entourage.characters,
+					relationships: team.entourage.relationships
+				},
+				production.resources,
+				execution.timeUsed + reservedTime(state.mandates, content),
+				nextTurn,
+				content
+			)
+		: null;
+
+	// 4 ter. Soutiens : retour partiel vers leur référence (parti, mandats en cours).
+	const supports = family
+		? resolveSupports(
+				family.parts.player,
+				production.career.mandates,
+				production.resources.influence,
+				content
+			)
+		: null;
+
+	// 5. Échéances de la fin de T : fins de mandat, scrutins, échéances suivantes.
+	const deadlines =
+		world && supports && team && family
+			? resolveDeadlines(
+					{
+						world: world.world,
+						player: supports.player,
+						resources: family.resources,
+						characters: family.parts.characters,
+						relationships: family.parts.relationships,
+						career: production.career
+					},
+					resolvedTurn,
+					team.rng,
+					content
+				)
+			: null;
+
+	// 6. Passage à T+1, puis suites dues et tirage des événements (sauf décès en 4).
+	const frontier = world
+		? resolveEventFrontier(
+				{
+					turn: nextTurn,
+					player: deadlines!.player,
+					resources: deadlines!.resources,
+					upgrades: execution.upgrades,
+					rng: deadlines!.rng,
 					nextInstanceNumber: execution.nextInstanceNumber,
-					events: state.events
+					events: state.events,
+					world: deadlines!.world,
+					characters: deadlines!.characters,
+					relationships: deadlines!.relationships,
+					career: deadlines!.career,
+					staff: team!.entourage.staff,
+					shortlists: team!.entourage.shortlists
 				},
 				content
-			);
+			)
+		: null;
 
 	const entry: HistoryEntry = {
 		type: 'turn.resolved',
 		turn: resolvedTurn,
 		steps: execution.records,
 		economy: { producers: economyRecords(economy), changes: economy.changes },
+		mandates: mandateRecord,
+		family: family?.record ?? null,
+		staff: {
+			...production.record,
+			departures: team?.record.departures ?? [],
+			shortlisted: team?.record.shortlisted ?? []
+		},
 		wellbeing: wellbeing.record,
+		characters: people?.record ?? null,
+		world: world?.record ?? null,
+		supports: supports?.record ?? null,
+		deadlines: deadlines?.record ?? null,
 		events: frontier?.records ?? []
 	};
 
@@ -126,13 +263,45 @@ function commitTurn(
 			end,
 			rng: frontier?.rng ?? wellbeing.rng,
 			player: frontier?.player ?? wellbeing.player,
-			resources: frontier?.resources ?? economy.resources,
+			resources: frontier?.resources ?? production.resources,
+			world: frontier?.world ?? production.world,
+			characters: frontier?.characters ?? production.entourage.characters,
+			relationships: frontier?.relationships ?? production.entourage.relationships,
+			staff: frontier?.staff ?? production.entourage.staff,
+			shortlists: frontier?.shortlists ?? production.entourage.shortlists,
+			mandates: frontier?.career.mandates ?? production.career.mandates,
+			ballots: frontier?.career.ballots ?? production.career.ballots,
+			campaigns: frontier?.career.campaigns ?? production.career.campaigns,
+			institutions: frontier?.career.institutions ?? production.career.institutions,
 			upgrades: execution.upgrades,
 			nextInstanceNumber: frontier?.nextInstanceNumber ?? execution.nextInstanceNumber,
 			events,
 			history: [...state.history, entry]
 		},
 		log: [entry]
+	};
+}
+
+function assignMission(
+	state: GameState,
+	command: AssignMissionCommand,
+	content: Content
+): TransitionResult {
+	const blocked = phaseError(state);
+	if (blocked) return reject(state, blocked);
+	const issue = missionIssue(state.staff, command.characterId, command.missionId, content);
+	if (issue) return reject(state, { code: 'invalid_mission', message: issue, issues: [] });
+	return {
+		ok: true,
+		state: {
+			...state,
+			staff: state.staff.map((member) =>
+				member.status === 'active' && member.characterId === command.characterId
+					? { ...member, missionId: command.missionId }
+					: member
+			)
+		},
+		log: []
 	};
 }
 
@@ -146,6 +315,8 @@ export function transition(
 			return commitTurn(state, command, content);
 		case 'chooseEvent':
 			return chooseEvent(state, command, content);
+		case 'assignMission':
+			return assignMission(state, command, content);
 		default:
 			return reject(state, {
 				code: 'unknown_command',

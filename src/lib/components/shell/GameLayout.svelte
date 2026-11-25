@@ -3,9 +3,13 @@
 		BookOpen,
 		Briefcase,
 		Calendar,
+		Flag,
+		Award,
 		Landmark,
 		LayoutDashboard,
-		Newspaper
+		Newspaper,
+		Users,
+		UsersRound
 	} from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
 	import AlertList from '#lib/components/common/AlertList.svelte';
@@ -33,6 +37,10 @@
 	const tabs: { id: GameTab; label: string; icon: typeof Calendar }[] = [
 		{ id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
 		{ id: 'agenda', label: 'Agenda', icon: Calendar },
+		{ id: 'career', label: 'Carrière', icon: Award },
+		{ id: 'world', label: 'Monde politique', icon: Flag },
+		{ id: 'entourage', label: 'Entourage', icon: UsersRound },
+		{ id: 'relations', label: 'Relations', icon: Users },
 		{ id: 'organisation', label: 'Organisation', icon: Briefcase },
 		{ id: 'journal', label: 'Journal', icon: BookOpen }
 	];
@@ -58,6 +66,14 @@
 				<p class="font-serif text-lg" data-testid="game-date">
 					<span class="font-semibold">{view.dateLabel}</span> · {view.age} ans
 				</p>
+				<p class="text-sm" data-testid="header-party">
+					<span class="text-muted">Étiquette</span>
+					<span class="font-semibold">{view.world.partyAcronym ?? 'aucune'}</span>
+				</p>
+				<p class="text-sm" data-testid="header-function">
+					<span class="text-muted">Fonction</span>
+					<span class="font-semibold">{view.career.mainFunction}</span>
+				</p>
 				<dl class="flex flex-wrap gap-x-5 gap-y-1 text-sm" aria-label="Ressources">
 					{#each view.resources as resource (resource.id)}
 						<div class="flex items-baseline gap-1.5">
@@ -69,6 +85,7 @@
 					{/each}
 				</dl>
 				<div class="ml-auto flex gap-5">
+					<Gauge name="Popularité" gauge={view.supports.popularity} compact />
 					<Gauge name="Santé" gauge={view.health} compact />
 					<Gauge name="Stress" gauge={view.stress} compact />
 				</div>

@@ -33,6 +33,17 @@
 							"op": "addStat",
 							"stat": "player.stress",
 							"value": 3
+						},
+						{
+							"op": "addRelation",
+							"role": "journalist",
+							"value": 10,
+							"memory": "Vous lui avez accordé un entretien."
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 3
 						}
 					],
 					"followUp": {
@@ -55,6 +66,12 @@
 							"op": "addResource",
 							"resource": "influence",
 							"value": 3
+						},
+						{
+							"op": "addRelation",
+							"role": "journalist",
+							"value": -5,
+							"memory": "Vous avez proposé un encart publicitaire au lieu d’un entretien."
 						}
 					]
 				},
@@ -63,7 +80,14 @@
 					"label": "Décliner poliment",
 					"hints": ["Rien ne change, en apparence"],
 					"costs": [],
-					"effects": []
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "journalist",
+							"value": -5,
+							"memory": "Vous avez décliné son portrait."
+						}
+					]
 				}
 			]
 		},
@@ -136,6 +160,18 @@
 							"resource": "influence",
 							"min": 2,
 							"max": 8
+						},
+						{
+							"op": "addRelation",
+							"role": "journalist",
+							"value": 5,
+							"memory": "Vous avez accepté son débat."
+						},
+						{
+							"op": "addRelation",
+							"role": "rival",
+							"value": -5,
+							"memory": "Vous avez préparé le débat radiophonique comme une finale."
 						}
 					]
 				},
@@ -150,6 +186,12 @@
 							"resource": "influence",
 							"min": -4,
 							"max": 6
+						},
+						{
+							"op": "addRelation",
+							"role": "journalist",
+							"value": 5,
+							"memory": "Vous avez accepté son débat."
 						}
 					]
 				},
@@ -163,6 +205,18 @@
 							"op": "addResource",
 							"resource": "influence",
 							"value": -1
+						},
+						{
+							"op": "addRelation",
+							"role": "journalist",
+							"value": -5,
+							"memory": "Vous avez décliné son invitation à débattre."
+						},
+						{
+							"op": "addRelation",
+							"role": "rival",
+							"value": 5,
+							"memory": "Vous lui avez laissé le micro."
 						}
 					]
 				}

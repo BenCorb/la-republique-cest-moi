@@ -188,7 +188,9 @@ describe('validation du trimestre avec un plan', () => {
 				id: 'test.earn',
 				instanceId: null,
 				changes: [{ resource: 'personalCashCents', delta: 50_000 }],
-				gauges: []
+				gauges: [],
+				target: null,
+				politics: []
 			},
 			{
 				kind: 'action',
@@ -198,7 +200,9 @@ describe('validation du trimestre avec un plan', () => {
 					{ resource: 'politicalBudgetCents', delta: 120_000 },
 					{ resource: 'personalCashCents', delta: -120_000 }
 				],
-				gauges: []
+				gauges: [],
+				target: null,
+				politics: []
 			},
 			{
 				kind: 'action',
@@ -208,7 +212,9 @@ describe('validation du trimestre avec un plan', () => {
 					{ resource: 'influence', delta: 2 },
 					{ resource: 'politicalBudgetCents', delta: -1_000 }
 				],
-				gauges: []
+				gauges: [],
+				target: null,
+				politics: []
 			}
 		]);
 		// Aucun effet aléatoire : le PRNG n'avance pas.
