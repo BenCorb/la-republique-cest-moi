@@ -157,3 +157,10 @@ bugs, irritants classés (bloquant, gênant, mineur) et décisions._
   locaux), 2 (remboursement des frais de campagne) et 4 (gala de levée de fonds) pour la série
   de corrections du playtest, avec les chiffres ci-dessus comme point de départ ; les pistes 3, 5
   et 6 restent en réserve si la simulation montre que cela ne suffit pas.
+
+- **Presse impossible à consulter (26 novembre 2026, mineur).** La colonne « La presse », à
+  droite, n’apparaît qu’à partir de 1 100 px de large et ne montre que les titres des six
+  derniers événements, sans article ni archive ; il n’y a pas d’écran de presse. Comportement
+  attendu de l’alpha : les médias fictifs, le fil de presse et les articles fondés sur les faits
+  sont prévus en P3-03. Pistes d’ici là, si utile : un onglet « Actualités » qui reprend le fil
+  complet avec le texte des événements (DESIGN §3), visible quelle que soit la largeur.
