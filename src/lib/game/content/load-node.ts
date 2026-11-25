@@ -30,6 +30,7 @@ export function loadContentFromFiles(directory = DEFAULT_CONTENT_DATA_DIR): Cont
 		entourage: read('entourage.json'),
 		profiles: read('profiles.json'),
 		justice: read('justice.json'),
+		wealth: read('wealth.json'),
 		events
 	});
 	if (!result.ok) {

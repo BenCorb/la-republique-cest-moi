@@ -31,6 +31,7 @@ import { evaluateCondition } from './conditions.ts';
 import { resolveEconomy, type ProducerForecast } from './economy.ts';
 import { applyGauge, effectRange, gaugeKey, resolveEffect, type EffectRange } from './effects.ts';
 import { forecastWellbeing, type WellbeingForecast } from './health.ts';
+import { comfortStress } from './wealth.ts';
 import type { RngState } from './random.ts';
 import type {
 	GameState,
@@ -85,7 +86,7 @@ export interface PlanIssue {
 
 /** Avertissement non bloquant : le plan reste valide. */
 export interface PlanWarning {
-	readonly code: 'upkeep_at_risk' | 'stress_high';
+	readonly code: 'upkeep_at_risk' | 'stress_high' | 'lifestyle_unpaid';
 	/** Exemplaire concerné (`upkeep_at_risk`), sinon `null`. */
 	readonly instanceId: string | null;
 	readonly upgradeId: string | null;
@@ -179,21 +180,42 @@ function expandRelease(
 		return { effects: [...effects], released: null };
 	}
 	const owned = upgrades.find((upgrade) => upgrade.instanceId === target);
-	const own = owned ? (content.upgrades[owned.upgradeId]?.releaseEffects ?? []) : [];
+	const definition = owned ? content.upgrades[owned.upgradeId] : undefined;
+	const own: Effect[] = [...(definition?.releaseEffects ?? [])];
+	// Revente d'un actif : sa valeur, diminuée des frais (prévision exacte, sans tirage).
+	const proceeds = assetProceeds(owned, content);
+	if (proceeds > 0) own.push({ op: 'addResource', resource: 'personalCashCents', value: proceeds });
 	return {
 		effects: [...effects.filter((effect) => effect.op !== 'releaseUpgrade'), ...own],
 		released: owned?.instanceId ?? null
 	};
 }
 
-/** Problème de cible d'un départ : un exemplaire possédé avant ce trimestre. */
+/** Produit de la revente d'un actif, en centimes (0 pour un autre exemplaire). */
+export function assetProceeds(owned: OwnedUpgrade | undefined, content: Content): number {
+	const asset = owned ? content.upgrades[owned.upgradeId]?.asset : undefined;
+	if (!owned || !asset || owned.valueCents === null) return 0;
+	return Math.floor((owned.valueCents * asset.salePercent) / 100 / 100) * 100;
+}
+
+/**
+ * Problème de cible d'un départ : un exemplaire possédé avant ce trimestre, actif
+ * patrimonial pour une revente (`asset`), élément de l'organisation sinon.
+ */
 function releaseIssue(
 	target: string | null,
 	upgrades: readonly OwnedUpgrade[],
-	turn: number
+	turn: number,
+	kind: 'upgrade' | 'asset',
+	content: Content
 ): string | null {
 	const owned = upgrades.find((upgrade) => upgrade.instanceId === target);
-	if (!owned) return 'choisissez un élément de votre organisation';
+	const isAsset = owned ? content.upgrades[owned.upgradeId]?.asset !== undefined : false;
+	if (!owned || isAsset !== (kind === 'asset')) {
+		return kind === 'asset'
+			? 'choisissez un bien de votre patrimoine'
+			: 'choisissez un élément de votre organisation';
+	}
 	if (owned.acquiredTurn >= turn) return 'cet élément n’est acquis qu’à la fin du trimestre';
 	return null;
 }
@@ -233,6 +255,8 @@ function applyStateEffects(
 			const outcome = applyStaffEffect(effect, entourage, turn, target, null, content);
 			entourage = outcome.parts;
 			changes.push(...outcome.changes);
+		} else if (effect.op === 'setLifestyle') {
+			player = { ...player, lifestyle: effect.lifestyle };
 		} else if (effect.op === 'familyAttitude') {
 			// Seul effet familial permis dans une action : déterministe, sans tirage.
 			const relationships = shiftFamily(
@@ -269,6 +293,23 @@ function definitionOf<T>(catalog: Readonly<Record<string, T>>, id: string): T | 
 	return Object.hasOwn(catalog, id) ? catalog[id] : undefined;
 }
 
+/** Exemplaire acheté : un actif vaut d'abord son prix d'achat. */
+function newInstance(
+	instanceId: string,
+	upgradeId: string,
+	turn: number,
+	content: Content
+): OwnedUpgrade {
+	const definition = content.upgrades[upgradeId];
+	const price = definition?.price.find((cost) => cost.resource === 'personalCashCents');
+	return {
+		instanceId,
+		upgradeId,
+		acquiredTurn: turn,
+		valueCents: definition?.asset ? (price?.amount ?? 0) : null
+	};
+}
+
 export function instanceIdFor(number: number): string {
 	return `upgrade.${number}`;
 }
@@ -286,7 +327,13 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 
 	const items: unknown = (plan as { steps?: unknown } | null)?.steps;
 	if (!Array.isArray(items)) {
-		const economy = resolveEconomy(state.resources, state.upgrades, state.turn, content);
+		const economy = resolveEconomy(
+			state.resources,
+			state.upgrades,
+			state.turn,
+			content,
+			state.player.lifestyle
+		);
 		return {
 			valid: false,
 			timeAvailable,
@@ -304,7 +351,13 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			],
 			producers: economy.producers,
 			warnings: [],
-			wellbeing: forecastWellbeing(state.player, reserved, state.turn, content.balance.wellbeing),
+			wellbeing: forecastWellbeing(
+				state.player,
+				reserved,
+				state.turn,
+				content.balance.wellbeing,
+				comfortStress(economy, content)
+			),
 			resourceChanges: totals
 		};
 	}
@@ -409,8 +462,8 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 					(mandate) => mandate.instanceId === target
 				);
 				if (!held) fail('invalid_target', `« ${label} » : choisissez un mandat en cours.`);
-			} else if (definition.target === 'upgrade') {
-				const issue = releaseIssue(target, upgrades, state.turn);
+			} else if (definition.target === 'upgrade' || definition.target === 'asset') {
+				const issue = releaseIssue(target, upgrades, state.turn, definition.target, content);
 				if (issue) {
 					fail('invalid_target', `« ${label} » : ${issue}.`);
 				} else {
@@ -541,7 +594,7 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			content
 		));
 		if (instanceId !== null) {
-			upgrades.push({ instanceId, upgradeId: step.id, acquiredTurn: state.turn });
+			upgrades.push(newInstance(instanceId, step.id, state.turn, content));
 			nextInstanceNumber += 1;
 		}
 		if (released !== null) {
@@ -553,7 +606,7 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 	});
 
 	// Économie du trimestre sur le pire cas : une charge prévue impayée est un risque.
-	const economy = resolveEconomy(working, upgrades, state.turn, content);
+	const economy = resolveEconomy(working, upgrades, state.turn, content, workingPlayer.lifestyle);
 	for (const change of economy.changes) {
 		totals[change.resource].min += change.delta;
 		totals[change.resource].max += change.delta;
@@ -566,6 +619,14 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			upgradeId: producer.upgradeId,
 			message: `Charges de « ${content.upgrades[producer.upgradeId]?.label ?? producer.upgradeId} » non couvertes : production suspendue ce trimestre si la trésorerie reste insuffisante.`
 		}));
+	if (economy.lifestyle.unpaid) {
+		warnings.unshift({
+			code: 'lifestyle_unpaid',
+			instanceId: null,
+			upgradeId: null,
+			message: `« ${content.lifestyles[economy.lifestyle.lifestyleId]?.label ?? economy.lifestyle.lifestyleId} » n’est pas couvert par votre argent personnel : retour au train de vie le plus sobre, et du stress en plus.`
+		});
+	}
 
 	// Revenus et stress des mandats encore en cours à la fin du trimestre.
 	const mandates = mandateIncome(workingCareer.mandates, state.turn, content);
@@ -581,7 +642,8 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 		stressed,
 		timeUsed + reserved,
 		state.turn,
-		content.balance.wellbeing
+		content.balance.wellbeing,
+		comfortStress(economy, content)
 	);
 	if (wellbeing.stress >= content.balance.wellbeing.highStressThreshold) {
 		warnings.push({
@@ -700,7 +762,7 @@ export function executePlan(
 			for (const cost of definition.price) add(cost.resource, -cost.amount);
 			instanceId = instanceIdFor(nextInstanceNumber);
 			nextInstanceNumber += 1;
-			upgrades.push({ instanceId, upgradeId: step.id, acquiredTurn: state.turn });
+			upgrades.push(newInstance(instanceId, step.id, state.turn, content));
 		}
 
 		for (const resource of RESOURCE_IDS) {

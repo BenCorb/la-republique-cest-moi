@@ -9,6 +9,7 @@ import type { Condition, StatId } from '../content/types.ts';
 import { ageAt, quarterOf, yearOf } from './calendar.ts';
 import { activeMandates, cumulatedMandates, holdIssue, isIneligible } from './career.ts';
 import type { GameState } from './state.ts';
+import { netWorth } from './wealth.ts';
 
 /** Sous-ensemble de l'état suffisant pour évaluer une condition. */
 export type ConditionContext = Pick<
@@ -85,6 +86,10 @@ export function readStat(context: ConditionContext, stat: StatId): number {
 				.length;
 		case 'player.ineligible':
 			return isIneligible(context.player, context.turn) ? 1 : 0;
+		case 'player.assets':
+			return context.upgrades.filter((upgrade) => upgrade.valueCents !== null).length;
+		case 'player.netWorthCents':
+			return netWorth(context.resources, context.upgrades);
 		default: {
 			const unknown: never = stat;
 			throw new Error(`Statistique inconnue : ${String(unknown)}`);
@@ -112,6 +117,8 @@ export function evaluateCondition(context: ConditionContext, condition: Conditio
 			return context.player.origin === condition.origin;
 		case 'profession':
 			return context.player.profession === condition.profession;
+		case 'lifestyle':
+			return context.player.lifestyle === condition.lifestyle;
 		case 'holdsMandate':
 			return activeMandates(context.mandates).some(
 				(mandate) => mandate.mandateId === condition.mandate

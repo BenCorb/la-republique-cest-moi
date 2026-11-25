@@ -27,6 +27,7 @@ import {
 	fixtureEvents,
 	fixtureProfiles,
 	fixtureJustice,
+	fixtureWealth,
 	fixtureCareer,
 	fixtureSupports,
 	fixtureTraits,
@@ -145,7 +146,8 @@ function political(
 		supports: fixtureSupports,
 		entourage: fixtureEntourage,
 		profiles: fixtureProfiles,
-		justice: fixtureJustice
+		justice: fixtureJustice,
+		wealth: fixtureWealth
 	});
 }
 

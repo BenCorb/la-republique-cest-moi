@@ -42,6 +42,9 @@ import {
 	type JusticeBalance,
 	type JusticeDefinition,
 	type OffenseDefinition,
+	type AssetDefinition,
+	type LifestyleDefinition,
+	type WealthDefinition,
 	type SentenceRule,
 	type MandateDefinition,
 	type SupportGroupDefinition,
@@ -83,6 +86,7 @@ export const conditionSchema: z.ZodType<Condition> = z.lazy(() =>
 		z.strictObject({ op: z.literal('canHoldMandate'), mandate: contentId }),
 		z.strictObject({ op: z.literal('origin'), origin: contentId }),
 		z.strictObject({ op: z.literal('profession'), profession: contentId }),
+		z.strictObject({ op: z.literal('lifestyle'), lifestyle: contentId }),
 		z.strictObject({
 			op: z.literal('support'),
 			group: contentId,
@@ -174,6 +178,7 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 		op: z.literal('prepareCampaign'),
 		value: safeInt.refine((value) => value > 0 && value <= 100, 'préparation de 1 à 100')
 	}),
+	z.strictObject({ op: z.literal('setLifestyle'), lifestyle: contentId }),
 	z.strictObject({
 		op: z.literal('recordFact'),
 		offense: contentId,
@@ -211,7 +216,9 @@ export const actionSchema: z.ZodType<ActionDefinition> = z
 		requires: conditionSchema.optional(),
 		unavailableReason: frenchText.optional(),
 		effects: z.array(effectSchema).min(1),
-		target: z.enum(['party', 'mandate', 'ballot', 'candidate', 'staff', 'upgrade']).optional(),
+		target: z
+			.enum(['party', 'mandate', 'ballot', 'candidate', 'staff', 'upgrade', 'asset'])
+			.optional(),
 		category: z
 			.string()
 			.regex(/^[a-z][a-z0-9_]*$/, 'identifiant en minuscules (a-z, 0-9, _)')
@@ -238,6 +245,35 @@ export const actionCatalogSchema = z.strictObject({
 	actions: z.array(actionSchema).min(1)
 });
 
+const smallPercent = safeInt.refine((value) => Math.abs(value) <= 100, 'pourcentage de -100 à 100');
+
+export const assetSchema: z.ZodType<AssetDefinition> = z.strictObject({
+	annualYieldPercent: smallPercent,
+	annualGrowthPercent: smallPercent,
+	volatilityPercent: smallPercent.refine((value) => value >= 0, 'aléa positif ou nul'),
+	economySensitivityPercent: smallPercent,
+	failurePerMille: safeInt.refine((value) => value >= 0 && value <= 1000, 'de 0 à 1000'),
+	salePercent: smallPercent.refine((value) => value >= 0, 'part positive ou nulle'),
+	stressPerTurn: smallPercent
+});
+
+export const lifestyleSchema: z.ZodType<LifestyleDefinition> = z.strictObject({
+	id: contentId,
+	label: frenchText,
+	description: frenchText,
+	level: nonNegativeInt,
+	costCents: nonNegativeInt,
+	stressPerTurn: smallPercent,
+	exposure: smallPercent
+});
+
+/** Trains de vie (`wealth.json`, P3-02). */
+export const wealthCatalogSchema: z.ZodType<WealthDefinition> = z.strictObject({
+	lifestyles: z.array(lifestyleSchema).min(1),
+	defaultLifestyle: contentId,
+	unpaidLifestyleStress: nonNegativeInt
+});
+
 export const upgradeSchema: z.ZodType<UpgradeDefinition> = z
 	.strictObject({
 		id: contentId,
@@ -249,16 +285,22 @@ export const upgradeSchema: z.ZodType<UpgradeDefinition> = z
 		maxOwned: positiveInt,
 		price: z.array(resourceAmountSchema),
 		upkeep: z.array(resourceAmountSchema),
-		production: z.array(resourceAmountSchema).min(1),
+		production: z.array(resourceAmountSchema),
 		requires: conditionSchema.optional(),
 		unavailableReason: frenchText.optional(),
 		ownedLabel: frenchText.optional(),
-		releaseEffects: z.array(effectSchema).optional()
+		releaseEffects: z.array(effectSchema).optional(),
+		asset: assetSchema.optional()
 	})
 	.refine(
 		(upgrade) => (upgrade.requires === undefined) === (upgrade.unavailableReason === undefined),
 		{ message: '« requires » et « unavailableReason » vont ensemble', path: ['unavailableReason'] }
-	);
+	)
+	// Un actif rapporte selon sa valeur ; les autres améliorations produisent toujours quelque chose.
+	.refine((upgrade) => upgrade.asset !== undefined || upgrade.production.length > 0, {
+		message: 'production attendue (sauf pour un actif)',
+		path: ['production']
+	});
 
 export const upgradeCatalogSchema = z.strictObject({
 	upgrades: z.array(upgradeSchema)

@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.21.1';
+export const RULES_VERSION = '0.22.0';
 
 export {
 	START_YEAR,
@@ -65,6 +65,7 @@ export {
 	type OwnedUpgrade,
 	type PlayerState,
 	type ProducerRecord,
+	type WealthRecord,
 	type ResourceChange,
 	type StepRecord,
 	type WellbeingContribution,
@@ -219,6 +220,7 @@ export {
 } from './commands.ts';
 export {
 	RESOURCE_LABELS,
+	assetProceeds,
 	carryOverPlan,
 	executePlan,
 	instanceIdFor,
@@ -233,6 +235,7 @@ export {
 	type ResourceRanges
 } from './plan.ts';
 export {
+	assetIncome,
 	economyRecords,
 	isProducing,
 	resolveEconomy,
@@ -258,6 +261,7 @@ export {
 	type WellbeingForecast,
 	type WellbeingResolution
 } from './health.ts';
+export { assetsValue, comfortStress, netWorth, revalueAssets } from './wealth.ts';
 export { careerSummary, type CareerSummary, type EndCause } from './selectors.ts';
 export {
 	caseInstanceId,

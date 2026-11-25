@@ -1,0 +1,33 @@
+{
+	"lifestyles": [
+		{
+			"id": "lifestyle.modest",
+			"label": "Train de vie modeste",
+			"description": "Un deux-pièces, une voiture d’occasion et des vacances chez la belle-famille. Les électeurs vous trouvent proche d’eux ; votre banquier aussi.",
+			"level": 0,
+			"costCents": 0,
+			"stressPerTurn": 0,
+			"exposure": 0
+		},
+		{
+			"id": "lifestyle.comfortable",
+			"label": "Train de vie confortable",
+			"description": "Un bel appartement, une table réservée au bistrot du coin et des week-ends qui reposent vraiment.",
+			"level": 1,
+			"costCents": 400000,
+			"stressPerTurn": -3,
+			"exposure": 0
+		},
+		{
+			"id": "lifestyle.lavish",
+			"label": "Train de vie fastueux",
+			"description": "Chauffeur, montre de collection et dîners dont les photographes raffolent. On se détend beaucoup, on se fait remarquer davantage.",
+			"level": 2,
+			"costCents": 1000000,
+			"stressPerTurn": -5,
+			"exposure": 8
+		}
+	],
+	"defaultLifestyle": "lifestyle.modest",
+	"unpaidLifestyleStress": 6
+}

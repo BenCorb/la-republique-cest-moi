@@ -150,7 +150,8 @@ export function divertedFunds(facts: readonly Fact[]): number {
 export function referenceExposure(
 	mandates: readonly MandateInstance[],
 	campaigns: readonly Campaign[],
-	content: Content
+	content: Content,
+	lifestyleId: string | null = null
 ): number {
 	const rules = content.justice;
 	const office = Math.max(
@@ -160,7 +161,12 @@ export function referenceExposure(
 	const campaigning = campaigns.some((campaign) => campaign.status === 'running')
 		? rules.campaignExposure
 		: 0;
-	return Math.min(GAUGE_MAX, Math.max(GAUGE_MIN, rules.baseExposure + office + campaigning));
+	// Le luxe se voit (P3-02).
+	const lifestyle = lifestyleId === null ? 0 : (content.lifestyles[lifestyleId]?.exposure ?? 0);
+	return Math.min(
+		GAUGE_MAX,
+		Math.max(GAUGE_MIN, rules.baseExposure + office + campaigning + lifestyle)
+	);
 }
 
 /**
@@ -173,7 +179,7 @@ export function resolveExposure(
 	campaigns: readonly Campaign[],
 	content: Content
 ): { readonly player: PlayerState; readonly delta: number } {
-	const gap = referenceExposure(mandates, campaigns, content) - player.exposure;
+	const gap = referenceExposure(mandates, campaigns, content, player.lifestyle) - player.exposure;
 	const step = Math.ceil((Math.abs(gap) * content.justice.exposureDriftPercent) / 100);
 	const delta = Math.sign(gap) * Math.min(Math.abs(gap), step);
 	return delta === 0

@@ -54,7 +54,8 @@ export type EffectRange =
 	  }
 	| { readonly kind: 'preparation'; readonly value: number }
 	/** Fait inscrit au registre : connu du joueur, qui l'a choisi. */
-	| { readonly kind: 'fact'; readonly offense: string; readonly severity: number };
+	| { readonly kind: 'fact'; readonly offense: string; readonly severity: number }
+	| { readonly kind: 'lifestyle'; readonly lifestyle: string };
 
 export type ResolvedEffect =
 	| {
@@ -82,7 +83,11 @@ export type ResolvedEffect =
 	/** Départ de l'exemplaire ciblé, appliqué par le plan (actions seulement). */
 	| { readonly kind: 'release'; readonly rng: RngState }
 	/** Fait inscrit au registre par le moteur d'événements (P3-01). */
-	| { readonly kind: 'fact'; readonly effect: FactEffect; readonly rng: RngState };
+	| { readonly kind: 'fact'; readonly effect: FactEffect; readonly rng: RngState }
+	/** Changement de train de vie (P3-02), appliqué au joueur. */
+	| { readonly kind: 'lifestyle'; readonly effect: LifestyleEffect; readonly rng: RngState };
+
+export type LifestyleEffect = Extract<Effect, { op: 'setLifestyle' }>;
 
 export type FactEffect = Extract<Effect, { op: 'recordFact' }>;
 
@@ -163,6 +168,8 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'preparation', value: effect.value };
 		case 'recordFact':
 			return { kind: 'fact', offense: effect.offense, severity: effect.severity };
+		case 'setLifestyle':
+			return { kind: 'lifestyle', lifestyle: effect.lifestyle };
 		default: {
 			const unknown: never = effect;
 			throw new Error(`Effet inconnu : ${JSON.stringify(unknown)}`);
@@ -208,6 +215,8 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 			return { kind: 'family', effect, rng };
 		case 'recordFact':
 			return { kind: 'fact', effect, rng };
+		case 'setLifestyle':
+			return { kind: 'lifestyle', effect, rng };
 		default: {
 			const unknown: never = effect;
 			throw new Error(`Effet inconnu : ${JSON.stringify(unknown)}`);

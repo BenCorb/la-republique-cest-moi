@@ -9,7 +9,8 @@
 		LayoutDashboard,
 		Newspaper,
 		Users,
-		UsersRound
+		UsersRound,
+		Wallet
 	} from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
 	import AlertList from '#lib/components/common/AlertList.svelte';
@@ -42,6 +43,7 @@
 		{ id: 'entourage', label: 'Entourage', icon: UsersRound },
 		{ id: 'relations', label: 'Relations', icon: Users },
 		{ id: 'organisation', label: 'Organisation', icon: Briefcase },
+		{ id: 'wealth', label: 'Patrimoine', icon: Wallet },
 		{ id: 'journal', label: 'Journal', icon: BookOpen }
 	];
 </script>

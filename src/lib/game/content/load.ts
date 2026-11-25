@@ -13,6 +13,7 @@ import supports from './data/supports.json';
 import entourage from './data/entourage.json';
 import profiles from './data/profiles.json';
 import justice from './data/justice.json';
+import wealth from './data/wealth.json';
 import traits from './data/traits.json';
 import world from './data/world.json';
 import type { Content } from './types.ts';
@@ -40,7 +41,8 @@ export function loadContent(): Content {
 		supports,
 		entourage,
 		profiles,
-		justice
+		justice,
+		wealth
 	});
 	if (!result.ok) {
 		const details = result.issues

@@ -57,6 +57,13 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
 		violations.push(`naissance invalide : ${state.player.birthTurn}`);
 	}
 
+	for (const upgrade of state.upgrades) {
+		const value = upgrade.valueCents;
+		if (value !== null && (!Number.isSafeInteger(value) || value < 0)) {
+			violations.push(`valeur d’actif invalide : ${upgrade.instanceId} = ${value}`);
+		}
+	}
+
 	for (const gauge of ['health', 'stress', 'exposure', 'defense'] as const) {
 		const value = state.player[gauge];
 		if (!Number.isSafeInteger(value) || value < GAUGE_MIN || value > GAUGE_MAX) {
@@ -569,6 +576,15 @@ function checkCareerInvariants(state: GameState): string[] {
  */
 export function checkContentReferences(state: GameState, content: Content): string[] {
 	const violations: string[] = [];
+	if (!Object.hasOwn(content.lifestyles, state.player.lifestyle)) {
+		violations.push(`train de vie inconnu : ${state.player.lifestyle}`);
+	}
+	for (const upgrade of state.upgrades) {
+		const isAsset = content.upgrades[upgrade.upgradeId]?.asset !== undefined;
+		if (isAsset !== (upgrade.valueCents !== null)) {
+			violations.push(`valeur d’actif incohérente : ${upgrade.instanceId}`);
+		}
+	}
 	for (const fact of state.facts) {
 		if (!Object.hasOwn(content.offenses, fact.offenseId)) {
 			violations.push(`infraction inconnue du catalogue : ${fact.offenseId}`);

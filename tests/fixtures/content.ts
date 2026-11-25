@@ -920,6 +920,32 @@ export const fixtureJustice = {
 	}
 };
 
+/** Trains de vie de test : le sobre est gratuit et sans effet (tests existants inchangés). */
+export const fixtureWealth = {
+	lifestyles: [
+		{
+			id: 'lifestyle.test_modest',
+			label: 'Sobre',
+			description: 'Sobre.',
+			level: 0,
+			costCents: 0,
+			stressPerTurn: 0,
+			exposure: 0
+		},
+		{
+			id: 'lifestyle.test_lavish',
+			label: 'Fastueux',
+			description: 'Fastueux.',
+			level: 1,
+			costCents: 50_000,
+			stressPerTurn: -4,
+			exposure: 10
+		}
+	],
+	defaultLifestyle: 'lifestyle.test_modest',
+	unpaidLifestyleStress: 6
+};
+
 function load(): Content {
 	const result = validateContent({
 		actions: fixtureActions,
@@ -933,7 +959,8 @@ function load(): Content {
 		supports: fixtureSupports,
 		entourage: fixtureEntourage,
 		profiles: fixtureProfiles,
-		justice: fixtureJustice
+		justice: fixtureJustice,
+		wealth: fixtureWealth
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;

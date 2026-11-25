@@ -56,6 +56,8 @@ export interface PlayerState {
 	readonly defense: number;
 	/** Inéligible jusqu'à ce trimestre exclu, `null` sinon (P3-01). */
 	readonly ineligibleUntil: Turn | null;
+	/** Train de vie en cours (`lifestyle.*`, P3-02). */
+	readonly lifestyle: string;
 	/** Parti du joueur, `null` s'il n'est pas encarté. */
 	readonly partyId: string | null;
 	/** Historique des adhésions, dans l'ordre ; seule la dernière peut être en cours. */
@@ -379,6 +381,14 @@ export interface LegalCase {
 	readonly sentence: Sentence | null;
 }
 
+/** Réévaluation des actifs patrimoniaux à la frontière (P3-02). */
+export interface WealthRecord {
+	/** Variation totale de la valeur des actifs, en centimes. */
+	readonly valueChange: number;
+	/** Exemplaires dont la valeur est tombée à zéro (faillite, sinistre). */
+	readonly failed: readonly string[];
+}
+
 export type CaseEventKind =
 	'revealed' | 'dismissed' | 'indicted' | 'appealed' | 'acquitted' | 'convicted';
 
@@ -447,6 +457,8 @@ export interface OwnedUpgrade {
 	readonly upgradeId: string;
 	/** Trimestre d'achat ; l'exemplaire produit à partir du trimestre suivant. */
 	readonly acquiredTurn: Turn;
+	/** Valeur de marché d'un actif patrimonial, en centimes (P3-02) ; `null` pour les autres. */
+	readonly valueCents: number | null;
 }
 
 /** Étape du plan exécutée pendant un trimestre, avec ses variations réelles. */
@@ -483,6 +495,12 @@ export interface ProducerRecord {
 }
 
 export interface EconomyRecord {
+	/** Train de vie du trimestre : dépense prélevée, ou impayée (retour au plus sobre). */
+	readonly lifestyle: {
+		readonly lifestyleId: string;
+		readonly costCents: number;
+		readonly unpaid: boolean;
+	};
 	readonly producers: readonly ProducerRecord[];
 	/** Variation nette de l'économie (charges et production). */
 	readonly changes: readonly ResourceChange[];
@@ -491,7 +509,8 @@ export interface EconomyRecord {
 export type DeathCause = 'health_failure' | 'natural_causes';
 
 /** Origine identifiable d'une variation de santé ou de stress (ARCHITECTURE.md §8.2). */
-export type WellbeingSource = 'workload' | 'recovery' | 'high_stress' | 'calm' | 'ageing';
+export type WellbeingSource =
+	'workload' | 'comfort' | 'recovery' | 'high_stress' | 'calm' | 'ageing';
 
 export interface WellbeingContribution {
 	readonly source: WellbeingSource;
@@ -584,6 +603,8 @@ export interface HistoryEntry {
 	readonly exposure: number | null;
 	/** Dossiers judiciaires, `null` si la carrière s'est terminée avant. */
 	readonly justice: JusticeRecord | null;
+	/** Réévaluation des actifs, `null` si la carrière s'est terminée avant. */
+	readonly wealth: WealthRecord | null;
 	/** Événements créés (ou suites annulées) au passage à T+1. */
 	readonly events: readonly EventRecord[];
 }
@@ -687,6 +708,7 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		exposure: content.justice.baseExposure,
 		defense: 0,
 		ineligibleUntil: null,
+		lifestyle: content.wealth.defaultLifestyle,
 		partyId: null,
 		affiliations: [],
 		supports: startingSupports(content),

@@ -9,7 +9,8 @@
 		{ "id": "personal", "label": "Vie personnelle" },
 		{ "id": "organisation", "label": "Organisation et entourage" },
 		{ "id": "mandate", "label": "Mandats" },
-		{ "id": "justice", "label": "Justice" }
+		{ "id": "justice", "label": "Justice" },
+		{ "id": "wealth", "label": "Patrimoine et train de vie" }
 	],
 	"actions": [
 		{
@@ -686,6 +687,62 @@
 				{ "op": "addStat", "stat": "player.defense", "value": 15 },
 				{ "op": "addStat", "stat": "player.stress", "value": 2 }
 			]
+		},
+		{
+			"id": "wealth.sell",
+			"category": "wealth",
+			"label": "Vendre un bien",
+			"description": "Un notaire, deux signatures et un chèque un peu moins rond que prévu : frais et décote restent chez les intermédiaires.",
+			"timeCost": 5,
+			"maxPerTurn": 5,
+			"costs": [],
+			"effects": [{ "op": "releaseUpgrade" }],
+			"target": "asset"
+		},
+		{
+			"id": "lifestyle.adopt_modest",
+			"category": "wealth",
+			"label": "Adopter un train de vie modeste",
+			"description": "Revendre la montre, garder la voiture et redécouvrir les joies du pique-nique. Les électeurs apprécient ; vous, un peu moins.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "not",
+				"condition": { "op": "lifestyle", "lifestyle": "lifestyle.modest" }
+			},
+			"unavailableReason": "C’est déjà votre train de vie.",
+			"effects": [{ "op": "setLifestyle", "lifestyle": "lifestyle.modest" }]
+		},
+		{
+			"id": "lifestyle.adopt_comfortable",
+			"category": "wealth",
+			"label": "Adopter un train de vie confortable",
+			"description": "Un appartement plus grand, quelques bons restaurants et des week-ends qui reposent vraiment.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "not",
+				"condition": { "op": "lifestyle", "lifestyle": "lifestyle.comfortable" }
+			},
+			"unavailableReason": "C’est déjà votre train de vie.",
+			"effects": [{ "op": "setLifestyle", "lifestyle": "lifestyle.comfortable" }]
+		},
+		{
+			"id": "lifestyle.adopt_lavish",
+			"category": "wealth",
+			"label": "Adopter un train de vie fastueux",
+			"description": "Chauffeur, réceptions et vacances sur un yacht « prêté par un ami ». Le repos est total ; la discrétion, beaucoup moins.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "not",
+				"condition": { "op": "lifestyle", "lifestyle": "lifestyle.lavish" }
+			},
+			"unavailableReason": "C’est déjà votre train de vie.",
+			"effects": [{ "op": "setLifestyle", "lifestyle": "lifestyle.lavish" }]
 		}
 	]
 }

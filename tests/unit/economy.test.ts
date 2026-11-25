@@ -31,7 +31,11 @@ function game(
 			type: 'turn.resolved' as const,
 			turn: index,
 			steps: [],
-			economy: { producers: [], changes: [] },
+			economy: {
+				lifestyle: { lifestyleId: 'lifestyle.test_modest', costCents: 0, unpaid: false },
+				producers: [],
+				changes: []
+			},
 			mandates: { changes: [], stress: 0 },
 			staff: null,
 			family: null,
@@ -42,6 +46,7 @@ function game(
 			deadlines: null,
 			exposure: null,
 			justice: null,
+			wealth: null,
 			events: []
 		})),
 		resources: { ...base.resources, ...resources },
@@ -53,7 +58,8 @@ function game(
 const owned = (number: number, upgradeId: string, acquiredTurn = 0): OwnedUpgrade => ({
 	instanceId: `upgrade.${number}`,
 	upgradeId,
-	acquiredTurn
+	acquiredTurn,
+	valueCents: null
 });
 
 function commit(state: GameState, turnPlan: TurnPlan = plan()): TransitionSuccess {
@@ -84,7 +90,11 @@ describe('achat d’une amélioration', () => {
 			}
 		]);
 		// Trimestre T : aucune production.
-		expect(quarterLog(bought).economy).toEqual({ producers: [], changes: [] });
+		expect(quarterLog(bought).economy).toEqual({
+			lifestyle: { lifestyleId: 'lifestyle.test_modest', costCents: 0, unpaid: false },
+			producers: [],
+			changes: []
+		});
 		expect(bought.state.resources.politicalBudgetCents).toBe(10_000 - 5_000);
 
 		// Trimestre T+1 : production.

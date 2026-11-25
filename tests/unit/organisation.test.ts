@@ -21,6 +21,7 @@ import {
 	fixtureEvents,
 	fixtureProfiles,
 	fixtureJustice,
+	fixtureWealth,
 	fixtureSupports,
 	fixtureTraits,
 	fixtureUpgrades,
@@ -63,7 +64,8 @@ function raw(overrides: { actions?: unknown[]; upgradeChanges?: Record<string, u
 		supports: fixtureSupports,
 		entourage: fixtureEntourage,
 		profiles: fixtureProfiles,
-		justice: fixtureJustice
+		justice: fixtureJustice,
+		wealth: fixtureWealth
 	};
 }
 

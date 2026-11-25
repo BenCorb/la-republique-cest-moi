@@ -68,10 +68,13 @@ function settleGauges(
 	timeUsed: number,
 	band: AgeBand,
 	wellbeing: WellbeingBalance,
-	log: ContributionLog
+	log: ContributionLog,
+	comfort: number
 ): Gauges {
 	const gauges: Gauges = { health: player.health, stress: player.stress };
 	log.apply(gauges, 'player.stress', 'workload', workloadStress(timeUsed, wellbeing));
+	// Confort (P3-02) : train de vie et biens qui apaisent, ou dépense impayée.
+	log.apply(gauges, 'player.stress', 'comfort', comfort);
 	log.apply(gauges, 'player.stress', 'recovery', -wellbeing.stressRecoveryPerTurn);
 	if (gauges.stress >= wellbeing.highStressThreshold) {
 		log.apply(gauges, 'player.health', 'high_stress', -wellbeing.highStressHealthLoss);
@@ -96,11 +99,12 @@ export function forecastWellbeing(
 	player: PlayerState,
 	timeUsed: number,
 	turn: Turn,
-	wellbeing: WellbeingBalance
+	wellbeing: WellbeingBalance,
+	comfort = 0
 ): WellbeingForecast {
 	const band = ageBandFor(ageAt(player.birthTurn, turn), wellbeing);
 	const log = new ContributionLog();
-	const gauges = settleGauges(player, timeUsed, band, wellbeing, log);
+	const gauges = settleGauges(player, timeUsed, band, wellbeing, log, comfort);
 	const possibleLoss = band.ageingChance > 0 ? band.ageingHealthLoss : 0;
 	return {
 		stress: gauges.stress,
@@ -120,11 +124,12 @@ export function resolveWellbeing(
 	timeUsed: number,
 	turn: Turn,
 	rng: RngState,
-	wellbeing: WellbeingBalance
+	wellbeing: WellbeingBalance,
+	comfort = 0
 ): WellbeingResolution {
 	const band = ageBandFor(ageAt(player.birthTurn, turn), wellbeing);
 	const log = new ContributionLog();
-	const gauges = settleGauges(player, timeUsed, band, wellbeing, log);
+	const gauges = settleGauges(player, timeUsed, band, wellbeing, log, comfort);
 	let currentRng = rng;
 
 	// 3. Vieillissement.

@@ -7,4 +7,5 @@ export type GameTab =
 	| 'entourage'
 	| 'relations'
 	| 'organisation'
+	| 'wealth'
 	| 'journal';

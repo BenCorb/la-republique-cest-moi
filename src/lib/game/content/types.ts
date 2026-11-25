@@ -122,7 +122,11 @@ export const STAT_IDS = [
 	/** Dossiers judiciaires en cours visant le joueur (P3-01). */
 	'player.openCases',
 	/** 1 si le joueur est frappé d'inéligibilité, sinon 0 (P3-01). */
-	'player.ineligible'
+	'player.ineligible',
+	/** Nombre d'actifs patrimoniaux possédés (P3-02). */
+	'player.assets',
+	/** Valeur nette : argent personnel et valeur des actifs, en centimes (P3-02). */
+	'player.netWorthCents'
 ] as const;
 export type StatId = (typeof STAT_IDS)[number];
 
@@ -143,6 +147,8 @@ export type Condition =
 	/** Origine ou profession du joueur (P2-08). */
 	| { readonly op: 'origin'; readonly origin: string }
 	| { readonly op: 'profession'; readonly profession: string }
+	/** Train de vie en cours du joueur (P3-02). */
+	| { readonly op: 'lifestyle'; readonly lifestyle: string }
 	/** Soutien d'un groupe comparé à une valeur. */
 	| {
 			readonly op: 'support';
@@ -238,6 +244,8 @@ export type Effect =
 	 * Sans `author`, le joueur en est l'auteur ; sinon l'acteur de ce rôle (un
 	 * collaborateur, par exemple) l'est et le joueur en est complice.
 	 */
+	/** Changement de train de vie (P3-02), pris en compte dès ce trimestre. */
+	| { readonly op: 'setLifestyle'; readonly lifestyle: string }
 	| {
 			readonly op: 'recordFact';
 			readonly offense: string;
@@ -373,7 +381,9 @@ export interface ActionDefinition {
 	 * Cible à choisir dans le plan : `party` (identifiant de parti), `mandate`
 	 * (exemplaire de mandat en cours) ou `ballot` (échéance électorale).
 	 */
-	readonly target?: 'party' | 'mandate' | 'ballot' | 'candidate' | 'staff' | 'upgrade' | undefined;
+	/** `asset` : un actif patrimonial possédé ; `upgrade` : un autre exemplaire de l'organisation. */
+	readonly target?:
+		'party' | 'mandate' | 'ballot' | 'candidate' | 'staff' | 'upgrade' | 'asset' | undefined;
 }
 
 /**
@@ -404,6 +414,52 @@ export interface UpgradeDefinition {
 	readonly ownedLabel?: string | undefined;
 	/** Effets certains d'un départ (`releaseUpgrade`) : ressources, jauges, soutiens. */
 	readonly releaseEffects?: readonly Effect[] | undefined;
+	/**
+	 * Actif patrimonial (P3-02) : l'exemplaire a une valeur de marché, rapporte un
+	 * revenu proportionnel à cette valeur et se revend au lieu d'être abandonné.
+	 */
+	readonly asset?: AssetDefinition | undefined;
+}
+
+/** Règles d'un actif patrimonial ; hypothèses provisoires d'équilibrage. */
+export interface AssetDefinition {
+	/** Revenu passif annuel, en % de la valeur, versé par quart chaque trimestre actif. */
+	readonly annualYieldPercent: number;
+	/** Tendance annuelle de la valeur, en %. */
+	readonly annualGrowthPercent: number;
+	/** Aléa trimestriel de la valeur, en % (tirage uniforme entre − et +). */
+	readonly volatilityPercent: number;
+	/** Effet de la conjoncture : % de variation trimestrielle par 10 points d'écart de l'économie à 50. */
+	readonly economySensitivityPercent: number;
+	/** Chance de perte totale par trimestre, en dixièmes de % (faillite, sinistre). */
+	readonly failurePerMille: number;
+	/** Part de la valeur récupérée à la revente, en % (frais, décote). */
+	readonly salePercent: number;
+	/** Variation de stress par trimestre actif (confort ; négatif : apaise). */
+	readonly stressPerTurn: number;
+}
+
+/** Train de vie du joueur (P3-02) : dépense personnelle de chaque trimestre. */
+export interface LifestyleDefinition {
+	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	/** Rang, de 0 (le plus sobre) au plus dispendieux. */
+	readonly level: number;
+	/** Dépense prélevée sur l'argent personnel chaque trimestre. */
+	readonly costCents: number;
+	/** Variation de stress par trimestre (négatif : apaise). */
+	readonly stressPerTurn: number;
+	/** Exposition médiatique de référence ajoutée (le luxe se voit). */
+	readonly exposure: number;
+}
+
+export interface WealthDefinition {
+	readonly lifestyles: readonly LifestyleDefinition[];
+	/** Train de vie au début de la partie et après une dépense impayée. */
+	readonly defaultLifestyle: string;
+	/** Stress d'un trimestre où le train de vie n'a pas pu être payé. */
+	readonly unpaidLifestyleStress: number;
 }
 
 /**
@@ -990,4 +1046,8 @@ export interface Content {
 	readonly offenses: Readonly<Record<string, OffenseDefinition>>;
 	readonly offenseIds: readonly string[];
 	readonly justice: JusticeBalance;
+	/** Trains de vie, par identifiant, et leur ordre de rang (P3-02). */
+	readonly lifestyles: Readonly<Record<string, LifestyleDefinition>>;
+	readonly lifestyleIds: readonly string[];
+	readonly wealth: Omit<WealthDefinition, 'lifestyles'>;
 }

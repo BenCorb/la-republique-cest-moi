@@ -59,7 +59,11 @@ describe('scénario : passage du temps', () => {
 				type: 'turn.resolved',
 				turn: 0,
 				steps: [],
-				economy: { producers: [], changes: [] },
+				economy: {
+					lifestyle: { lifestyleId: 'lifestyle.test_modest', costCents: 0, unpaid: false },
+					producers: [],
+					changes: []
+				},
 				mandates: { changes: [], stress: 0 },
 				staff: { payroll: [], production: [], departures: [], shortlisted: [] },
 				family: { inheritance: 0, childCosts: 0, stress: 0, neglected: false, widowed: null },
@@ -70,6 +74,7 @@ describe('scénario : passage du temps', () => {
 				deadlines: { mandates: [], ballots: [], campaigns: [], people: [] },
 				exposure: 0,
 				justice: { cases: [], changes: [], gauges: [], politics: [] },
+				wealth: { valueChange: 0, failed: [] },
 				events: []
 			}
 		]);

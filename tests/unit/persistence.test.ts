@@ -167,7 +167,9 @@ describe('lecture validée', () => {
 			'amélioration absente du catalogue',
 			() => {
 				const raw = rawEnvelope();
-				const upgrades = [{ instanceId: 'upgrade.1', upgradeId: 'test.disparue', acquiredTurn: 0 }];
+				const upgrades = [
+					{ instanceId: 'upgrade.1', upgradeId: 'test.disparue', acquiredTurn: 0, valueCents: null }
+				];
 				return JSON.stringify({ ...raw, state: { ...raw.state, upgrades, nextInstanceNumber: 2 } });
 			},
 			'incompatible_content'
