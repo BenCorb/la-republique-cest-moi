@@ -99,3 +99,24 @@ bugs, irritants classés (bloquant, gênant, mineur) et décisions._
   retenue pour la série de corrections du playtest : compter « conseil municipal + mairie » pour
   un seul mandat dans le cumul et les afficher ensemble (« Mairie (et siège au conseil
   municipal) »). Temps réservé et indemnités restent cumulés.
+- **Composer le plan est trop laborieux (26 novembre 2026, gênant).** L’agenda affiche une
+  longue liste de cartes (≈ 18 actions), chacune avec description, coûts et effets, dans un ordre
+  sans logique visible. Les actions inaccessibles y figurent aussi : actions des autres
+  professions, actions de parti sans adhésion, actions de campagne sans candidature. Trouver
+  l’action voulue demande de parcourir toute la liste. Pistes proposées :
+  1. **Masquer ce qui est hors de portée.** Une action dont la condition n’est pas remplie
+     (`condition_not_met` : autre profession, pas d’adhésion, pas de campagne, pas de mandat)
+     disparaît de la liste ; un lien « Afficher les actions indisponibles » la montre à la
+     demande, avec son motif. Une action seulement bloquée ce trimestre (temps, argent, limite
+     atteinte) reste visible mais grisée, avec ce qui manque.
+  2. **Regrouper par thème**, groupes déclarés dans le catalogue (`category` de chaque action) et
+     repliables : militantisme, parti, campagne, réseau, finances politiques, revenus et métier,
+     vie personnelle. Un groupe sans action disponible est masqué.
+  3. **Lignes compactes** au lieu de cartes : nom, temps, coût et effet principal sur une ligne,
+     bouton « + » ; description et détail des effets au survol ou en dépliant. Compteur
+     « − 2 + » pour les actions répétables.
+  4. Plus tard (P3-08) : épinglage des étapes du plan, aide contextuelle, composition plus
+     graphique du trimestre.
+
+  Recommandation : faire 1 à 3 dans la série de corrections du playtest (interface et catalogue,
+  sans changement de règle) ; 4 reste en P3-08.
