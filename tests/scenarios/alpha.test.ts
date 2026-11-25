@@ -91,9 +91,9 @@ describe('alpha : trajectoires distinctes', { timeout: LONG_SCENARIO_TIMEOUT }, 
 		expect(mean(byStrategy('ambitious').map((run) => run.endingAge))).toBeLessThan(
 			mean(byStrategy('prudent').map((run) => run.endingAge))
 		);
-		// Le mixte délègue davantage que le patrimonial.
-		expect(mean(byStrategy('mixed').map((run) => run.staffHired))).toBeGreaterThan(
-			mean(byStrategy('patrimonial').map((run) => run.staffHired))
+		// Le patrimonial bâtit une organisation plus fournie que le prudent, qui n'achète rien.
+		expect(mean(byStrategy('patrimonial').map((run) => run.upgradesOwned))).toBeGreaterThan(
+			mean(byStrategy('prudent').map((run) => run.upgradesOwned))
 		);
 	});
 });

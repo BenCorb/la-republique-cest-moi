@@ -429,6 +429,8 @@ export interface CampaignsBalance {
 	readonly victoryInfluence: number;
 	readonly defeatInfluence: number;
 	readonly defeatStress: number;
+	/** Score minimal (en %) ouvrant droit au remboursement forfaitaire des frais de campagne. */
+	readonly refundMinPercent: number;
 	/** Points gagnés par un adversaire pour chacune de ses victoires passées contre le joueur. */
 	readonly rivalExperienceBonus: number;
 	/** Nombre maximal de victoires prises en compte. */
@@ -548,6 +550,11 @@ export interface ElectionDefinition {
 	readonly requiresAnyMandate: readonly string[];
 	/** Score de l'adversaire principal, avant aléa. */
 	readonly rivalStrength: number;
+	/**
+	 * Remboursement forfaitaire des frais de campagne (centimes, budget politique),
+	 * versé après le scrutin à partir de `refundMinPercent` des voix ; absent : aucun.
+	 */
+	readonly campaignRefundCents?: number | undefined;
 }
 
 /**

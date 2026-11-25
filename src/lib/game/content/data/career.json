@@ -15,7 +15,8 @@
 				"minPercent": 55
 			},
 			"requiresAnyMandate": [],
-			"rivalStrength": 30
+			"rivalStrength": 30,
+			"campaignRefundCents": 80000
 		},
 		{
 			"id": "election.senatorial",
@@ -32,7 +33,8 @@
 				"mandate.mayor",
 				"mandate.regional_councillor"
 			],
-			"rivalStrength": 36
+			"rivalStrength": 36,
+			"campaignRefundCents": 50000
 		},
 		{
 			"id": "election.legislative",
@@ -45,7 +47,8 @@
 			"minAge": 23,
 			"grants": "mandate.deputy",
 			"requiresAnyMandate": [],
-			"rivalStrength": 40
+			"rivalStrength": 40,
+			"campaignRefundCents": 150000
 		},
 		{
 			"id": "election.regional",
@@ -58,7 +61,8 @@
 			"minAge": 18,
 			"grants": "mandate.regional_councillor",
 			"requiresAnyMandate": [],
-			"rivalStrength": 33
+			"rivalStrength": 33,
+			"campaignRefundCents": 100000
 		}
 	],
 	"mandates": [
@@ -71,6 +75,7 @@
 			"requires": [],
 			"timePerTurn": 10,
 			"income": [
+				{ "resource": "politicalBudgetCents", "amount": 5000 },
 				{
 					"resource": "influence",
 					"amount": 1
@@ -91,6 +96,7 @@
 			"requires": ["mandate.municipal_councillor"],
 			"timePerTurn": 25,
 			"income": [
+				{ "resource": "politicalBudgetCents", "amount": 60000 },
 				{
 					"resource": "influence",
 					"amount": 3
@@ -111,6 +117,7 @@
 			"requires": [],
 			"timePerTurn": 10,
 			"income": [
+				{ "resource": "politicalBudgetCents", "amount": 30000 },
 				{
 					"resource": "influence",
 					"amount": 2

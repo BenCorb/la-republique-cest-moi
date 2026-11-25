@@ -141,6 +141,9 @@
 							{ballot.filing}{ballot.endsMandate ? ' · Votre mandat arrive à son terme' : ''}
 						</p>
 						<p class="text-xs">Enjeu : {ballot.stake}</p>
+						{#if ballot.refund}
+							<p class="text-xs text-muted">{ballot.refund}</p>
+						{/if}
 						{#if ballot.campaign}
 							<div
 								class="mt-2 rounded bg-surface p-2"

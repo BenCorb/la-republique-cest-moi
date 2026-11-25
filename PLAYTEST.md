@@ -159,6 +159,11 @@ bugs, irritants classés (bloquant, gênant, mineur) et décisions._
   de corrections du playtest, avec les chiffres ci-dessus comme point de départ ; les pistes 3, 5
   et 6 restent en réserve si la simulation montre que cela ne suffit pas.
 
+  **Corrigé** (ARCHITECTURE §8.3 duodecies) : charges impayées fortement réduites en
+  simulation. Deux points restent à régler : le budget des carrières élues déborde davantage
+  (surtout par l’Assemblée), et des pics de budget font recruter des collaborateurs qu’on ne
+  peut ensuite plus payer.
+
 - **Presse impossible à consulter (26 novembre 2026, mineur).** La colonne « La presse », à
   droite, n’apparaît qu’à partir de 1 100 px de large et ne montre que les titres des six
   derniers événements, sans article ni archive ; il n’y a pas d’écran de presse. Comportement

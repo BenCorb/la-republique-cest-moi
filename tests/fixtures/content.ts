@@ -68,6 +68,7 @@ export const fixtureBalance = {
 		victoryInfluence: 5,
 		defeatInfluence: 1,
 		defeatStress: 4,
+		refundMinPercent: 5,
 		rivalExperienceBonus: 3,
 		rivalExperienceCap: 3,
 		rivalryAttitude: -8,

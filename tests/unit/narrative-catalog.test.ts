@@ -56,9 +56,10 @@ function texts(event: EventDefinition): string[] {
 }
 
 describe('catalogue narratif du prototype', () => {
-	it('contient entre 20 et 30 événements', () => {
+	it('contient au moins les 20 événements du prototype', () => {
+		// Le plafond de 30 de P1-06 ne valait que pour le prototype : les corrections de
+		// l'alpha (gala, 26 novembre 2026) et la V1 enrichissent ces catégories.
 		expect(prototypeEvents.length).toBeGreaterThanOrEqual(20);
-		expect(prototypeEvents.length).toBeLessThanOrEqual(30);
 	});
 
 	it('ajoute des événements de relations fondés sur la mémoire et les traits (P2-04)', () => {

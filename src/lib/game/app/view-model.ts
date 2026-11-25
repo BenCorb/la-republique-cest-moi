@@ -18,6 +18,7 @@ import {
 import {
 	accelerationAlerts,
 	ageAt,
+	campaignRefund,
 	careerSummary,
 	describePendingEvent,
 	effectRange,
@@ -68,6 +69,7 @@ import {
 	describeIndicator,
 	describeStress,
 	formatDelta,
+	formatMoney,
 	formatGaugeDelta,
 	formatRange,
 	formatResource,
@@ -311,6 +313,8 @@ export interface BallotView {
 	readonly endsMandate: boolean;
 	/** Mandat brigué en cas de victoire. */
 	readonly stake: string;
+	/** Remboursement forfaitaire des frais de campagne, en clair, ou `null`. */
+	readonly refund: string | null;
 	/** Candidature : déjà déposée (campagne en cours), prévue dans le plan, ou possible. */
 	readonly campaign: CampaignView | null;
 	readonly candidacyPlanned: boolean;
@@ -636,6 +640,16 @@ function deadlineLines(
 						? `${label} : défaite avec ${result.playerPercent} %${against}. La notoriété progresse, la fatigue aussi.`
 						: `${label} : candidature invalidée (${result.reason ?? 'conditions non remplies'}).`
 		});
+		const definition = content.elections[campaign?.electionId ?? ''];
+		const refund = definition
+			? campaignRefund(definition, result.status, result.playerPercent, content)
+			: 0;
+		if (refund > 0) {
+			lines.push({
+				kind: 'economy',
+				text: `Frais de campagne remboursés — ${RESOURCE_NAMES.politicalBudgetCents} ${formatDelta('politicalBudgetCents', refund)}`
+			});
+		}
 	}
 	for (const result of record.ballots) {
 		const ballot = state.ballots.find((entry) => entry.ballotId === result.ballotId);
@@ -1369,6 +1383,9 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 				dateLabel: formatTurn(ballot.turn),
 				turnsLeft: ballot.turn - state.turn,
 				filing: `Candidatures closes au ${formatTurn(ballot.filingClosesTurn)}`,
+				refund: definition?.campaignRefundCents
+					? `Frais de campagne remboursés ${formatMoney(definition.campaignRefundCents)} à partir de ${content.balance.campaigns.refundMinPercent} % des voix`
+					: null,
 				early: ballot.early,
 				endsMandate: active.some(
 					(mandate) => content.mandates[mandate.mandateId]?.election === ballot.electionId

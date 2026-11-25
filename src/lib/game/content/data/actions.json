@@ -121,6 +121,27 @@
 			]
 		},
 		{
+			"id": "organization.gala",
+			"label": "Organiser un gala de levée de fonds",
+			"description": "Salle des fêtes louée, nappes blanches, discours de vingt minutes et couverts à 300 € : les donateurs viennent pour être vus, et attendent qu’on s’en souvienne.",
+			"timeCost": 40,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 20000 }],
+			"requires": { "op": "gte", "stat": "resources.influence", "value": 20 },
+			"unavailableReason": "Il faut au moins 20 points d’influence pour remplir une salle de donateurs.",
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "politicalBudgetCents",
+					"min": 100000,
+					"max": 300000
+				},
+				{ "op": "addStat", "stat": "player.stress", "value": 3 },
+				{ "op": "addSupport", "group": "support.business", "value": 2 },
+				{ "op": "addSupport", "group": "support.activists", "value": -1 }
+			]
+		},
+		{
 			"id": "personal.freelance",
 			"label": "Accepter des missions en free-lance",
 			"description": "Il faut bien payer le loyer : quelques missions de conseil, réalisées entre deux réunions.",
