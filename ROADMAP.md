@@ -123,6 +123,47 @@ Cette section est un plan de travail. **Décisions du créateur (24 novembre 202
 | P3-09 | Équilibrage et tests | P3-08 | Lots de simulations par stratégie, playtests, corrections documentées ; cible de durée évaluée ; aucune anomalie critique connue |
 | P3-10 | Livraison statique | P3-09 | Build, vérification locale et sous-chemin GitHub Pages ; procédure de déploiement/rollback (workflow manuel) éprouvée ; publication seulement sur demande |
 
+### 5.1 Préparation de la mise en œuvre (25 novembre 2026)
+
+Plan de travail proposé, **à valider par le créateur** : contrairement à la phase 2, aucun choix de contenu n’a encore été délégué. Les chiffres sont des hypothèses de départ, modifiables à l’équilibrage. Rien ne commence avant le playtest de l’alpha (`PLAYTEST.md`) et les corrections qui en découlent.
+
+**Constats de départ.** L’alpha simule déjà la carrière, le monde, les personnages, l’entourage et la famille ; les choix opportunistes existent dans les événements mais ne laissent aucune trace exploitable. Il manque les jauges d’exposition médiatique et de risque judiciaire (GDD §4.2), un compteur de fonds détournés pour le bilan (GDD §12), les actifs personnels et un coût de la vie (GDD §17). L’état grossit à chaque tâche : la projection recalculée en entier et la sauvegarde relue à chaque écriture (ARCHITECTURE §15.3) sont à surveiller.
+
+**Préalables techniques (au début de P3-01, sans nouvel identifiant de tâche) :**
+
+1. **Registre des faits** : un acte douteux (emploi fictif, financement occulte, favoritisme…) crée un fait daté, avec ses protagonistes et sa gravité. La justice (P3-01), la presse (P3-03) et le bilan s’appuient sur ce même registre, au lieu de tirages indépendants. Les choix opportunistes existants sont rattachés à des faits.
+2. **Jauges** : exposition médiatique et risque judiciaire, bornées et expliquées, sans jauge morale (AGENTS.md).
+3. **Sauvegardes** : l’alpha est jetable ; le format reste en version 1 et toute sauvegarde devenue illisible est refusée (`outdated_rules`). Les migrations commencent avec la première version à conserver (au plus tard P3-10).
+4. **Performance** : mesurer la projection et l’écriture de sauvegarde sur une carrière longue avant d’ajouter les modules ; mémoriser le journal si nécessaire.
+
+**Ordre recommandé** (respecte les dépendances du tableau) :
+
+| Lot | Tâches | Contenu livré | Remarque |
+| --- | --- | --- | --- |
+| A — Faits et justice | P3-01 | Registre des faits, risque judiciaire, dossiers à étapes (révélation, enquête, mise en examen, procès, jugement, appel), défense, sanctions | Cœur satirique de la V1 ; réutilise le poste « Affaires juridiques » |
+| B — Patrimoine | P3-02 | Actifs personnels, revenus passifs, valeur nette, train de vie et coût de la vie | Tranche la question ouverte du coût de la vie |
+| C — Promesses | P3-04 | Promesses de campagne, registre et états, dilemmes une fois élu, rappels différés | S’appuie sur les campagnes de P2-03 |
+| D — Médias | P3-03 | Médias fictifs différenciés, fil de presse fondé sur les faits et promesses, exposition, rachat d’un média | Après B (actifs) et C (promesses à rappeler) |
+| E — Institutions | P3-05 | Réformes paramétrées, activation à date fixe, effets pour tous les acteurs | Après A et C |
+| F — Profils | P3-06 | Âges de départ et passé cohérent | Indépendant : peut s’intercaler tôt si le playtest le demande |
+| G — Contenu et finition | P3-07 à P3-10 | Époques, chaînes, interface définitive, équilibrage, livraison | P3-08 reprend les retouches d’interface reportées (épinglage du plan, densité de texte) |
+
+**Propositions de contenu par lot** (à valider) :
+
+- *Lot A* — Cinq types d’affaires fictives : emplois fictifs, financement occulte de campagne, favoritisme dans un marché public, prise illégale d’intérêts, abus de biens sociaux ; plusieurs dossiers simultanés, dont ceux de l’entourage. Délais de 2 à 8 trimestres par étape. Sanctions : amende, inéligibilité de 1 à 10 ans, prison avec sursis, prison ferme ; seule une condamnation ferme grave met fin à la carrière. Défense : temps, argent, conseil juridique, choix de communication. Culpabilité et enquête restent des états distincts.
+- *Lot B* — Six actifs : appartement en ville, résidence secondaire, portefeuille boursier, parts de PME, vignoble, et un média local (activé par P3-03). Trois niveaux de train de vie (modeste, confortable, fastueux) qui coûtent chaque trimestre et agissent sur le stress et la santé.
+- *Lot C* — Huit promesses types liées aux élections (fiscalité, sécurité, écologie, services publics, institutions…), avec les états annoncée, en cours, tenue, partiellement tenue et abandonnée, et des effets sur les soutiens des groupes concernés.
+- *Lot D* — Cinq médias fictifs (quotidien de référence, quotidien populaire, chaîne d’information continue, hebdomadaire satirique, presse régionale existante : Courrier du Bocage, Radio Bocage FM), avec ligne éditoriale, audience et relation au joueur ; une acquisition possible, sans contrôle de toute la presse.
+- *Lot E* — Cinq paramètres réformables : plafond du cumul, indépendance de la justice, transparence financière, mode de scrutin, liberté de la presse.
+- *Lot F* — Trois familles d’âge de départ (18–25, 30–45, 50–65 ans) avec bagage et horizon de vie contrastés.
+
+**Questions pour le créateur :**
+
+1. Valider ou amender l’ordre des lots et les propositions de contenu ci-dessus.
+2. **Organisation Git** : reconduire une branche de phase unique (`feat/p3-v1`, une PR en fin de phase) ou passer à une PR par tâche, désormais possible grâce à la CI obligatoire et utile pour publier l’alpha au fil de l’eau. Recommandation : une PR par tâche.
+3. Ton et limites de la satire judiciaire (affaires uniquement fictives, aucune personne réelle identifiable — GDD §8.1).
+4. Coût de la vie : le traiter dans P3-02 comme proposé, ou plus tôt si le playtest le réclame.
+
 ### Hors périmètre
 
 Version mobile dédiée, multijoueur, comptes, stockage serveur, IA générative en cours de partie, méta-progression, prestige, gestion exhaustive d’un pays ou d’entreprises, graphismes complexes. Les archives de carrières enrichies et récompenses narratives sont des pistes ultérieures ; le bilan de fin reste en V1. Ne pas créer ces systèmes « pour plus tard » avant preuve de leur intérêt.
@@ -149,9 +190,9 @@ Les tâches de phase 0 peuvent également être confiées une par une pour facil
 
 ## 9. Reprise du travail — passage de relais (25 novembre 2026)
 
-- **Branche :** `main` (`5a5b0e5`, fusion « squash » de la phase 2 via la PR #5, CI verte). La branche `feat/p2-alpha` n’a plus d’usage et peut être supprimée. Le site publié (https://bencorb.github.io/la-republique-cest-moi/) montre l’alpha, déployée à la demande du créateur le 25 novembre 2026.
+- **Branche :** travail sur `main` par branches courtes et pull requests (CI obligatoire avant fusion). Dernières intégrations : phase 2 (PR #5), feuille de route (PR #6), organisation regroupée et départ d’un exemplaire (PR #7). Les branches de phase ont été supprimées. Le site publié (https://bencorb.github.io/la-republique-cest-moi/) montre l’alpha, redéployée à la demande du créateur le 25 novembre 2026.
 - **État :** phases 0, 1 et 2 terminées, intégrées et publiées. Plan et décisions de la phase 2 au §4.1.
-- **Où lire :** décisions de chaque tâche de phase 1 dans `ARCHITECTURE.md` (§5.2 bis, §6.1, §7.1 bis, §7.3, §7.4, §8.1 bis, §8.2 bis, §9.1, §10.1, §11.1 bis, §12.1–12.3) ; protocole humain dans `PLAYTEST.md` ; limites, dette et règles provisoires au §15.
-- **Prochaine étape :** phase 2 terminée (P2-01 à P2-10 ; décisions : ARCHITECTURE §5.2 ter et §8.3 bis à decies). Suite : retouches d’interface utiles au playtest (sur une branche dédiée depuis `main`), puis playtest de l’alpha (rythme des arrêts d’accélération, fréquence de la vie de famille, relecture des hypothèses provisoires) avant la phase 3. Ne pas déployer sans demande explicite.
-- **Décisions attendues du créateur :** relecture des hypothèses provisoires du §4.1 ; coût de la vie personnel ; relecture éditoriale des 30 événements ; déplacement du dépôt hors d’iCloud (§15.4).
+- **Où lire :** décisions de la phase 1 dans `ARCHITECTURE.md` (§5.2 bis, §6.1, §7.1 bis, §7.3, §7.4, §8.1 bis, §8.2 bis, §9.1, §10.1, §11.1 bis, §12.1–12.3) ; de la phase 2 au §5.2 ter et aux §8.1 ter, §8.3 bis à decies ; plan de la phase 3 au §5.1 de ce document ; protocoles et résultats humains dans `PLAYTEST.md` ; limites, dette et règles provisoires au §15.
+- **Prochaine étape :** playtest de l’alpha par le créateur (`PLAYTEST.md`, prévu le 26 novembre 2026), corrections qui en découlent, puis P3-01 selon le plan du §5.1.
+- **Décisions attendues du créateur :** relecture des hypothèses provisoires de la phase 2 (§4.1, GDD) ; coût de la vie personnel ; relecture éditoriale des 86 événements ; décisions de contenu de la phase 3 (§5.1). Réglé le 25 novembre 2026 : l’alpha est jetable (sauvegardes refusées après un changement de format, sans migration, jusqu’à la première version à conserver) ; le dépôt reste dans `~/Documents` jusqu’au nettoyage de fin de projet.
 - **Avant de commencer :** `git fetch --prune`, `git status`, rechercher les copies de synchronisation (`find . -path ./node_modules -prune -o -name '* [0-9].*' -print`), `npm ci`, puis `npm run check`, `npm run lint`, `npm run content:validate`, `npm run test` et `npm run build`.

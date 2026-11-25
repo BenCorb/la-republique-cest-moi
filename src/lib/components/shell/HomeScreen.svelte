@@ -99,6 +99,9 @@
 	</div>
 
 	{#snippet status()}
-		<p>Alpha · une carrière complète, sauvegardée dans ce navigateur</p>
+		<p>
+			Alpha · sauvegardée dans ce navigateur ; une mise à jour du jeu peut rendre une partie en
+			cours illisible
+		</p>
 	{/snippet}
 </GameShell>
