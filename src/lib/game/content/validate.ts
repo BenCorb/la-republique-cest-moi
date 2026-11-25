@@ -1071,6 +1071,20 @@ export function validateContent(raw: RawContent): ContentValidation {
 		parsed.success ? parsed.data.events.map((event, index) => ({ source, index, event })) : []
 	);
 	issues.push(...crossCheck(actionList, upgradeList, balance.data.timeBudgetPerTurn));
+	const actionCategories = actionCatalog.data.categories ?? [];
+	const categoryIds = new Set(actionCategories.map((category) => category.id));
+	if (categoryIds.size !== actionCategories.length) {
+		issues.push({ source: 'actions.json', path: 'categories', message: 'thème en double' });
+	}
+	actionList.forEach((action, index) => {
+		if (action.category !== undefined && !categoryIds.has(action.category)) {
+			issues.push({
+				source: 'actions.json',
+				path: `actions[${index}].category`,
+				message: `thème inconnu : ${action.category}`
+			});
+		}
+	});
 	const knownIds = new Set([...actionList.map((a) => a.id), ...upgradeList.map((u) => u.id)]);
 	const traitList = traitCatalog.data.traits;
 	issues.push(...crossCheckTraits(traitList, balance.data, knownIds));
@@ -1202,6 +1216,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 			balance: balance.data,
 			actions,
 			actionIds: actionList.map((action) => action.id),
+			actionCategories,
 			upgrades,
 			upgradeIds: upgradeList.map((upgrade) => upgrade.id),
 			events,

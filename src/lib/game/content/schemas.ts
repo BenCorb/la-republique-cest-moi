@@ -192,7 +192,11 @@ export const actionSchema: z.ZodType<ActionDefinition> = z
 		requires: conditionSchema.optional(),
 		unavailableReason: frenchText.optional(),
 		effects: z.array(effectSchema).min(1),
-		target: z.enum(['party', 'mandate', 'ballot', 'candidate', 'staff', 'upgrade']).optional()
+		target: z.enum(['party', 'mandate', 'ballot', 'candidate', 'staff', 'upgrade']).optional(),
+		category: z
+			.string()
+			.regex(/^[a-z][a-z0-9_]*$/, 'identifiant en minuscules (a-z, 0-9, _)')
+			.optional()
 	})
 	.refine(
 		(action) => (action.requires === undefined) === (action.unavailableReason === undefined),
@@ -203,6 +207,15 @@ export const actionSchema: z.ZodType<ActionDefinition> = z
 	);
 
 export const actionCatalogSchema = z.strictObject({
+	/** Thèmes de l'agenda, dans l'ordre d'affichage. */
+	categories: z
+		.array(
+			z.strictObject({
+				id: z.string().regex(/^[a-z][a-z0-9_]*$/, 'identifiant en minuscules (a-z, 0-9, _)'),
+				label: frenchText
+			})
+		)
+		.optional(),
 	actions: z.array(actionSchema).min(1)
 });
 
