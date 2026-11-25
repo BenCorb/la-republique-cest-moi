@@ -55,6 +55,8 @@ import {
 	type Article,
 	activationLabel,
 	adoptionPercent,
+	eraAt,
+	eraReached,
 	effectiveContent,
 	evaluateCondition,
 	type CareerParts,
@@ -333,6 +335,8 @@ export interface WorldView {
 	readonly joinActionId: string | null;
 	readonly joinTimeCost: number;
 	readonly joinCosts: readonly string[];
+	/** Époque en cours (P3-07). */
+	readonly era: { readonly label: string; readonly description: string };
 	/** Institutions modifiables (P3-05). */
 	readonly institutions: InstitutionsView;
 }
@@ -1636,6 +1640,8 @@ function buildOrganisation(
 		// Les actifs patrimoniaux ont leur propre écran (P3-02).
 		if (definition.asset) return [];
 		const owned = state.upgrades.filter((upgrade) => upgrade.upgradeId === upgradeId);
+		// Une amélioration d'une époque à venir reste invisible (P3-07).
+		if (owned.length === 0 && !eraReached(definition.fromEra, state.turn, content)) return [];
 		const forecasts = preview.producers.filter((producer) => producer.upgradeId === upgradeId);
 		const releasing = new Set(
 			plan.flatMap((step) =>
@@ -1812,6 +1818,7 @@ function buildWorld(state: GameState, plan: readonly PlanStep[], content: Conten
 		joinActionId,
 		joinTimeCost: joinAction?.timeCost ?? 0,
 		joinCosts: joinAction ? amounts(joinAction.costs, -1) : [],
+		era: (({ label, description }) => ({ label, description }))(eraAt(state.turn, content)),
 		institutions: buildInstitutions(state, plan, content)
 	};
 }
@@ -2680,7 +2687,8 @@ export function projectView(
 	// Les actions ciblées se planifient depuis les écrans Monde politique et Carrière.
 	const actions: CatalogItemView[] = content.actionIds.flatMap((id) => {
 		const action = content.actions[id]!;
-		if (action.target) return [];
+		// Une action d'une époque à venir reste invisible (P3-07).
+		if (action.target || !eraReached(action.fromEra, state.turn, content)) return [];
 		return {
 			kind: 'action',
 			id,
@@ -2713,9 +2721,13 @@ export function projectView(
 			...addability(state, plan, { kind: 'purchase', id }, content)
 		};
 	};
-	const upgrades = content.upgradeIds.filter((id) => !content.upgrades[id]?.asset).map(upgradeView);
+	const current = (id: string): boolean =>
+		eraReached(content.upgrades[id]?.fromEra, state.turn, content);
+	const upgrades = content.upgradeIds
+		.filter((id) => !content.upgrades[id]?.asset && current(id))
+		.map(upgradeView);
 	const assetOffers = content.upgradeIds
-		.filter((id) => content.upgrades[id]?.asset)
+		.filter((id) => content.upgrades[id]?.asset && current(id))
 		.map((id) => {
 			const view = upgradeView(id);
 			const asset = content.upgrades[id]!.asset!;

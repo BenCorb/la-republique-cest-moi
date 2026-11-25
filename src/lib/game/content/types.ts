@@ -666,6 +666,8 @@ export interface ActionDefinition {
 	readonly unavailableReason?: string | undefined;
 	/** Thème de l'agenda (identifiant d'`ActionCategory`) ; absent : « Autres actions ». */
 	readonly category?: string | undefined;
+	/** Époque d'apparition (P3-07) : invisible et indisponible avant elle. */
+	readonly fromEra?: string | undefined;
 	readonly effects: readonly Effect[];
 	/**
 	 * Cible à choisir dans le plan : `party` (identifiant de parti), `mandate`
@@ -715,6 +717,8 @@ export interface UpgradeDefinition {
 	readonly unavailableReason?: string | undefined;
 	/** Nom d'un exemplaire possédé (« Militant bénévole »), à défaut le libellé d'achat. */
 	readonly ownedLabel?: string | undefined;
+	/** Époque d'apparition (P3-07) : invisible et indisponible avant elle. */
+	readonly fromEra?: string | undefined;
 	/** Effets certains d'un départ (`releaseUpgrade`) : ressources, jauges, soutiens. */
 	readonly releaseEffects?: readonly Effect[] | undefined;
 	/**
@@ -827,6 +831,13 @@ export interface EventsBalance {
 	readonly ordinaryDrawsPerTurn: number;
 	/** Probabilité qu'un tirage ordinaire produise un événement. */
 	readonly ordinaryEventChance: number;
+	/**
+	 * Répétition (P3-07) : chaque occurrence passée réduit le poids d'un
+	 * événement ordinaire (poids × 100 / (100 + pénalité × occurrences)).
+	 */
+	readonly repeatPenaltyPercent: number;
+	/** Occurrences par carrière d'un événement ordinaire non unique (0 : sans plafond). */
+	readonly maxOccurrences: number;
 }
 
 /**
@@ -1201,7 +1212,24 @@ export interface ProfessionDefinition {
 }
 
 /** Catalogue du monde : partis, axes et noms des personnages générés. */
+/** Année du premier trimestre de toute partie (T1 2000). */
+export const START_YEAR = 2000;
+
+/**
+ * Époque (P3-07, GDD §8.3) : à partir de son année de début et jusqu'à la
+ * suivante. Les événements, actions et améliorations d'une époque ultérieure
+ * n'apparaissent pas avant elle.
+ */
+export interface EraDefinition {
+	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	readonly fromYear: number;
+}
+
 export interface WorldDefinition {
+	/** Époques, par année de début croissante ; la première commence avec la partie. */
+	readonly eras: readonly EraDefinition[];
 	readonly axes: readonly AxisDefinition[];
 	readonly parties: readonly PartyDefinition[];
 	/** Parti qui conduit le gouvernement au début de la partie. */
@@ -1278,6 +1306,10 @@ interface EventBase {
 	readonly priority: number;
 	readonly availableFromTurn?: number | undefined;
 	readonly availableUntilTurn?: number | undefined;
+	/** Époques où l'événement peut survenir (P3-07) ; absent : toutes. */
+	readonly eras?: readonly string[] | undefined;
+	/** Nombre maximal d'occurrences par carrière, à défaut celui de l'équilibrage (P3-07). */
+	readonly maxOccurrences?: number | undefined;
 	/** Trimestres minimum entre deux occurrences. */
 	readonly cooldownTurns: number;
 	/** Une seule occurrence par carrière. */

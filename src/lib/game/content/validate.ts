@@ -31,6 +31,7 @@ import {
 	ARTICLE_TONES,
 	ARTICLE_TOPICS,
 	PARTY_REFERENCES,
+	START_YEAR,
 	PROMISE_VARIABLE,
 	TREASURY_IDS,
 	WORLD_TEMPLATE_VARIABLES,
@@ -217,6 +218,31 @@ function crossCheckWorld(
 ): ContentIssue[] {
 	const issues: ContentIssue[] = [];
 	const source = 'world.json';
+	world.eras.forEach((era, index) => {
+		if (knownIds.has(era.id)) {
+			issues.push({
+				source,
+				path: `eras[${index}].id`,
+				message: `identifiant en double : ${era.id}`
+			});
+		}
+		knownIds.add(era.id);
+		const previous = world.eras[index - 1];
+		if (index === 0 && era.fromYear !== START_YEAR) {
+			issues.push({
+				source,
+				path: `eras[0].fromYear`,
+				message: `la première époque commence avec la partie (${START_YEAR})`
+			});
+		}
+		if (previous && era.fromYear <= previous.fromYear) {
+			issues.push({
+				source,
+				path: `eras[${index}].fromYear`,
+				message: 'époques par année de début strictement croissante'
+			});
+		}
+	});
 	const axisIds = new Set<string>();
 	world.axes.forEach((axis, index) => {
 		if (axisIds.has(axis.id)) {
@@ -1360,6 +1386,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 		)
 	);
 	issues.push(...crossCheckWorld(world.data, balance.data, knownIds));
+	issues.push(...crossCheckEras(world.data, actionList, upgradeList, sourcedEvents));
 	const career = careerCatalog.data;
 	issues.push(
 		...crossCheckCareer(
@@ -1638,6 +1665,58 @@ function crossCheckReforms(
 		});
 	}
 	checkEffects(balance.rejectionEffects, 'balance.rejectionEffects');
+	return issues;
+}
+
+/**
+ * Époques (P3-07) : époques connues pour les événements, actions et
+ * améliorations ; une suite ne précède jamais l'époque de l'événement qui la
+ * programme (pas d'anachronisme par une chaîne).
+ */
+function crossCheckEras(
+	world: WorldDefinition,
+	actions: readonly ActionDefinition[],
+	upgrades: readonly UpgradeDefinition[],
+	events: readonly SourcedEvent[]
+): ContentIssue[] {
+	const issues: ContentIssue[] = [];
+	const rank = new Map(world.eras.map((era, index) => [era.id, index]));
+	const check = (eraId: string, source: string, path: string): void => {
+		if (!rank.has(eraId)) issues.push({ source, path, message: `époque inconnue : ${eraId}` });
+	};
+	actions.forEach((action, index) => {
+		if (action.fromEra !== undefined)
+			check(action.fromEra, 'actions.json', `actions[${index}].fromEra`);
+	});
+	upgrades.forEach((upgrade, index) => {
+		if (upgrade.fromEra !== undefined) {
+			check(upgrade.fromEra, 'upgrades.json', `upgrades[${index}].fromEra`);
+		}
+	});
+	const byId = new Map(events.map((entry) => [entry.event.id, entry.event]));
+	const earliest = (event: EventDefinition): number =>
+		event.eras === undefined ? 0 : Math.min(...event.eras.map((eraId) => rank.get(eraId) ?? 0));
+	for (const { source, index, event } of events) {
+		(event.eras ?? []).forEach((eraId, eraIndex) => {
+			check(eraId, source, `events[${index}].eras[${eraIndex}]`);
+		});
+		const choices = event.blocking ? event.choices : [];
+		choices.forEach((choice, choiceIndex) => {
+			const next = choice.followUp ? byId.get(choice.followUp.eventId) : undefined;
+			if (
+				next &&
+				earliest(next) > earliest(event) &&
+				next.eras !== undefined &&
+				event.eras === undefined
+			) {
+				issues.push({
+					source,
+					path: `events[${index}].choices[${choiceIndex}].followUp`,
+					message: `suite d’une époque ultérieure depuis un événement de toutes les époques : ${next.id}`
+				});
+			}
+		});
+	}
 	return issues;
 }
 

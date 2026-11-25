@@ -63,6 +63,50 @@
 			]
 		},
 		{
+			"id": "activism.social_video",
+			"category": "activism",
+			"fromEra": "era.decade_2010",
+			"label": "Publier une vidéo sur le réseau Piaf",
+			"description": "Trente secondes face caméra, un fond de bibliothèque emprunté et un sous-titrage approximatif. Parfois partagée des milliers de fois, parfois par votre seule tante.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [],
+			"effects": [
+				{ "op": "addStat", "stat": "player.exposure", "value": 3 },
+				{ "op": "addResourceRandom", "resource": "influence", "min": -2, "max": 5 }
+			]
+		},
+		{
+			"id": "activism.live_stream",
+			"category": "activism",
+			"fromEra": "era.decade_2020",
+			"label": "Répondre en direct aux électeurs",
+			"description": "Une heure de questions en direct, des commentaires qui défilent trop vite pour être lus et une question sur les impôts toutes les quarante secondes.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"effects": [
+				{ "op": "addStat", "stat": "player.exposure", "value": 4 },
+				{ "op": "addResourceRandom", "resource": "influence", "min": 0, "max": 6 },
+				{ "op": "addStat", "stat": "player.stress", "value": 1 }
+			]
+		},
+		{
+			"id": "activism.hologram_rally",
+			"category": "activism",
+			"fromEra": "era.decade_2030",
+			"label": "Tenir un meeting holographique dans dix villes",
+			"description": "Vous voilà simultanément à Lille, Brest et Carpentras, en trois dimensions et légèrement transparent. La salle de Carpentras a reçu la version avec l’accent belge.",
+			"timeCost": 30,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 200000 }],
+			"effects": [
+				{ "op": "addStat", "stat": "player.exposure", "value": 6 },
+				{ "op": "addResource", "resource": "influence", "value": 8 },
+				{ "op": "addStat", "stat": "player.stress", "value": 2 }
+			]
+		},
+		{
 			"id": "activism.public_meeting",
 			"category": "activism",
 			"label": "Organiser une réunion publique",

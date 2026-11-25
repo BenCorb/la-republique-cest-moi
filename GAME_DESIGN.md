@@ -287,6 +287,8 @@ Le moteur national est volontairement réduit : rapports de force des partis, si
 
 Les dates d’apparition sont des paramètres de contenu, pas une obligation de reproduire l’Histoire réelle. Les crises inspirées de faits réels peuvent survenir autrement ou jamais. Les médias et outils d’une époque ultérieure ne doivent pas apparaître prématurément, sauf événement explicitement fictionnel prévu.
 
+**Hypothèses provisoires de P3-07 (25 novembre 2026) :** quatre époques (2000, 2010, 2020, 2030). Les événements peuvent être réservés à certaines époques ; les technologies (vidéo sur le réseau fictif Piaf, community manager, assistant de rédaction automatique, meeting holographique…) restent invisibles avant la leur. Un même événement devient moins probable à chaque occurrence et ne revient pas plus de six fois par carrière. Volume du catalogue : 122 événements, à compléter selon les playtests (ARCHITECTURE §8.4 octies).
+
 ## 9. Médias et patrimoine
 
 ### 9.1 Presse et communication

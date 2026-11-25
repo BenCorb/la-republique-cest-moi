@@ -45,6 +45,7 @@ import type {
 } from './state.ts';
 import { applyPoliticalEffect, isPoliticalEffect } from './world.ts';
 import { interviewIssue, mediaIssue } from './press.ts';
+import { eraReached } from './eras.ts';
 import { applyReformEffect, effectiveContent, isReformEffect, reformIssue } from './reforms.ts';
 import {
 	activeMandates,
@@ -440,6 +441,9 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 				return;
 			}
 			({ label, timeCost, costs, requires, unavailableReason } = definition);
+			if (!eraReached(definition.fromEra, state.turn, content)) {
+				fail('condition_not_met', `« ${label} » n’existe pas encore à cette époque.`);
+			}
 			ranges = definition.effects.map(effectRange);
 			actionEffects = definition.effects;
 			if (definition.target === 'party') {
@@ -551,6 +555,9 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 				return;
 			}
 			({ label, timeCost, requires, unavailableReason } = definition);
+			if (!eraReached(definition.fromEra, state.turn, content)) {
+				fail('condition_not_met', `« ${label} » n’existe pas encore à cette époque.`);
+			}
 			costs = definition.price;
 			const owned = upgrades.filter((upgrade) => upgrade.upgradeId === step.id).length;
 			if (owned + 1 > definition.maxOwned) {

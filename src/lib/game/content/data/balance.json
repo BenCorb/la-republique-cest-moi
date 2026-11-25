@@ -64,7 +64,9 @@
 	},
 	"events": {
 		"ordinaryDrawsPerTurn": 1,
-		"ordinaryEventChance": 0.3
+		"ordinaryEventChance": 0.3,
+		"repeatPenaltyPercent": 50,
+		"maxOccurrences": 6
 	},
 	"world": {
 		"startingIndicators": {

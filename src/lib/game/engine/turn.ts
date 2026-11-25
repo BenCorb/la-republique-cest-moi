@@ -280,7 +280,8 @@ function commitTurn(
 						rng: wealth.rng
 					},
 					resolvedTurn,
-					content
+					content,
+					state.events.occurrences
 				)
 			: null;
 

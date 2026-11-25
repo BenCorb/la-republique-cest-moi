@@ -168,6 +168,7 @@ test.describe('parcours de jeu', () => {
 	test('présente les institutions et réserve les réformes aux parlementaires', async ({ page }) => {
 		await startCareer(page, 'e2e-institutions');
 		await page.getByRole('button', { name: 'Monde politique', exact: true }).click();
+		await expect(page.getByTestId('era')).toContainText('Années 2000');
 		await expect(page.getByRole('heading', { name: 'Institutions' })).toBeVisible();
 		await expect(page.getByText('Réservé aux parlementaires et aux ministres.')).toBeVisible();
 		const cumul = page.getByTestId('institution-institution.cumul');
@@ -193,6 +194,9 @@ test.describe('parcours de jeu', () => {
 			page.getByRole('button', { name: 'Prévoir l’adhésion au Front du Non' })
 		).toBeDisabled();
 		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		// Un événement peut survenir : il ne fait pas partie de ce parcours.
+		await expect(page.getByTestId('game-date')).toHaveText('T2 2000 · 25 ans');
+		await settleDecisions(page);
 
 		await expect(page.getByTestId('header-party')).toHaveText('Étiquette PS');
 		await page.getByRole('button', { name: 'Monde politique', exact: true }).click();
