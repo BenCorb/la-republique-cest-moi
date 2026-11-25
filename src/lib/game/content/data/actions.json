@@ -1,7 +1,19 @@
 {
+	"categories": [
+		{ "id": "activism", "label": "Militantisme" },
+		{ "id": "party", "label": "Parti" },
+		{ "id": "campaign", "label": "Campagne" },
+		{ "id": "network", "label": "Réseau et influence" },
+		{ "id": "political_finance", "label": "Finances politiques" },
+		{ "id": "work", "label": "Métier et revenus" },
+		{ "id": "personal", "label": "Vie personnelle" },
+		{ "id": "organisation", "label": "Organisation et entourage" },
+		{ "id": "mandate", "label": "Mandats" }
+	],
 	"actions": [
 		{
 			"id": "activism.leaflets",
+			"category": "activism",
 			"label": "Distribuer des tracts",
 			"description": "Un samedi matin au marché, entre le fromager et un militant adverse qui distribue exactement le même tract avec un autre logo.",
 			"timeCost": 15,
@@ -28,6 +40,7 @@
 		},
 		{
 			"id": "network.meet_officials",
+			"category": "network",
 			"label": "Rencontrer des élus locaux",
 			"description": "Serrer des mains, écouter longuement les anecdotes de mandats passés et rire au bon moment.",
 			"timeCost": 20,
@@ -48,6 +61,7 @@
 		},
 		{
 			"id": "activism.public_meeting",
+			"category": "activism",
 			"label": "Organiser une réunion publique",
 			"description": "Louer une salle des fêtes, installer cent chaises et espérer en occuper plus de douze.",
 			"timeCost": 50,
@@ -90,6 +104,7 @@
 		},
 		{
 			"id": "organization.fundraising",
+			"category": "political_finance",
 			"label": "Organiser une collecte",
 			"description": "Un dîner-débat à prix libre, dont le prix s’avère étonnamment peu libre.",
 			"timeCost": 25,
@@ -122,6 +137,7 @@
 		},
 		{
 			"id": "organization.gala",
+			"category": "political_finance",
 			"label": "Organiser un gala de levée de fonds",
 			"description": "Salle des fêtes louée, nappes blanches, discours de vingt minutes et couverts à 300 € : les donateurs viennent pour être vus, et attendent qu’on s’en souvienne.",
 			"timeCost": 40,
@@ -143,6 +159,7 @@
 		},
 		{
 			"id": "personal.freelance",
+			"category": "work",
 			"label": "Accepter des missions en free-lance",
 			"description": "Il faut bien payer le loyer : quelques missions de conseil, réalisées entre deux réunions.",
 			"timeCost": 30,
@@ -158,6 +175,7 @@
 		},
 		{
 			"id": "personal.donate",
+			"category": "political_finance",
 			"label": "Verser un don à son organisation",
 			"description": "Transférer une partie de ses économies au budget politique. Le geste est noble, le compte en banque moins enthousiaste.",
 			"timeCost": 5,
@@ -178,6 +196,7 @@
 		},
 		{
 			"id": "personal.rest",
+			"category": "personal",
 			"label": "Prendre du repos",
 			"description": "Éteindre son téléphone, ne pas lire la presse, et constater que le monde politique continue de tourner sans vous, ce qui est à la fois rassurant et vexant.",
 			"timeCost": 25,
@@ -193,6 +212,7 @@
 		},
 		{
 			"id": "personal.vacation",
+			"category": "personal",
 			"label": "Partir en vacances",
 			"description": "Une semaine au bord de la mer, avec un livre que vous ne finirez pas et une crème solaire que vous oublierez.",
 			"timeCost": 40,
@@ -222,6 +242,7 @@
 		},
 		{
 			"id": "party.join",
+			"category": "party",
 			"label": "Adhérer à un parti",
 			"description": "Remplir le bulletin, régler la cotisation et recevoir une carte plastifiée qui vous engage pour la vie, ou jusqu’au prochain congrès.",
 			"timeCost": 10,
@@ -263,6 +284,7 @@
 		},
 		{
 			"id": "party.section_meeting",
+			"category": "party",
 			"label": "Assister à la réunion de section",
 			"description": "Deux heures sur l’ordre du jour, une heure sur la motion de soutien, dix minutes de vrai débat près de la machine à café.",
 			"timeCost": 15,
@@ -300,6 +322,7 @@
 		},
 		{
 			"id": "party.leave",
+			"category": "party",
 			"label": "Rendre sa carte",
 			"description": "Annoncer votre départ par un communiqué digne, sobre, et relu sept fois. Les anciens camarades, eux, ne relisent rien.",
 			"timeCost": 5,
@@ -334,6 +357,7 @@
 		},
 		{
 			"id": "mandate.resign",
+			"category": "mandate",
 			"label": "Démissionner d’un mandat",
 			"description": "Libérer du temps et un siège, en promettant de « se consacrer pleinement » à autre chose. Le suppléant, lui, se consacre déjà pleinement à sa joie.",
 			"timeCost": 5,
@@ -355,6 +379,7 @@
 		},
 		{
 			"id": "campaign.declare",
+			"category": "campaign",
 			"label": "Déclarer sa candidature",
 			"description": "Une conférence de presse, un slogan testé auprès de trois cousins et un dépôt de candidature en préfecture. Plus tôt on se déclare, plus longtemps on est exposé.",
 			"timeCost": 10,
@@ -379,6 +404,7 @@
 		},
 		{
 			"id": "campaign.canvass",
+			"category": "campaign",
 			"label": "Faire du porte-à-porte",
 			"description": "Sonner, sourire, laisser un tract, éviter le chien. Recommencer quatre cents fois.",
 			"timeCost": 25,
@@ -404,6 +430,7 @@
 		},
 		{
 			"id": "campaign.rally",
+			"category": "campaign",
 			"label": "Tenir un meeting de campagne",
 			"description": "Une salle des fêtes, une sono capricieuse, un discours applaudi aux bons endroits par des militants bien placés.",
 			"timeCost": 35,
@@ -439,6 +466,7 @@
 		},
 		{
 			"id": "staff.hire",
+			"category": "organisation",
 			"label": "Recruter un collaborateur",
 			"description": "Un entretien, une poignée de main et une promesse de « missions passionnantes ». Le salaire, lui, est bien réel.",
 			"timeCost": 10,
@@ -453,6 +481,7 @@
 		},
 		{
 			"id": "staff.dismiss",
+			"category": "organisation",
 			"label": "Se séparer d’un collaborateur",
 			"description": "Un entretien pénible, un pot de départ gêné et quelqu’un qui se souviendra longtemps de vous.",
 			"timeCost": 5,
@@ -472,6 +501,7 @@
 		},
 		{
 			"id": "organization.release",
+			"category": "organisation",
 			"label": "Se séparer d’un élément de l’organisation",
 			"description": "Un militant qu’on remercie, une permanence qu’on ferme, un abonnement qu’on résilie : l’organisation maigrit, les charges aussi.",
 			"timeCost": 2,
@@ -482,6 +512,7 @@
 		},
 		{
 			"id": "profession.union_office",
+			"category": "work",
 			"label": "Tenir la permanence syndicale",
 			"description": "Écouter les collègues, remplir des dossiers et rappeler à la direction l’existence du Code du travail.",
 			"timeCost": 20,
@@ -507,6 +538,7 @@
 		},
 		{
 			"id": "profession.evening_classes",
+			"category": "work",
 			"label": "Donner des cours du soir",
 			"description": "Expliquer la règle de trois à des adultes fatigués, et repartir avec quelques électeurs.",
 			"timeCost": 20,
@@ -532,6 +564,7 @@
 		},
 		{
 			"id": "profession.plead",
+			"category": "work",
 			"label": "Plaider une affaire",
 			"description": "Une audience, une plaidoirie inspirée et une note d’honoraires qui l’est tout autant.",
 			"timeCost": 30,
@@ -558,6 +591,7 @@
 		},
 		{
 			"id": "profession.op_ed",
+			"category": "work",
 			"label": "Signer une tribune",
 			"description": "Huit mille signes sur l’avenir du pays, relus par trois amis et un dictionnaire des citations.",
 			"timeCost": 15,
@@ -583,6 +617,7 @@
 		},
 		{
 			"id": "profession.consulting",
+			"category": "work",
 			"label": "Conseiller une entreprise",
 			"description": "Une journée de conseil facturée au prix d’une semaine, avec un tableur très coloré.",
 			"timeCost": 25,
@@ -608,6 +643,7 @@
 		},
 		{
 			"id": "profession.old_networks",
+			"category": "work",
 			"label": "Activer les anciens réseaux",
 			"description": "Un déjeuner avec d’anciens camarades de promotion devenus indispensables dans des ministères.",
 			"timeCost": 20,

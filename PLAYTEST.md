@@ -120,7 +120,9 @@ bugs, irritants classés (bloquant, gênant, mineur) et décisions._
      graphique du trimestre.
 
   Recommandation : faire 1 à 3 dans la série de corrections du playtest (interface et catalogue,
-  sans changement de règle) ; 4 reste en P3-08.
+  sans changement de règle) ; 4 reste en P3-08. **Corrigé** (pistes 1 à 3, ARCHITECTURE §8.3
+  terdecies) : au début de carrière, l’agenda passe d’environ 18 cartes à une dizaine de lignes
+  en cinq groupes, les autres actions étant consultables à la demande.
 
 - **Budget politique trop difficile à faire grossir (26 novembre 2026, gênant).** Constat
   chiffré :

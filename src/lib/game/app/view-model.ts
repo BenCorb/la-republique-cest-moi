@@ -123,6 +123,20 @@ export interface CatalogItemView {
 	readonly addable: boolean;
 	/** Raison pour laquelle l'élément ne peut pas être ajouté au plan. */
 	readonly reason: string | null;
+	/**
+	 * Hors de portée : une condition n'est pas remplie (autre profession, pas
+	 * d'adhésion, pas de campagne, influence insuffisante…), par opposition à un
+	 * blocage du trimestre (temps, argent, limite atteinte).
+	 */
+	readonly outOfReach: boolean;
+}
+
+/** Thème de l'agenda : actions à portée, et actions hors de portée affichées à la demande. */
+export interface ActionGroupView {
+	readonly id: string;
+	readonly label: string;
+	readonly actions: readonly CatalogItemView[];
+	readonly outOfReach: readonly CatalogItemView[];
 }
 
 export interface UpgradeView extends CatalogItemView {
@@ -439,6 +453,8 @@ export interface PlayerView {
 	readonly stress: GaugeDescription;
 	readonly plan: PlanView;
 	readonly actions: readonly CatalogItemView[];
+	/** Actions de l'agenda regroupées par thème, dans l'ordre du catalogue ; groupes vides omis. */
+	readonly actionGroups: readonly ActionGroupView[];
 	readonly upgrades: readonly UpgradeView[];
 	readonly producers: readonly ProducerView[];
 	readonly organisation: readonly OrganisationGroupView[];
@@ -740,11 +756,37 @@ function joinParts(...parts: string[]): string {
 /** Disponibilité d'une étape supplémentaire, évaluée par la prévision du moteur. */
 function addability(state: GameState, plan: readonly PlanStep[], step: PlanStep, content: Content) {
 	if (state.phase !== 'planning')
-		return { addable: false, reason: 'Aucune planification possible pour le moment.' };
+		return {
+			addable: false,
+			reason: 'Aucune planification possible pour le moment.',
+			outOfReach: false
+		};
 	const preview = previewPlan(state, { steps: [...plan, step] }, content);
 	const last = preview.steps.at(-1);
 	const issue = last?.issues[0];
-	return issue ? { addable: false, reason: issue.message } : { addable: true, reason: null };
+	const outOfReach = last?.issues.some((item) => item.code === 'condition_not_met') ?? false;
+	return issue
+		? { addable: false, reason: issue.message, outOfReach }
+		: { addable: true, reason: null, outOfReach: false };
+}
+
+const OTHER_ACTIONS = { id: 'other', label: 'Autres actions' } as const;
+
+/** Regroupe les actions de l'agenda par thème du catalogue ; « Autres actions » en dernier. */
+function groupActions(actions: readonly CatalogItemView[], content: Content): ActionGroupView[] {
+	const categoryOf = (id: string): string => content.actions[id]?.category ?? OTHER_ACTIONS.id;
+	return [...content.actionCategories, OTHER_ACTIONS].flatMap((category) => {
+		const members = actions.filter((action) => categoryOf(action.id) === category.id);
+		if (members.length === 0) return [];
+		return [
+			{
+				id: category.id,
+				label: category.label,
+				actions: members.filter((action) => !action.outOfReach),
+				outOfReach: members.filter((action) => action.outOfReach)
+			}
+		];
+	});
 }
 
 function eventTitle(
@@ -1942,6 +1984,7 @@ export function projectView(
 			healthAfter: preview.wellbeing.health
 		},
 		actions,
+		actionGroups: groupActions(actions, content),
 		upgrades,
 		producers,
 		organisation: buildOrganisation(state, plan, preview, content),

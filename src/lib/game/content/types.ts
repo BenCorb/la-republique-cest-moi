@@ -218,6 +218,12 @@ export interface ResourceAmount {
 	readonly amount: number;
 }
 
+/** Thème d'actions de l'agenda (militantisme, campagne, finances…), dans l'ordre d'affichage. */
+export interface ActionCategory {
+	readonly id: string;
+	readonly label: string;
+}
+
 export interface ActionDefinition {
 	/** Identifiant stable, par exemple `activism.leaflets`. */
 	readonly id: string;
@@ -233,6 +239,8 @@ export interface ActionDefinition {
 	readonly requires?: Condition | undefined;
 	/** Explication affichée lorsque le prérequis n'est pas rempli. */
 	readonly unavailableReason?: string | undefined;
+	/** Thème de l'agenda (identifiant d'`ActionCategory`) ; absent : « Autres actions ». */
+	readonly category?: string | undefined;
 	readonly effects: readonly Effect[];
 	/**
 	 * Cible à choisir dans le plan : `party` (identifiant de parti), `mandate`
@@ -813,6 +821,8 @@ export interface Content {
 	readonly actions: Readonly<Record<string, ActionDefinition>>;
 	/** Ordre de présentation du catalogue. */
 	readonly actionIds: readonly string[];
+	/** Thèmes de l'agenda, dans l'ordre d'affichage (vide : un seul groupe). */
+	readonly actionCategories: readonly ActionCategory[];
 	readonly upgrades: Readonly<Record<string, UpgradeDefinition>>;
 	readonly upgradeIds: readonly string[];
 	readonly events: Readonly<Record<string, EventDefinition>>;

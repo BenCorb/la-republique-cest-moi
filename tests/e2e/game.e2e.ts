@@ -46,13 +46,23 @@ test.describe('parcours de jeu', () => {
 			.click();
 		await expect(page.getByTestId('time-used')).toHaveText('50/100');
 
-		// Coûts et indisponibilités lisibles.
+		// Actions regroupées par thème ; compteur d'occurrences au plan.
+		await expect(page.getByTestId('group-network')).toContainText('1 au plan');
+		await page.getByRole('button', { name: 'Ajouter « Distribuer des tracts » au plan' }).click();
+		await page
+			.getByRole('button', { name: 'Retirer une occurrence de « Distribuer des tracts » du plan' })
+			.click();
+		await expect(page.getByTestId('time-used')).toHaveText('50/100');
+
+		// Hors de portée : masquée, puis affichée à la demande avec son coût et son motif.
 		const meeting = page.getByTestId('action-activism.public_meeting');
-		await expect(meeting).toContainText('Coût : Budget politique − 300 €');
+		await expect(meeting).toHaveCount(0);
+		await page.getByRole('button', { name: /Afficher les actions hors de portée/u }).click();
+		await expect(meeting).toContainText('Budget politique − 300 €');
 		await expect(meeting).toContainText('Il faut au moins 10 points d’influence');
 		await expect(
 			page.getByRole('button', { name: 'Ajouter « Organiser une réunion publique » au plan' })
-		).toBeDisabled();
+		).toHaveCount(0);
 
 		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
 		await expect(page.getByTestId('game-date')).toHaveText('T2 2000 · 25 ans');
