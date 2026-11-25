@@ -211,16 +211,42 @@ test.describe('parcours de jeu', () => {
 	});
 
 	test('peut interrompre une accélération longue entre deux trimestres', async ({ page }) => {
+		// Le contrôleur cède une frame entre deux trimestres : le test retient ces frames
+		// pour garder l'accélération en cours le temps de l'interrompre, sans course.
+		await page.addInitScript(() => {
+			const native = window.requestAnimationFrame.bind(window);
+			const held: FrameRequestCallback[] = [];
+			const gate = {
+				hold: false,
+				release(): void {
+					gate.hold = false;
+					for (const callback of held.splice(0)) native(callback);
+				}
+			};
+			Object.assign(window, { __frames: gate });
+			window.requestAnimationFrame = (callback) => {
+				if (!gate.hold) return native(callback);
+				held.push(callback);
+				return 0;
+			};
+		});
+		type Gate = { hold: boolean; release: () => void };
 		await startCareer(page, 'e2e-year');
-		// Première étape : l'alerte des législatives, reconnue ensuite.
-		await page.getByRole('button', { name: 'Année suivante' }).click();
-		await expect(page.getByTestId('acceleration-status')).toContainText('législatives');
+		await page.evaluate(() => {
+			(window as unknown as { __frames: Gate }).__frames.hold = true;
+		});
 		await page.getByRole('button', { name: 'Jusqu’à une alerte' }).click();
 		const cancel = page.getByRole('button', { name: 'Interrompre' });
 		await expect(cancel).toBeVisible();
 		await cancel.click();
+		await page.evaluate(() => {
+			(window as unknown as { __frames: Gate }).__frames.release();
+		});
 
-		await expect(page.getByTestId('acceleration-status')).toContainText('accélération interrompue');
+		await expect(page.getByTestId('acceleration-status')).toContainText(
+			'1 trimestre simulé : accélération interrompue'
+		);
+		await expect(page.getByTestId('game-date')).toHaveText('T2 2000 · 25 ans');
 		await expect(page.getByRole('button', { name: 'Trimestre suivant' })).toBeEnabled();
 		await expect(page.getByRole('button', { name: 'Année suivante' })).toBeEnabled();
 	});
