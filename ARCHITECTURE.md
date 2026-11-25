@@ -703,6 +703,16 @@ Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défa
 - **Attribution des acteurs** : soldée en P2-04 (recherche avec retour arrière, au chargement comme à l’exécution ; voir §8.3 ter).
 - **Projection recalculée en entier** à chaque changement du contrôleur (journal complet, une prévision par élément de catalogue) ; recherche quadratique des acteurs d’un choix dans le journal. Acceptable aux tailles actuelles (≈ 250 entrées), à mémoriser si le journal grossit.
 - **Écriture de sauvegarde** : chaque écriture relit et valide entièrement la sauvegarde existante (≈ 250 Ko) pour décider de la copie précédente.
+- **Mesure avant la phase 3 (25 novembre 2026, `npm run benchmark`, poste local, dernier état en cours de partie, médianes sur 20 essais) :**
+
+  | Stratégie (seed)                  | Trimestres | Entrées du journal | Sauvegarde | `projectView` | Sérialisation | `writeSave` |
+  | --------------------------------- | ---------- | ------------------ | ---------- | ------------- | ------------- | ----------- |
+  | ambitieuse (`bench-ambitious`)     | 82         | 100                | 271 Ko     | 0,7 ms        | 0,6 ms        | 2,6 ms      |
+  | prudente (`bench-prudent`)         | 229        | 273                | 521 Ko     | 1,2 ms        | 1,1 ms        | 4,9 ms      |
+  | mixte (`bench-mixed`)              | 262        | 322                | 1 204 Ko   | 2,7 ms        | 2,5 ms        | 10,4 ms     |
+  | patrimoniale (`bench-patrimonial`) | 261        | 310                | 1 366 Ko   | 3,3 ms        | 2,7 ms        | 11,4 ms     |
+
+  Le temps de calcul ne justifie pas de mémorisation. La **taille** est le vrai risque : avec la copie précédente, une carrière longue occupe ≈ 2,7 Mo du stockage local (quota usuel ≈ 5 Mo par origine, plafond `MAX_SAVE_BYTES` de 5 Mo). Le journal en représente plus de 90 %, dont plus de la moitié pour les relevés de production par exemplaire (`economy.producers`), puis les étapes du plan et la production de l’entourage. Piste, à traiter avant que les modules de la phase 3 ne fassent grossir le journal : compacter les relevés de production (agrégés par définition) ou les entrées anciennes, en gardant les faits durables (GDD §12, §4.1). À remesurer après chaque lot.
 - **Paquet client** : catalogue et Zod validés côté navigateur (≈ 65 Ko compressés pour la page) ; une validation au seul build allégerait le paquet.
 - **Tests dépendants du catalogue réel** : seuils des scénarios (`real-catalog.test.ts`, atteinte de chaque événement) et seed E2E `e2e-decision` (décision dans les 40 premiers trimestres). Un changement de tuning peut les faire échouer : les ajuster consciemment, sans masquer un événement devenu inatteignable.
 - **Messages d’invariants** en français libre : les tests s’appuient sur des fragments de texte ; un code structuré serait plus robuste.
