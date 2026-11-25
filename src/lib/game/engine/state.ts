@@ -20,6 +20,7 @@ import { createCast } from './characters.ts';
 import { computePopularity, startingSupports } from './supports.ts';
 import { EMPTY_FAMILY, createFamily, type FamilyRecord } from './family.ts';
 import { applyPoliticalEffect } from './world.ts';
+import { gaugeKey } from './effects.ts';
 import { createWorld } from './world.ts';
 
 /** Version du format de l'état, à incrémenter avec une migration explicite. */
@@ -49,6 +50,8 @@ export interface PlayerState {
 	readonly health: number;
 	/** Stress, entier de 0 à 100. */
 	readonly stress: number;
+	/** Exposition médiatique, entier de 0 à 100 (P3-01). */
+	readonly exposure: number;
 	/** Parti du joueur, `null` s'il n'est pas encarté. */
 	readonly partyId: string | null;
 	/** Historique des adhésions, dans l'ordre ; seule la dernière peut être en cours. */
@@ -311,7 +314,32 @@ export type PoliticalChange =
 			readonly ballotId: string;
 			readonly electionId: string;
 			readonly turn: Turn;
-	  };
+	  }
+	/** Acte douteux inscrit au registre des faits (P3-01). */
+	| { readonly kind: 'fact'; readonly factId: string; readonly offenseId: string };
+
+/**
+ * Fait du registre (P3-01) : acte douteux daté, avec ses protagonistes et sa
+ * gravité. Justice, presse et bilan s'appuient sur ce même registre ; un fait
+ * n'est jamais supprimé. Il ne dit rien d'une enquête ni d'une culpabilité
+ * établie : ce sont des états distincts (ARCHITECTURE.md §8.4).
+ */
+export interface Fact {
+	/** `fact.N`, N étant le rang d'inscription (jamais réutilisé). */
+	readonly factId: string;
+	readonly offenseId: string;
+	readonly turn: Turn;
+	/** Gravité de 1 à 3. */
+	readonly severity: number;
+	/** Fonds détournés, en centimes (statistique de bilan, pas une monnaie). */
+	readonly divertedCents: number;
+	/** Auteur : `null` pour le joueur, sinon un personnage (le joueur est alors complice). */
+	readonly authorId: string | null;
+	/** Autres protagonistes (donateur, bénéficiaire…), sans le joueur. */
+	readonly accompliceIds: readonly string[];
+	/** Événement dont le choix a produit le fait. */
+	readonly eventId: string;
+}
 
 /** Échéances résolues à la fin du trimestre (étape 5 de l'ordre de tour). */
 export interface DeadlinesRecord {
@@ -494,6 +522,8 @@ export interface HistoryEntry {
 	readonly supports: readonly { readonly groupId: string; readonly delta: number }[] | null;
 	/** Échéances (fins de mandat, scrutins), `null` si la carrière s'est terminée avant. */
 	readonly deadlines: DeadlinesRecord | null;
+	/** Retour de l'exposition vers sa référence, `null` si la carrière s'est terminée avant. */
+	readonly exposure: number | null;
 	/** Événements créés (ou suites annulées) au passage à T+1. */
 	readonly events: readonly EventRecord[];
 }
@@ -554,6 +584,8 @@ export interface GameState {
 	readonly staff: readonly StaffMember[];
 	/** Présélections ouvertes, par poste vacant. */
 	readonly shortlists: Readonly<Record<string, readonly ShortlistEntry[]>>;
+	/** Registre des faits, dans l'ordre d'inscription (P3-01). */
+	readonly facts: readonly Fact[];
 	/** Journal : trimestres résolus et choix, dans l'ordre chronologique. */
 	readonly history: readonly JournalEntry[];
 	readonly end: EndState | null;
@@ -587,6 +619,7 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		birthTurn: START_TURN - PROTOTYPE_STARTING_AGE * TURNS_PER_YEAR,
 		health: content.balance.wellbeing.startingHealth,
 		stress: content.balance.wellbeing.startingStress,
+		exposure: content.justice.baseExposure,
 		partyId: null,
 		affiliations: [],
 		supports: startingSupports(content),
@@ -600,8 +633,13 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		if (effect.op === 'addResource') {
 			resources[effect.resource] = Math.max(0, resources[effect.resource] + effect.value);
 		} else if (effect.op === 'addStat') {
-			const key = effect.stat === 'player.health' ? 'health' : 'stress';
-			player = { ...player, [key]: Math.min(GAUGE_MAX, Math.max(1, player[key] + effect.value)) };
+			const key = gaugeKey(effect.stat);
+			// Santé et stress d'au moins 1 au départ (règle de l'alpha) ; exposition dès 0.
+			const floor = key === 'exposure' ? 0 : 1;
+			player = {
+				...player,
+				[key]: Math.min(GAUGE_MAX, Math.max(floor, player[key] + effect.value))
+			};
 		} else if (effect.op === 'addSupport') {
 			player = applyPoliticalEffect(effect, player, world.world, START_TURN, null, content).player;
 		}
@@ -645,6 +683,7 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 				})
 			)
 		},
+		facts: [],
 		history: [],
 		end: null
 	};

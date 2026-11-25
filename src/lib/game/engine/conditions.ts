@@ -22,6 +22,7 @@ export type ConditionContext = Pick<
 	| 'institutions'
 	| 'campaigns'
 	| 'staff'
+	| 'facts'
 >;
 
 export function readStat(context: ConditionContext, stat: StatId): number {
@@ -74,6 +75,10 @@ export function readStat(context: ConditionContext, stat: StatId): number {
 			return context.staff.filter((member) => member.status === 'active').length;
 		case 'player.campaigning':
 			return context.campaigns.filter((campaign) => campaign.status === 'running').length;
+		case 'player.exposure':
+			return context.player.exposure;
+		case 'player.facts':
+			return context.facts.length;
 		default: {
 			const unknown: never = stat;
 			throw new Error(`Statistique inconnue : ${String(unknown)}`);

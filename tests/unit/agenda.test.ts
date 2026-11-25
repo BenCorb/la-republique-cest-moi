@@ -11,6 +11,7 @@ import {
 	fixtureEntourage,
 	fixtureEvents,
 	fixtureProfiles,
+	fixtureJustice,
 	fixtureSupports,
 	fixtureTraits,
 	fixtureUpgrades,
@@ -31,7 +32,8 @@ function validate(actions: unknown) {
 		career: fixtureCareer,
 		supports: fixtureSupports,
 		entourage: fixtureEntourage,
-		profiles: fixtureProfiles
+		profiles: fixtureProfiles,
+		justice: fixtureJustice
 	});
 }
 

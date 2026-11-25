@@ -51,7 +51,8 @@ export const RESOURCE_NAMES: { readonly [K in ResourceId]: string } = {
 
 export const GAUGE_NAMES: { readonly [K in GaugeId]: string } = {
 	'player.health': 'Santé',
-	'player.stress': 'Stress'
+	'player.stress': 'Stress',
+	'player.exposure': 'Exposition médiatique'
 };
 
 export type GaugeTone = 'good' | 'neutral' | 'warning' | 'danger';
@@ -75,6 +76,22 @@ export function describeStress(value: number): GaugeDescription {
 	if (value < 50) return { value, label: 'Tendu', tone: 'neutral' };
 	if (value < 70) return { value, label: 'Sous pression', tone: 'warning' };
 	return { value, label: 'Épuisé', tone: 'danger' };
+}
+
+/** Exposition médiatique (P3-01) : la visibilité, ni bonne ni mauvaise en soi. */
+export function describeExposure(value: number): GaugeDescription {
+	if (value < 15) return { value, label: 'Discrète', tone: 'neutral' };
+	if (value < 35) return { value, label: 'Remarquée', tone: 'neutral' };
+	if (value < 60) return { value, label: 'En vue', tone: 'warning' };
+	return { value, label: 'Sous les projecteurs', tone: 'warning' };
+}
+
+/** Risque judiciaire (P3-01) : exposition aux enquêtes, pas culpabilité. */
+export function describeJudicialRisk(value: number): GaugeDescription {
+	if (value === 0) return { value, label: 'Nul', tone: 'good' };
+	if (value < 20) return { value, label: 'Faible', tone: 'neutral' };
+	if (value < 45) return { value, label: 'Notable', tone: 'warning' };
+	return { value, label: 'Élevé', tone: 'danger' };
 }
 
 export const INDICATOR_NAMES: { readonly [K in IndicatorId]: string } = {

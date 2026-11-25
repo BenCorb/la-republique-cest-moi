@@ -97,6 +97,13 @@
 							"op": "addStat",
 							"stat": "player.stress",
 							"value": 2
+						},
+						{
+							"op": "recordFact",
+							"offense": "offense.illegal_financing",
+							"severity": 2,
+							"divertedCents": 60000,
+							"author": "treasurer"
 						}
 					]
 				},

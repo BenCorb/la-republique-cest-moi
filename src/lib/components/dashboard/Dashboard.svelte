@@ -64,6 +64,51 @@
 			</p>
 		</section>
 
+		<section class="card flex flex-col gap-4 lg:col-span-2" aria-labelledby="justice-title">
+			<h2 id="justice-title" class="section-title">Exposition et justice</h2>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<Gauge name="Exposition médiatique" gauge={view.justice.exposure} />
+				<Gauge name="Risque judiciaire" gauge={view.justice.risk} />
+			</div>
+			<p class="text-xs text-muted">
+				Vos fonctions et vos campagnes vous mettent en vue ; l’exposition retombe peu à peu. Le
+				risque judiciaire vient des faits inscrits au registre : il baisse avec le temps jusqu’à la
+				prescription, et l’exposition l’amplifie{view.justice.exposureBonus > 0
+					? ` (+ ${view.justice.exposureBonus} aujourd’hui)`
+					: ''}. Ce n’est ni une enquête ni une culpabilité.
+			</p>
+			{#if view.justice.facts.length === 0}
+				<p class="text-sm text-muted" data-testid="facts-empty">Aucun fait inscrit au registre.</p>
+			{:else}
+				<table class="w-full text-sm" data-testid="facts">
+					<caption class="sr-only">Registre des faits</caption>
+					<thead>
+						<tr class="text-left text-muted">
+							<th class="pb-1 font-normal">Date</th>
+							<th class="pb-1 font-normal">Fait</th>
+							<th class="pb-1 font-normal">Rôle</th>
+							<th class="pb-1 text-right font-normal">Risque</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each view.justice.facts as fact (fact.key)}
+							<tr class="border-t border-line">
+								<td class="py-1.5 tabular-nums">{fact.dateLabel}</td>
+								<th scope="row" class="py-1.5 text-left font-medium">
+									{fact.offense} <span class="font-normal text-muted">({fact.severity})</span>
+								</th>
+								<td class="py-1.5">{fact.involvement}</td>
+								<td class="py-1.5 text-right tabular-nums">
+									{fact.prescribed ? 'prescrit' : `+ ${fact.riskPoints}`}
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+				<p class="text-xs text-muted">Fonds détournés cumulés : {view.justice.diverted}.</p>
+			{/if}
+		</section>
+
 		<section class="card flex flex-col gap-1 lg:col-span-2" aria-labelledby="profil-title">
 			<h2 id="profil-title" class="section-title">Profil</h2>
 			<p class="text-sm" data-testid="profile">

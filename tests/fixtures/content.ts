@@ -477,6 +477,53 @@ export const fixtureEvents = {
 	'events/test.json': {
 		events: [
 			{
+				id: 'test.shady_offer',
+				category: 'opportunity',
+				title: 'Une offre douteuse',
+				text: '{cousin} propose un arrangement.',
+				blocking: true,
+				trigger: 'random',
+				weight: 5,
+				priority: 0,
+				cooldownTurns: 0,
+				unique: false,
+				actors: [{ role: 'cousin', tags: ['family'] }],
+				choices: [
+					{
+						id: 'accept',
+						label: 'Accepter',
+						hints: ['Budget en hausse'],
+						costs: [],
+						effects: [
+							{ op: 'addResource', resource: 'politicalBudgetCents', value: 1_000 },
+							{
+								op: 'recordFact',
+								offense: 'offense.test_financing',
+								severity: 2,
+								divertedCents: 1_000,
+								accomplices: ['cousin']
+							},
+							{ op: 'addStat', stat: 'player.exposure', value: 10 }
+						]
+					},
+					{
+						id: 'delegate',
+						label: 'Le laisser faire',
+						hints: [],
+						costs: [],
+						effects: [
+							{
+								op: 'recordFact',
+								offense: 'offense.test_favour',
+								severity: 3,
+								author: 'cousin'
+							}
+						]
+					},
+					{ id: 'refuse', label: 'Refuser', hints: [], costs: [], effects: [] }
+				]
+			},
+			{
 				id: 'test.stress_alert',
 				category: 'personal',
 				title: 'Alerte',
@@ -767,6 +814,31 @@ export const fixtureUpgrades = {
 	]
 };
 
+/**
+ * Justice neutre : l'exposition ne bouge pas d'elle-même, si bien que les tests
+ * existants restent indépendants des jauges de la justice (`withJustice`).
+ */
+export const fixtureJustice = {
+	offenses: [
+		{
+			id: 'offense.test_financing',
+			label: 'Financement de test',
+			description: 'Des fonds de test.'
+		},
+		{ id: 'offense.test_favour', label: 'Faveur de test', description: 'Une faveur de test.' }
+	],
+	balance: {
+		riskPerSeverity: 8,
+		accompliceRiskPercent: 50,
+		prescriptionTurns: 24,
+		exposureRiskBonusPercent: 50,
+		baseExposure: 0,
+		campaignExposure: 0,
+		mandateExposure: {},
+		exposureDriftPercent: 0
+	}
+};
+
 function load(): Content {
 	const result = validateContent({
 		actions: fixtureActions,
@@ -779,13 +851,19 @@ function load(): Content {
 		career: fixtureCareer,
 		supports: fixtureSupports,
 		entourage: fixtureEntourage,
-		profiles: fixtureProfiles
+		profiles: fixtureProfiles,
+		justice: fixtureJustice
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;
 }
 
 export const fixtureContent: Content = load();
+
+/** Contenu de test avec des règles de justice modifiées. */
+export function withJustice(changes: Partial<Content['justice']>): Content {
+	return { ...fixtureContent, justice: { ...fixtureContent.justice, ...changes } };
+}
 
 /** Contenu de test avec un modèle de santé modifié. */
 export function withWellbeing(changes: Partial<Content['balance']['wellbeing']>): Content {

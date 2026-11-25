@@ -23,8 +23,12 @@ export type TreasuryId = (typeof TREASURY_IDS)[number];
 export const UPGRADE_FAMILIES = ['organization', 'communication', 'network', 'personal'] as const;
 export type UpgradeFamily = (typeof UPGRADE_FAMILIES)[number];
 
-/** Jauges du personnage, entières et bornées entre 0 et 100 (GDD §4.2). */
-export const GAUGE_IDS = ['player.health', 'player.stress'] as const;
+/**
+ * Jauges du personnage, entières et bornées entre 0 et 100 (GDD §4.2).
+ * L'exposition médiatique (P3-01) mesure la visibilité : elle amplifie le
+ * risque judiciaire et revient vers une référence fixée par les fonctions.
+ */
+export const GAUGE_IDS = ['player.health', 'player.stress', 'player.exposure'] as const;
 export type GaugeId = (typeof GAUGE_IDS)[number];
 export const GAUGE_MIN = 0;
 export const GAUGE_MAX = 100;
@@ -101,7 +105,11 @@ export const STAT_IDS = [
 	/** 1 si le joueur vit en couple, sinon 0 (P2-08). */
 	'player.hasPartner',
 	/** Nombre d'enfants du joueur. */
-	'player.children'
+	'player.children',
+	/** Exposition médiatique, de 0 à 100 (P3-01). */
+	'player.exposure',
+	/** Nombre de faits du registre impliquant le joueur, comme auteur ou complice (P3-01). */
+	'player.facts'
 ] as const;
 export type StatId = (typeof STAT_IDS)[number];
 
@@ -211,7 +219,62 @@ export type Effect =
 	/** Séparation : la personne qui partage la vie du joueur s'en va. */
 	| { readonly op: 'separate' }
 	/** Variation d'attitude de la famille proche (partenaire et enfants). */
-	| { readonly op: 'familyAttitude'; readonly value: number };
+	| { readonly op: 'familyAttitude'; readonly value: number }
+	/**
+	 * Acte douteux inscrit au registre des faits (événements seulement, P3-01).
+	 * Sans `author`, le joueur en est l'auteur ; sinon l'acteur de ce rôle (un
+	 * collaborateur, par exemple) l'est et le joueur en est complice.
+	 */
+	| {
+			readonly op: 'recordFact';
+			readonly offense: string;
+			/** Gravité de 1 (indélicatesse) à 3 (affaire d'envergure). */
+			readonly severity: number;
+			/** Fonds détournés, en centimes, comptés au bilan (GDD §12) ; 0 par défaut. */
+			readonly divertedCents?: number | undefined;
+			readonly author?: string | undefined;
+			/** Rôles des autres protagonistes (donateur, bénéficiaire…). */
+			readonly accomplices?: readonly string[] | undefined;
+	  };
+
+/** Gravité maximale d'un fait. */
+export const FACT_SEVERITY_MAX = 3;
+
+/** Type d'infraction fictive du registre des faits (`offense.*`, P3-01). */
+export interface OffenseDefinition {
+	readonly id: string;
+	/** Nom affiché, par exemple « Financement occulte ». */
+	readonly label: string;
+	readonly description: string;
+}
+
+/**
+ * Règles provisoires du registre des faits et des jauges de la justice (P3-01) ;
+ * toutes les valeurs sont des hypothèses d'équilibrage.
+ */
+export interface JusticeBalance {
+	/** Risque apporté par un fait récent, par point de gravité, quand le joueur en est l'auteur. */
+	readonly riskPerSeverity: number;
+	/** Part de ce risque quand le joueur n'est que complice, en %. */
+	readonly accompliceRiskPercent: number;
+	/** Trimestres au bout desquels un fait n'apporte plus de risque (prescription). */
+	readonly prescriptionTurns: number;
+	/** Majoration du risque à exposition maximale, en % (proportionnelle à l'exposition). */
+	readonly exposureRiskBonusPercent: number;
+	/** Exposition de référence sans fonction ni campagne. */
+	readonly baseExposure: number;
+	/** Exposition de référence ajoutée par une campagne en cours. */
+	readonly campaignExposure: number;
+	/** Exposition de référence par mandat (la plus élevée des fonctions exercées compte). */
+	readonly mandateExposure: Readonly<Record<string, number>>;
+	/** Part de l'écart à la référence résorbée à chaque trimestre, en %. */
+	readonly exposureDriftPercent: number;
+}
+
+export interface JusticeDefinition {
+	readonly offenses: readonly OffenseDefinition[];
+	readonly balance: JusticeBalance;
+}
 
 export interface ResourceAmount {
 	readonly resource: ResourceId;
@@ -859,4 +922,8 @@ export interface Content {
 	readonly parties: Readonly<Record<string, PartyDefinition>>;
 	/** Ordre du catalogue : ordre stable de l'évolution autonome. */
 	readonly partyIds: readonly string[];
+	/** Types d'infractions du registre des faits, par identifiant (P3-01). */
+	readonly offenses: Readonly<Record<string, OffenseDefinition>>;
+	readonly offenseIds: readonly string[];
+	readonly justice: JusticeBalance;
 }

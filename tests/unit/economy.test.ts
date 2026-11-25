@@ -40,6 +40,7 @@ function game(
 			world: null,
 			supports: null,
 			deadlines: null,
+			exposure: null,
 			events: []
 		})),
 		resources: { ...base.resources, ...resources },

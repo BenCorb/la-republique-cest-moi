@@ -172,6 +172,12 @@
 							"op": "addSupport",
 							"group": "support.working_class",
 							"value": -4
+						},
+						{
+							"op": "recordFact",
+							"offense": "offense.conflict_of_interest",
+							"severity": 2,
+							"accomplices": ["donor"]
 						}
 					]
 				},

@@ -52,7 +52,9 @@ export type EffectRange =
 			readonly change: 'partner' | 'child' | 'separate' | 'attitude';
 			readonly value: number;
 	  }
-	| { readonly kind: 'preparation'; readonly value: number };
+	| { readonly kind: 'preparation'; readonly value: number }
+	/** Fait inscrit au registre : connu du joueur, qui l'a choisi. */
+	| { readonly kind: 'fact'; readonly offense: string; readonly severity: number };
 
 export type ResolvedEffect =
 	| {
@@ -78,7 +80,27 @@ export type ResolvedEffect =
 	/** Vie de famille, appliquée par `applyFamilyEffect` (une arrivée tire un personnage). */
 	| { readonly kind: 'family'; readonly effect: FamilyEffect; readonly rng: RngState }
 	/** Départ de l'exemplaire ciblé, appliqué par le plan (actions seulement). */
-	| { readonly kind: 'release'; readonly rng: RngState };
+	| { readonly kind: 'release'; readonly rng: RngState }
+	/** Fait inscrit au registre par le moteur d'événements (P3-01). */
+	| { readonly kind: 'fact'; readonly effect: FactEffect; readonly rng: RngState };
+
+export type FactEffect = Extract<Effect, { op: 'recordFact' }>;
+
+/** Champ de `PlayerState` portant une jauge. */
+export function gaugeKey(gauge: GaugeId): 'health' | 'stress' | 'exposure' {
+	switch (gauge) {
+		case 'player.health':
+			return 'health';
+		case 'player.stress':
+			return 'stress';
+		case 'player.exposure':
+			return 'exposure';
+		default: {
+			const unknown: never = gauge;
+			throw new Error(`Jauge inconnue : ${String(unknown)}`);
+		}
+	}
+}
 
 export type PeopleEffect = Extract<Effect, { op: 'addRelation' | 'revealTraits' | 'staffLeaves' }>;
 
@@ -137,6 +159,8 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'family', change: 'attitude', value: effect.value };
 		case 'prepareCampaign':
 			return { kind: 'preparation', value: effect.value };
+		case 'recordFact':
+			return { kind: 'fact', offense: effect.offense, severity: effect.severity };
 		default: {
 			const unknown: never = effect;
 			throw new Error(`Effet inconnu : ${JSON.stringify(unknown)}`);
@@ -180,6 +204,8 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 		case 'separate':
 		case 'familyAttitude':
 			return { kind: 'family', effect, rng };
+		case 'recordFact':
+			return { kind: 'fact', effect, rng };
 		default: {
 			const unknown: never = effect;
 			throw new Error(`Effet inconnu : ${JSON.stringify(unknown)}`);

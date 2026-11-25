@@ -12,6 +12,7 @@ import career from './data/career.json';
 import supports from './data/supports.json';
 import entourage from './data/entourage.json';
 import profiles from './data/profiles.json';
+import justice from './data/justice.json';
 import traits from './data/traits.json';
 import world from './data/world.json';
 import type { Content } from './types.ts';
@@ -38,7 +39,8 @@ export function loadContent(): Content {
 		career,
 		supports,
 		entourage,
-		profiles
+		profiles,
+		justice
 	});
 	if (!result.ok) {
 		const details = result.issues

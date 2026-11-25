@@ -99,7 +99,8 @@
 					"op": "addSupport",
 					"group": "support.middle_class",
 					"value": 1
-				}
+				},
+				{ "op": "addStat", "stat": "player.exposure", "value": 3 }
 			]
 		},
 		{
@@ -154,7 +155,8 @@
 				},
 				{ "op": "addStat", "stat": "player.stress", "value": 3 },
 				{ "op": "addSupport", "group": "support.business", "value": 2 },
-				{ "op": "addSupport", "group": "support.activists", "value": -1 }
+				{ "op": "addSupport", "group": "support.activists", "value": -1 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 3 }
 			]
 		},
 		{
@@ -461,7 +463,8 @@
 					"op": "addSupport",
 					"group": "support.middle_class",
 					"value": 1
-				}
+				},
+				{ "op": "addStat", "stat": "player.exposure", "value": 4 }
 			]
 		},
 		{
@@ -612,7 +615,8 @@
 					"op": "addSupport",
 					"group": "support.middle_class",
 					"value": 1
-				}
+				},
+				{ "op": "addStat", "stat": "player.exposure", "value": 3 }
 			]
 		},
 		{

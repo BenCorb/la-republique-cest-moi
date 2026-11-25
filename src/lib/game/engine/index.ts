@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.19.0';
+export const RULES_VERSION = '0.20.0';
 
 export {
 	START_YEAR,
@@ -50,6 +50,7 @@ export {
 	type EventOccurrence,
 	type EventRecord,
 	type EventsState,
+	type Fact,
 	type JournalEntry,
 	type ScheduledEvent,
 	type EconomyRecord,
@@ -237,6 +238,7 @@ export {
 	applyGauge,
 	clampGauge,
 	effectRange,
+	gaugeKey,
 	resolveEffect,
 	type EffectRange,
 	type ResolvedEffect
@@ -250,6 +252,17 @@ export {
 	type WellbeingResolution
 } from './health.ts';
 export { careerSummary, type CareerSummary } from './selectors.ts';
+export {
+	createFact,
+	currentJudicialRisk,
+	divertedFunds,
+	factInstanceId,
+	judicialRisk,
+	referenceExposure,
+	resolveExposure,
+	type JudicialRisk,
+	type RiskContribution
+} from './justice.ts';
 export {
 	actorName,
 	choiceAvailability,

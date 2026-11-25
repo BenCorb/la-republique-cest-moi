@@ -15,6 +15,7 @@ const context: ConditionContext = {
 		birthTurn: turnOf(1975, 1),
 		health: 64,
 		stress: 37,
+		exposure: 0,
 		partyId: null,
 		affiliations: [],
 		supports: {},
@@ -33,6 +34,7 @@ const context: ConditionContext = {
 	mandates: [],
 	campaigns: [],
 	staff: [],
+	facts: [],
 	institutions: createGame({ seed: 'conditions' }, fixtureContent).institutions,
 	resources: { influence: 12, politicalBudgetCents: 5_000, personalCashCents: 0 },
 	upgrades: [

@@ -80,6 +80,7 @@ describe('contrôle des invariants', () => {
 						world: null,
 						supports: null,
 						deadlines: null,
+						exposure: null,
 						events: []
 					},
 					{
@@ -95,6 +96,7 @@ describe('contrôle des invariants', () => {
 						world: null,
 						supports: null,
 						deadlines: null,
+						exposure: null,
 						events: []
 					}
 				]

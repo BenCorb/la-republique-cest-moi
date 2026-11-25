@@ -44,7 +44,8 @@
 							"op": "addSupport",
 							"group": "support.middle_class",
 							"value": 3
-						}
+						},
+						{ "op": "addStat", "stat": "player.exposure", "value": 5 }
 					],
 					"followUp": {
 						"eventId": "press.portrait_published",
@@ -72,7 +73,8 @@
 							"role": "journalist",
 							"value": -5,
 							"memory": "Vous avez proposé un encart publicitaire au lieu d’un entretien."
-						}
+						},
+						{ "op": "addStat", "stat": "player.exposure", "value": 3 }
 					]
 				},
 				{
@@ -172,7 +174,8 @@
 							"role": "rival",
 							"value": -5,
 							"memory": "Vous avez préparé le débat radiophonique comme une finale."
-						}
+						},
+						{ "op": "addStat", "stat": "player.exposure", "value": 6 }
 					]
 				},
 				{
@@ -192,7 +195,8 @@
 							"role": "journalist",
 							"value": 5,
 							"memory": "Vous avez accepté son débat."
-						}
+						},
+						{ "op": "addStat", "stat": "player.exposure", "value": 6 }
 					]
 				},
 				{

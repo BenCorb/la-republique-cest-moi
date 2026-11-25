@@ -34,6 +34,7 @@ import { applyGauge } from './effects.ts';
 import { RESOURCE_IDS, type ResourceId } from '../content/types.ts';
 import { resolveWorld } from './world.ts';
 import { resolveSupports } from './supports.ts';
+import { resolveExposure } from './justice.ts';
 import { resolveStaffFrontier, resolveStaffProduction } from './staff.ts';
 import { resolveFamily } from './family.ts';
 import type {
@@ -154,7 +155,8 @@ function commitTurn(
 					mandates: production.career.mandates,
 					campaigns: production.career.campaigns,
 					institutions: production.career.institutions,
-					staff: production.entourage.staff
+					staff: production.entourage.staff,
+					facts: state.facts
 				},
 				nextTurn,
 				world.rng,
@@ -187,13 +189,23 @@ function commitTurn(
 			)
 		: null;
 
+	// 4 quater. Exposition médiatique : retour vers la référence des fonctions exercées.
+	const exposure = supports
+		? resolveExposure(
+				supports.player,
+				production.career.mandates,
+				production.career.campaigns,
+				content
+			)
+		: null;
+
 	// 5. Échéances de la fin de T : fins de mandat, scrutins, échéances suivantes.
 	const deadlines =
-		world && supports && team && family
+		world && exposure && team && family
 			? resolveDeadlines(
 					{
 						world: world.world,
-						player: supports.player,
+						player: exposure.player,
 						resources: family.resources,
 						characters: family.parts.characters,
 						relationships: family.parts.relationships,
@@ -221,7 +233,8 @@ function commitTurn(
 					relationships: deadlines!.relationships,
 					career: deadlines!.career,
 					staff: team!.entourage.staff,
-					shortlists: team!.entourage.shortlists
+					shortlists: team!.entourage.shortlists,
+					facts: state.facts
 				},
 				content
 			)
@@ -244,6 +257,7 @@ function commitTurn(
 		world: world?.record ?? null,
 		supports: supports?.record ?? null,
 		deadlines: deadlines?.record ?? null,
+		exposure: exposure?.delta ?? null,
 		events: frontier?.records ?? []
 	};
 
@@ -274,6 +288,7 @@ function commitTurn(
 			campaigns: frontier?.career.campaigns ?? production.career.campaigns,
 			institutions: frontier?.career.institutions ?? production.career.institutions,
 			upgrades: execution.upgrades,
+			facts: frontier?.facts ?? state.facts,
 			nextInstanceNumber: frontier?.nextInstanceNumber ?? execution.nextInstanceNumber,
 			events,
 			history: [...state.history, entry]

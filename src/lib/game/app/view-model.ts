@@ -20,6 +20,8 @@ import {
 	ageAt,
 	campaignRefund,
 	careerSummary,
+	currentJudicialRisk,
+	divertedFunds,
 	describePendingEvent,
 	effectRange,
 	formatTurn,
@@ -68,6 +70,8 @@ import {
 	describeHealth,
 	describeIndicator,
 	describeStress,
+	describeExposure,
+	describeJudicialRisk,
 	formatDelta,
 	formatMoney,
 	formatGaugeDelta,
@@ -444,6 +448,51 @@ export interface EntourageView {
 	}[];
 }
 
+export interface FactView {
+	readonly key: string;
+	readonly dateLabel: string;
+	readonly offense: string;
+	/** « auteur » ou « complice ». */
+	readonly involvement: string;
+	readonly severity: string;
+	/** Points de risque encore apportés (avant majoration par l'exposition). */
+	readonly riskPoints: number;
+	readonly prescribed: boolean;
+}
+
+export interface JusticeView {
+	readonly exposure: GaugeDescription;
+	readonly risk: GaugeDescription;
+	/** Majoration du risque due à l'exposition, en points. */
+	readonly exposureBonus: number;
+	/** Faits du registre, du plus récent au plus ancien. */
+	readonly facts: readonly FactView[];
+	/** Fonds détournés cumulés, formatés (statistique de bilan). */
+	readonly diverted: string;
+}
+
+const SEVERITY_LABELS = ['', 'indélicatesse', 'faute', 'affaire d’envergure'] as const;
+
+function buildJustice(state: GameState, content: Content): JusticeView {
+	const risk = currentJudicialRisk(state, content);
+	const points = new Map(risk.contributions.map((entry) => [entry.factId, entry.points]));
+	return {
+		exposure: describeExposure(state.player.exposure),
+		risk: describeJudicialRisk(risk.value),
+		exposureBonus: risk.exposureBonus,
+		facts: [...state.facts].reverse().map((fact) => ({
+			key: fact.factId,
+			dateLabel: formatTurn(fact.turn),
+			offense: content.offenses[fact.offenseId]?.label ?? fact.offenseId,
+			involvement: fact.authorId === null ? 'auteur' : 'complice',
+			severity: SEVERITY_LABELS[fact.severity] ?? String(fact.severity),
+			riskPoints: points.get(fact.factId) ?? 0,
+			prescribed: state.turn - fact.turn >= content.justice.prescriptionTurns
+		})),
+		diverted: formatMoney(divertedFunds(state.facts))
+	};
+}
+
 export interface PlayerView {
 	readonly dateLabel: string;
 	readonly age: number;
@@ -451,6 +500,8 @@ export interface PlayerView {
 	readonly resources: readonly ResourceView[];
 	readonly health: GaugeDescription;
 	readonly stress: GaugeDescription;
+	/** Exposition médiatique, risque judiciaire et registre des faits (P3-01). */
+	readonly justice: JusticeView;
 	readonly plan: PlanView;
 	readonly actions: readonly CatalogItemView[];
 	/** Actions de l'agenda regroupées par thème, dans l'ordre du catalogue ; groupes vides omis. */
@@ -548,6 +599,8 @@ function describeEffect(range: EffectRange, content: Content): string {
 			return `Élection anticipée : ${content.elections[range.election]?.label ?? range.election}`;
 		case 'candidacy':
 			return 'Candidature déposée';
+		case 'fact':
+			return `Fait inscrit au registre : ${content.offenses[range.offense]?.label ?? range.offense}`;
 		case 'family':
 			return range.change === 'attitude'
 				? `Famille ${range.value > 0 ? 'apaisée' : 'agacée'}`
@@ -601,6 +654,8 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 					return `départ du poste « ${content.posts[change.postId]?.label ?? change.postId} » (${STAFF_LEAVE_LABELS[change.reason]})`;
 				case 'earlyElection':
 					return `${content.elections[change.electionId]?.label ?? change.electionId} anticipées au ${formatTurn(change.turn)}`;
+				case 'fact':
+					return `fait inscrit au registre : ${content.offenses[change.offenseId]?.label ?? change.offenseId}`;
 			}
 		})
 		.join(', ');
@@ -1967,6 +2022,7 @@ export function projectView(
 		})),
 		health,
 		stress,
+		justice: buildJustice(state, content),
 		plan: {
 			steps,
 			timeAvailable: preview.timeAvailable,
