@@ -106,8 +106,9 @@ describe('départ d’un élément de l’organisation', () => {
 		const log = quarterLog(result);
 
 		expect(result.state.upgrades.map((upgrade) => upgrade.instanceId)).toEqual([first!.instanceId]);
-		expect(log.economy.producers.map((producer) => producer.instanceId)).toEqual([
-			first!.instanceId
+		// Seul l'exemplaire restant a payé ses charges et produit.
+		expect(log.economy.producers.map((producer) => [producer.active, producer.suspended])).toEqual([
+			[1, 0]
 		]);
 		expect(log.steps[0]).toMatchObject({ id: 'test.release', target: second!.instanceId });
 		expect(result.state.player.supports['support.members']).toBeLessThan(before);

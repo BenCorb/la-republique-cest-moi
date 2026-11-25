@@ -89,9 +89,9 @@ const turnEntry = z.strictObject({
 	economy: z.strictObject({
 		producers: z.array(
 			z.strictObject({
-				instanceId: id,
 				upgradeId: id,
-				status: z.enum(['active', 'suspended']),
+				active: int,
+				suspended: int,
 				changes: z.array(resourceChange)
 			})
 		),

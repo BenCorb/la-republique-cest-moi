@@ -147,7 +147,7 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 		expect(state.upgrades.every((upgrade) => upgrade.acquiredTurn < state.turn)).toBe(true);
 		const firstPurchaseTurn = Math.min(...state.upgrades.map((upgrade) => upgrade.acquiredTurn));
 		const productive = quarters(state.history).filter((entry) =>
-			entry.economy.producers.some((producer) => producer.status === 'active')
+			entry.economy.producers.some((producer) => producer.active > 0)
 		);
 		expect(productive.length).toBeGreaterThan(0);
 		expect(Math.min(...productive.map((entry) => entry.turn))).toBeGreaterThan(firstPurchaseTurn);
