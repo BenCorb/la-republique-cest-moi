@@ -45,6 +45,7 @@ import type {
 } from './state.ts';
 import { applyPoliticalEffect, isPoliticalEffect } from './world.ts';
 import { interviewIssue, mediaIssue } from './press.ts';
+import { applyReformEffect, effectiveContent, isReformEffect, reformIssue } from './reforms.ts';
 import {
 	activeMandates,
 	applyCareerEffect,
@@ -267,6 +268,10 @@ function applyStateEffects(
 			const outcome = applyPromiseEffect(effect, career, turn, target, content);
 			career = outcome.parts;
 			changes.push(...outcome.changes);
+		} else if (isReformEffect(effect)) {
+			const outcome = applyReformEffect(effect, career, turn, target, content);
+			career = outcome.parts;
+			changes.push(...outcome.changes);
 		} else if (effect.op === 'setLifestyle') {
 			player = { ...player, lifestyle: effect.lifestyle };
 		} else if (effect.op === 'familyAttitude') {
@@ -328,7 +333,9 @@ export function instanceIdFor(number: number): string {
 }
 
 /** Validation et prévision pures d'un plan, sans tirage aléatoire. */
-export function previewPlan(state: GameState, plan: TurnPlan, content: Content): PlanPreview {
+export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content): PlanPreview {
+	// Règles en vigueur (P3-05) : la prévision valide exactement comme le trimestre.
+	const content = effectiveContent(catalog, state.institutions.parameters);
 	// Les mandats en cours réservent une part du temps du trimestre.
 	const reserved = reservedTime(state.mandates, content);
 	// Les collaborateurs qui tiennent l'agenda rendent du temps (à partir du trimestre suivant l'embauche).
@@ -493,6 +500,12 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 					target === null
 						? 'choisissez une promesse en cours'
 						: pledgeIssue(target, workingCareer.promises);
+				if (issue) fail('invalid_target', `« ${label} » : ${issue}.`);
+			} else if (definition.target === 'reform') {
+				const issue =
+					target === null
+						? 'choisissez une réforme'
+						: reformIssue(target, workingCareer.institutions, content);
 				if (issue) fail('invalid_target', `« ${label} » : ${issue}.`);
 			} else if (definition.target === 'media') {
 				const issue =

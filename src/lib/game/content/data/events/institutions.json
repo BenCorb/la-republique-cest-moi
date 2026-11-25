@@ -1,0 +1,218 @@
+{
+	"events": [
+		{
+			"id": "institutions.rival_cumulates",
+			"category": "campaign",
+			"title": "Le cumul profite aussi aux autres",
+			"text": "Grâce au cumul élargi, {rival} préside désormais un syndicat intercommunal, une société d’économie mixte et le comité des fêtes. Trois réseaux de plus mobilisés contre vous, et autant de cartes de vœux.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 0,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{ "op": "institution", "parameter": "institution.cumul", "level": "cumul.extended" },
+					{ "op": "gte", "stat": "player.campaigning", "value": 1 }
+				]
+			},
+			"actors": [{ "role": "rival", "tags": ["rival"] }],
+			"effects": [
+				{ "op": "addResource", "resource": "influence", "value": -3 },
+				{ "op": "addStat", "stat": "player.stress", "value": 2 }
+			]
+		},
+		{
+			"id": "institutions.rival_case_buried",
+			"category": "relations",
+			"title": "Un dossier qui s’égare",
+			"text": "Le dossier visant {rival} vient d’être classé « faute d’éléments », sur une note du parquet aussi brève que remarquée. Le parquet sous tutelle protège décidément tout le monde.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "institution",
+				"parameter": "institution.justice",
+				"level": "justice.supervised"
+			},
+			"actors": [{ "role": "rival", "tags": ["rival"], "met": true }],
+			"choices": [
+				{
+					"id": "denounce",
+					"label": "Dénoncer publiquement « une justice aux ordres »",
+					"hints": ["Les militants applaudissent", "On vous rappellera vos propres votes"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.exposure", "value": 4 },
+						{ "op": "addSupport", "group": "support.activists", "value": 2 },
+						{ "op": "addMediaRelation", "media": "media.gazette", "value": 4 },
+						{
+							"op": "addRelation",
+							"role": "rival",
+							"value": -10,
+							"memory": "Vous avez dénoncé le classement de son dossier."
+						}
+					]
+				},
+				{
+					"id": "silence",
+					"label": "Ne rien dire : la règle vaut pour tous",
+					"hints": ["Aucun remous", "Les militants vous trouvent bien sage"],
+					"costs": [],
+					"effects": [{ "op": "addSupport", "group": "support.activists", "value": -1 }]
+				},
+				{
+					"id": "favor",
+					"label": "Lui faire savoir que vous savez rendre service",
+					"hints": [
+						"Un rival qui vous doit quelque chose",
+						"Un échange de bons procédés, rien de plus"
+					],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.stress", "value": -1 },
+						{
+							"op": "addRelation",
+							"role": "rival",
+							"value": 8,
+							"memory": "Vous avez fermé les yeux sur le classement de son dossier."
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "institutions.press_digs_rival",
+			"category": "campaign",
+			"title": "La presse fouille aussi chez les autres",
+			"text": "Protégés par le nouveau secret des sources, des journalistes publient les notes de frais de {rival}. Votre équipe de campagne fait semblant d’être surprise, avec un talent certain.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 0,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{ "op": "institution", "parameter": "institution.press", "level": "press.free" },
+					{ "op": "gte", "stat": "player.campaigning", "value": 1 }
+				]
+			},
+			"actors": [{ "role": "rival", "tags": ["rival"] }],
+			"effects": [{ "op": "prepareCampaign", "value": 3 }]
+		},
+		{
+			"id": "institutions.list_rank",
+			"category": "campaign",
+			"title": "La bataille des places",
+			"text": "Proportionnelle oblige, la commission d’investiture distribue les places sur la liste. La vôtre est « éligible, en théorie », c’est-à-dire juste après celle du neveu du trésorier.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 5,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "institution",
+						"parameter": "institution.ballot",
+						"level": "ballot.proportional"
+					},
+					{ "op": "eq", "stat": "player.affiliated", "value": 1 },
+					{ "op": "gte", "stat": "player.campaigning", "value": 1 }
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "lobby",
+					"label": "Négocier en coulisses une meilleure place",
+					"hints": ["Coûte de l’influence", "L’appareil vous remontera"],
+					"costs": [{ "resource": "influence", "amount": 8 }],
+					"effects": [
+						{ "op": "addSupport", "group": "support.apparatus", "value": 4 },
+						{ "op": "prepareCampaign", "value": 3 }
+					]
+				},
+				{
+					"id": "accept",
+					"label": "Accepter avec le sourire",
+					"hints": ["Rien ne change", "Le trésorier vous remercie"],
+					"costs": [],
+					"effects": [{ "op": "addSupport", "group": "support.apparatus", "value": 1 }]
+				},
+				{
+					"id": "threaten",
+					"label": "Menacer de monter une liste dissidente",
+					"hints": ["L’appareil n’oubliera pas", "Les caméras adorent"],
+					"costs": [],
+					"effects": [
+						{ "op": "addSupport", "group": "support.apparatus", "value": -5 },
+						{ "op": "addStat", "stat": "player.exposure", "value": 3 }
+					]
+				}
+			]
+		},
+		{
+			"id": "institutions.transparency_audit",
+			"category": "finance",
+			"title": "La Haute autorité vous écrit",
+			"text": "La Haute autorité de la transparence a relevé « quelques imprécisions » dans votre déclaration de patrimoine, dont un appartement que vous aviez, de bonne foi, oublié de posséder.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "institution",
+						"parameter": "institution.transparency",
+						"level": "transparency.strict"
+					},
+					{ "op": "gte", "stat": "player.mandates", "value": 1 }
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "correct",
+					"label": "Tout rectifier, publiquement",
+					"hints": ["Un peu d’embarras", "Les classes moyennes apprécient"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.stress", "value": 2 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": 2 }
+					]
+				},
+				{
+					"id": "accountant",
+					"label": "Confier le dossier à un expert-comptable",
+					"hints": ["Coûteux", "Rien ne transpire"],
+					"costs": [{ "resource": "personalCashCents", "amount": 300000 }],
+					"effects": [{ "op": "addStat", "stat": "player.stress", "value": -1 }]
+				},
+				{
+					"id": "omit",
+					"label": "Répondre que tout est en ordre",
+					"hints": ["Tranquillité immédiate", "Un mensonge qui reste au dossier"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.stress", "value": -1 },
+						{ "op": "recordFact", "offense": "offense.conflict_of_interest", "severity": 1 }
+					]
+				}
+			]
+		}
+	]
+}

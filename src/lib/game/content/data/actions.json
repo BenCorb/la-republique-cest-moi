@@ -455,6 +455,26 @@
 			"target": "media"
 		},
 		{
+			"id": "mandate.propose_institutional_reform",
+			"category": "mandate",
+			"label": "Proposer une réforme institutionnelle",
+			"description": "Un texte, un exposé des motifs et une tournée des groupes parlementaires. Le vote a lieu à la fin du trimestre ; adoptée, la réforme entre en vigueur au 1er janvier suivant, pour tout le monde.",
+			"timeCost": 40,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "influence", "amount": 10 }],
+			"requires": {
+				"op": "any",
+				"conditions": [
+					{ "op": "holdsMandate", "mandate": "mandate.deputy" },
+					{ "op": "holdsMandate", "mandate": "mandate.senator" },
+					{ "op": "holdsMandate", "mandate": "mandate.minister" }
+				]
+			},
+			"unavailableReason": "Réservé aux parlementaires et aux ministres.",
+			"effects": [{ "op": "proposeReform" }],
+			"target": "reform"
+		},
+		{
 			"id": "mandate.prepare_reform",
 			"category": "mandate",
 			"label": "Préparer une réforme",

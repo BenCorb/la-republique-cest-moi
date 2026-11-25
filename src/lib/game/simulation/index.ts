@@ -26,6 +26,7 @@ import {
 	followsPlayer,
 	interviewIssue,
 	ownedMedia,
+	reformIssue,
 	previewPlan,
 	promiseIssue,
 	transition,
@@ -38,7 +39,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 13;
+export const SIMULATION_REPORT_VERSION = 14;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -121,6 +122,10 @@ export interface SimulationRun {
 	readonly favorableArticles: number;
 	readonly interviews: number;
 	readonly mediaOwned: number;
+	/** Réformes proposées et adoptées par le joueur, réformes du gouvernement seul (P3-05). */
+	readonly reformsProposed: number;
+	readonly reformsAdopted: number;
+	readonly governmentReforms: number;
 	/** Collaborateurs recrutés et départs (démission, renvoi, débauchage…). */
 	readonly staffHired: number;
 	readonly staffDepartures: number;
@@ -385,6 +390,43 @@ function mediaWish(
 	return [];
 }
 
+/** Réformes souhaitées par politique (P3-05), par ordre de préférence. */
+const REFORM_WISHES: Readonly<Record<SimulationStrategy, readonly string[]>> = {
+	prudent: [],
+	ambitious: ['cumul.extended', 'press.controlled', 'justice.supervised'],
+	patrimonial: ['transparency.opaque'],
+	mixed: ['transparency.strict', 'ballot.mixed'],
+	'random-valid': []
+};
+
+/**
+ * Réformes par politique : la première réforme souhaitée encore possible ;
+ * l'aléatoire tire une réforme possible au sort.
+ */
+function reformWish(
+	strategy: SimulationStrategy,
+	state: GameState,
+	seed: string,
+	content: Content
+): PlanStep[] {
+	const actionId = content.actionIds.find((id) => content.actions[id]?.target === 'reform');
+	if (!actionId) return [];
+	const possible = (levelId: string): boolean =>
+		Object.hasOwn(content.institutionLevels, levelId) &&
+		reformIssue(levelId, state.institutions, content) === null;
+	const wishes =
+		strategy === 'random-valid'
+			? Object.keys(content.institutionLevels)
+					.filter(possible)
+					.sort(
+						(left, right) =>
+							hashSeed(`${seed}:${state.turn}:${left}`) - hashSeed(`${seed}:${state.turn}:${right}`)
+					)
+			: REFORM_WISHES[strategy].filter(possible);
+	const pick = wishes[0];
+	return pick ? [{ kind: 'action', id: actionId, target: pick }] : [];
+}
+
 /**
  * Recrutement par politique : sauf la prudente, chaque politique recrute le
  * candidat de meilleure compétence visible (CV) d'un poste ouvert.
@@ -499,6 +541,7 @@ function wishesFor(
 		...candidacyWish(strategy, state, content),
 		...promiseWish(strategy, state, seed, content),
 		...mediaWish(strategy, state, seed, content),
+		...reformWish(strategy, state, seed, content),
 		...hireWish(strategy, state, content)
 	];
 	if (strategy === 'random-valid') return [...party, ...randomWishes(seed, state.turn, content)];
@@ -651,6 +694,13 @@ function finalizeRun(
 		promisesPartial: state.promises.filter((pledge) => pledge.status === 'partial').length,
 		promisesAbandoned: state.promises.filter((pledge) => pledge.status === 'abandoned').length,
 		...pressCounts(state, content),
+		reformsProposed: state.institutions.reforms.filter((reform) => reform.origin === 'player')
+			.length,
+		reformsAdopted: state.institutions.reforms.filter(
+			(reform) => reform.origin === 'player' && reform.status !== 'rejected'
+		).length,
+		governmentReforms: state.institutions.reforms.filter((reform) => reform.origin === 'government')
+			.length,
 		separations: state.history.reduce(
 			(total, entry) =>
 				total +
@@ -1051,6 +1101,9 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'favorableArticles',
 		'interviews',
 		'mediaOwned',
+		'reformsProposed',
+		'reformsAdopted',
+		'governmentReforms',
 		'staffHired',
 		'staffDepartures',
 		'finalPopularity',
@@ -1109,6 +1162,9 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.favorableArticles,
 		run.interviews,
 		run.mediaOwned,
+		run.reformsProposed,
+		run.reformsAdopted,
+		run.governmentReforms,
 		run.staffHired,
 		run.staffDepartures,
 		run.finalPopularity,

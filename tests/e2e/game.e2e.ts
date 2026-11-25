@@ -165,6 +165,20 @@ test.describe('parcours de jeu', () => {
 		).toBeVisible();
 	});
 
+	test('présente les institutions et réserve les réformes aux parlementaires', async ({ page }) => {
+		await startCareer(page, 'e2e-institutions');
+		await page.getByRole('button', { name: 'Monde politique', exact: true }).click();
+		await expect(page.getByRole('heading', { name: 'Institutions' })).toBeVisible();
+		await expect(page.getByText('Réservé aux parlementaires et aux ministres.')).toBeVisible();
+		const cumul = page.getByTestId('institution-institution.cumul');
+		await expect(cumul).toContainText('Cumul des mandats');
+		await expect(cumul).toContainText('Cumul limité');
+		await expect(page.getByTestId('institution-institution.press')).toContainText(
+			'Liberté encadrée'
+		);
+		await expect(page.getByRole('button', { name: /^Proposer :/ })).toHaveCount(0);
+	});
+
 	test('adhère à un parti depuis le monde politique', async ({ page }) => {
 		await startCareer(page, 'e2e-parti');
 		await expect(page.getByTestId('header-party')).toHaveText('Étiquette aucune');
@@ -241,8 +255,8 @@ test.describe('parcours de jeu', () => {
 	test('s’arrête avant une échéance, résume la période, puis accélère une année', async ({
 		page
 	}) => {
-		// Seed sans décision bloquante sur les sept premiers trimestres (catalogue P3-03).
-		await startCareer(page, 'e2e-year-3');
+		// Seed sans décision bloquante sur les sept premiers trimestres (catalogue P3-05).
+		await startCareer(page, 'e2e-year-4');
 		await page.getByRole('button', { name: 'Année suivante' }).click();
 
 		// Les législatives sont accessibles : le temps s'arrête avant la clôture des candidatures.

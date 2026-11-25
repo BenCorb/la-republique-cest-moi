@@ -295,6 +295,8 @@ function applyAutomaticEffects(
 			const outcome = applyPromiseEffect(resolved.effect, career, turn, promiseTarget, content);
 			career = outcome.parts;
 			politics.push(...outcome.changes);
+		} else if (resolved.kind === 'reform') {
+			throw new Error('Proposition de réforme hors du plan.');
 		} else {
 			const key = gaugeKey(resolved.gauge);
 			const { value, applied } = applyGauge(player[key], resolved.delta);

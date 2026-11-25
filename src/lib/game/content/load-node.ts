@@ -33,6 +33,7 @@ export function loadContentFromFiles(directory = DEFAULT_CONTENT_DATA_DIR): Cont
 		wealth: read('wealth.json'),
 		promises: read('promises.json'),
 		media: read('media.json'),
+		institutions: read('institutions.json'),
 		events
 	});
 	if (!result.ok) {

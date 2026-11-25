@@ -319,6 +319,8 @@ Lorsqu’il détient les fonctions et soutiens nécessaires, le joueur peut tent
 
 Les réformes ne sont pas nécessairement acceptées : elles dépendent du contexte et des contre-pouvoirs. Elles peuvent aussi survenir indépendamment du joueur. Leurs effets persistent au-delà des mandats et s’appliquent aux autres acteurs. Une décision institutionnelle autrefois avantageuse peut ainsi profiter à un rival devenu dirigeant.
 
+**Hypothèses provisoires de P3-05 (25 novembre 2026, contenu du lot E validé par le créateur) :** cinq paramètres à trois niveaux (cumul des mandats, indépendance de la justice, transparence financière, mode de scrutin, liberté de la presse). Député, sénateur ou ministre, le joueur propose de déplacer un paramètre d’un cran ; le vote dépend du gouvernement, de l’appareil et de la stabilité. Adoptée, la réforme entre en vigueur au 1er janvier suivant, pour tous, et survit aux alternances ; rejetée, elle coûte de l’influence. Le gouvernement réforme parfois de lui-même. Les règles en vigueur pèsent sur les scrutins, les dossiers judiciaires, la presse et le cumul de tous les acteurs, et des événements en font profiter les rivaux. Chiffres modifiables à l’équilibrage (ARCHITECTURE §8.4 septies).
+
 ## 11. Événements narratifs
 
 ### 11.1 Principes

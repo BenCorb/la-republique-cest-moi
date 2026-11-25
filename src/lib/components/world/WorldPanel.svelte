@@ -2,6 +2,7 @@
 	import { Crown, LogOut, Plus } from '@lucide/svelte';
 	import Gauge from '#lib/components/common/Gauge.svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
+	import InstitutionsCard from './InstitutionsCard.svelte';
 
 	/**
 	 * Monde politique (P2-01) : contexte national, partis et adhésion du joueur.
@@ -134,5 +135,7 @@
 				{/each}
 			</ul>
 		</section>
+
+		<InstitutionsCard {session} institutions={world.institutions} {accelerating} />
 	</div>
 {/if}
