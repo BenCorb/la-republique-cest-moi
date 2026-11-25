@@ -71,6 +71,116 @@
 			"price": [{ "resource": "personalCashCents", "amount": 30000 }],
 			"upkeep": [{ "resource": "personalCashCents", "amount": 5000 }],
 			"production": [{ "resource": "influence", "amount": 1 }]
+		},
+		{
+			"id": "wealth.city_flat",
+			"family": "personal",
+			"ownedLabel": "Appartement en location",
+			"label": "Acheter un appartement en ville",
+			"description": "Un trois-pièces « idéalement situé », loué à un jeune couple qui paie à l’heure. Le syndic, lui, envoie ses appels de fonds à l’avance.",
+			"treasury": "personalCashCents",
+			"timeCost": 10,
+			"maxOwned": 3,
+			"price": [{ "resource": "personalCashCents", "amount": 6000000 }],
+			"upkeep": [{ "resource": "personalCashCents", "amount": 60000 }],
+			"production": [],
+			"asset": {
+				"annualYieldPercent": 4,
+				"annualGrowthPercent": 3,
+				"volatilityPercent": 2,
+				"economySensitivityPercent": 1,
+				"failurePerMille": 0,
+				"salePercent": 92,
+				"stressPerTurn": 0
+			}
+		},
+		{
+			"id": "wealth.country_house",
+			"family": "personal",
+			"ownedLabel": "Résidence secondaire",
+			"label": "Acheter une résidence secondaire",
+			"description": "Une longère avec vue sur rien, où l’on se repose loin des caméras. La toiture, en revanche, ne se repose jamais.",
+			"treasury": "personalCashCents",
+			"timeCost": 10,
+			"maxOwned": 1,
+			"price": [{ "resource": "personalCashCents", "amount": 12000000 }],
+			"upkeep": [{ "resource": "personalCashCents", "amount": 150000 }],
+			"production": [],
+			"asset": {
+				"annualYieldPercent": 0,
+				"annualGrowthPercent": 2,
+				"volatilityPercent": 2,
+				"economySensitivityPercent": 1,
+				"failurePerMille": 0,
+				"salePercent": 90,
+				"stressPerTurn": -2
+			}
+		},
+		{
+			"id": "wealth.stock_portfolio",
+			"family": "personal",
+			"ownedLabel": "Portefeuille boursier",
+			"label": "Placer en Bourse",
+			"description": "Un portefeuille « équilibré » confié à un conseiller qui vous appelle surtout quand tout va bien. Achetable par tranches.",
+			"treasury": "personalCashCents",
+			"timeCost": 5,
+			"maxOwned": 10,
+			"price": [{ "resource": "personalCashCents", "amount": 1000000 }],
+			"upkeep": [],
+			"production": [],
+			"asset": {
+				"annualYieldPercent": 2,
+				"annualGrowthPercent": 4,
+				"volatilityPercent": 8,
+				"economySensitivityPercent": 2,
+				"failurePerMille": 0,
+				"salePercent": 99,
+				"stressPerTurn": 0
+			}
+		},
+		{
+			"id": "wealth.sme_shares",
+			"family": "personal",
+			"ownedLabel": "Parts de PME",
+			"label": "Entrer au capital d’une PME",
+			"description": "Des parts dans une entreprise locale de « solutions innovantes ». Le dividende est généreux, l’avenir un peu moins certain.",
+			"treasury": "personalCashCents",
+			"timeCost": 10,
+			"maxOwned": 3,
+			"price": [{ "resource": "personalCashCents", "amount": 3000000 }],
+			"upkeep": [],
+			"production": [],
+			"asset": {
+				"annualYieldPercent": 8,
+				"annualGrowthPercent": 0,
+				"volatilityPercent": 10,
+				"economySensitivityPercent": 2,
+				"failurePerMille": 5,
+				"salePercent": 85,
+				"stressPerTurn": 0
+			}
+		},
+		{
+			"id": "wealth.vineyard",
+			"family": "personal",
+			"ownedLabel": "Vignoble",
+			"label": "Acheter un vignoble",
+			"description": "Quelques hectares de coteaux et un millésime à votre nom. La grêle n’a aucun respect pour les élus.",
+			"treasury": "personalCashCents",
+			"timeCost": 10,
+			"maxOwned": 1,
+			"price": [{ "resource": "personalCashCents", "amount": 20000000 }],
+			"upkeep": [{ "resource": "personalCashCents", "amount": 300000 }],
+			"production": [],
+			"asset": {
+				"annualYieldPercent": 5,
+				"annualGrowthPercent": 3,
+				"volatilityPercent": 5,
+				"economySensitivityPercent": 1,
+				"failurePerMille": 2,
+				"salePercent": 88,
+				"stressPerTurn": -1
+			}
 		}
 	]
 }

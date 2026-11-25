@@ -20,6 +20,7 @@ import {
 	entourageCatalogSchema,
 	profileCatalogSchema,
 	justiceCatalogSchema,
+	wealthCatalogSchema,
 	upgradeCatalogSchema,
 	worldSchema
 } from './schemas.ts';
@@ -45,6 +46,8 @@ import {
 	type PartyDefinition,
 	type JusticeDefinition,
 	type OffenseDefinition,
+	type LifestyleDefinition,
+	type WealthDefinition,
 	type ResourceAmount,
 	type TraitDefinition,
 	type UpgradeDefinition,
@@ -84,6 +87,8 @@ export interface RawContent {
 	readonly profiles: unknown;
 	/** Infractions du registre des faits et jauges de la justice (`justice.json`). */
 	readonly justice: unknown;
+	/** Trains de vie (`wealth.json`). */
+	readonly wealth: unknown;
 }
 
 export type ContentValidation =
@@ -258,6 +263,7 @@ interface Refs {
 	readonly origins: ReadonlySet<string>;
 	readonly professions: ReadonlySet<string>;
 	readonly offenses: ReadonlySet<string>;
+	readonly lifestyles: ReadonlySet<string>;
 }
 
 /** Vérifie les partis et mandats cités par une condition. */
@@ -284,6 +290,16 @@ function conditionIssues(
 			return refs.origins.has(condition.origin)
 				? []
 				: [{ source, path: `${path}.origin`, message: `origine inconnue : ${condition.origin}` }];
+		case 'lifestyle':
+			return refs.lifestyles.has(condition.lifestyle)
+				? []
+				: [
+						{
+							source,
+							path: `${path}.lifestyle`,
+							message: `train de vie inconnu : ${condition.lifestyle}`
+						}
+					];
 		case 'profession':
 			return refs.professions.has(condition.profession)
 				? []
@@ -322,7 +338,7 @@ function conditionIssues(
 function effectIssues(
 	effects: readonly Effect[],
 	refs: Refs,
-	targetKind: 'party' | 'mandate' | 'ballot' | 'candidate' | 'staff' | 'upgrade' | null,
+	targetKind: 'party' | 'mandate' | 'ballot' | 'candidate' | 'staff' | 'upgrade' | 'asset' | null,
 	source: string,
 	path: string,
 	roles: ReadonlySet<string> | null = null
@@ -383,7 +399,7 @@ function effectIssues(
 				}
 				break;
 			case 'releaseUpgrade':
-				if (targetKind !== 'upgrade') {
+				if (targetKind !== 'upgrade' && targetKind !== 'asset') {
 					issues.push({
 						source,
 						path: at,
@@ -473,6 +489,15 @@ function effectIssues(
 						source,
 						path: `${at}.election`,
 						message: 'élection anticipée réservée aux événements'
+					});
+				}
+				break;
+			case 'setLifestyle':
+				if (!refs.lifestyles.has(effect.lifestyle)) {
+					issues.push({
+						source,
+						path: `${at}.lifestyle`,
+						message: `train de vie inconnu : ${effect.lifestyle}`
 					});
 				}
 				break;
@@ -1068,6 +1093,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	const entourageCatalog = entourageCatalogSchema.safeParse(raw.entourage);
 	const profileCatalog = profileCatalogSchema.safeParse(raw.profiles);
 	const justiceCatalog = justiceCatalogSchema.safeParse(raw.justice);
+	const wealthCatalog = wealthCatalogSchema.safeParse(raw.wealth);
 	const eventFiles = Object.keys(raw.events)
 		.sort()
 		.map((source) => ({ source, parsed: eventCatalogSchema.safeParse(raw.events[source]) }));
@@ -1086,6 +1112,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	}
 	if (!profileCatalog.success) issues.push(...zodIssues('profiles.json', profileCatalog.error));
 	if (!justiceCatalog.success) issues.push(...zodIssues('justice.json', justiceCatalog.error));
+	if (!wealthCatalog.success) issues.push(...zodIssues('wealth.json', wealthCatalog.error));
 	for (const { source, parsed } of eventFiles) {
 		if (!parsed.success) issues.push(...zodIssues(source, parsed.error));
 	}
@@ -1101,6 +1128,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 		!entourageCatalog.success ||
 		!profileCatalog.success ||
 		!justiceCatalog.success ||
+		!wealthCatalog.success ||
 		eventFiles.some(({ parsed }) => !parsed.success)
 	) {
 		return { ok: false, issues };
@@ -1180,8 +1208,10 @@ export function validateContent(raw: RawContent): ContentValidation {
 		parties: new Set(world.data.parties.map((party) => party.id)),
 		mandates: new Set(career.mandates.map((mandate) => mandate.id)),
 		elections: new Set(career.elections.map((election) => election.id)),
-		offenses: new Set(justiceCatalog.data.offenses.map((offense) => offense.id))
+		offenses: new Set(justiceCatalog.data.offenses.map((offense) => offense.id)),
+		lifestyles: new Set(wealthCatalog.data.lifestyles.map((lifestyle) => lifestyle.id))
 	};
+	issues.push(...crossCheckWealth(wealthCatalog.data, upgradeList, knownIds));
 	issues.push(...crossCheckJustice(justiceCatalog.data, refs, knownIds, sourcedEvents));
 	issues.push(...crossCheckPolitics(actionList, upgradeList, sourcedEvents, refs));
 	issues.push(
@@ -1245,6 +1275,11 @@ export function validateContent(raw: RawContent): ContentValidation {
 	for (const group of groupList) supportGroups[group.id] = group;
 	const parties: Record<string, PartyDefinition> = {};
 	for (const party of world.data.parties) parties[party.id] = party;
+	const lifestyleList = [...wealthCatalog.data.lifestyles].sort(
+		(left, right) => left.level - right.level
+	);
+	const lifestyles: Record<string, LifestyleDefinition> = {};
+	for (const lifestyle of lifestyleList) lifestyles[lifestyle.id] = lifestyle;
 	const offenses: Record<string, OffenseDefinition> = {};
 	for (const offense of justiceCatalog.data.offenses) offenses[offense.id] = offense;
 	return {
@@ -1262,6 +1297,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 				entourage: entourageCatalog.data,
 				profiles: profileData,
 				justice: justiceCatalog.data,
+				wealth: wealthCatalog.data,
 				events: Object.fromEntries(eventFiles.map(({ source, parsed }) => [source, parsed.data]))
 			}),
 			balance: balance.data,
@@ -1300,9 +1336,87 @@ export function validateContent(raw: RawContent): ContentValidation {
 			partyIds: world.data.parties.map((party) => party.id),
 			offenses,
 			offenseIds: justiceCatalog.data.offenses.map((offense) => offense.id),
-			justice: justiceCatalog.data.balance
+			justice: justiceCatalog.data.balance,
+			lifestyles,
+			lifestyleIds: lifestyleList.map((lifestyle) => lifestyle.id),
+			wealth: {
+				defaultLifestyle: wealthCatalog.data.defaultLifestyle,
+				unpaidLifestyleStress: wealthCatalog.data.unpaidLifestyleStress
+			}
 		}
 	};
+}
+
+/**
+ * Trains de vie aux identifiants et rangs uniques (0, 1, 2…), le plus sobre
+ * gratuit et par défaut ; actifs patrimoniaux personnels, payés et entretenus
+ * sur l'argent personnel, au prix d'achat non nul (leur valeur initiale).
+ */
+function crossCheckWealth(
+	wealth: WealthDefinition,
+	upgrades: readonly UpgradeDefinition[],
+	knownIds: Set<string>
+): ContentIssue[] {
+	const issues: ContentIssue[] = [];
+	const levels = wealth.lifestyles.map((lifestyle) => lifestyle.level).sort((a, b) => a - b);
+	if (levels.some((level, index) => level !== index)) {
+		issues.push({
+			source: 'wealth.json',
+			path: 'lifestyles',
+			message: 'rangs attendus : 0, 1, 2… sans doublon'
+		});
+	}
+	wealth.lifestyles.forEach((lifestyle, index) => {
+		if (knownIds.has(lifestyle.id)) {
+			issues.push({
+				source: 'wealth.json',
+				path: `lifestyles[${index}].id`,
+				message: `identifiant en double : ${lifestyle.id}`
+			});
+		}
+		knownIds.add(lifestyle.id);
+	});
+	const fallback = wealth.lifestyles.find((lifestyle) => lifestyle.id === wealth.defaultLifestyle);
+	if (!fallback) {
+		issues.push({
+			source: 'wealth.json',
+			path: 'defaultLifestyle',
+			message: `train de vie inconnu : ${wealth.defaultLifestyle}`
+		});
+	} else if (fallback.level !== 0 || fallback.costCents !== 0) {
+		issues.push({
+			source: 'wealth.json',
+			path: 'defaultLifestyle',
+			message: 'le train de vie par défaut doit être le plus sobre et gratuit'
+		});
+	}
+	upgrades.forEach((upgrade, index) => {
+		if (!upgrade.asset) return;
+		const at = `upgrades[${index}]`;
+		if (upgrade.family !== 'personal' || upgrade.treasury !== 'personalCashCents') {
+			issues.push({
+				source: 'upgrades.json',
+				path: at,
+				message: 'un actif est personnel et payé sur l’argent personnel'
+			});
+		}
+		const price = upgrade.price.filter((cost) => cost.resource === 'personalCashCents');
+		if (price.length !== 1 || upgrade.price.length !== 1) {
+			issues.push({
+				source: 'upgrades.json',
+				path: `${at}.price`,
+				message: 'un actif a un prix unique en argent personnel (sa valeur initiale)'
+			});
+		}
+		if (upgrade.releaseEffects !== undefined) {
+			issues.push({
+				source: 'upgrades.json',
+				path: `${at}.releaseEffects`,
+				message: 'la revente d’un actif rapporte sa valeur : pas d’effets de départ'
+			});
+		}
+	});
+	return issues;
 }
 
 /** Infractions uniques, mandats connus dans les expositions de référence. */

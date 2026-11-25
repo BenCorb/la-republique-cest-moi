@@ -440,6 +440,7 @@ test.describe('parcours de jeu', () => {
 			'Entourage',
 			'Relations',
 			'Organisation',
+			'Patrimoine',
 			'Journal'
 		]) {
 			await page.getByRole('button', { name: tab, exact: true }).click();

@@ -26,6 +26,7 @@ import {
 	fixtureEvents,
 	fixtureProfiles,
 	fixtureJustice,
+	fixtureWealth,
 	fixtureSupports,
 	fixtureTraits,
 	fixtureUpgrades,
@@ -107,7 +108,8 @@ function load(): Content {
 		supports: fixtureSupports,
 		entourage: fixtureEntourage,
 		profiles: fixtureProfiles,
-		justice: fixtureJustice
+		justice: fixtureJustice,
+		wealth: fixtureWealth
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;

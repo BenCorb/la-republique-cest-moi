@@ -318,7 +318,13 @@ const STRATEGY_WISHES: Readonly<
 		action('activism.leaflets'),
 		action('activism.leaflets')
 	],
+	// Le patrimonial investit (P3-02), puis s'offre du confort quand il en a les moyens.
 	patrimonial: [
+		purchase('wealth.stock_portfolio'),
+		purchase('wealth.city_flat'),
+		purchase('wealth.sme_shares'),
+		purchase('wealth.country_house'),
+		action('lifestyle.adopt_comfortable'),
 		purchase('network.think_tank'),
 		purchase('organization.donor_file'),
 		purchase('organization.local_office'),
@@ -369,9 +375,18 @@ function wishesFor(
 					? Object.hasOwn(content.actions, step.id)
 					: Object.hasOwn(content.upgrades, step.id)) &&
 				// Le gala épuise : seulement quand le budget politique est bas.
-				(step.id !== GALA_ACTION || state.resources.politicalBudgetCents < GALA_BUDGET_BELOW)
+				(step.id !== GALA_ACTION || state.resources.politicalBudgetCents < GALA_BUDGET_BELOW) &&
+				// Un train de vie plus coûteux : seulement avec dix trimestres d'avance.
+				(!step.id.startsWith('lifestyle.') ||
+					state.resources.personalCashCents >=
+						10 * lifestyleCost(step.id.replace('adopt_', ''), content))
 		)
 	];
+}
+
+/** Dépense trimestrielle d'un train de vie (identifiant `lifestyle.*`), 0 s'il est inconnu. */
+function lifestyleCost(lifestyleId: string, content: Content): number {
+	return content.lifestyles[lifestyleId]?.costCents ?? 0;
 }
 
 const GALA_ACTION = 'organization.gala';

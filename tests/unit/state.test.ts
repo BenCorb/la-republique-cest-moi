@@ -71,7 +71,11 @@ describe('contrôle des invariants', () => {
 						type: 'turn.resolved',
 						turn: 1,
 						steps: [],
-						economy: { producers: [], changes: [] },
+						economy: {
+							lifestyle: { lifestyleId: 'lifestyle.test_modest', costCents: 0, unpaid: false },
+							producers: [],
+							changes: []
+						},
 						mandates: { changes: [], stress: 0 },
 						staff: null,
 						family: null,
@@ -82,13 +86,18 @@ describe('contrôle des invariants', () => {
 						deadlines: null,
 						exposure: null,
 						justice: null,
+						wealth: null,
 						events: []
 					},
 					{
 						type: 'turn.resolved',
 						turn: 0,
 						steps: [],
-						economy: { producers: [], changes: [] },
+						economy: {
+							lifestyle: { lifestyleId: 'lifestyle.test_modest', costCents: 0, unpaid: false },
+							producers: [],
+							changes: []
+						},
 						mandates: { changes: [], stress: 0 },
 						staff: null,
 						family: null,
@@ -99,6 +108,7 @@ describe('contrôle des invariants', () => {
 						deadlines: null,
 						exposure: null,
 						justice: null,
+						wealth: null,
 						events: []
 					}
 				]

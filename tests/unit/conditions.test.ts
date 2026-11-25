@@ -18,6 +18,7 @@ const context: ConditionContext = {
 		exposure: 0,
 		defense: 0,
 		ineligibleUntil: null,
+		lifestyle: 'lifestyle.test_modest',
 		partyId: null,
 		affiliations: [],
 		supports: {},
@@ -41,8 +42,8 @@ const context: ConditionContext = {
 	institutions: createGame({ seed: 'conditions' }, fixtureContent).institutions,
 	resources: { influence: 12, politicalBudgetCents: 5_000, personalCashCents: 0 },
 	upgrades: [
-		{ instanceId: 'upgrade.1', upgradeId: 'test.volunteer', acquiredTurn: 0 },
-		{ instanceId: 'upgrade.2', upgradeId: 'test.donors', acquiredTurn: 1 }
+		{ instanceId: 'upgrade.1', upgradeId: 'test.volunteer', acquiredTurn: 0, valueCents: null },
+		{ instanceId: 'upgrade.2', upgradeId: 'test.donors', acquiredTurn: 1, valueCents: null }
 	]
 };
 

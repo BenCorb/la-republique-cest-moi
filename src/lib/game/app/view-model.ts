@@ -21,6 +21,10 @@ import {
 	campaignRefund,
 	careerSummary,
 	currentJudicialRisk,
+	assetIncome,
+	assetProceeds,
+	assetsValue,
+	netWorth,
 	caseStepMessage,
 	isIneligible,
 	divertedFunds,
@@ -154,6 +158,37 @@ export interface UpgradeView extends CatalogItemView {
 	readonly upkeep: readonly string[];
 	readonly owned: number;
 	readonly maxOwned: number;
+}
+
+export interface AssetView {
+	readonly instanceId: string;
+	readonly label: string;
+	readonly acquired: string;
+	readonly value: string;
+	/** Revenu du trimestre en cours, `null` avant le premier trimestre actif. */
+	readonly income: string | null;
+	readonly proceeds: string;
+	readonly lost: boolean;
+	readonly sale: {
+		readonly step: PlanStep | null;
+		readonly reason: string | null;
+		readonly planned: boolean;
+	};
+}
+
+export interface WealthView {
+	readonly netWorth: string;
+	readonly cash: string;
+	readonly assetsValue: string;
+	readonly lifestyle: {
+		readonly label: string;
+		readonly description: string;
+		readonly cost: string;
+	};
+	/** Changements de train de vie planifiables. */
+	readonly lifestyleActions: readonly CatalogItemView[];
+	readonly owned: readonly AssetView[];
+	readonly offers: readonly UpgradeView[];
 }
 
 export interface ProducerView {
@@ -586,6 +621,8 @@ export interface PlayerView {
 	/** Actions de l'agenda regroupées par thème, dans l'ordre du catalogue ; groupes vides omis. */
 	readonly actionGroups: readonly ActionGroupView[];
 	readonly upgrades: readonly UpgradeView[];
+	/** Patrimoine personnel (P3-02). */
+	readonly wealth: WealthView;
 	readonly producers: readonly ProducerView[];
 	readonly organisation: readonly OrganisationGroupView[];
 	readonly decision: DecisionView | null;
@@ -620,6 +657,7 @@ const FAMILY_LABELS: Readonly<Record<string, string>> = {
 
 const SOURCE_LABELS: { readonly [K in WellbeingSource]: string } = {
 	workload: 'charge de travail',
+	comfort: 'confort',
 	recovery: 'récupération',
 	high_stress: 'stress élevé',
 	calm: 'calme retrouvé',
@@ -681,6 +719,8 @@ function describeEffect(range: EffectRange, content: Content): string {
 			return 'Candidature déposée';
 		case 'fact':
 			return `Fait inscrit au registre : ${content.offenses[range.offense]?.label ?? range.offense}`;
+		case 'lifestyle':
+			return content.lifestyles[range.lifestyle]?.label ?? range.lifestyle;
 		case 'family':
 			return range.change === 'attitude'
 				? `Famille ${range.value > 0 ? 'apaisée' : 'agacée'}`
@@ -1164,6 +1204,62 @@ function sumAmounts(lists: readonly (readonly ResourceAmount[])[]): ResourceAmou
 	});
 }
 
+function buildWealth(
+	state: GameState,
+	plan: readonly PlanStep[],
+	actions: readonly CatalogItemView[],
+	offers: readonly UpgradeView[],
+	content: Content
+): WealthView {
+	const lifestyle = content.lifestyles[state.player.lifestyle];
+	const sellActionId =
+		content.actionIds.find((id) => content.actions[id]?.target === 'asset') ?? null;
+	const selling = new Set(
+		plan.flatMap((step) =>
+			step.kind === 'action' && step.id === sellActionId && step.target ? [step.target] : []
+		)
+	);
+	const owned = state.upgrades.flatMap((upgrade): AssetView[] => {
+		const definition = content.upgrades[upgrade.upgradeId];
+		if (!definition?.asset || upgrade.valueCents === null) return [];
+		const step: PlanStep | null = sellActionId
+			? { kind: 'action', id: sellActionId, target: upgrade.instanceId }
+			: null;
+		const planned = selling.has(upgrade.instanceId);
+		const check = step && !planned ? addability(state, plan, step, content) : null;
+		const income = assetIncome(upgrade, content);
+		return [
+			{
+				instanceId: upgrade.instanceId,
+				label: definition.ownedLabel ?? definition.label,
+				acquired: formatTurn(upgrade.acquiredTurn),
+				value: formatMoney(upgrade.valueCents),
+				income: upgrade.acquiredTurn < state.turn ? formatMoney(income) : null,
+				proceeds: formatMoney(assetProceeds(upgrade, content)),
+				lost: upgrade.valueCents === 0,
+				sale: {
+					step: check?.addable ? step : null,
+					reason: planned ? 'Vente prévue ce trimestre.' : (check?.reason ?? null),
+					planned
+				}
+			}
+		];
+	});
+	return {
+		netWorth: formatMoney(netWorth(state.resources, state.upgrades)),
+		cash: formatMoney(state.resources.personalCashCents),
+		assetsValue: formatMoney(assetsValue(state.upgrades)),
+		lifestyle: {
+			label: lifestyle?.label ?? state.player.lifestyle,
+			description: lifestyle?.description ?? '',
+			cost: formatMoney(lifestyle?.costCents ?? 0)
+		},
+		lifestyleActions: actions.filter((action) => action.id.startsWith('lifestyle.')),
+		owned,
+		offers
+	};
+}
+
 /** Organisation regroupée par type d'amélioration, dans l'ordre du catalogue. */
 function buildOrganisation(
 	state: GameState,
@@ -1175,6 +1271,8 @@ function buildOrganisation(
 		content.actionIds.find((id) => content.actions[id]?.target === 'upgrade') ?? null;
 	return content.upgradeIds.flatMap((upgradeId) => {
 		const definition = content.upgrades[upgradeId]!;
+		// Les actifs patrimoniaux ont leur propre écran (P3-02).
+		if (definition.asset) return [];
 		const owned = state.upgrades.filter((upgrade) => upgrade.upgradeId === upgradeId);
 		const forecasts = preview.producers.filter((producer) => producer.upgradeId === upgradeId);
 		const releasing = new Set(
@@ -1257,6 +1355,7 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 				label: 'Affaires judiciaires',
 				value: `${summary.cases} dossier(s), ${summary.convictions} condamnation(s)`
 			},
+			{ label: 'Valeur nette (argent et biens)', value: formatMoney(summary.netWorthCents) },
 			{ label: 'Fonds détournés', value: formatMoney(summary.divertedCents) },
 			{
 				label: 'Catalogue',
@@ -2007,7 +2106,7 @@ export function projectView(
 		} satisfies CatalogItemView;
 	});
 
-	const upgrades: UpgradeView[] = content.upgradeIds.map((id) => {
+	const upgradeView = (id: string): UpgradeView => {
 		const upgrade = content.upgrades[id]!;
 		return {
 			kind: 'purchase',
@@ -2025,25 +2124,47 @@ export function projectView(
 			planned: planned('purchase', id),
 			...addability(state, plan, { kind: 'purchase', id }, content)
 		};
-	});
+	};
+	const upgrades = content.upgradeIds.filter((id) => !content.upgrades[id]?.asset).map(upgradeView);
+	const assetOffers = content.upgradeIds
+		.filter((id) => content.upgrades[id]?.asset)
+		.map((id) => {
+			const view = upgradeView(id);
+			const asset = content.upgrades[id]!.asset!;
+			return {
+				...view,
+				effects: [
+					asset.annualYieldPercent > 0
+						? `Revenu : ${asset.annualYieldPercent} % de la valeur par an`
+						: 'Aucun revenu',
+					`Valeur : tendance ${asset.annualGrowthPercent >= 0 ? '+' : ''}${asset.annualGrowthPercent} % par an, aléa ± ${asset.volatilityPercent} % par trimestre`,
+					...(asset.failurePerMille > 0 ? ['Risque de perte totale'] : []),
+					...(asset.stressPerTurn < 0 ? [`Stress ${asset.stressPerTurn} par trimestre`] : []),
+					`Revente : ${asset.salePercent} % de la valeur`
+				]
+			};
+		});
 
-	const producers: ProducerView[] = preview.producers.map((producer) => ({
-		instanceId: producer.instanceId,
-		upgradeId: producer.upgradeId,
-		label:
-			content.upgrades[producer.upgradeId]?.ownedLabel ??
-			content.upgrades[producer.upgradeId]?.label ??
-			producer.upgradeId,
-		status: producer.status,
-		statusLabel:
-			producer.status === 'active'
-				? 'Actif ce trimestre'
-				: producer.status === 'pending'
-					? 'Actif à partir du trimestre prochain'
-					: 'Suspendu : charges non couvertes',
-		upkeep: amounts(producer.upkeep, -1),
-		production: amounts(producer.production, 1)
-	}));
+	// Organisation seulement : les actifs patrimoniaux ont leur écran (P3-02).
+	const producers: ProducerView[] = preview.producers
+		.filter((producer) => !content.upgrades[producer.upgradeId]?.asset)
+		.map((producer) => ({
+			instanceId: producer.instanceId,
+			upgradeId: producer.upgradeId,
+			label:
+				content.upgrades[producer.upgradeId]?.ownedLabel ??
+				content.upgrades[producer.upgradeId]?.label ??
+				producer.upgradeId,
+			status: producer.status,
+			statusLabel:
+				producer.status === 'active'
+					? 'Actif ce trimestre'
+					: producer.status === 'pending'
+						? 'Actif à partir du trimestre prochain'
+						: 'Suspendu : charges non couvertes',
+			upkeep: amounts(producer.upkeep, -1),
+			production: amounts(producer.production, 1)
+		}));
 
 	const pending = describePendingEvent(state, content);
 	const decision: DecisionView | null = pending
@@ -2151,6 +2272,7 @@ export function projectView(
 		},
 		actions,
 		actionGroups: groupActions(actions, content),
+		wealth: buildWealth(state, plan, actions, assetOffers, content),
 		upgrades,
 		producers,
 		organisation: buildOrganisation(state, plan, preview, content),

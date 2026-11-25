@@ -87,6 +87,7 @@ const turnEntry = z.strictObject({
 		})
 	),
 	economy: z.strictObject({
+		lifestyle: z.strictObject({ lifestyleId: id, costCents: int, unpaid: z.boolean() }),
 		producers: z.array(
 			z.strictObject({
 				upgradeId: id,
@@ -129,7 +130,7 @@ const turnEntry = z.strictObject({
 	wellbeing: z.strictObject({
 		contributions: z.array(
 			z.strictObject({
-				source: z.enum(['workload', 'recovery', 'high_stress', 'calm', 'ageing']),
+				source: z.enum(['workload', 'comfort', 'recovery', 'high_stress', 'calm', 'ageing']),
 				gauge,
 				delta: int
 			})
@@ -184,6 +185,7 @@ const turnEntry = z.strictObject({
 		})
 		.nullable(),
 	exposure: int.nullable(),
+	wealth: z.strictObject({ valueChange: int, failed: z.array(id) }).nullable(),
 	justice: z
 		.strictObject({
 			cases: z.array(
@@ -243,6 +245,7 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 		exposure: int,
 		defense: int,
 		ineligibleUntil: int.nullable(),
+		lifestyle: id,
 		partyId: id.nullable(),
 		affiliations: z.array(z.strictObject({ partyId: id, fromTurn: int, toTurn: int.nullable() })),
 		supports: z.record(id, int),
@@ -262,7 +265,9 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 		politicalBudgetCents: int,
 		personalCashCents: int
 	}),
-	upgrades: z.array(z.strictObject({ instanceId: id, upgradeId: id, acquiredTurn: int })),
+	upgrades: z.array(
+		z.strictObject({ instanceId: id, upgradeId: id, acquiredTurn: int, valueCents: int.nullable() })
+	),
 	nextInstanceNumber: int,
 	events: z.strictObject({
 		pending: z.array(z.strictObject({ instanceId: id, eventId: id, turn: int, actors })),

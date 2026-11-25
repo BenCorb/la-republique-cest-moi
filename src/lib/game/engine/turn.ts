@@ -35,6 +35,7 @@ import { RESOURCE_IDS, type ResourceId } from '../content/types.ts';
 import { resolveWorld } from './world.ts';
 import { resolveSupports } from './supports.ts';
 import { resolveExposure, resolveJustice } from './justice.ts';
+import { comfortStress, revalueAssets } from './wealth.ts';
 import { resolveStaffFrontier, resolveStaffProduction } from './staff.ts';
 import { resolveFamily } from './family.ts';
 import type {
@@ -95,13 +96,23 @@ function commitTurn(
 
 	// 3. Charges puis production des améliorations acquises avant T.
 	const resolvedTurn = state.turn;
-	const economy = resolveEconomy(execution.resources, execution.upgrades, resolvedTurn, content);
+	const economy = resolveEconomy(
+		execution.resources,
+		execution.upgrades,
+		resolvedTurn,
+		content,
+		execution.player.lifestyle
+	);
+	// Train de vie impayé : retour au plus sobre (P3-02).
+	const householdPlayer = economy.lifestyle.unpaid
+		? { ...execution.player, lifestyle: content.wealth.defaultLifestyle }
+		: execution.player;
 
 	// 3 bis. Revenus et stress des mandats exercés pendant T (démissions du plan comprises).
 	const mandates = mandateIncome(execution.career.mandates, resolvedTurn, content);
 	const afterMandates: Record<ResourceId, number> = { ...economy.resources };
 	for (const amount of mandates.income) afterMandates[amount.resource] += amount.amount;
-	const stressed = applyGauge(execution.player.stress, mandates.stress);
+	const stressed = applyGauge(householdPlayer.stress, mandates.stress);
 	const mandateRecord = {
 		changes: RESOURCE_IDS.flatMap((resource) => {
 			const amount = mandates.income.find((entry) => entry.resource === resource)?.amount ?? 0;
@@ -114,7 +125,7 @@ function commitTurn(
 	const production = resolveStaffProduction(
 		{
 			resources: afterMandates,
-			player: { ...execution.player, stress: stressed.value },
+			player: { ...householdPlayer, stress: stressed.value },
 			world: execution.world,
 			career: execution.career,
 			entourage: execution.entourage
@@ -130,7 +141,8 @@ function commitTurn(
 		execution.timeUsed + reservedTime(state.mandates, content),
 		resolvedTurn,
 		execution.rng,
-		content.balance.wellbeing
+		content.balance.wellbeing,
+		comfortStress(economy, content)
 	);
 	const nextTurn = resolvedTurn + 1;
 
@@ -241,6 +253,12 @@ function commitTurn(
 		: null;
 	const settled = justice?.parts ?? null;
 
+	// 5 ter. Patrimoine : réévaluation des actifs (tendance, conjoncture, aléa).
+	const wealth =
+		settled && !justice!.end
+			? revalueAssets(execution.upgrades, settled.world, resolvedTurn, settled.rng, content)
+			: null;
+
 	// 6. Passage à T+1, puis suites dues et tirage des événements (sauf fin de carrière).
 	const frontier =
 		settled && !justice!.end
@@ -249,8 +267,8 @@ function commitTurn(
 						turn: nextTurn,
 						player: settled.player,
 						resources: settled.resources,
-						upgrades: execution.upgrades,
-						rng: settled.rng,
+						upgrades: wealth!.upgrades,
+						rng: wealth!.rng,
 						nextInstanceNumber: execution.nextInstanceNumber,
 						events: {
 							...state.events,
@@ -273,7 +291,11 @@ function commitTurn(
 		type: 'turn.resolved',
 		turn: resolvedTurn,
 		steps: execution.records,
-		economy: { producers: economyRecords(economy), changes: economy.changes },
+		economy: {
+			lifestyle: economy.lifestyle,
+			producers: economyRecords(economy),
+			changes: economy.changes
+		},
 		mandates: mandateRecord,
 		family: family?.record ?? null,
 		staff: {
@@ -288,6 +310,7 @@ function commitTurn(
 		deadlines: deadlines?.record ?? null,
 		exposure: exposure?.delta ?? null,
 		justice: justice?.record ?? null,
+		wealth: wealth?.record ?? null,
 		events: frontier?.records ?? []
 	};
 
@@ -306,7 +329,7 @@ function commitTurn(
 			turn: nextTurn,
 			phase: end ? 'ended' : events.pending.length > 0 ? 'decision' : 'planning',
 			end,
-			rng: frontier?.rng ?? settled?.rng ?? wellbeing.rng,
+			rng: frontier?.rng ?? wealth?.rng ?? settled?.rng ?? wellbeing.rng,
 			player: frontier?.player ?? settled?.player ?? wellbeing.player,
 			resources: frontier?.resources ?? settled?.resources ?? production.resources,
 			world: frontier?.world ?? settled?.world ?? production.world,
@@ -327,7 +350,7 @@ function commitTurn(
 				frontier?.career.institutions ??
 				settled?.career.institutions ??
 				production.career.institutions,
-			upgrades: execution.upgrades,
+			upgrades: wealth?.upgrades ?? execution.upgrades,
 			facts: frontier?.facts ?? state.facts,
 			cases: settled?.cases ?? state.cases,
 			nextInstanceNumber: frontier?.nextInstanceNumber ?? execution.nextInstanceNumber,
