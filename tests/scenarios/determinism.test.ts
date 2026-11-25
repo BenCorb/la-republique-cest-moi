@@ -12,6 +12,9 @@ import {
 } from '../../src/lib/game/engine/index.ts';
 import { fixtureContent, quarters as quarterEntries } from '../fixtures/content.ts';
 
+/** Scénarios longs : le runner de CI est deux à trois fois plus lent qu'un poste local. */
+const LONG_SCENARIO_TIMEOUT = 60_000;
+
 function deepFreeze<T>(value: T): T {
 	if (value && typeof value === 'object' && !Object.isFrozen(value)) {
 		Object.freeze(value);
@@ -80,7 +83,7 @@ describe('scénario : passage du temps', () => {
 	});
 });
 
-describe('scénario : reproductibilité', () => {
+describe('scénario : reproductibilité', { timeout: LONG_SCENARIO_TIMEOUT }, () => {
 	it('même seed et mêmes commandes donnent un état identique', () => {
 		const first = play('reproductible', quarters(12));
 		const second = play('reproductible', quarters(12));

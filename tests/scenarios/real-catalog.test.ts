@@ -16,6 +16,9 @@ import {
 	type TurnPlan
 } from '../../src/lib/game/engine/index.ts';
 
+/** Scénarios longs : le runner de CI est deux à trois fois plus lent qu'un poste local. */
+const LONG_SCENARIO_TIMEOUT = 60_000;
+
 const content = loadContent();
 
 /** Stratégie simple : propose des actions, retire celles que la prévision refuse. */
@@ -107,7 +110,7 @@ function answerEvents(start: GameState, policy: number): GameState {
 	return state;
 }
 
-describe('scénario : catalogue réel', () => {
+describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () => {
 	// Ordre de priorité : la réunion publique (50 points de temps) passe en premier.
 	const militant = [
 		act('activism.public_meeting'),

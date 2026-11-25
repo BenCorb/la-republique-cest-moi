@@ -34,13 +34,16 @@ import {
 	serializeEnvelope
 } from '../../src/lib/game/persistence/index.ts';
 
+/** Scénarios longs : le runner de CI est deux à trois fois plus lent qu'un poste local. */
+const LONG_SCENARIO_TIMEOUT = 60_000;
+
 const content = loadContent();
 const SEEDS = 6;
 
 const mean = (values: readonly number[]): number =>
 	values.reduce((sum, value) => sum + value, 0) / values.length;
 
-describe('alpha : trajectoires distinctes', () => {
+describe('alpha : trajectoires distinctes', { timeout: LONG_SCENARIO_TIMEOUT }, () => {
 	const runs: SimulationRun[] = SIMULATION_STRATEGIES.flatMap((strategy) =>
 		Array.from({ length: SEEDS }, (_unused, index) =>
 			simulateCareer(`alpha-${strategy}-${index}`, strategy, 400, content)
@@ -94,7 +97,7 @@ describe('alpha : trajectoires distinctes', () => {
 	});
 });
 
-describe('alpha : cumul légal à chaque trimestre', () => {
+describe('alpha : cumul légal à chaque trimestre', { timeout: LONG_SCENARIO_TIMEOUT }, () => {
 	const { maxMandates, incompatibilities } = content.institutions;
 
 	function playCareer(

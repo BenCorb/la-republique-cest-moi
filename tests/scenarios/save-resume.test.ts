@@ -20,6 +20,9 @@ import {
 	type KeyValueStorage
 } from '../../src/lib/game/persistence/index.ts';
 
+/** Scénarios longs : le runner de CI est deux à trois fois plus lent qu'un poste local. */
+const LONG_SCENARIO_TIMEOUT = 60_000;
+
 const content = loadContent();
 
 class MemoryStorage implements KeyValueStorage {
@@ -95,7 +98,7 @@ function play(
 	return { state, decisionsReloaded };
 }
 
-describe('scénario : sauvegarde et reprise', () => {
+describe('scénario : sauvegarde et reprise', { timeout: LONG_SCENARIO_TIMEOUT }, () => {
 	it('reprend à l’identique après un rechargement à chaque commande, décisions comprises', () => {
 		for (const seed of ['reprise-1', 'reprise-2', 'reprise-3']) {
 			const direct = play(seed, 300);
