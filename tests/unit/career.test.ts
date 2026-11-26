@@ -445,13 +445,21 @@ describe('projection et alertes', () => {
 	it('annonce la clôture des candidatures puis l’échéance proche', () => {
 		const filing = advanceTo(createGame({ seed: 'alerte' }, catalog), 38);
 		const local = `Élection locale (${filing.player.territory.homeTown.name})`;
-		expect(projectView(filing, [], catalog).alerts.map((alert) => alert.text)).toContain(
-			`${local} : dernier trimestre pour déposer une candidature.`
-		);
+		// Dernier dépôt possible : à traiter ; le simple calendrier reste une information (P3-13).
+		expect(projectView(filing, [], catalog).alerts).toContainEqual({
+			level: 'warning',
+			text: `${local} : dernier trimestre pour déposer une candidature.`
+		});
+		const earlier = advanceTo(createGame({ seed: 'alerte' }, catalog), 37);
+		expect(projectView(earlier, [], catalog).alerts).toContainEqual({
+			level: 'info',
+			text: `${local} : candidatures closes au T3 2009.`
+		});
 		const after = advanceTo(filing, 39);
-		expect(projectView(after, [], catalog).alerts.map((alert) => alert.text)).toContain(
-			`${local} au T1 2010, dans 1 trimestre.`
-		);
+		expect(projectView(after, [], catalog).alerts).toContainEqual({
+			level: 'info',
+			text: `${local} au T1 2010, dans 1 trimestre.`
+		});
 	});
 
 	it('range la mairie sous le conseil municipal, hors du décompte du cumul', () => {

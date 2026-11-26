@@ -6,6 +6,7 @@
 	import StatBar from '#lib/components/common/StatBar.svelte';
 	import TimeChip from '#lib/components/common/TimeChip.svelte';
 	import { categoryIdentity } from '#lib/components/common/identity.ts';
+	import TimeBar from './TimeBar.svelte';
 	import { describeHealth } from '#lib/game/app/format.ts';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 
@@ -22,54 +23,18 @@
 	let { session }: Props = $props();
 	const view = $derived(session.snapshot.view);
 	const plan = $derived(view?.plan);
-	const accelerating = $derived(session.snapshot.acceleration?.running === true);
+	/** Modifications fermées pendant l'accélération ou une décision bloquante (P3-13). */
+	const accelerating = $derived(
+		session.snapshot.acceleration?.running === true || view?.phase !== 'planning'
+	);
 
-	/** Segments de la barre de temps : un par thème, dans l'ordre d'apparition, puis les mandats. */
-	const segments = $derived.by(() => {
-		if (!plan) return [];
-		const total = plan.timeAvailable + plan.timeReserved || 1;
-		const byCategory: { key: string; label: string; color: string; points: number }[] = [];
-		for (const step of plan.steps) {
-			if (step.timeCost <= 0) continue;
-			const key = step.category ?? 'other';
-			const identity = categoryIdentity(key);
-			const existing = byCategory.find((segment) => segment.key === key);
-			if (existing) existing.points += step.timeCost;
-			else
-				byCategory.push({
-					key,
-					label: identity.label,
-					color: identity.color,
-					points: step.timeCost
-				});
-		}
-		return [
-			...byCategory.map((segment) => ({
-				...segment,
-				width: (segment.points / total) * 100,
-				reserved: false
-			})),
-			...(plan.timeReserved > 0
-				? [
-						{
-							key: 'reserved',
-							label: 'Mandats (réservé)',
-							color: 'var(--color-muted)',
-							points: plan.timeReserved,
-							width: (plan.timeReserved / total) * 100,
-							reserved: true
-						}
-					]
-				: [])
-		];
-	});
 	const healthForecast = $derived(
 		plan ? Math.round((plan.healthAfter.min + plan.healthAfter.max) / 2) : null
 	);
 </script>
 
 {#if view && plan}
-	<section class="card flex flex-col gap-3" aria-labelledby="plan-title">
+	<section class="flex flex-col gap-3" aria-labelledby="plan-title">
 		<div class="flex flex-wrap items-center gap-2">
 			<h2 id="plan-title" class="section-title flex items-center gap-2">
 				<ClipboardList class="size-4" aria-hidden="true" /> Plan du trimestre
@@ -83,51 +48,18 @@
 		<div>
 			<p class="flex items-baseline gap-1.5">
 				<ResourceIcon identity="time" size="lg" />
-				<span
-					class="text-3xl leading-none font-bold text-res-time tabular-nums"
-					data-testid="time-remaining"
-				>
+				<span class="text-3xl leading-none font-bold text-res-time tabular-nums">
 					{plan.timeRemaining}<span class="sr-only"> / {plan.timeAvailable} restants</span>
 				</span>
 				<span class="text-sm text-muted" aria-hidden="true">
 					restants sur {plan.timeAvailable}
 				</span>
 			</p>
-			<div
-				class="mt-2 flex h-4 gap-0.5 overflow-hidden rounded bg-sidebar"
-				role="meter"
-				aria-label="Temps utilisé"
-				aria-valuemin={0}
-				aria-valuemax={plan.timeAvailable}
-				aria-valuenow={plan.timeUsed}
-				aria-valuetext="{plan.timeUsed} points utilisés sur {plan.timeAvailable}"
-			>
-				{#each segments as segment (segment.key)}
-					<span
-						class="block h-full {segment.reserved ? 'plan-reserved' : ''}"
-						style:width="{segment.width}%"
-						style:background={segment.reserved ? undefined : segment.color}
-						title="{segment.label} : {segment.points}"
-					></span>
-				{/each}
+			<div class="mt-2">
+				<TimeBar {plan} legend />
 			</div>
-			{#if segments.length > 0}
-				<ul class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted">
-					{#each segments as segment (segment.key)}
-						<li class="flex items-center gap-1">
-							<span
-								class="inline-block size-2.5 rounded-sm {segment.reserved ? 'plan-reserved' : ''}"
-								style:background={segment.reserved ? undefined : segment.color}
-								aria-hidden="true"
-							></span>
-							{segment.label}
-							{segment.points}
-						</li>
-					{/each}
-				</ul>
-			{/if}
 			{#if plan.timeReserved > 0}
-				<p class="sr-only" data-testid="time-reserved">
+				<p class="sr-only">
 					{plan.timeReserved} points réservés par vos mandats.
 				</p>
 			{/if}
@@ -137,7 +69,6 @@
 			<div
 				class="flex gap-2 rounded border border-dashed border-warning bg-risk-soft px-3 py-2 text-sm"
 				role="status"
-				data-testid="plan-adjustments"
 			>
 				<WandSparkles class="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
 				<div>

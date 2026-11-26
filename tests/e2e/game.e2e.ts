@@ -180,10 +180,22 @@ test.describe('parcours de jeu', () => {
 		await expect(bocage).toContainText('Accorder une interview : prévu ce trimestre.');
 		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
 		await settleDecisions(page);
-		const press = page.getByRole('complementary', { name: 'Alertes et presse' });
-		await expect(
-			press.getByTestId('press-item').filter({ hasText: 'Le Courrier du Bocage' }).first()
-		).toBeVisible();
+		// Fil de presse de l'en-tête : un article vous concernant passe en premier (P3-13).
+		await expect(page.getByRole('banner').getByTestId('press-item')).toContainText(
+			'Le Courrier du Bocage'
+		);
+		// Fil tournant : le compteur fait passer d'un titre du trimestre au suivant.
+		const feed = page.getByRole('banner').getByTestId('press-item');
+		const next = feed.getByTestId('press-next');
+		if (await next.isVisible()) {
+			const first = await feed.getByTestId('press-title').textContent();
+			await expect(next).toHaveText(/^1\/\d+$/);
+			await next.click();
+			await expect(next).toHaveText(/^2\/\d+$/);
+			await expect(feed.getByTestId('press-title')).not.toHaveText(first ?? '');
+		}
+		await feed.getByRole('button', { name: /lire les actualités/ }).click();
+		await expect(page.getByRole('heading', { name: 'Actualités' })).toBeVisible();
 	});
 
 	test('présente les institutions et réserve les réformes aux parlementaires', async ({ page }) => {
@@ -657,5 +669,231 @@ test.describe('parcours de jeu', () => {
 			expect(overflow, tab).toBeLessThanOrEqual(0);
 			await expect(page.getByRole('button', { name: 'Trimestre suivant' })).toBeInViewport();
 		}
+	});
+});
+
+test.describe('plan permanent (P3-13)', () => {
+	test('montre le carnet du trimestre dans chaque onglet et le modifie sur place', async ({
+		page
+	}) => {
+		await startCareer(page, 'e2e-carnet');
+		await page
+			.getByRole('button', { name: 'Ajouter « Rencontrer des élus locaux » au plan' })
+			.click();
+		const notebook = page.getByTestId('plan-notebook');
+		for (const tab of [
+			'Tableau de bord',
+			'Agenda',
+			'Carrière',
+			'Monde politique',
+			'Actualités',
+			'Entourage',
+			'Relations',
+			'Organisation',
+			'Patrimoine',
+			'Journal'
+		]) {
+			await page.getByRole('button', { name: tab, exact: true }).click();
+			await expect(notebook, tab).toBeVisible();
+			await expect(notebook.getByTestId('notebook-step'), tab).toHaveCount(1);
+		}
+		// Épingler puis retirer depuis le carnet, sans passer par l'agenda.
+		await notebook
+			.getByRole('button', {
+				name: 'Épingler « Rencontrer des élus locaux » : répéter chaque trimestre'
+			})
+			.click();
+		await expect(page.getByTestId('plan-repeat')).toHaveText(
+			'1 activité ce trimestre, toutes répétées ensuite'
+		);
+		await notebook.getByRole('button', { name: 'Retirer « Rencontrer des élus locaux »' }).click();
+		await expect(notebook).toContainText('Aucune activité ce trimestre.');
+		await expect(page.getByTestId('time-remaining')).toContainText('100 restants sur 100');
+	});
+
+	test('ouvre le panneau sans perdre l’onglet ni le défilement', async ({ page }) => {
+		await startCareer(page, 'e2e-panneau');
+		await page.getByRole('button', { name: 'Agenda', exact: true }).click();
+		const main = page.locator('#contenu');
+		await main.evaluate((element) => element.scrollTo(0, 300));
+		const before = await main.evaluate((element) => element.scrollTop);
+		expect(before).toBeGreaterThan(0);
+
+		await page.getByRole('button', { name: 'Modifier le plan' }).click();
+		const sheet = page.getByRole('dialog', { name: 'Modifier le plan' });
+		await expect(sheet).toBeVisible();
+		await sheet.getByRole('searchbox', { name: 'Rechercher une activité' }).fill('free lance');
+		await expect(sheet.getByText('Aucune activité ne correspond.')).toBeVisible();
+		await sheet.getByRole('searchbox', { name: 'Rechercher une activité' }).fill('free-lance');
+		await sheet
+			.getByRole('button', { name: 'Ajouter « Accepter des missions en free-lance » au plan' })
+			.click();
+		await expect(sheet.getByRole('list', { name: 'Étapes du plan' })).toContainText(
+			'Accepter des missions en free-lance'
+		);
+		await page.keyboard.press('Escape');
+		await expect(sheet).toBeHidden();
+
+		await expect(page.getByRole('button', { name: 'Agenda', exact: true })).toHaveAttribute(
+			'aria-current',
+			'page'
+		);
+		expect(await main.evaluate((element) => element.scrollTop)).toBe(before);
+		await expect(page.getByTestId('plan-notebook').getByTestId('notebook-step')).toHaveCount(1);
+	});
+
+	test('regroupe les alertes dans un bandeau sous l’en-tête', async ({ page }) => {
+		await startCareer(page);
+		const bar = page.getByTestId('alert-bar');
+		for (const tab of ['Tableau de bord', 'Agenda', 'Journal'])
+			await page.getByRole('button', { name: tab, exact: true }).click();
+		await expect(bar).toBeVisible();
+		const infos = bar.getByRole('button', { name: /information/ });
+		await expect(infos).toHaveAttribute('aria-expanded', 'false');
+		await infos.click();
+		await expect(infos).toHaveAttribute('aria-expanded', 'true');
+		await expect(page.locator('#alert-bar-list')).toContainText('Élections municipales');
+		await page.keyboard.press('Escape');
+		await expect(page.locator('#alert-bar-list')).toBeHidden();
+	});
+
+	test('fait tourner les titres du trimestre dans l’en-tête', async ({ page }, testInfo) => {
+		test.setTimeout(60_000);
+		// Dernier trimestre à trois articles d'ambiance, dans trois médias différents.
+		const content = loadContentFromFiles();
+		const base = createGame({ seed: 'e2e-fil' }, content);
+		const played = transition(base, commitTurn(), content);
+		if (!played.ok) throw new Error(played.error.message);
+		const ambient = (mediaId: string, headlineId: string) => ({
+			mediaId,
+			topic: 'ambient' as const,
+			tone: 'neutral' as const,
+			headlineId,
+			subjectId: null,
+			detail: null,
+			supports: [],
+			exposure: 0
+		});
+		const history = played.state.history.map((entry) =>
+			entry.type === 'turn.resolved' && entry.turn === base.turn
+				? {
+						...entry,
+						press: {
+							relations: [],
+							articles: [
+								ambient('media.horizon', 'headline.ambient_pothole'),
+								ambient('media.gazette', 'headline.ambient_pool'),
+								ambient('media.bocage', 'headline.ambient_poll')
+							]
+						}
+					}
+				: entry
+		);
+		const state = { ...played.state, history };
+		const exported = exportSave(createEnvelope(state, content, '2026-11-26T10:00:00.000Z'));
+		const file = testInfo.outputPath(exported.fileName);
+		writeFileSync(file, exported.text);
+
+		await page.goto('./');
+		await page.getByTestId('import-input').setInputFiles(file);
+		await settleDecisions(page);
+		const feed = page.getByRole('banner').getByTestId('press-item');
+		const next = feed.getByTestId('press-next');
+		await expect(next).toHaveText('1/3');
+		const first = await feed.innerText();
+		// Rotation automatique, sans clic : environ 6 s pour un titre court, plus s’il défile.
+		await page.mouse.move(5, 600);
+		await expect(next).toHaveText('2/3', { timeout: 25_000 });
+		expect(await feed.innerText()).not.toBe(first);
+		// Survol : pause sur place, sans retour au début ; le compteur fait avancer à la main.
+		const title = feed.getByTestId('press-title');
+		const progress = (): Promise<number> =>
+			title.evaluate((element) => Number(element.getAnimations()[0]?.currentTime ?? 0));
+		await page.waitForTimeout(1500);
+		const before = await progress();
+		expect(before).toBeGreaterThan(0);
+		await feed.hover();
+		const paused = await progress();
+		expect(paused).toBeGreaterThanOrEqual(before);
+		await page.waitForTimeout(1000);
+		expect(await progress()).toBe(paused);
+		await next.click();
+		await expect(next).toHaveText('3/3');
+		await next.click();
+		await expect(next).toHaveText('1/3');
+		await page.waitForTimeout(7000);
+		await expect(next).toHaveText('1/3');
+	});
+
+	test('garde le plan à un clic sous 1 100 px', async ({ page }) => {
+		await page.setViewportSize({ width: 1024, height: 768 });
+		await startCareer(page, 'e2e-etroit');
+		await expect(page.getByTestId('plan-notebook')).toBeHidden();
+		const compact = page.getByTestId('plan-compact');
+		await expect(compact).toContainText('Plan · 0 activité · 0/100');
+		await page
+			.getByRole('button', { name: 'Ajouter « Rencontrer des élus locaux » au plan' })
+			.click();
+		await expect(compact).toContainText('Plan · 1 activité · 20/100');
+		await compact.click();
+		await expect(page.getByRole('dialog', { name: 'Modifier le plan' })).toBeVisible();
+		const overflow = await page.evaluate(
+			() => document.documentElement.scrollWidth - document.documentElement.clientWidth
+		);
+		expect(overflow).toBeLessThanOrEqual(0);
+	});
+
+	test('verrouille le carnet et le panneau pendant l’accélération', async ({ page }) => {
+		await page.addInitScript(() => {
+			const native = window.requestAnimationFrame.bind(window);
+			const held: FrameRequestCallback[] = [];
+			const gate = {
+				hold: false,
+				release(): void {
+					gate.hold = false;
+					for (const callback of held.splice(0)) native(callback);
+				}
+			};
+			Object.assign(window, { __frames: gate });
+			window.requestAnimationFrame = (callback) => {
+				if (!gate.hold) return native(callback);
+				held.push(callback);
+				return 0;
+			};
+		});
+		type Gate = { hold: boolean; release: () => void };
+		await startCareer(page, 'e2e-year');
+		await page
+			.getByRole('button', { name: 'Ajouter « Rencontrer des élus locaux » au plan' })
+			.click();
+		const notebook = page.getByTestId('plan-notebook');
+		await notebook
+			.getByRole('button', {
+				name: 'Épingler « Rencontrer des élus locaux » : répéter chaque trimestre'
+			})
+			.click();
+		await page.evaluate(() => {
+			(window as unknown as { __frames: Gate }).__frames.hold = true;
+		});
+		await page.getByRole('button', { name: 'Jusqu’à une alerte' }).click();
+		await expect(page.getByRole('button', { name: 'Interrompre' })).toBeVisible();
+		await expect(
+			notebook.getByRole('button', { name: 'Retirer « Rencontrer des élus locaux »' })
+		).toBeDisabled();
+		await notebook.getByRole('button', { name: 'Modifier le plan' }).click();
+		const sheet = page.getByRole('dialog', { name: 'Modifier le plan' });
+		await expect(sheet).toContainText('Accélération en cours');
+		await expect(
+			sheet.getByRole('button', { name: 'Ajouter « Accepter des missions en free-lance » au plan' })
+		).toBeDisabled();
+		await sheet.getByRole('button', { name: 'Fermer' }).click();
+		await page.getByRole('button', { name: 'Interrompre' }).click();
+		await page.evaluate(() => {
+			(window as unknown as { __frames: Gate }).__frames.release();
+		});
+		await expect(page.getByRole('button', { name: 'Trimestre suivant' })).toBeEnabled();
+		await expect(
+			notebook.getByRole('button', { name: 'Retirer « Rencontrer des élus locaux »' })
+		).toBeEnabled();
 	});
 });

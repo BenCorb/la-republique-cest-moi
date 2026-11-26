@@ -6,7 +6,6 @@
 	import { SvelteSet } from 'svelte/reactivity';
 	import type { CatalogItemView } from '#lib/game/app/view-model.ts';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
-	import PlanPanel from './PlanPanel.svelte';
 
 	/**
 	 * Agenda (DESIGN.md §4.3) : actions regroupées par thème en lignes compactes,
@@ -130,7 +129,7 @@
 {/snippet}
 
 {#if view}
-	<div class="grid gap-5 xl:grid-cols-[1fr_minmax(20rem,26rem)]">
+	<div class="grid gap-5">
 		<section aria-labelledby="actions-title" class="flex min-w-0 flex-col gap-3">
 			<h2 id="actions-title" class="section-title">Actions possibles ce trimestre</h2>
 			{#each view.actionGroups.filter((group) => group.actions.length > 0) as group (group.id)}
@@ -193,8 +192,5 @@
 				{/if}
 			{/if}
 		</section>
-		<div class="xl:sticky xl:top-0 xl:self-start">
-			<PlanPanel {session} />
-		</div>
 	</div>
 {/if}
