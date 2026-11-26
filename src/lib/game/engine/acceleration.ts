@@ -3,23 +3,25 @@
  *
  * Cette fonction ne possède aucune transition propre : elle répète exclusivement
  * `transition(state, commitTurn(plan), content)`. Entre deux trimestres, le plan
- * est reporté selon la même règle qu'un tour manuel (`carryOverPlan`) : achats
- * et étapes devenues sans objet sont retirés, le reste doit rester valide. Les
- * alertes déjà visibles au lancement sont considérées comme reconnues ; une
- * alerte qui apparaît ensuite interrompt la boucle (échéance électorale à
- * préparer, résultat, mandat, départ d'un collaborateur, budget, santé), tout
- * comme une décision, une fin de carrière ou un plan devenu invalide.
+ * est reporté selon la même règle qu'un tour manuel (`carryOverPlan`) : seules
+ * les actions épinglées restent, et celles devenues impossibles sont retirées
+ * avec leur motif (P3-11), sans interrompre la boucle. Les alertes déjà
+ * visibles au lancement sont considérées comme reconnues ; une alerte qui
+ * apparaît ensuite interrompt la boucle (échéance électorale à préparer,
+ * résultat, mandat, départ d'un collaborateur, budget, santé), tout comme une
+ * décision, une fin de carrière, un plan mal formé ou un plan, non vide au
+ * lancement, devenu entièrement vide (`empty_plan`).
  */
 import type { Content } from '../content/types.ts';
 import { formatTurn } from './calendar.ts';
 import { candidacyIssue, runningCampaigns } from './career.ts';
 import { commitTurn, type PlanStep, type TurnPlan } from './commands.ts';
-import { carryOverPlan, previewPlan, type PlanIssue } from './plan.ts';
+import { carryOverPlan, previewPlan, prunePlan, type PlanIssue, type PlanRemoval } from './plan.ts';
 import type { CaseEventKind, GameState, HistoryEntry, PoliticalChange } from './state.ts';
 import { transition } from './turn.ts';
 
 export type AccelerationStopReason =
-	'limit_reached' | 'decision_pending' | 'alert' | 'game_ended' | 'invalid_plan';
+	'limit_reached' | 'decision_pending' | 'alert' | 'game_ended' | 'invalid_plan' | 'empty_plan';
 
 /**
  * Origine d'une alerte : prévision du plan, santé, échéance électorale,
@@ -47,8 +49,10 @@ export interface AccelerationResult {
 	readonly issues: readonly PlanIssue[];
 	/** Plan reporté après le dernier trimestre simulé. */
 	readonly plan: TurnPlan;
-	/** Étapes retirées du plan en cours de route (achats, cibles devenues sans objet). */
-	readonly dropped: readonly PlanStep[];
+	/** Étapes non reconduites en cours de route (ponctuelles, achats). */
+	readonly expired: readonly PlanStep[];
+	/** Étapes retirées parce que devenues impossibles, avec leur motif (P3-11). */
+	readonly removed: readonly PlanRemoval[];
 }
 
 /** Dernier trimestre résolu, s'il vient de l'être (le passage à `state.turn`). */
@@ -266,7 +270,8 @@ interface Progress {
 	readonly state: GameState;
 	readonly turnsAdvanced: number;
 	readonly plan: TurnPlan;
-	readonly dropped: readonly PlanStep[];
+	readonly expired: readonly PlanStep[];
+	readonly removed: readonly PlanRemoval[];
 }
 
 function result(
@@ -286,13 +291,25 @@ export function accelerate(
 	if (!Number.isSafeInteger(request.maxTurns) || request.maxTurns < 1) {
 		throw new RangeError(`Nombre de trimestres invalide : ${request.maxTurns}`);
 	}
-	const initial: Progress = { state, turnsAdvanced: 0, plan: request.plan, dropped: [] };
+	const initial: Progress = {
+		state,
+		turnsAdvanced: 0,
+		plan: request.plan,
+		expired: [],
+		removed: []
+	};
 	if (state.phase === 'ended') return result(initial, 'game_ended');
 	if (state.phase === 'decision') return result(initial, 'decision_pending');
 
-	let progress = initial;
+	// Garde-fou : un plan non vide au lancement qui se vide arrête la boucle.
+	const startedWithSteps = Array.isArray(request.plan.steps) && request.plan.steps.length > 0;
+	const emptied = (plan: TurnPlan): boolean => startedWithSteps && plan.steps.length === 0;
+
+	const pruned = prunePlan(state, request.plan, content);
+	let progress: Progress = { ...initial, plan: pruned.plan, removed: pruned.removed };
+	if (emptied(progress.plan)) return result(progress, 'empty_plan');
 	let acknowledged = new Set(
-		accelerationAlerts(state, request.plan, content).map((alert) => alert.id)
+		accelerationAlerts(state, progress.plan, content).map((alert) => alert.id)
 	);
 
 	while (progress.turnsAdvanced < request.maxTurns) {
@@ -311,7 +328,8 @@ export function accelerate(
 			state: advanced.state,
 			turnsAdvanced: progress.turnsAdvanced + 1,
 			plan: carried.plan,
-			dropped: [...progress.dropped, ...carried.dropped]
+			expired: [...progress.expired, ...carried.expired],
+			removed: [...progress.removed, ...carried.removed]
 		};
 		const current = progress.state;
 
@@ -323,6 +341,8 @@ export function accelerate(
 		const activeAlerts = accelerationAlerts(current, progress.plan, content);
 		const newAlerts = activeAlerts.filter((alert) => !acknowledged.has(alert.id));
 		if (newAlerts.length > 0) return result(progress, 'alert', newAlerts);
+		// Une alerte prime : elle explique souvent pourquoi le plan s'est vidé.
+		if (emptied(progress.plan)) return result(progress, 'empty_plan');
 		acknowledged = new Set(
 			activeAlerts.filter((alert) => acknowledged.has(alert.id)).map((alert) => alert.id)
 		);

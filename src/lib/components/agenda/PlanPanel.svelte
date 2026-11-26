@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowDown, ArrowUp, Pin, PinOff, X } from '@lucide/svelte';
+	import { ArrowDown, ArrowUp, Pin, X } from '@lucide/svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 
 	/**
@@ -21,9 +21,8 @@
 	<section class="card" aria-labelledby="plan-title">
 		<h2 id="plan-title" class="section-title">Plan du trimestre</h2>
 		<p class="mt-1 text-xs text-muted">
-			Les actions épinglées sont reconduites d’un trimestre à l’autre ; désépinglez celles à ne
-			faire qu’une fois. Achats et démarches sans objet ensuite (recrutement, candidature…) ne sont
-			jamais reconduits.
+			Chaque activité ne vaut que pour ce trimestre. Épinglez celles à répéter chaque trimestre ;
+			les achats ne se répètent jamais. Une activité devenue impossible est retirée du plan.
 		</p>
 
 		<div class="mt-3">
@@ -52,6 +51,21 @@
 				></div>
 			</div>
 		</div>
+
+		{#if plan.adjustments.length > 0}
+			<div
+				class="mt-3 rounded border-l-4 border-primary bg-canvas px-3 py-2 text-sm"
+				role="status"
+				data-testid="plan-adjustments"
+			>
+				<p class="font-semibold">Plan ajusté</p>
+				<ul class="mt-1 text-xs">
+					{#each plan.adjustments as adjustment, index (index)}
+						<li>{adjustment}</li>
+					{/each}
+				</ul>
+			</div>
+		{/if}
 
 		{#if plan.steps.length === 0}
 			<p class="mt-4 text-sm text-muted">
@@ -87,20 +101,20 @@
 								{#if step.kind === 'action'}
 									<button
 										type="button"
-										class="btn-secondary btn-small {step.pinned ? 'text-primary' : 'text-muted'}"
-										aria-label="Reconduire « {step.label} » chaque trimestre"
+										class="btn-secondary btn-small {step.pinned
+											? 'border-primary text-primary'
+											: 'text-muted opacity-70'}"
+										aria-label={step.pinned
+											? `« ${step.label} » épinglée : répétée chaque trimestre`
+											: `Épingler « ${step.label} » : répéter chaque trimestre`}
 										aria-pressed={step.pinned}
 										title={step.pinned
-											? 'Épinglée : reconduite au trimestre suivant'
-											: 'Ponctuelle : retirée après ce trimestre'}
+											? 'Épinglée : répétée chaque trimestre'
+											: 'Épingler : répéter chaque trimestre'}
 										disabled={accelerating}
 										onclick={() => session.controller.togglePin(step.index)}
 									>
-										{#if step.pinned}
-											<Pin class="size-3.5" aria-hidden="true" />
-										{:else}
-											<PinOff class="size-3.5" aria-hidden="true" />
-										{/if}
+										<Pin class="size-3.5 {step.pinned ? 'fill-current' : ''}" aria-hidden="true" />
 									</button>
 								{/if}
 								<button

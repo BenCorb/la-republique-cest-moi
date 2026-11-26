@@ -590,6 +590,10 @@ parties réelles.
   **Décisions restant à prendre :** niveau visuel de la notice et conservation éventuelle d’un
   historique des retraits dans le journal.
 
+  **Traité par P3-11 (26 novembre 2026, ARCHITECTURE §8.4 duodecies)** : notice groupée dans le
+  plan et en bandeau ; lignes « Plan ajusté » au journal, conservées pour la session seulement
+  (choix provisoire).
+
   **Conséquences techniques :** élargir le nettoyage de `carryOverPlan` aux conditions, limites,
   temps et ressources ; recalculer après chaque retrait ; appliquer la même règle dans le contrôleur
   et l’accélération ; remplacer le test d’arrêt sur plan récurrent invalide. Les tests doivent couvrir
@@ -841,6 +845,8 @@ parties réelles.
 
   **Décision acquise :** une activité n’est jamais reconduite sans action explicite du joueur sur son
   épingle. L’épinglage est une demande de persistance, pas l’état initial de l’agenda.
+
+  **Traité par P3-11 (26 novembre 2026, ARCHITECTURE §8.4 duodecies)** : marqueur `pinned: true`.
 
 - **PT-P3-09-012 — Garder le plan trimestriel visible et modifiable depuis tous les onglets (26
   novembre 2026, irritant gênant, navigation, agenda et structure de l’interface).** Consulter ou

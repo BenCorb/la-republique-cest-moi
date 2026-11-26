@@ -43,6 +43,18 @@
 		}
 	});
 
+	/** Rappel avant d'accélérer : seules les activités épinglées sont répétées (P3-11). */
+	const repeatText = $derived.by(() => {
+		if (!view) return '';
+		const total = view.plan.steps.length;
+		if (total === 0) return 'Aucune activité prévue';
+		const activities = `${total} activité${total > 1 ? 's' : ''} ce trimestre`;
+		const pinned = view.plan.pinnedCount;
+		if (pinned === 0) return `${activities}, aucune répétée ensuite`;
+		if (pinned === total) return `${activities}, toutes répétées ensuite`;
+		return `${activities}, dont ${pinned} répétée${pinned > 1 ? 's' : ''} ensuite`;
+	});
+
 	function commit(): void {
 		if (session.controller.commitTurn()) onTab('dashboard');
 		else onTab('agenda');
@@ -61,6 +73,7 @@
 				{view.plan.timeUsed}/{view.plan.timeAvailable}
 			</span>
 		</p>
+		<p class="text-sm text-muted" data-testid="plan-repeat">{repeatText}</p>
 		<p class="text-sm text-muted" data-testid="save-status" aria-live="polite">{saveText}</p>
 		{#if acceleration && (acceleration.running || acceleration.stopReason !== 'decision_pending' || view.phase === 'decision')}
 			<p class="text-sm text-primary" data-testid="acceleration-status" aria-live="polite">
