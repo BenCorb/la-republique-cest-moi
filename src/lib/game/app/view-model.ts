@@ -883,16 +883,62 @@ export interface OutcomeView {
 	readonly details: readonly string[];
 }
 
-/** Paragraphe court de la note de cabinet (« Sur le terrain »…). */
-export interface NoteSectionView {
+/** Statistique de la note : variation du trimestre et valeur atteinte (P3-14). */
+export interface NoteVariationView {
+	readonly identity: string;
+	readonly label: string;
+	/** « +3 », « −120 € », « 0 » ; `null` au premier trimestre (pas de point de départ). */
+	readonly change: string | null;
+	/** Valeur atteinte (« 14 », « 3 800 € »). */
+	readonly value: string;
+	readonly sense: ChipSense;
+}
+
+/** Graphique d'un fait marquant : duel du joueur ou parts d'un scrutin. */
+export type NoteChartView =
+	| {
+			readonly kind: 'duel';
+			readonly playerPercent: number;
+			readonly rival: string;
+	  }
+	| {
+			readonly kind: 'shares';
+			readonly rows: readonly {
+				readonly label: string;
+				readonly percent: number;
+				readonly mine: boolean;
+			}[];
+	  };
+
+/**
+ * Fait marquant entre deux trimestres (P3-14) : élection, alternance, mandat,
+ * dirigeant de parti, justice, entourage, événement. Titre court, une phrase,
+ * graphique éventuel ; uniquement des faits publics déjà inscrits au journal.
+ */
+export interface NoteHighlightView {
+	readonly key: string;
+	readonly kind:
+		| 'victory'
+		| 'defeat'
+		| 'ballot'
+		| 'mandate'
+		| 'party'
+		| 'justice'
+		| 'people'
+		| 'event'
+		| 'institution';
+	readonly tone: ChipSense;
 	readonly title: string;
-	readonly lines: readonly string[];
+	readonly text: string;
+	readonly chart: NoteChartView | null;
+	/** Bilan électoral de la carrière, joint au résultat d'une candidature. */
+	readonly record: { readonly won: number; readonly lost: number } | null;
 }
 
 /**
- * Note de cabinet du dernier trimestre (P3-14) : nouvelle date, phrase
- * d'ouverture, variations nettes et trois paragraphes courts au plus. Tirée du
- * journal sauvegardé : rouvrable après une reprise, jamais rejouée.
+ * Note de cabinet du dernier trimestre (P3-14, version « suivi de partie ») :
+ * nouvelle date, évolution des statistiques, faits marquants entre les deux
+ * trimestres. Tirée du journal sauvegardé : rouvrable, jamais rejouée.
  */
 export interface QuarterNoteView {
 	readonly key: string;
@@ -900,14 +946,12 @@ export interface QuarterNoteView {
 	readonly dateLabel: string;
 	/** Trimestre écoulé. */
 	readonly endedLabel: string;
-	readonly opening: string;
-	/** Variations nettes ; valeurs atteintes au premier trimestre (pas de point de départ). */
-	readonly chips: readonly ChipView[];
-	/** Vrai si `chips` donne des soldes (premier trimestre) plutôt que des variations. */
-	readonly totals: boolean;
-	readonly sections: readonly NoteSectionView[];
-	/** Lignes du journal non reprises, consultables au journal. */
-	readonly more: number;
+	/** Premier trimestre : valeurs atteintes sans variation. */
+	readonly first: boolean;
+	readonly variations: readonly NoteVariationView[];
+	readonly highlights: readonly NoteHighlightView[];
+	/** Autres faits du trimestre laissés au journal. */
+	readonly journalLines: number;
 	/** Activités retirées du plan reconduit (P3-11). */
 	readonly adjustments: readonly string[];
 }
@@ -1826,46 +1870,192 @@ function lowerFirstUpper(text: string): string {
 	return text.charAt(0).toLocaleUpperCase('fr-FR') + text.slice(1);
 }
 
-/** Paragraphes de la note : rubrique, familles de lignes du journal, deux lignes au plus. */
-const NOTE_SECTIONS: readonly {
-	readonly title: string;
-	readonly kinds: ReadonlySet<JournalLine['kind']>;
+const NOTE_VARIATIONS: readonly {
+	readonly key: keyof QuarterSnapshot;
+	readonly identity: string;
+	readonly label: string;
+	/** 1 : une hausse est un gain ; −1 : une hausse est un coût. */
+	readonly good: 1 | -1;
 }[] = [
-	{ title: 'Sur le terrain', kinds: new Set(['step', 'career', 'event']) },
-	{ title: 'Au cabinet', kinds: new Set(['people', 'world', 'end']) },
-	{ title: 'Dans les comptes', kinds: new Set(['economy', 'wellbeing']) }
+	{ key: 'influence', identity: 'influence', label: 'Influence', good: 1 },
+	{
+		key: 'politicalBudgetCents',
+		identity: 'politicalBudgetCents',
+		label: 'Budget politique',
+		good: 1
+	},
+	{ key: 'personalCashCents', identity: 'personalCashCents', label: 'Argent personnel', good: 1 },
+	{ key: 'popularity', identity: 'popularity', label: 'Popularité', good: 1 },
+	{ key: 'health', identity: 'player.health', label: 'Santé', good: 1 },
+	{ key: 'stress', identity: 'player.stress', label: 'Stress', good: -1 }
 ];
-const NOTE_LINES_PER_SECTION = 2;
 
-const QUIET_OPENINGS = [
-	'Un trimestre sans éclat : la République a tenu sans vous.',
-	'Rien de notable : les dossiers s’empilent, la cafetière tient bon.',
-	'Trimestre calme. Les couloirs bruissent d’autres noms que le vôtre.'
-] as const;
+/** Faits marquants retenus dans la note ; les autres restent au journal. */
+const MAX_HIGHLIGHTS_IN_NOTE = 5;
 
-function noteOpening(
+/** Phrase d'un résultat de candidature, selon l'écart (variante fixe, pas de hasard). */
+function campaignSentence(won: boolean, percent: number, rival: string): string {
+	const against = rival ? ` face à ${rival}` : '';
+	if (won) {
+		if (percent >= 60)
+			return `Raz-de-marée : ${percent} % des voix${against}. Les militants n’ont même pas eu le temps de s’inquiéter.`;
+		if (percent < 53)
+			return `D’un cheveu : ${percent} %${against}. Le recomptage n’y changera rien, l’écharpe est à vous.`;
+		return `Vous l’emportez avec ${percent} %${against}. La soirée électorale se prolonge tard.`;
+	}
+	if (percent >= 47)
+		return `Défaite d’un souffle : ${percent} %${against}. La notoriété progresse, la fatigue aussi.`;
+	return `Défaite nette : ${percent} %${against}. Les affiches restent sur les murs, les militants rentrent chez eux.`;
+}
+
+function noteHighlights(
 	entry: HistoryEntry,
-	lines: readonly JournalLine[],
-	delta: (key: keyof QuarterSnapshot) => number | null,
-	state: GameState
-): string {
-	if (state.end?.turn === entry.turn) return 'Le trimestre s’achève sur la fin de votre carrière.';
-	const career = lines.find((line) => line.kind === 'career');
-	if (career) return `Le fait du trimestre : ${lowerFirst(career.text)}.`;
-	const popularity = delta('popularity');
-	if (popularity !== null && Math.abs(popularity) >= 3)
-		return popularity > 0
-			? `Votre cote grimpe : popularité ${formatGaugeDelta(popularity)}.`
-			: `Votre cote s’effrite : popularité ${formatGaugeDelta(popularity)}.`;
-	const stress = delta('stress');
-	if (stress !== null && Math.abs(stress) >= 8)
-		return stress > 0
-			? `Le rythme se paie : stress ${formatGaugeDelta(stress)}.`
-			: `Vous soufflez enfin : stress ${formatGaugeDelta(stress)}.`;
-	const influence = delta('influence');
-	if (influence !== null && influence >= 5)
-		return `Votre carnet d’adresses s’épaissit : influence ${formatGaugeDelta(influence)}.`;
-	return QUIET_OPENINGS[entry.turn % QUIET_OPENINGS.length]!;
+	state: GameState,
+	content: Content
+): NoteHighlightView[] {
+	const items: NoteHighlightView[] = [];
+	const record = {
+		won: state.campaigns.filter((campaign) => campaign.status === 'won').length,
+		lost: state.campaigns.filter((campaign) => campaign.status === 'lost').length
+	};
+	const deadlines = entry.deadlines;
+	const ownBallots = new Set<string>();
+	for (const result of deadlines?.campaigns ?? []) {
+		const campaign = state.campaigns.find(
+			(candidate) => candidate.campaignId === result.campaignId
+		);
+		if (campaign) ownBallots.add(campaign.ballotId);
+		const label = electionName(campaign?.electionId ?? '', state, content);
+		const rival = result.opponentId ? state.characters[result.opponentId] : undefined;
+		const rivalName = rival ? displayName(rival) : '';
+		if (result.status === 'disqualified' || result.playerPercent === null) {
+			items.push({
+				key: `campaign:${result.campaignId}`,
+				kind: 'defeat',
+				tone: 'cost',
+				title: `Candidature invalidée — ${label}`,
+				text: `Votre candidature n’a pas été retenue : ${result.reason ?? 'conditions non remplies'}.`,
+				chart: null,
+				record
+			});
+			continue;
+		}
+		const won = result.status === 'won';
+		items.push({
+			key: `campaign:${result.campaignId}`,
+			kind: won ? 'victory' : 'defeat',
+			tone: won ? 'gain' : 'cost',
+			title: `${won ? 'Victoire' : 'Défaite'} — ${label}`,
+			text: campaignSentence(won, result.playerPercent, rivalName),
+			chart: {
+				kind: 'duel',
+				playerPercent: result.playerPercent,
+				rival: rivalName || 'Adversaire'
+			},
+			record
+		});
+	}
+	for (const result of deadlines?.ballots ?? []) {
+		if (ownBallots.has(result.ballotId)) continue;
+		const ballot = state.ballots.find((entry) => entry.ballotId === result.ballotId);
+		const winner = content.parties[result.winnerPartyId]?.name ?? result.winnerPartyId;
+		const alternance = result.governingAfter !== result.governingBefore;
+		const mine = state.player.partyId;
+		items.push({
+			key: `ballot:${result.ballotId}`,
+			kind: 'ballot',
+			tone: alternance ? 'risk' : 'neutral',
+			title: `${alternance ? 'Alternance' : 'Scrutin'} — ${electionName(result.electionId, state, content)}`,
+			text: alternance
+				? `Le ${content.parties[result.governingAfter]?.name ?? result.governingAfter} forme le nouveau gouvernement ; le ${content.parties[result.governingBefore]?.name ?? result.governingBefore} passe dans l’opposition.`
+				: `Le ${winner} arrive en tête.`,
+			chart: ballot?.shares
+				? {
+						kind: 'shares',
+						rows: ballot.shares.slice(0, 5).map((share) => ({
+							label: content.parties[share.partyId]?.acronym ?? share.partyId,
+							percent: share.percent,
+							mine: share.partyId === mine
+						}))
+					}
+				: null,
+			record: null
+		});
+	}
+	for (const change of deadlines?.mandates ?? []) {
+		if (change.kind !== 'mandateEnded') continue;
+		items.push({
+			key: `mandate:${change.instanceId}`,
+			kind: 'mandate',
+			tone: 'neutral',
+			title: `Fin de mandat — ${mandateName(change.mandateId, state, content)}`,
+			text: 'Le mandat arrive à son terme ; le bureau se vide, les cartons se remplissent.',
+			chart: null,
+			record: null
+		});
+	}
+	for (const step of entry.justice?.cases ?? []) {
+		items.push({
+			key: `case:${step.caseId}:${step.kind}`,
+			kind: 'justice',
+			tone: 'risk',
+			title: 'Justice',
+			text: caseStepMessage(step.caseId, step.kind, state, content),
+			chart: null,
+			record: null
+		});
+	}
+	for (const line of worldLines(entry.world, state, content)) {
+		items.push({
+			key: `party:${items.length}`,
+			kind: 'party',
+			tone: 'neutral',
+			title: 'Vie des partis',
+			text: line.text,
+			chart: null,
+			record: null
+		});
+	}
+	for (const line of [
+		...staffLines(entry.staff, state, content),
+		...familyLines(entry.family, state),
+		...characterLines(entry.characters, state)
+	]) {
+		if (line.kind !== 'people' && line.kind !== 'career') continue;
+		items.push({
+			key: `people:${items.length}`,
+			kind: 'people',
+			tone: 'neutral',
+			title: 'Entourage',
+			text: line.text,
+			chart: null,
+			record: null
+		});
+	}
+	if (entry.institutions && entry.institutions.politics.length > 0) {
+		items.push({
+			key: 'institutions',
+			kind: 'institution',
+			tone: 'neutral',
+			title: 'Institutions',
+			text: lowerFirstUpper(politicsText(entry.institutions.politics, content)) + '.',
+			chart: null,
+			record: null
+		});
+	}
+	for (const event of entry.events) {
+		if (event.outcome !== 'applied') continue;
+		items.push({
+			key: `event:${event.instanceId}`,
+			kind: 'event',
+			tone: 'neutral',
+			title: 'Événement',
+			text: `${eventTitle(event.eventId, event.actors, state, content)}.`,
+			chart: null,
+			record: null
+		});
+	}
+	return items;
 }
 
 function buildQuarterNote(
@@ -1880,73 +2070,32 @@ function buildQuarterNote(
 	if (!entry) return null;
 	const previous = quarters.at(-2)?.snapshot ?? null;
 	const now = entry.snapshot;
-	const delta = (key: keyof QuarterSnapshot): number | null =>
-		previous ? now[key] - previous[key] : null;
-	const chips: ChipView[] = [
-		...RESOURCE_IDS.map((id): ChipView => {
-			const change = delta(id);
-			return change === null
-				? {
-						identity: id,
-						value: formatResource(id, now[id]),
-						sense: 'neutral',
-						variable: false,
-						text: `${RESOURCE_NAMES[id]} : ${formatResource(id, now[id])}`
-					}
-				: {
-						identity: id,
-						value: formatCompactRange(id, change, change),
-						sense: senseOf(change),
-						variable: false,
-						text: `${RESOURCE_NAMES[id]} ${formatDelta(id, change)}`
-					};
-		}),
-		...(
-			[
-				['popularity', 'popularity', 'Popularité', 1],
-				['health', 'player.health', 'Santé', 1],
-				['stress', 'player.stress', 'Stress', -1]
-			] as const
-		).map(([key, identity, name, good]): ChipView => {
-			const change = delta(key);
-			return change === null
-				? {
-						identity,
-						value: String(now[key]),
-						sense: 'neutral',
-						variable: false,
-						text: `${name} : ${now[key]}`
-					}
-				: {
-						identity,
-						value: formatCompactRange(null, change, change),
-						sense: senseOf(change * good),
-						variable: false,
-						text: `${name} ${formatGaugeDelta(change)}`
-					};
-		})
-	];
-	const lines = journalOfQuarter(entry, state, content).filter(
-		(line) => line.text !== 'Trimestre calme : rien à signaler.'
-	);
-	let shown = 0;
-	const sections = NOTE_SECTIONS.flatMap((section) => {
-		const picked = lines
-			.filter((line) => section.kinds.has(line.kind))
-			.slice(0, NOTE_LINES_PER_SECTION)
-			.map((line) => line.text);
-		shown += picked.length;
-		return picked.length > 0 ? [{ title: section.title, lines: picked }] : [];
+	const variations = NOTE_VARIATIONS.map(({ key, identity, label, good }): NoteVariationView => {
+		const resource = RESOURCE_IDS.find((id) => id === key) ?? null;
+		const value = resource ? formatResource(resource, now[key]) : String(now[key]);
+		if (!previous) return { identity, label, change: null, value, sense: 'neutral' };
+		const change = now[key] - previous[key];
+		return {
+			identity,
+			label,
+			change: formatCompactRange(resource, change, change),
+			value,
+			sense: senseOf(change * good)
+		};
 	});
+	const highlights = noteHighlights(entry, state, content);
+	const journalLines = journalOfQuarter(entry, state, content).filter(
+		(line) => line.kind !== 'step' && line.text !== 'Trimestre calme : rien à signaler.'
+	).length;
+	const shown = highlights.slice(0, MAX_HIGHLIGHTS_IN_NOTE);
 	return {
 		key: `t${entry.turn}`,
 		dateLabel: formatTurn(entry.turn + 1),
 		endedLabel: formatTurn(entry.turn),
-		opening: noteOpening(entry, lines, delta, state),
-		chips,
-		totals: previous === null,
-		sections,
-		more: Math.max(0, lines.length - shown),
+		first: previous === null,
+		variations,
+		highlights: shown,
+		journalLines: Math.max(0, journalLines - shown.length),
 		adjustments: adjustments.find((adjustment) => adjustment.turn === state.turn)?.lines ?? []
 	};
 }

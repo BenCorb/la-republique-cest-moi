@@ -700,6 +700,11 @@ test.describe('parcours de jeu', () => {
 				() => document.documentElement.scrollWidth - document.documentElement.clientWidth
 			);
 			expect(overflow, tab).toBeLessThanOrEqual(0);
+			// Seules les colonnes défilent : jamais la page entière (textes « sr-only » contenus).
+			const vertical = await page.evaluate(
+				() => document.documentElement.scrollHeight - document.documentElement.clientHeight
+			);
+			expect(vertical, tab).toBeLessThanOrEqual(0);
 			await expect(page.getByRole('button', { name: 'Trimestre suivant' })).toBeInViewport();
 		}
 	});
@@ -940,8 +945,9 @@ test.describe('résultats et note de cabinet (P3-14)', () => {
 		const note = page.getByTestId('quarter-note');
 		await expect(note).toBeVisible();
 		await expect(note.getByRole('heading', { name: 'Note de cabinet' })).toBeVisible();
-		await expect(note).toContainText('Le T2 2000 commence.');
-		await expect(note.getByTestId('note-opening')).not.toBeEmpty();
+		await expect(note).toContainText('Bilan du T1 2000');
+		await expect(note).toContainText('Votre point de départ');
+		await expect(note.getByTestId('note-stat')).toHaveCount(6);
 		const prepare = note.getByRole('button', { name: 'Préparer ce trimestre' });
 		await expect(prepare).toBeFocused();
 		await page.keyboard.press('Enter');
@@ -986,5 +992,27 @@ test.describe('résultats et note de cabinet (P3-14)', () => {
 		await expect(page.getByTestId('decision-dialog')).toBeHidden();
 		await page.getByRole('button', { name: 'Journal', exact: true }).click();
 		await expect(page.getByText(/^Décision — /)).toHaveCount(1);
+	});
+
+	test('met en scène un résultat d’élection dans la note, avec son graphique', async ({ page }) => {
+		// Vraie campagne municipale : candidature au T1 2000, scrutin à la fin du T1 2001.
+		await startCareer(page, 'e2e-scrutin');
+		await page.getByRole('button', { name: 'Carrière', exact: true }).click();
+		await page
+			.getByRole('button', { name: 'Prévoir la candidature : Élections municipales du T1 2001' })
+			.click();
+		for (let quarter = 0; quarter < 5; quarter += 1) {
+			await nextQuarter(page);
+			await settleDecisions(page);
+		}
+		await expect(page.getByTestId('game-date')).toHaveText('T2 2001 · 26 ans');
+		await page.getByTestId('reopen-note').click();
+		const fact = page.getByTestId('note-fact').first();
+		await expect(fact).toHaveAttribute('data-kind', /^(victory|defeat)$/u);
+		await expect(fact).toContainText(/(Victoire|Défaite) — Élections municipales/u);
+		await expect(fact.getByRole('img', { name: /^Vous \d+ %/u })).toBeVisible();
+		await expect(fact.getByTestId('note-record')).toContainText(
+			'Bilan électoral de votre carrière'
+		);
 	});
 });

@@ -74,7 +74,12 @@
 </a>
 
 {#if view}
-	<div class="grid h-dvh grid-rows-[auto_auto_1fr_auto]">
+	<!--
+		Coque à la hauteur exacte de la fenêtre : seules les colonnes défilent. Les zones
+		défilantes sont « relative » pour contenir les éléments absolus (textes « sr-only »
+		des pastilles), qui sinon allongent le document et font défiler toute la page.
+	-->
+	<div class="relative grid h-dvh grid-rows-[auto_auto_1fr_auto] overflow-hidden">
 		<header class="border-b border-line bg-surface">
 			<div class="tricolor-rule h-1" aria-hidden="true"></div>
 			<!-- Bande d'identité : marque alignée sur la navigation, puis le personnage. -->
@@ -178,7 +183,10 @@
 		<AlertBar alerts={view.alerts} />
 
 		<div class="grid min-h-0 grid-cols-[200px_1fr] min-[1100px]:grid-cols-[200px_1fr_300px]">
-			<nav aria-label="Écrans de la partie" class="border-r border-line bg-sidebar p-3">
+			<nav
+				aria-label="Écrans de la partie"
+				class="relative min-h-0 overflow-y-auto border-r border-line bg-sidebar p-3"
+			>
 				<ul class="flex flex-col gap-1">
 					{#each tabs as item (item.id)}
 						<li>
@@ -199,13 +207,17 @@
 				</ul>
 			</nav>
 
-			<main id="contenu" tabindex="-1" class="min-h-0 overflow-y-auto p-5 focus:outline-none">
+			<main
+				id="contenu"
+				tabindex="-1"
+				class="relative min-h-0 overflow-y-auto p-5 focus:outline-none"
+			>
 				<SaveBanner {session} />
 				{@render children()}
 			</main>
 
 			<aside
-				class="hidden min-h-0 overflow-y-auto border-l border-line bg-sidebar p-4 min-[1100px]:block"
+				class="relative hidden min-h-0 overflow-y-auto border-l border-line bg-sidebar p-4 min-[1100px]:block"
 				aria-label="Plan du trimestre"
 			>
 				<PlanNotebook {session} onEdit={openPlan} />
