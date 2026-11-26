@@ -163,17 +163,17 @@ function zeroRanges(): Record<ResourceId, { min: number; max: number }> {
 
 function readStep(item: unknown): PlanStep | null {
 	if (typeof item !== 'object' || item === null) return null;
-	const { kind, id, target, once } = item as {
+	const { kind, id, target, pinned } = item as {
 		kind?: unknown;
 		id?: unknown;
 		target?: unknown;
-		once?: unknown;
+		pinned?: unknown;
 	};
 	if ((kind !== 'action' && kind !== 'purchase') || typeof id !== 'string' || id.length === 0) {
 		return null;
 	}
-	if (once !== undefined && (once !== true || kind !== 'action')) return null;
-	const flag = once === true ? { once: true as const } : {};
+	if (pinned !== undefined && (pinned !== true || kind !== 'action')) return null;
+	const flag = pinned === true ? { pinned: true as const } : {};
 	if (target === undefined) return kind === 'action' ? { kind, id, ...flag } : { kind, id };
 	if (kind !== 'action' || typeof target !== 'string' || target.length === 0) return null;
 	return { kind, id, target, ...flag };
@@ -880,37 +880,61 @@ function applyGaugeEffect(
 	return { player: { ...player, [key]: value }, delta: applied };
 }
 
-/** Problèmes qui rendent une étape sans objet au trimestre suivant : elle est retirée du plan. */
-const OBSOLETE_ISSUES: ReadonlySet<PlanIssueCode> = new Set([
-	'invalid_target',
-	'unknown_action',
-	'unknown_upgrade'
-]);
+/** Étape retirée automatiquement du plan, avec son motif (P3-11). */
+export interface PlanRemoval {
+	readonly step: PlanStep;
+	/** Motif lisible : premier problème de l'étape au moment du retrait. */
+	readonly reason: string;
+}
 
 /**
- * Plan reporté au trimestre suivant (P2-09), même règle pour un tour manuel et
- * pour l'accélération : les achats sont ponctuels et retirés ; une action dont
- * la cible n'a plus d'objet (candidat recruté, candidature déposée, parti déjà
- * rejoint) l'est aussi. Les autres étapes restent, même si elles deviennent
- * invalides (ressources, temps, condition) : le joueur décide. Sans effet hors
- * de la planification (décision en attente, fin).
+ * Nettoyage du plan (P3-11, PT-P3-09-007) : tant qu'une étape est invalide, la
+ * première dans l'ordre d'exécution est retirée et le plan restant est
+ * revalidé. Une étape antérieure invalide ne consomme ni temps ni ressources,
+ * mais compte dans les limites de répétition : la boucle conserve donc les
+ * occurrences valides et ne retire que l'excédent. Les problèmes globaux (plan
+ * mal formé) ne sont pas corrigés. Sans effet hors de la planification.
+ */
+export function prunePlan(
+	state: GameState,
+	plan: TurnPlan,
+	content: Content
+): { plan: TurnPlan; removed: PlanRemoval[] } {
+	// Un plan mal formé (venu de l'extérieur) n'est pas nettoyé : la prévision le signale.
+	const items: unknown = (plan as { steps?: unknown }).steps;
+	if (state.phase !== 'planning' || !Array.isArray(items)) return { plan, removed: [] };
+	let steps: PlanStep[] = [...plan.steps];
+	const removed: PlanRemoval[] = [];
+	while (steps.length > 0) {
+		const preview = previewPlan(state, { steps }, content);
+		const first = preview.issues.find((issue) => issue.index !== null);
+		if (!first || first.index === null) break;
+		const index = first.index;
+		const step = steps[index];
+		if (step === undefined) break;
+		removed.push({ step, reason: first.message });
+		steps = steps.filter((_entry, position) => position !== index);
+	}
+	return { plan: removed.length === 0 ? plan : { steps }, removed };
+}
+
+/**
+ * Plan reporté au trimestre suivant, même règle pour un tour manuel et pour
+ * l'accélération (P2-09, P3-11) : seules les actions épinglées sont reconduites
+ * (`expired` : étapes ponctuelles et achats exécutés) ; le plan reconduit est
+ * ensuite nettoyé (`prunePlan`) : une étape épinglée devenue impossible
+ * (condition, cible, limite, temps, ressources) est retirée avec son motif et
+ * perd son épinglage. Sans effet hors de la planification (décision en
+ * attente, fin) : le report a lieu une fois la décision prise.
  */
 export function carryOverPlan(
 	state: GameState,
 	plan: TurnPlan,
 	content: Content
-): { plan: TurnPlan; dropped: PlanStep[] } {
-	if (state.phase !== 'planning') return { plan, dropped: [] };
-	const preview = previewPlan(state, plan, content);
-	const kept: PlanStep[] = [];
-	const dropped: PlanStep[] = [];
-	plan.steps.forEach((step, index) => {
-		// Un achat et une étape ponctuelle (P3-08) ne sont jamais reconduits.
-		const obsolete =
-			step.kind === 'purchase' ||
-			step.once === true ||
-			preview.issues.some((issue) => issue.index === index && OBSOLETE_ISSUES.has(issue.code));
-		(obsolete ? dropped : kept).push(step);
-	});
-	return { plan: { steps: kept }, dropped };
+): { plan: TurnPlan; expired: PlanStep[]; removed: PlanRemoval[] } {
+	if (state.phase !== 'planning') return { plan, expired: [], removed: [] };
+	const pinned = plan.steps.filter((step) => step.kind === 'action' && step.pinned === true);
+	const expired = plan.steps.filter((step) => !(step.kind === 'action' && step.pinned === true));
+	const pruned = prunePlan(state, { steps: pinned }, content);
+	return { plan: pruned.plan, expired, removed: pruned.removed };
 }

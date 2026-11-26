@@ -25,7 +25,7 @@ function advanceManually(state: GameState, plan: TurnPlan, count: number): GameS
 describe('accélération minimale', () => {
 	it('produit exactement le même état que les tours unitaires', () => {
 		const start = createGame({ seed: 'accélération-identique' }, fixtureContent);
-		const plan = { steps: [{ kind: 'action' as const, id: 'test.random' }] };
+		const plan = { steps: [{ kind: 'action' as const, id: 'test.random', pinned: true as const }] };
 		const accelerated = accelerate(start, { plan, maxTurns: 12 }, fixtureContent);
 		const manual = advanceManually(start, plan, 12);
 
@@ -53,18 +53,21 @@ describe('accélération minimale', () => {
 		expect(chosen.ok).toBe(true);
 	});
 
-	it('s’arrête avec l’état cohérent lorsque le plan récurrent devient invalide', () => {
+	it('retire les occurrences devenues impossibles puis s’arrête sur le plan vide', () => {
 		const start = createGame({ seed: 'accélération-plan' }, fixtureContent);
-		const fixed = { kind: 'action' as const, id: 'test.fixed' };
+		const fixed = { kind: 'action' as const, id: 'test.fixed', pinned: true as const };
 		const accelerated = accelerate(
 			start,
 			{ plan: { steps: [fixed, fixed] }, maxTurns: 40 },
 			fixtureContent
 		);
 
-		expect(accelerated.stopReason).toBe('invalid_plan');
-		expect(accelerated.turnsAdvanced).toBeGreaterThan(0);
-		expect(accelerated.issues.some((issue) => issue.code === 'insufficient_resource')).toBe(true);
+		expect(accelerated.stopReason).toBe('empty_plan');
+		expect(accelerated.turnsAdvanced).toBeGreaterThan(1);
+		expect(accelerated.plan.steps).toEqual([]);
+		// La seconde occurrence part d'abord, la première ensuite : jamais d'arrêt `invalid_plan`.
+		expect(accelerated.removed).toHaveLength(2);
+		expect(accelerated.removed.every((removal) => /insuffisant/u.test(removal.reason))).toBe(true);
 		assertInvariants(accelerated.state, fixtureContent);
 	});
 
@@ -73,15 +76,15 @@ describe('accélération minimale', () => {
 		const plan = {
 			steps: [
 				{ kind: 'purchase' as const, id: 'test.donors' },
-				{ kind: 'action' as const, id: 'test.random' }
+				{ kind: 'action' as const, id: 'test.random', pinned: true as const }
 			]
 		};
 		const accelerated = accelerate(start, { plan, maxTurns: 4 }, fixtureContent);
 
 		expect(accelerated).toMatchObject({ turnsAdvanced: 4, stopReason: 'limit_reached' });
 		expect(accelerated.state.upgrades).toHaveLength(1);
-		expect(accelerated.plan.steps).toEqual([{ kind: 'action', id: 'test.random' }]);
-		expect(accelerated.dropped).toEqual([{ kind: 'purchase', id: 'test.donors' }]);
+		expect(accelerated.plan.steps).toEqual([{ kind: 'action', id: 'test.random', pinned: true }]);
+		expect(accelerated.expired).toEqual([{ kind: 'purchase', id: 'test.donors' }]);
 
 		let manual = start;
 		let manualPlan: TurnPlan = plan;

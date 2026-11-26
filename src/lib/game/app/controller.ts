@@ -8,8 +8,12 @@
  *   - le brouillon de plan n'appartient qu'à l'interface ; il n'est jamais
  *     présenté comme validé et peut être perdu au rechargement ; après un
  *     trimestre, manuel ou accéléré, il est reporté selon la règle du moteur
- *     (`carryOverPlan` : achats, étapes ponctuelles et cibles sans objet
- *     retirés ; les actions sont épinglées par défaut, P3-08) ;
+ *     (`carryOverPlan` : seules les actions épinglées restent, P3-11) ;
+ *   - le plan reste toujours valide (P3-11) : un ajout impossible est refusé
+ *     avec son motif ; après chaque changement (report, réordonnancement,
+ *     commande hors tour), les étapes devenues impossibles sont retirées
+ *     (`prunePlan`), signalées par une notice groupée et une ligne du journal
+ *     de la session (non sauvegardée, comme le brouillon) ;
  *   - chaque transition réussie est sauvegardée aussitôt (nouvelle partie, tour,
  *     choix, fin) ; tant que la sauvegarde a échoué, aucune transition suivante
  *     n'est permise, sauf si le joueur choisit explicitement de continuer sans
@@ -24,6 +28,8 @@ import {
 	accelerate as accelerateEngine,
 	carryOverPlan,
 	chooseEventCommand,
+	previewPlan,
+	prunePlan,
 	commitTurn,
 	createGame,
 	formatTurn,
@@ -32,6 +38,7 @@ import {
 	type AccelerationStopReason,
 	type GameCommand,
 	type GameState,
+	type PlanRemoval,
 	type PlanStep
 } from '../engine/index.ts';
 import {
@@ -51,6 +58,7 @@ import {
 	creationOptions,
 	projectView,
 	summarizeSpan,
+	type PlanAdjustment,
 	type PlayerView,
 	type SpanSummaryView
 } from './view-model.ts';
@@ -136,6 +144,8 @@ export class GameController {
 	private readonly deps: ControllerDependencies;
 	private state: GameState | null = null;
 	private plan: PlanStep[] = [];
+	/** Retraits automatiques du plan pendant la session (journal, P3-11). */
+	private adjustments: PlanAdjustment[] = [];
 	private screen: 'home' | 'game' = 'home';
 	private saveStatus: SaveStatus | null = null;
 	private continuingUnsaved = false;
@@ -169,7 +179,7 @@ export class GameController {
 		this.cachedSnapshot = {
 			screen: this.screen,
 			home: this.home,
-			view: this.state ? projectView(this.state, this.plan, content) : null,
+			view: this.state ? projectView(this.state, this.plan, content, this.adjustments) : null,
 			plan: [...this.plan],
 			saveStatus: this.saveStatus,
 			canAct: this.canAct(),
@@ -271,6 +281,7 @@ export class GameController {
 		this.accelerationToken += 1;
 		this.state = null;
 		this.plan = [];
+		this.adjustments = [];
 		this.screen = 'home';
 		this.saveStatus = null;
 		this.continuingUnsaved = false;
@@ -284,6 +295,7 @@ export class GameController {
 		this.accelerationToken += 1;
 		this.state = state;
 		this.plan = [];
+		this.adjustments = [];
 		this.screen = 'game';
 		this.continuingUnsaved = false;
 		this.notice = null;
@@ -293,16 +305,33 @@ export class GameController {
 
 	// -- Plan ---------------------------------------------------------------
 
-	addStep(step: PlanStep): void {
-		if (!this.state || this.state.phase !== 'planning' || this.acceleration?.running) return;
+	/**
+	 * Ajoute une étape en fin de plan (ponctuelle, P3-11). Une étape déjà
+	 * impossible est refusée avec son motif, sans être ajoutée.
+	 */
+	addStep(step: PlanStep): boolean {
+		if (!this.state || this.state.phase !== 'planning' || this.acceleration?.running) return false;
+		const preview = previewPlan(this.state, { steps: [...this.plan, step] }, this.deps.content);
+		const issue = preview.steps.at(-1)?.issues[0];
+		if (issue) {
+			this.notice = {
+				level: 'warning',
+				text: `« ${this.stepLabel(step)} » n’a pas été ajoutée au plan.`,
+				details: [issue.message]
+			};
+			this.changed();
+			return false;
+		}
 		this.plan = [...this.plan, step];
 		this.notice = null;
 		this.changed();
+		return true;
 	}
 
 	removeStep(index: number): void {
 		if (this.acceleration?.running) return;
 		this.plan = this.plan.filter((_step, position) => position !== index);
+		// Retirer une étape peut rendre valide une occurrence suivante, jamais l'inverse.
 		this.changed();
 	}
 
@@ -313,20 +342,23 @@ export class GameController {
 		const next = [...this.plan];
 		[next[index], next[target]] = [next[target]!, next[index]!];
 		this.plan = next;
+		// Une étape avancée peut épuiser le temps ou les ressources d'une suivante.
+		const removed = this.settlePlan();
+		if (removed.length > 0) this.notice = this.adjustedNotice(removed);
 		this.changed();
 	}
 
-	/** Épingle (reconduit) ou rend ponctuelle une action du plan (P3-08) ; un achat reste ponctuel. */
+	/** Épingle (répète chaque trimestre) ou rend ponctuelle une action du plan (P3-11). */
 	togglePin(index: number): void {
 		if (this.acceleration?.running) return;
 		const step = this.plan[index];
 		if (!step || step.kind !== 'action') return;
-		const pinned: PlanStep =
+		const base: PlanStep =
 			step.target === undefined
 				? { kind: 'action', id: step.id }
 				: { kind: 'action', id: step.id, target: step.target };
 		this.plan = this.plan.map((entry, position) =>
-			position === index ? (step.once ? pinned : { ...pinned, once: true }) : entry
+			position === index ? (step.pinned ? base : { ...base, pinned: true }) : entry
 		);
 		this.changed();
 	}
@@ -360,24 +392,50 @@ export class GameController {
 			: `Achat : ${content.upgrades[step.id]?.label ?? step.id}`;
 	}
 
-	private droppedNotice(dropped: readonly PlanStep[]): Notice | null {
-		if (dropped.length === 0) return null;
+	private adjustedNotice(removed: readonly PlanRemoval[]): Notice | null {
+		if (removed.length === 0) return null;
 		return {
 			level: 'info',
-			text: 'Plan reconduit pour le trimestre suivant ; étapes ponctuelles retirées :',
-			details: dropped.map((step) => this.stepLabel(step))
+			text: 'Plan ajusté :',
+			details: removed.map((removal) => this.removalText(removal))
 		};
 	}
 
+	private removalText(removal: PlanRemoval): string {
+		return `${this.stepLabel(removal.step)} retiré — ${removal.reason}`;
+	}
+
+	/** Consigne les retraits automatiques au journal de la session (trimestre en cours). */
+	private recordRemovals(removed: readonly PlanRemoval[]): void {
+		if (!this.state || removed.length === 0) return;
+		const turn = this.state.turn;
+		const lines = removed.map((removal) => this.removalText(removal));
+		const last = this.adjustments.at(-1);
+		this.adjustments =
+			last?.turn === turn
+				? [...this.adjustments.slice(0, -1), { turn, lines: [...last.lines, ...lines] }]
+				: [...this.adjustments, { turn, lines }];
+	}
+
+	/** Nettoie le brouillon après un changement d'état ou d'ordre (P3-11). */
+	private settlePlan(): readonly PlanRemoval[] {
+		if (!this.state || this.state.phase !== 'planning') return [];
+		const pruned = prunePlan(this.state, { steps: this.plan }, this.deps.content);
+		this.plan = [...pruned.plan.steps];
+		this.recordRemovals(pruned.removed);
+		return pruned.removed;
+	}
+
 	/** Report du plan après une transition (règle commune au tour manuel et à l'accélération). */
-	private carryPlan(): readonly PlanStep[] {
+	private carryPlan(): readonly PlanRemoval[] {
 		if (!this.state || this.state.phase === 'ended') {
 			this.plan = [];
 			return [];
 		}
 		const carried = carryOverPlan(this.state, { steps: this.plan }, this.deps.content);
 		this.plan = [...carried.plan.steps];
-		return carried.dropped;
+		this.recordRemovals(carried.removed);
+		return carried.removed;
 	}
 
 	/** Change la mission d'un collaborateur (commande hors tour, sauvegardée aussitôt). */
@@ -418,6 +476,8 @@ export class GameController {
 				return `${count} : la carrière est terminée.`;
 			case 'invalid_plan':
 				return `${count} : ${result.issues[0]?.message ?? 'le plan récurrent n’est plus valide'}`;
+			case 'empty_plan':
+				return `${count} : le plan ne contient plus aucune activité ; accélération arrêtée.`;
 		}
 	}
 
@@ -445,7 +505,7 @@ export class GameController {
 
 		const token = ++this.accelerationToken;
 		this.accelerationStart = this.state;
-		let dropped: PlanStep[] = [];
+		let removed: PlanRemoval[] = [];
 		let running: AccelerationStatus = {
 			running: true,
 			turnsAdvanced: 0,
@@ -468,8 +528,9 @@ export class GameController {
 			);
 			this.state = batch.state;
 			this.plan = batch.state.phase === 'ended' ? [] : [...batch.plan.steps];
-			dropped = [...dropped, ...batch.dropped];
-			this.notice = this.droppedNotice(dropped);
+			this.recordRemovals(batch.removed);
+			removed = [...removed, ...batch.removed];
+			this.notice = this.adjustedNotice(removed);
 			running = {
 				...running,
 				turnsAdvanced: running.turnsAdvanced + batch.turnsAdvanced
@@ -552,7 +613,7 @@ export class GameController {
 			return false;
 		}
 		this.state = result.state;
-		this.notice = clearsPlan ? this.droppedNotice(this.carryPlan()) : null;
+		this.notice = this.adjustedNotice(clearsPlan ? this.carryPlan() : this.settlePlan());
 		this.persist();
 		this.changed();
 		return true;

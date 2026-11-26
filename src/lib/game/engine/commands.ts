@@ -9,8 +9,8 @@ import type { GameState, JournalEntry } from './state.ts';
 
 /**
  * Étape d'un plan trimestriel : une action ou l'achat d'une amélioration. Une
- * action est reconduite au trimestre suivant (épinglée) sauf si elle est
- * marquée ponctuelle (`once`, P3-08) ; un achat est toujours ponctuel.
+ * action est ponctuelle par défaut ; épinglée (`pinned`, P3-11), elle est
+ * reconduite au trimestre suivant. Un achat est toujours ponctuel.
  */
 export type PlanStep =
 	| {
@@ -18,8 +18,8 @@ export type PlanStep =
 			readonly id: string;
 			/** Cible d'une action ciblée (identifiant de parti), absente sinon. */
 			readonly target?: string;
-			/** Étape ponctuelle : retirée du plan après le trimestre. */
-			readonly once?: true;
+			/** Étape épinglée : reconduite au trimestre suivant (absente : ponctuelle). */
+			readonly pinned?: true;
 	  }
 	| { readonly kind: 'purchase'; readonly id: string };
 

@@ -153,7 +153,8 @@ describe('départ d’un élément de l’organisation', () => {
 		expect(preview.producers).toHaveLength(1);
 
 		const after = commit(state, [release(target)]);
-		expect(carryOverPlan(after, { steps: [release(target)] }, catalog).plan.steps).toEqual([]);
+		const pinned = { ...release(target), pinned: true as const };
+		expect(carryOverPlan(after, { steps: [pinned] }, catalog).plan.steps).toEqual([]);
 	});
 });
 
