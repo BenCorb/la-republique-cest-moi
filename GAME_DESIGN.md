@@ -83,17 +83,13 @@ Les revenus et l’influence peuvent se renforcer mutuellement, mais les coûts 
 
 ### 3.1 Identité et situation initiale
 
-Le prototype commence avec un personnage de 25 ans au profil neutre. L’alpha ajoute les choix d’origine sociale, de profession et de famille. La V1 prévoit le choix de l’âge et un passé cohérent avec le profil.
+Le personnage commence toujours à 25 ans. L’alpha ajoute les choix d’origine sociale, de profession et de famille ; la V1 remplace la profession par un terrain d’engagement et ajoute un territoire d’origine (`ROADMAP.md` §5.2, P3-16 et P3-17).
 
-| Âge indicatif | Type de départ | Arbitrage |
-|---|---|---|
-| 18–25 ans | Jeune ambitieux | Peu de patrimoine et de réseau, longue carrière potentielle |
-| 30–45 ans | Reconversion professionnelle | Expérience et ressources déjà constituées, horizon plus court |
-| 50–65 ans | Entrée tardive | Bagage potentiellement important, moins de temps et risques liés à l’âge |
+**Décision du créateur (26 novembre 2026) :** le choix de l’âge de départ prévu à l’origine (trois familles de profils de 18–25, 30–45 et 50–65 ans, tâche P3-06) est abandonné. L’âge de départ reste fixe à 25 ans ; la création repose sur l’origine sociale, le terrain d’engagement et le territoire. Le passé du personnage n’est donc pas une carrière achevée, mais un début de parcours.
 
-L’âge ne garantit ni richesse ni compétence : le passé professionnel et social détermine les avantages. Les profils exacts et leurs valeurs seront équilibrés après le prototype. La génération peut produire des dettes, des relations, des actifs ou un dossier ancien, si cohérents avec le parcours.
+**Terrain d’engagement (V1, P3-17) :** syndical, associatif, étudiant, service public, entreprise ou presse. Il décrit ce qui a conduit le personnage vers la politique, lui donne une activité et des revenus modestes, des effets de départ et des actions propres. Il remplace la profession de l’alpha.
 
-Exemples d’origines : milieu populaire, classe moyenne, grande bourgeoisie, dynastie politique. Exemples de professions : ouvrier, enseignant, avocat, journaliste, entrepreneur, haut fonctionnaire, permanent de parti, sans emploi. Les bonus sont liés aux expériences fictives du personnage plutôt qu’à des jugements automatiques sur les catégories sociales.
+Exemples d’origines : milieu populaire, classe moyenne, grande bourgeoisie, dynastie politique. Les bonus sont liés aux expériences fictives du personnage plutôt qu’à des jugements automatiques sur les catégories sociales.
 
 **Hypothèses provisoires de l’alpha (P2-08, 24 novembre 2026, choix délégués) :** quatre origines (milieu populaire, classe moyenne, grande bourgeoisie, dynastie politique) et six professions (ouvrier, enseignant, avocat, journaliste, entrepreneur, haut fonctionnaire), chacune avec des effets de départ chiffrés (argent, influence, soutiens, stress) et une action propre ; l’origine fixe la famille de départ et l’héritage. Âge de départ toujours 25 ans. Valeurs modifiables à l’équilibrage.
 
@@ -388,7 +384,7 @@ Les détails seront développés dans ARCHITECTURE.md ; les contraintes ci-desso
 |---|---|---|
 | Prototype | Profil fixe de 25 ans ; calendrier ; temps trimestriel ; ressources ; actions ; production récurrente élémentaire ; stress/santé ; événements (20–30) ; vieillissement ; fin et bilan minimal | Une carrière complète peut être jouée et comprise ; le rythme et les arbitrages sont testables |
 | Alpha | Élections et mandats ; cumul ; partis et monde autonome simplifiés ; entourage nommé et délégation ; relations ; adversaires ; origine, profession et famille ; accélération fiable | Plusieurs parcours divergent réellement ; les systèmes partagent le même moteur de tour |
-| V1 | Justice à dossiers ; patrimoine et médias ; promesses et décisions de gouvernement ; évolution des institutions ; âges de départ et passés cohérents ; catalogue enrichi ; UI et bilan final aboutis | Jeu stable, compréhensible, rejouable, cohérent avec la cible de durée et déployable statiquement |
+| V1 | Justice à dossiers ; patrimoine et médias ; promesses et décisions de gouvernement ; évolution des institutions ; terrain d’engagement et territoire d’origine ; catalogue enrichi ; UI et bilan final aboutis | Jeu stable, compréhensible, rejouable, cohérent avec la cible de durée et déployable statiquement |
 | V2 éventuelle | Méta-progression narrative, archives enrichies, mobile ou autres extensions après tests | Hors périmètre actuel ; aucune dépendance de la V1 à ces fonctionnalités |
 
 Le prototype peut utiliser une seule trajectoire politique simplifiée ou un mandat minimal pour tester l’accumulation sans développer tout le système électoral. La priorité est une boucle verticale jouable de bout en bout, pas un ensemble de modules incomplets.
