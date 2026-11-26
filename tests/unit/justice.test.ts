@@ -35,6 +35,7 @@ import {
 	fixturePromises,
 	fixtureMedia,
 	fixtureInstitutions,
+	fixtureEpitaphs,
 	fixtureProfiles,
 	fixtureSupports,
 	fixtureTraits,
@@ -100,6 +101,7 @@ function raw(overrides: Record<string, unknown> = {}) {
 		promises: fixturePromises,
 		media: fixtureMedia,
 		institutions: fixtureInstitutions,
+		epitaphs: fixtureEpitaphs,
 		...overrides
 	};
 }

@@ -142,6 +142,8 @@ Après un tour, un bilan court indique les variations principales et les actions
 
 Une une de journal ou nécrologie satirique synthétise la trajectoire. Afficher le motif réel de fin (décès, condamnation terminale, etc.) et l’âge, les fonctions principales, la fortune, les fonds détournés cumulés, les promesses et les événements marquants lorsque disponibles. La distinction finale reflète les actes et non une jauge morale. Prévoir « Nouvelle carrière » ; aucune récompense ne modifie les statistiques initiales des parties suivantes.
 
+**Depuis P3-08 (26 novembre 2026) :** une de journal du Courrier du Bocage (« Nécrologie », ou « Chronique judiciaire » pour une prison ferme) : titre et chapeau choisis selon la cause et le parcours, dates, distinctions en pastilles (survol : leur motif), frise d’au plus dix moments marquants, parcours en quatre rubriques. Le joueur n’est jamais nommé ni genré.
+
 ## 7. Composants et accessibilité
 
 Composants réutilisables : `GameShell`, `ResourceStrip`, `StatGauge`, `AlertList`, `NewsFeed`, `ActionCard`, `TurnPlan`, `TurnControls`, `EventCard`, `ChoiceButton`, `CharacterCard`, `CareerSummary`. Noms indicatifs, pas une exigence de tous les créer dès le bootstrap.

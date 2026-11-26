@@ -35,6 +35,7 @@ import {
 	fixturePromises,
 	fixtureMedia,
 	fixtureInstitutions,
+	fixtureEpitaphs,
 	fixtureWorld,
 	quarterLog
 } from '../fixtures/content.ts';
@@ -116,6 +117,7 @@ function raw(overrides: Record<string, unknown> = {}) {
 		promises: fixturePromises,
 		media: fixtureMedia,
 		institutions: fixtureInstitutions,
+		epitaphs: fixtureEpitaphs,
 		...overrides
 	};
 }

@@ -437,6 +437,84 @@ export interface ReformsCatalog {
 	readonly balance: ReformsBalance;
 }
 
+/**
+ * Mesures du parcours (P3-08), calculées depuis l'état final et son journal,
+ * sur lesquelles reposent nécrologies et distinctions. Aucune n'est une jauge
+ * morale : ce sont des faits de carrière.
+ */
+export const LEGACY_METRICS = [
+	/** Âge à la fin de carrière. */
+	'age',
+	/** Années de carrière (trimestres joués / 4, arrondi inférieur). */
+	'years',
+	/** Mandats exercés (exemplaires). */
+	'mandatesHeld',
+	/** Rang de la plus haute fonction exercée (0 : aucune). */
+	'highestRank',
+	/** Années passées avec au moins un mandat (arrondi inférieur). */
+	'yearsInOffice',
+	/** Plus grand nombre de mandats cumulés simultanément. */
+	'peakCumul',
+	'campaignsWon',
+	'campaignsLost',
+	/** Adhésions successives à un parti. */
+	'partyChanges',
+	/** Faits inscrits au registre (P3-01). */
+	'facts',
+	'cases',
+	'convictions',
+	'divertedCents',
+	'netWorthCents',
+	'promisesKept',
+	'promisesBroken',
+	/** Médias possédés à la fin (P3-03). */
+	'mediaOwned',
+	/** Réformes proposées par le joueur et adoptées (P3-05). */
+	'reformsAdopted',
+	'children',
+	/** Personnages rencontrés très bien et très mal disposés (attitude ≥ 40, ≤ −40). */
+	'allies',
+	'enemies'
+] as const;
+export type LegacyMetric = (typeof LEGACY_METRICS)[number];
+
+/** Causes de fin de carrière (décès ou prison ferme). */
+export const END_CAUSES = ['health_failure', 'natural_causes', 'prison'] as const;
+export type EndCauseId = (typeof END_CAUSES)[number];
+
+export interface LegacyCriterion {
+	readonly metric: LegacyMetric;
+	readonly cmp: ComparisonOp;
+	readonly value: number;
+}
+
+/**
+ * Nécrologie ou article de bilan (P3-08) : un gabarit par cause de fin,
+ * éventuellement réservé à certains parcours (critères). Variables : `{age}`,
+ * `{years}` et `{office}` (plus haute fonction exercée). Le joueur n'est
+ * jamais nommé ni genré.
+ */
+export interface ObituaryDefinition {
+	readonly id: string;
+	readonly causes: readonly EndCauseId[];
+	readonly criteria: readonly LegacyCriterion[];
+	readonly headline: string;
+	readonly text: string;
+}
+
+/** Distinction narrative non exclusive, fondée sur le parcours (GDD §12). */
+export interface DistinctionDefinition {
+	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	readonly criteria: readonly LegacyCriterion[];
+}
+
+export interface EpitaphsCatalog {
+	readonly obituaries: readonly ObituaryDefinition[];
+	readonly distinctions: readonly DistinctionDefinition[];
+}
+
 /** Bornes de la relation d'un média envers le joueur (P3-03). */
 export const MEDIA_RELATION_MIN = -100;
 export const MEDIA_RELATION_MAX = 100;
@@ -1409,4 +1487,7 @@ export interface Content {
 		Record<string, { readonly parameterId: string; readonly index: number }>
 	>;
 	readonly reforms: ReformsBalance;
+	/** Nécrologies et distinctions du bilan final (P3-08), dans l'ordre du catalogue. */
+	readonly obituaries: readonly ObituaryDefinition[];
+	readonly distinctions: readonly DistinctionDefinition[];
 }

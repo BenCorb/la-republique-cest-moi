@@ -33,6 +33,7 @@ import {
 	fixturePromises,
 	fixtureMedia,
 	fixtureInstitutions,
+	fixtureEpitaphs,
 	fixtureTraits,
 	fixtureUpgrades,
 	fixtureWorld,
@@ -123,7 +124,8 @@ function load(
 		wealth: fixtureWealth,
 		promises: fixturePromises,
 		media: fixtureMedia,
-		institutions: fixtureInstitutions
+		institutions: fixtureInstitutions,
+		epitaphs: fixtureEpitaphs
 	});
 }
 

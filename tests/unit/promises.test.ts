@@ -30,6 +30,7 @@ import {
 	fixturePromises,
 	fixtureMedia,
 	fixtureInstitutions,
+	fixtureEpitaphs,
 	fixtureProfiles,
 	fixtureSupports,
 	fixtureTraits,
@@ -94,6 +95,7 @@ function raw(overrides: Partial<RawContent> = {}): RawContent {
 		promises: fixturePromises,
 		media: fixtureMedia,
 		institutions: fixtureInstitutions,
+		epitaphs: fixtureEpitaphs,
 		...overrides
 	};
 }

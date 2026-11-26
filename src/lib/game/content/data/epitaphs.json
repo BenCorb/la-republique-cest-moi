@@ -1,0 +1,235 @@
+{
+	"obituaries": [
+		{
+			"id": "obituary.quiet_end",
+			"causes": ["natural_causes", "health_failure"],
+			"criteria": [],
+			"headline": "Une figure locale s’est éteinte à {age} ans",
+			"text": "On la croisait au marché, aux comices et à chaque inauguration de rond-point. Après {years} ans de vie publique, le dernier discours aura été le plus court : quelques mots au notaire, puis le silence, ce qui ne lui ressemblait guère."
+		},
+		{
+			"id": "obituary.overwork",
+			"causes": ["health_failure"],
+			"criteria": [],
+			"headline": "À la tâche jusqu’au bout, à {age} ans",
+			"text": "Le corps a cédé avant l’agenda. Ses collaborateurs rappellent qu’il restait trois réunions prévues cette semaine, et une quatrième « à caler ». Le médecin, lui, avait prévenu ; on l’avait inscrit en fin d’ordre du jour."
+		},
+		{
+			"id": "obituary.long_life",
+			"causes": ["natural_causes"],
+			"criteria": [{ "metric": "age", "cmp": "gte", "value": 85 }],
+			"headline": "Une mémoire de la vie politique s’en va, à {age} ans",
+			"text": "Elle avait connu les fax, les réseaux sociaux et les meetings holographiques, et trouvé chaque fois que c’était mieux avant. {years} ans de carrière, d’innombrables banquets et une conviction intacte : la République lui devait bien une rue."
+		},
+		{
+			"id": "obituary.young",
+			"causes": ["natural_causes", "health_failure"],
+			"criteria": [{ "metric": "age", "cmp": "lte", "value": 40 }],
+			"headline": "Disparition prématurée, à {age} ans",
+			"text": "Une carrière à peine commencée, déjà pleine de promesses dont certaines auraient peut-être été tenues. Le parti salue « un avenir prometteur », formule qu’il réservait jusqu’ici aux sondages."
+		},
+		{
+			"id": "obituary.office_holder",
+			"causes": ["natural_causes", "health_failure"],
+			"criteria": [{ "metric": "mandatesHeld", "cmp": "gte", "value": 1 }],
+			"headline": "Hommage unanime pour une personnalité de la vie locale",
+			"text": "Plus haute fonction : {office}. {years} ans de carrière, des milliers de mains serrées et autant de photos dans le Courrier du Bocage. Ses adversaires saluent « une loyauté de tous les instants », ce qui, dans leur bouche, est presque un compliment."
+		},
+		{
+			"id": "obituary.long_tenure",
+			"causes": ["natural_causes", "health_failure"],
+			"criteria": [
+				{ "metric": "mandatesHeld", "cmp": "gte", "value": 1 },
+				{ "metric": "yearsInOffice", "cmp": "gte", "value": 20 }
+			],
+			"headline": "Vingt ans d’écharpe tricolore, et bien davantage",
+			"text": "Indéboulonnable jusqu’au dernier jour, avec pour plus haute fonction : {office}. Le conseil observera une minute de silence, la première depuis des décennies qu’il n’y aura personne pour interrompre."
+		},
+		{
+			"id": "obituary.government",
+			"causes": ["natural_causes", "health_failure"],
+			"criteria": [{ "metric": "highestRank", "cmp": "gte", "value": 60 }],
+			"headline": "Le gouvernement salue une personnalité qui fut des siens",
+			"text": "Plus haute fonction : {office}. Le maroquin n’aura pas duré, mais la plaque de la voiture de fonction, gardée en souvenir, trônera longtemps dans l’entrée. Les drapeaux seront en berne, pour une demi-journée."
+		},
+		{
+			"id": "obituary.eternal_candidate",
+			"causes": ["natural_causes", "health_failure"],
+			"criteria": [
+				{ "metric": "mandatesHeld", "cmp": "eq", "value": 0 },
+				{ "metric": "campaignsLost", "cmp": "gte", "value": 2 }
+			],
+			"headline": "Fin de l’éternelle candidature, à {age} ans",
+			"text": "Jamais élue, jamais découragée : chaque scrutin était « le bon ». Les électeurs, eux, ne s’étaient pas laissé convaincre. On retrouvera dans son garage des affiches de toutes les élections depuis l’an 2000, soigneusement roulées."
+		},
+		{
+			"id": "obituary.wealthy",
+			"causes": ["natural_causes", "health_failure"],
+			"criteria": [{ "metric": "netWorthCents", "cmp": "gte", "value": 100000000 }],
+			"headline": "Une fortune s’éteint, ses héritiers s’éveillent",
+			"text": "Appartements, vignoble, portefeuille « équilibré » : {years} ans de carrière auront été rentables. L’ouverture du testament est attendue avec une impatience que la famille juge « indécente », tout en réservant la salle."
+		},
+		{
+			"id": "obituary.troubled",
+			"causes": ["natural_causes", "health_failure"],
+			"criteria": [{ "metric": "convictions", "cmp": "gte", "value": 1 }],
+			"headline": "Disparition d’une personnalité au parcours judiciaire chargé",
+			"text": "Condamnations, appels, relaxes partielles : son casier racontait une carrière aussi bien que son curriculum. Ses avocats, inconsolables, perdent leur meilleur client ; la Gazette fouineuse, un sujet en or."
+		},
+		{
+			"id": "obituary.untainted",
+			"causes": ["natural_causes", "health_failure"],
+			"criteria": [
+				{ "metric": "mandatesHeld", "cmp": "gte", "value": 1 },
+				{ "metric": "facts", "cmp": "eq", "value": 0 }
+			],
+			"headline": "Une carrière sans tache, ce qui intrigue encore",
+			"text": "Pas une affaire, pas une note de frais douteuse en {years} ans, avec pour plus haute fonction : {office}. Les journalistes ont longtemps cherché ; ils publient aujourd’hui, faute de mieux, un portrait élogieux."
+		},
+		{
+			"id": "obituary.broken_promises",
+			"causes": ["natural_causes", "health_failure"],
+			"criteria": [{ "metric": "promisesBroken", "cmp": "gte", "value": 4 }],
+			"headline": "Disparition d’une personnalité qui promettait beaucoup",
+			"text": "Baisse des impôts, ligne de train, usine sauvée : la liste de ses engagements tiendrait sur trois tracts. Celle des réalisations, sur un timbre. Les électeurs, rancuniers, viendront tout de même aux obsèques, par habitude."
+		},
+		{
+			"id": "obituary.prison",
+			"causes": ["prison"],
+			"criteria": [],
+			"headline": "Rideau : condamnation définitive à {age} ans",
+			"text": "La cour d’appel a confirmé la peine de prison ferme. Une carrière de {years} ans s’achève derrière des barreaux, avec vue sur une cour bien moins prestigieuse que les précédentes. Les visites sont autorisées le jeudi."
+		},
+		{
+			"id": "obituary.prison_high_office",
+			"causes": ["prison"],
+			"criteria": [{ "metric": "highestRank", "cmp": "gte", "value": 40 }],
+			"headline": "Des bancs de la République à ceux de la maison d’arrêt",
+			"text": "Plus haute fonction : {office}. La chute est vertigineuse et le parti découvre soudain qu’il connaissait à peine cette personne. La cantine de la prison, elle, sert le jeudi un gratin dauphinois jugé « correct » par les connaisseurs."
+		},
+		{
+			"id": "obituary.prison_diverted",
+			"causes": ["prison"],
+			"criteria": [{ "metric": "divertedCents", "cmp": "gte", "value": 50000 }],
+			"headline": "Les caisses étaient trop noires",
+			"text": "Fonds détournés, comptes opaques, mémoire défaillante : la justice a fini par additionner. Après {years} ans de carrière, la seule caisse encore accessible est celle de la cantine pénitentiaire."
+		}
+	],
+	"distinctions": [
+		{
+			"id": "distinction.integrity",
+			"label": "L’Intègre",
+			"description": "Des mandats exercés sans un seul fait douteux au registre.",
+			"criteria": [
+				{ "metric": "mandatesHeld", "cmp": "gte", "value": 1 },
+				{ "metric": "facts", "cmp": "eq", "value": 0 }
+			]
+		},
+		{
+			"id": "distinction.immovable",
+			"label": "L’Indéboulonnable",
+			"description": "Vingt-cinq ans au moins avec un mandat.",
+			"criteria": [{ "metric": "yearsInOffice", "cmp": "gte", "value": 25 }]
+		},
+		{
+			"id": "distinction.barony",
+			"label": "La Baronnie",
+			"description": "Trois mandats cumulés ou plus en même temps.",
+			"criteria": [{ "metric": "peakCumul", "cmp": "gte", "value": 3 }]
+		},
+		{
+			"id": "distinction.portfolio",
+			"label": "Le Maroquin",
+			"description": "Un passage au gouvernement.",
+			"criteria": [{ "metric": "highestRank", "cmp": "gte", "value": 60 }]
+		},
+		{
+			"id": "distinction.fortune",
+			"label": "La Fortune faite",
+			"description": "Une valeur nette d’un million d’euros ou plus.",
+			"criteria": [{ "metric": "netWorthCents", "cmp": "gte", "value": 100000000 }]
+		},
+		{
+			"id": "distinction.weathervane",
+			"label": "La Girouette",
+			"description": "Trois partis ou plus au fil de la carrière.",
+			"criteria": [{ "metric": "partyChanges", "cmp": "gte", "value": 3 }]
+		},
+		{
+			"id": "distinction.unsinkable",
+			"label": "L’Insubmersible",
+			"description": "Au moins deux dossiers judiciaires, et aucune condamnation.",
+			"criteria": [
+				{ "metric": "cases", "cmp": "gte", "value": 2 },
+				{ "metric": "convictions", "cmp": "eq", "value": 0 }
+			]
+		},
+		{
+			"id": "distinction.disgrace",
+			"label": "La Disgrâce",
+			"description": "Au moins une condamnation définitive.",
+			"criteria": [{ "metric": "convictions", "cmp": "gte", "value": 1 }]
+		},
+		{
+			"id": "distinction.slush_fund",
+			"label": "Les Caisses noires",
+			"description": "Au moins 500 € de fonds détournés.",
+			"criteria": [{ "metric": "divertedCents", "cmp": "gte", "value": 50000 }]
+		},
+		{
+			"id": "distinction.word_kept",
+			"label": "La Parole tenue",
+			"description": "Trois promesses tenues ou plus.",
+			"criteria": [{ "metric": "promisesKept", "cmp": "gte", "value": 3 }]
+		},
+		{
+			"id": "distinction.empty_promises",
+			"label": "Les Promesses envolées",
+			"description": "Cinq promesses abandonnées ou plus.",
+			"criteria": [{ "metric": "promisesBroken", "cmp": "gte", "value": 5 }]
+		},
+		{
+			"id": "distinction.eternal_candidate",
+			"label": "L’Éternelle Candidature",
+			"description": "Au moins trois défaites électorales, sans jamais remporter un scrutin.",
+			"criteria": [
+				{ "metric": "campaignsLost", "cmp": "gte", "value": 3 },
+				{ "metric": "campaignsWon", "cmp": "eq", "value": 0 }
+			]
+		},
+		{
+			"id": "distinction.press_baron",
+			"label": "La Presse aux ordres",
+			"description": "Un média racheté et conservé jusqu’au bout.",
+			"criteria": [{ "metric": "mediaOwned", "cmp": "gte", "value": 1 }]
+		},
+		{
+			"id": "distinction.reformer",
+			"label": "Les Institutions remodelées",
+			"description": "Deux réformes institutionnelles adoptées ou plus.",
+			"criteria": [{ "metric": "reformsAdopted", "cmp": "gte", "value": 2 }]
+		},
+		{
+			"id": "distinction.networker",
+			"label": "Le Carnet d’adresses",
+			"description": "Trois personnages ou plus très bien disposés.",
+			"criteria": [{ "metric": "allies", "cmp": "gte", "value": 3 }]
+		},
+		{
+			"id": "distinction.feuds",
+			"label": "Les Rancunes tenaces",
+			"description": "Cinq personnages ou plus très mal disposés.",
+			"criteria": [{ "metric": "enemies", "cmp": "gte", "value": 5 }]
+		},
+		{
+			"id": "distinction.private_life",
+			"label": "La Vie à côté",
+			"description": "Aucun mandat, aucune candidature : une vie loin des urnes.",
+			"criteria": [
+				{ "metric": "mandatesHeld", "cmp": "eq", "value": 0 },
+				{ "metric": "campaignsWon", "cmp": "eq", "value": 0 },
+				{ "metric": "campaignsLost", "cmp": "eq", "value": 0 }
+			]
+		}
+	]
+}

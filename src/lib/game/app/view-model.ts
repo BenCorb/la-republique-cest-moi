@@ -55,6 +55,10 @@ import {
 	type Article,
 	activationLabel,
 	adoptionPercent,
+	distinctionsOf,
+	highestOffice,
+	legacyMetrics,
+	obituaryOf,
 	eraAt,
 	eraReached,
 	effectiveContent,
@@ -286,10 +290,34 @@ export interface Alert {
 	readonly text: string;
 }
 
+/**
+ * Bilan de fin de carrière (P3-08, DESIGN.md §6) : une de journal avec la
+ * nécrologie (ou la chronique judiciaire), les distinctions méritées, les
+ * moments marquants et le parcours par rubriques.
+ */
 export interface SummaryView {
+	/** Bandeau du journal : nécrologie ou chronique judiciaire. */
+	readonly masthead: string;
 	readonly title: string;
+	readonly text: string;
 	readonly cause: string;
-	readonly lines: readonly { readonly label: string; readonly value: string }[];
+	/** Naissance, fin et âge, en une ligne. */
+	readonly dates: string;
+	readonly distinctions: readonly {
+		readonly id: string;
+		readonly label: string;
+		readonly description: string;
+	}[];
+	/** Moments marquants, dans l'ordre chronologique. */
+	readonly moments: readonly {
+		readonly key: string;
+		readonly date: string;
+		readonly text: string;
+	}[];
+	readonly sections: readonly {
+		readonly title: string;
+		readonly lines: readonly { readonly label: string; readonly value: string }[];
+	}[];
 }
 
 export interface IndicatorView {
@@ -1457,13 +1485,21 @@ function articleSubject(article: Article, state: GameState, content: Content): s
 	}
 }
 
+/** « de » suivi d'un mot, avec élision devant une voyelle (« d’emploi fictif »). */
+export function ofWord(word: string): string {
+	return /^[aeiouyàâäéèêëîïôöûü]/i.test(word) ? `d’${word}` : `de ${word}`;
+}
+
 /** Titre d'un article : gabarit du catalogue, variables résolues. */
 export function articleTitle(article: Article, state: GameState, content: Content): string {
 	const headline = content.headlines.find((entry) => entry.id === article.headlineId);
 	if (!headline) return article.headlineId;
 	const subject = articleSubject(article, state, content);
 	const media = content.media[article.mediaId]?.name ?? article.mediaId;
-	return headline.text.replaceAll('{subject}', subject).replaceAll('{media}', media);
+	return headline.text
+		.replaceAll('de {subject}', ofWord(subject))
+		.replaceAll('{subject}', subject)
+		.replaceAll('{media}', media);
 }
 
 function articleEffects(article: Article, content: Content): string {
@@ -1695,46 +1731,217 @@ function promisesSummary(counts: ReturnType<typeof careerSummary>['promises']): 
 	return `${counts.made} engagement(s) : ${counts.kept} tenue(s), ${counts.partial} partiellement, ${counts.abandoned} abandonnée(s)`;
 }
 
+/** Nombre de moments marquants retenus au bilan. */
+const MAX_MOMENTS = 10;
+
+function lowerOffence(label: string): string {
+	return label.charAt(0).toLocaleLowerCase('fr-FR') + label.slice(1);
+}
+
+/** Moments marquants : les plus importants, puis dans l'ordre chronologique. */
+function buildMoments(state: GameState, content: Content): SummaryView['moments'] {
+	const moments: { turn: number; weight: number; text: string }[] = [];
+	const ranks = state.mandates.map((mandate) => content.mandates[mandate.mandateId]?.rank ?? 0);
+	const top = Math.max(0, ...ranks);
+	const seen = new Set<string>();
+	state.mandates.forEach((mandate, index) => {
+		const label = content.mandates[mandate.mandateId]?.label ?? mandate.mandateId;
+		const first = !seen.has(mandate.mandateId);
+		seen.add(mandate.mandateId);
+		if (!first && ranks[index] !== top) return;
+		moments.push({
+			turn: mandate.startTurn,
+			weight: ranks[index] === top ? 9 : 7,
+			text: `${first ? 'Première prise de fonction' : 'Retour'} : ${label}`
+		});
+	});
+	for (const campaign of state.campaigns) {
+		if (campaign.status !== 'lost') continue;
+		const ballot = state.ballots.find((entry) => entry.ballotId === campaign.ballotId);
+		const election = content.elections[campaign.electionId]?.label ?? campaign.electionId;
+		moments.push({
+			turn: ballot?.turn ?? campaign.declaredTurn,
+			weight: 3,
+			text: `Défaite : ${election}`
+		});
+	}
+	for (const legalCase of state.cases) {
+		if (legalCase.defendantId !== null) continue;
+		const fact = state.facts.find((entry) => entry.factId === legalCase.factId);
+		const offence = lowerOffence(content.offenses[fact?.offenseId ?? '']?.label ?? 'une affaire');
+		moments.push({
+			turn: legalCase.openedTurn,
+			weight: 6,
+			text: `Révélation d’une affaire ${ofWord(offence)}`
+		});
+		if (legalCase.outcome && legalCase.closedTurn !== null) {
+			const verdict =
+				legalCase.outcome === 'convicted'
+					? 'Condamnation'
+					: legalCase.outcome === 'acquitted'
+						? 'Relaxe'
+						: 'Classement sans suite';
+			moments.push({
+				turn: legalCase.closedTurn,
+				weight: legalCase.outcome === 'convicted' ? 10 : 6,
+				text: `${verdict} dans l’affaire ${ofWord(offence)}`
+			});
+		}
+	}
+	for (const pledge of state.promises) {
+		if ((pledge.status !== 'kept' && pledge.status !== 'abandoned') || pledge.closedTurn === null)
+			continue;
+		const label = content.promises[pledge.promiseId]?.label ?? pledge.promiseId;
+		moments.push({
+			turn: pledge.closedTurn,
+			weight: 5,
+			text: `${pledge.status === 'kept' ? 'Promesse tenue' : 'Promesse abandonnée'} : « ${label} »`
+		});
+	}
+	for (const reform of state.institutions.reforms) {
+		if (
+			reform.origin !== 'player' ||
+			(reform.status !== 'scheduled' && reform.status !== 'enacted')
+		)
+			continue;
+		const parameter =
+			content.institutionParameters[reform.parameterId]?.label ?? reform.parameterId;
+		const level = levelOf(reform.levelId, content)?.label ?? reform.levelId;
+		moments.push({
+			turn: reform.proposedTurn,
+			weight: 6,
+			text: `Réforme adoptée — ${parameter} : « ${level} »`
+		});
+	}
+	for (const upgrade of state.upgrades) {
+		const mediaId = content.upgrades[upgrade.upgradeId]?.asset?.media;
+		if (mediaId === undefined) continue;
+		moments.push({
+			turn: upgrade.acquiredTurn,
+			weight: 5,
+			text: `Rachat de ${content.media[mediaId]?.name ?? mediaId}`
+		});
+	}
+	for (const entry of state.history) {
+		if (entry.type !== 'event.resolved') continue;
+		for (const change of entry.politics) {
+			if (change.kind !== 'familyJoined') continue;
+			moments.push({
+				turn: entry.turn,
+				weight: 4,
+				text: change.relation === 'partner' ? 'Une nouvelle vie à deux' : 'Naissance d’un enfant'
+			});
+		}
+	}
+	return moments
+		.map((moment, index) => ({ ...moment, index }))
+		.sort(
+			(left, right) =>
+				right.weight - left.weight || left.turn - right.turn || left.index - right.index
+		)
+		.slice(0, MAX_MOMENTS)
+		.sort((left, right) => left.turn - right.turn || left.index - right.index)
+		.map((moment) => ({
+			key: `m${moment.index}`,
+			date: formatTurn(moment.turn),
+			text: moment.text
+		}));
+}
+
 function buildSummary(state: GameState, content: Content): SummaryView | null {
 	if (!state.end) return null;
 	const summary = careerSummary(state);
-	const born = formatTurn(state.player.birthTurn);
+	const metrics = legacyMetrics(state, content);
+	const obituary = obituaryOf(state, content);
+	const office = highestOffice(state, content);
+	const fill = (text: string): string =>
+		text
+			.replaceAll('{age}', String(summary.age))
+			.replaceAll('{years}', String(metrics.years))
+			.replaceAll('{office}', office ?? 'aucune');
+	const cause = summary.cause ?? 'natural_causes';
+	const attitudes = Object.entries(state.relationships)
+		.map(([id, relation]) => ({
+			name: state.characters[id]?.name ?? id,
+			attitude: relation.attitude
+		}))
+		.sort((left, right) => right.attitude - left.attitude);
+	const ally = attitudes[0] && attitudes[0].attitude >= 40 ? attitudes[0].name : 'aucun';
+	const foe = attitudes.at(-1);
+	const parties = state.player.affiliations
+		.map((affiliation) => content.parties[affiliation.partyId]?.acronym ?? affiliation.partyId)
+		.join(', ');
 	return {
-		title: `Fin de carrière à ${summary.age} ans`,
-		cause: CAUSE_LABELS[summary.cause ?? 'natural_causes'],
-		lines: [
-			{ label: 'Né au', value: born },
+		masthead:
+			cause === 'prison'
+				? 'Le Courrier du Bocage · Chronique judiciaire'
+				: 'Le Courrier du Bocage · Nécrologie',
+		title: obituary ? fill(obituary.headline) : `Fin de carrière à ${summary.age} ans`,
+		text: obituary ? fill(obituary.text) : '',
+		cause: CAUSE_LABELS[cause],
+		dates: `${formatTurn(state.player.birthTurn)} – ${formatTurn(summary.lastTurn)} · ${summary.age} ans`,
+		distinctions: distinctionsOf(state, content).map(({ id, label, description }) => ({
+			id,
+			label,
+			description
+		})),
+		moments: buildMoments(state, content),
+		sections: [
 			{
-				label: 'Origine',
-				value: content.origins[state.player.origin]?.label ?? state.player.origin
+				title: 'Parcours',
+				lines: [
+					{ label: 'Plus haute fonction', value: office ?? 'Aucun mandat' },
+					{ label: 'Mandats exercés', value: String(metrics.mandatesHeld) },
+					{ label: 'Années en fonction', value: String(metrics.yearsInOffice) },
+					{
+						label: 'Scrutins',
+						value: `${metrics.campaignsWon} gagné(s), ${metrics.campaignsLost} perdu(s)`
+					},
+					{ label: 'Partis', value: parties || 'Sans étiquette' },
+					{ label: 'Trimestres de carrière', value: String(summary.quartersPlayed) }
+				]
 			},
 			{
-				label: 'Profession',
-				value: content.professions[state.player.profession]?.label ?? state.player.profession
+				title: 'Fortune',
+				lines: [
+					{ label: 'Valeur nette (argent et biens)', value: formatMoney(summary.netWorthCents) },
+					...RESOURCE_IDS.map((id) => ({
+						label: RESOURCE_NAMES[id],
+						value: formatResource(id, summary.resources[id])
+					})),
+					{ label: 'Fonds détournés', value: formatMoney(summary.divertedCents) }
+				]
 			},
 			{
-				label: summary.cause === 'prison' ? 'Incarcéré au' : 'Décédé au',
-				value: formatTurn(summary.lastTurn)
+				title: 'Engagements et justice',
+				lines: [
+					{ label: 'Promesses', value: promisesSummary(summary.promises) },
+					{
+						label: 'Affaires judiciaires',
+						value: `${summary.cases} dossier(s), ${summary.convictions} condamnation(s)`
+					},
+					{ label: 'Réformes adoptées', value: String(metrics.reformsAdopted) }
+				]
 			},
-			{ label: 'Âge', value: `${summary.age} ans` },
-			{ label: 'Trimestres de carrière', value: String(summary.quartersPlayed) },
-			...RESOURCE_IDS.map((id) => ({
-				label: RESOURCE_NAMES[id],
-				value: formatResource(id, summary.resources[id])
-			})),
-			{ label: 'Actions menées', value: String(summary.actionsPerformed) },
-			{ label: 'Améliorations acquises', value: String(summary.upgradesOwned) },
-			{ label: 'Événements vécus', value: String(summary.eventsExperienced) },
 			{
-				label: 'Affaires judiciaires',
-				value: `${summary.cases} dossier(s), ${summary.convictions} condamnation(s)`
-			},
-			{ label: 'Valeur nette (argent et biens)', value: formatMoney(summary.netWorthCents) },
-			{ label: 'Promesses', value: promisesSummary(summary.promises) },
-			{ label: 'Fonds détournés', value: formatMoney(summary.divertedCents) },
-			{
-				label: 'Catalogue',
-				value: `${content.eventIds.length} événements possibles`
+				title: 'Vie et relations',
+				lines: [
+					{
+						label: 'Origine',
+						value: content.origins[state.player.origin]?.label ?? state.player.origin
+					},
+					{
+						label: 'Profession',
+						value: content.professions[state.player.profession]?.label ?? state.player.profession
+					},
+					{ label: 'Enfants', value: String(metrics.children) },
+					{ label: 'Plus fidèle soutien', value: ally },
+					{
+						label: 'Rancune la plus tenace',
+						value: foe && foe.attitude <= -40 ? foe.name : 'aucune'
+					},
+					{ label: 'Événements vécus', value: String(summary.eventsExperienced) }
+				]
 			}
 		]
 	};

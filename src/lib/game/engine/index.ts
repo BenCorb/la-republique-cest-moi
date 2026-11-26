@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.26.0';
+export const RULES_VERSION = '0.27.0';
 
 export {
 	START_YEAR,
@@ -288,6 +288,15 @@ export {
 	type PromisesParts,
 	type PromisesResolution
 } from './promises.ts';
+export {
+	distinctionsOf,
+	endCauseOf,
+	highestOffice,
+	legacyMetrics,
+	meetsCriteria,
+	obituaryOf,
+	type LegacyMetrics
+} from './legacy.ts';
 export { eraAt, eraIndexAt, eraReached, inEras } from './eras.ts';
 export {
 	activationLabel,

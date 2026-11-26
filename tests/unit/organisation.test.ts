@@ -25,6 +25,7 @@ import {
 	fixturePromises,
 	fixtureMedia,
 	fixtureInstitutions,
+	fixtureEpitaphs,
 	fixtureSupports,
 	fixtureTraits,
 	fixtureUpgrades,
@@ -71,7 +72,8 @@ function raw(overrides: { actions?: unknown[]; upgradeChanges?: Record<string, u
 		wealth: fixtureWealth,
 		promises: fixturePromises,
 		media: fixtureMedia,
-		institutions: fixtureInstitutions
+		institutions: fixtureInstitutions,
+		epitaphs: fixtureEpitaphs
 	};
 }
 

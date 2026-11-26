@@ -31,6 +31,7 @@ import {
 	fixturePromises,
 	fixtureMedia,
 	fixtureInstitutions,
+	fixtureEpitaphs,
 	fixtureCareer,
 	fixtureSupports,
 	fixtureTraits,
@@ -153,7 +154,8 @@ function political(
 		wealth: fixtureWealth,
 		promises: fixturePromises,
 		media: fixtureMedia,
-		institutions: fixtureInstitutions
+		institutions: fixtureInstitutions,
+		epitaphs: fixtureEpitaphs
 	});
 }
 
