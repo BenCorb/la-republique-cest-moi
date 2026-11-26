@@ -12,6 +12,7 @@
 			"priority": 30,
 			"cooldownTurns": 0,
 			"unique": false,
+			"maxOccurrences": 6,
 			"actors": [],
 			"choices": [
 				{
@@ -62,6 +63,7 @@
 			"priority": 30,
 			"cooldownTurns": 0,
 			"unique": false,
+			"maxOccurrences": 6,
 			"actors": [],
 			"choices": [
 				{
@@ -114,6 +116,7 @@
 			"priority": 30,
 			"cooldownTurns": 0,
 			"unique": false,
+			"maxOccurrences": 6,
 			"actors": [],
 			"choices": [
 				{
@@ -162,6 +165,7 @@
 			"priority": 30,
 			"cooldownTurns": 0,
 			"unique": false,
+			"maxOccurrences": 6,
 			"actors": [],
 			"choices": [
 				{

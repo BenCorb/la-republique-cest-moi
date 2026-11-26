@@ -255,6 +255,42 @@ describe('après le scrutin', () => {
 		).toBe(true);
 	});
 
+	it('ne programme plus de dilemme au plafond de son événement, suites en attente comprises (P3-09)', () => {
+		const dilemma = catalog.events['test.promise_dilemma']!;
+		const capped: Content = {
+			...catalog,
+			events: { ...catalog.events, [dilemma.id]: { ...dilemma, maxOccurrences: 1 } }
+		};
+		const before = advanceTo(declared, 40, 'hold', capped);
+		const scheduledDilemmas = (state: GameState): number =>
+			state.events.scheduled.filter((entry) => entry.eventId === dilemma.id).length;
+
+		const seen = {
+			...before,
+			events: {
+				...before.events,
+				occurrences: { ...before.events.occurrences, [dilemma.id]: { count: 1, lastTurn: 10 } }
+			}
+		};
+		const afterSeen = commit(seen, [], capped).state;
+		expect(afterSeen.promises[0]).toMatchObject({ status: 'in_progress', dueTurn: 46 });
+		expect(scheduledDilemmas(afterSeen)).toBe(0);
+
+		const queued = {
+			...before,
+			events: {
+				...before.events,
+				scheduled: [
+					...before.events.scheduled,
+					{ eventId: dilemma.id, dueTurn: 60, sourceInstanceId: 'pledge.0', actors: {} }
+				]
+			}
+		};
+		expect(scheduledDilemmas(commit(queued, [], capped).state)).toBe(1);
+		// Sans plafond déclaré, le dilemme reste programmé.
+		expect(scheduledDilemmas(commit(seen).state)).toBe(1);
+	});
+
 	it('reste sans lendemain après une défaite', () => {
 		const weak = commit(createGame({ seed: 'promesses' }, catalog), [declare]).state;
 		const promised = commit(weak, [pledge('promise.test_school')]).state;

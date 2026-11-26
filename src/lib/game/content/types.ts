@@ -1035,6 +1035,11 @@ export interface EntourageBalance {
 	/** Attitude gagnée à l'embauche, perdue à chaque salaire impayé ou au renvoi. */
 	readonly hireAttitude: number;
 	readonly unpaidAttitude: number;
+	/**
+	 * Trimestres de salaires (entourage en poste et nouveau venu) que le budget
+	 * politique doit couvrir pour recruter (P3-09).
+	 */
+	readonly hireReserveQuarters: number;
 	readonly dismissAttitude: number;
 	/** Sous cette attitude, un collaborateur démissionne. */
 	readonly resignAttitude: number;
