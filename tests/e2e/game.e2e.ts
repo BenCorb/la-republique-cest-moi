@@ -940,8 +940,9 @@ test.describe('résultats et note de cabinet (P3-14)', () => {
 		const note = page.getByTestId('quarter-note');
 		await expect(note).toBeVisible();
 		await expect(note.getByRole('heading', { name: 'Note de cabinet' })).toBeVisible();
-		await expect(note).toContainText('Le T2 2000 commence.');
-		await expect(note.getByTestId('note-opening')).not.toBeEmpty();
+		await expect(note).toContainText('Bilan du T1 2000');
+		await expect(note.getByTestId('note-action')).toHaveCount(0);
+		await expect(note).toContainText('Aucune activité ce trimestre.');
 		const prepare = note.getByRole('button', { name: 'Préparer ce trimestre' });
 		await expect(prepare).toBeFocused();
 		await page.keyboard.press('Enter');

@@ -110,24 +110,33 @@ describe('note de cabinet', () => {
 		const first = snapshot.view?.quarterNote;
 		expect(first?.dateLabel).toBe(snapshot.view?.dateLabel);
 		expect(first?.endedLabel).toBe('T1 2000');
-		// Premier trimestre : pas de point de départ, valeurs atteintes et sens neutre.
-		expect(first?.totals).toBe(true);
-		expect(first?.chips.every((chip) => chip.sense === 'neutral')).toBe(true);
-		expect(first?.opening.length).toBeGreaterThan(0);
+		// Premier trimestre : pas de point de départ, donc pas de variations ; bilan de l'action.
+		expect(first?.variations).toBeNull();
+		expect(first?.actions).toHaveLength(1);
+		expect(first?.actions[0]).toMatchObject({ label: 'Gain fixe', count: 1, purchase: false });
+		expect(first?.actions[0]?.chips.map((chip) => [chip.identity, chip.sense])).toEqual(
+			expect.arrayContaining([
+				['influence', 'gain'],
+				['politicalBudgetCents', 'cost']
+			])
+		);
 		game.dismissNote();
 		expect(game.snapshot().note).toBeNull();
 
+		// Deux occurrences : une seule ligne « × 2 », effets additionnés.
+		game.addStep({ kind: 'action', id: 'test.fixed' });
 		game.addStep({ kind: 'action', id: 'test.fixed' });
 		game.commitTurn();
 		snapshot = game.snapshot();
+		const doubled = snapshot.view?.quarterNote?.actions[0];
+		expect(doubled?.count).toBe(2);
+		expect(doubled?.chips.find((chip) => chip.identity === 'influence')?.value).toBe('+4');
 		const second = snapshot.view?.quarterNote;
-		expect(second?.totals).toBe(false);
-		expect(second?.chips.find((chip) => chip.identity === 'influence')).toMatchObject({
-			sense: 'gain',
-			value: '+2'
+		expect(second?.variations?.find((tile) => tile.identity === 'influence')).toMatchObject({
+			value: '+4',
+			sense: 'gain'
 		});
-		expect(second?.sections.length).toBeLessThanOrEqual(3);
-		expect(second?.sections.every((section) => section.lines.length <= 2)).toBe(true);
+		expect(second?.variations).toHaveLength(6);
 
 		const resumed = controller(storage);
 		expect(resumed.resume()).toBe(true);

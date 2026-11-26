@@ -39,6 +39,7 @@ import {
 	renderTemplate,
 	type ChoiceRecord,
 	type ResourceChange,
+	type StepRecord,
 	type EffectRange,
 	type GameState,
 	type LegalCase,
@@ -883,16 +884,33 @@ export interface OutcomeView {
 	readonly details: readonly string[];
 }
 
-/** Paragraphe court de la note de cabinet (« Sur le terrain »…). */
-export interface NoteSectionView {
-	readonly title: string;
-	readonly lines: readonly string[];
+/** Une action jouée au trimestre et ce qu'elle a réellement rapporté (P3-14). */
+export interface NoteActionView {
+	readonly key: string;
+	readonly label: string;
+	/** Thème de l'agenda (icône et couleur), `null` pour un achat ou hors catalogue. */
+	readonly category: string | null;
+	readonly purchase: boolean;
+	/** Occurrences regroupées (« × 2 »). */
+	readonly count: number;
+	/** Effets cumulés réellement appliqués, aléas compris. */
+	readonly chips: readonly ChipView[];
+}
+
+/** Variation nette d'une ressource ou d'une jauge sur le trimestre (tuile de la note). */
+export interface NoteVariationView {
+	readonly identity: string;
+	readonly label: string;
+	/** « +3 », « −120 € », « 0 ». */
+	readonly value: string;
+	readonly sense: ChipSense;
 }
 
 /**
- * Note de cabinet du dernier trimestre (P3-14) : nouvelle date, phrase
- * d'ouverture, variations nettes et trois paragraphes courts au plus. Tirée du
- * journal sauvegardé : rouvrable après une reprise, jamais rejouée.
+ * Note de cabinet du dernier trimestre (P3-14, version graphique) : nouvelle
+ * date, variations nettes en tuiles, bilan des actions jouées et retraits du
+ * plan ; le reste est au journal. Tirée du journal sauvegardé : rouvrable après
+ * une reprise, jamais rejouée.
  */
 export interface QuarterNoteView {
 	readonly key: string;
@@ -900,14 +918,11 @@ export interface QuarterNoteView {
 	readonly dateLabel: string;
 	/** Trimestre écoulé. */
 	readonly endedLabel: string;
-	readonly opening: string;
-	/** Variations nettes ; valeurs atteintes au premier trimestre (pas de point de départ). */
-	readonly chips: readonly ChipView[];
-	/** Vrai si `chips` donne des soldes (premier trimestre) plutôt que des variations. */
-	readonly totals: boolean;
-	readonly sections: readonly NoteSectionView[];
-	/** Lignes du journal non reprises, consultables au journal. */
-	readonly more: number;
+	/** Variations nettes ; `null` au premier trimestre (pas de point de départ). */
+	readonly variations: readonly NoteVariationView[] | null;
+	readonly actions: readonly NoteActionView[];
+	/** Événements et faits du trimestre laissés au journal. */
+	readonly journalLines: number;
 	/** Activités retirées du plan reconduit (P3-11). */
 	readonly adjustments: readonly string[];
 }
@@ -1826,47 +1841,93 @@ function lowerFirstUpper(text: string): string {
 	return text.charAt(0).toLocaleUpperCase('fr-FR') + text.slice(1);
 }
 
-/** Paragraphes de la note : rubrique, familles de lignes du journal, deux lignes au plus. */
-const NOTE_SECTIONS: readonly {
-	readonly title: string;
-	readonly kinds: ReadonlySet<JournalLine['kind']>;
-}[] = [
-	{ title: 'Sur le terrain', kinds: new Set(['step', 'career', 'event']) },
-	{ title: 'Au cabinet', kinds: new Set(['people', 'world', 'end']) },
-	{ title: 'Dans les comptes', kinds: new Set(['economy', 'wellbeing']) }
-];
-const NOTE_LINES_PER_SECTION = 2;
-
-const QUIET_OPENINGS = [
-	'Un trimestre sans éclat : la République a tenu sans vous.',
-	'Rien de notable : les dossiers s’empilent, la cafetière tient bon.',
-	'Trimestre calme. Les couloirs bruissent d’autres noms que le vôtre.'
-] as const;
-
-function noteOpening(
-	entry: HistoryEntry,
-	lines: readonly JournalLine[],
-	delta: (key: keyof QuarterSnapshot) => number | null,
-	state: GameState
-): string {
-	if (state.end?.turn === entry.turn) return 'Le trimestre s’achève sur la fin de votre carrière.';
-	const career = lines.find((line) => line.kind === 'career');
-	if (career) return `Le fait du trimestre : ${lowerFirst(career.text)}.`;
-	const popularity = delta('popularity');
-	if (popularity !== null && Math.abs(popularity) >= 3)
-		return popularity > 0
-			? `Votre cote grimpe : popularité ${formatGaugeDelta(popularity)}.`
-			: `Votre cote s’effrite : popularité ${formatGaugeDelta(popularity)}.`;
-	const stress = delta('stress');
-	if (stress !== null && Math.abs(stress) >= 8)
-		return stress > 0
-			? `Le rythme se paie : stress ${formatGaugeDelta(stress)}.`
-			: `Vous soufflez enfin : stress ${formatGaugeDelta(stress)}.`;
-	const influence = delta('influence');
-	if (influence !== null && influence >= 5)
-		return `Votre carnet d’adresses s’épaissit : influence ${formatGaugeDelta(influence)}.`;
-	return QUIET_OPENINGS[entry.turn % QUIET_OPENINGS.length]!;
+/**
+ * Effets cumulés des occurrences d'une action : variations chiffrées par identité
+ * (ressource, jauge, groupe, préparation), faits marquants en pastilles de texte.
+ */
+interface StepTotals {
+	readonly resources: Map<ResourceId, number>;
+	readonly gauges: Map<GaugeId, number>;
+	readonly supports: Map<string, number>;
+	preparation: number;
+	readonly marks: Map<string, ChipView>;
 }
+
+function addStep(totals: StepTotals, step: StepRecord, content: Content): void {
+	const add = <K>(map: Map<K, number>, key: K, delta: number): void => {
+		map.set(key, (map.get(key) ?? 0) + delta);
+	};
+	for (const change of step.changes) add(totals.resources, change.resource, change.delta);
+	for (const change of step.gauges) add(totals.gauges, change.gauge, change.delta);
+	for (const change of step.politics) {
+		if (change.kind === 'support') add(totals.supports, change.groupId, change.delta);
+		else if (change.kind === 'preparation') totals.preparation += change.delta;
+		else if (change.kind === 'joined') {
+			const label = `Adhésion ${content.parties[change.partyId]?.acronym ?? ''}`.trim();
+			totals.marks.set(label, textChip(label, 'gain'));
+		} else if (change.kind === 'candidacy')
+			totals.marks.set('candidacy', textChip('Candidature déposée', 'gain'));
+		else if (change.kind === 'fact')
+			totals.marks.set('fact', {
+				identity: 'justice.risk',
+				value: 'Risque',
+				sense: 'risk',
+				variable: false,
+				text: politicsText([change], content)
+			});
+	}
+}
+
+function totalChips(totals: StepTotals, content: Content): ChipView[] {
+	const chips: ChipView[] = [
+		...resourceChips(
+			[...totals.resources]
+				.filter(([, delta]) => delta !== 0)
+				.map(([resource, delta]) => ({ resource, delta }))
+		),
+		...[...totals.gauges]
+			.filter(([, delta]) => delta !== 0)
+			.map(([gauge, delta]) => gaugeChip(gauge, delta)),
+		...[...totals.supports]
+			.filter(([, delta]) => delta !== 0)
+			.map(([groupId, delta]): ChipView => ({
+				identity: groupId,
+				value: formatCompactRange(null, delta, delta),
+				sense: senseOf(delta),
+				variable: false,
+				text: `${content.supportGroups[groupId]?.label ?? groupId} ${formatGaugeDelta(delta)}`
+			}))
+	];
+	if (totals.preparation !== 0)
+		chips.push({
+			identity: 'preparation',
+			value: formatCompactRange(null, totals.preparation, totals.preparation),
+			sense: senseOf(totals.preparation),
+			variable: false,
+			text: `Préparation de campagne ${formatGaugeDelta(totals.preparation)}`
+		});
+	return [...chips, ...totals.marks.values()];
+}
+
+const NOTE_VARIATIONS: readonly {
+	readonly key: keyof QuarterSnapshot;
+	readonly identity: string;
+	readonly label: string;
+	/** 1 : une hausse est un gain ; −1 : une hausse est un coût. */
+	readonly good: 1 | -1;
+}[] = [
+	{ key: 'influence', identity: 'influence', label: 'Influence', good: 1 },
+	{
+		key: 'politicalBudgetCents',
+		identity: 'politicalBudgetCents',
+		label: 'Budget politique',
+		good: 1
+	},
+	{ key: 'personalCashCents', identity: 'personalCashCents', label: 'Argent personnel', good: 1 },
+	{ key: 'popularity', identity: 'popularity', label: 'Popularité', good: 1 },
+	{ key: 'health', identity: 'player.health', label: 'Santé', good: 1 },
+	{ key: 'stress', identity: 'player.stress', label: 'Stress', good: -1 }
+];
 
 function buildQuarterNote(
 	state: GameState,
@@ -1880,73 +1941,62 @@ function buildQuarterNote(
 	if (!entry) return null;
 	const previous = quarters.at(-2)?.snapshot ?? null;
 	const now = entry.snapshot;
-	const delta = (key: keyof QuarterSnapshot): number | null =>
-		previous ? now[key] - previous[key] : null;
-	const chips: ChipView[] = [
-		...RESOURCE_IDS.map((id): ChipView => {
-			const change = delta(id);
-			return change === null
-				? {
-						identity: id,
-						value: formatResource(id, now[id]),
-						sense: 'neutral',
-						variable: false,
-						text: `${RESOURCE_NAMES[id]} : ${formatResource(id, now[id])}`
-					}
-				: {
-						identity: id,
-						value: formatCompactRange(id, change, change),
-						sense: senseOf(change),
-						variable: false,
-						text: `${RESOURCE_NAMES[id]} ${formatDelta(id, change)}`
-					};
-		}),
-		...(
-			[
-				['popularity', 'popularity', 'Popularité', 1],
-				['health', 'player.health', 'Santé', 1],
-				['stress', 'player.stress', 'Stress', -1]
-			] as const
-		).map(([key, identity, name, good]): ChipView => {
-			const change = delta(key);
-			return change === null
-				? {
-						identity,
-						value: String(now[key]),
-						sense: 'neutral',
-						variable: false,
-						text: `${name} : ${now[key]}`
-					}
-				: {
-						identity,
-						value: formatCompactRange(null, change, change),
-						sense: senseOf(change * good),
-						variable: false,
-						text: `${name} ${formatGaugeDelta(change)}`
-					};
-		})
-	];
-	const lines = journalOfQuarter(entry, state, content).filter(
-		(line) => line.text !== 'Trimestre calme : rien à signaler.'
-	);
-	let shown = 0;
-	const sections = NOTE_SECTIONS.flatMap((section) => {
-		const picked = lines
-			.filter((line) => section.kinds.has(line.kind))
-			.slice(0, NOTE_LINES_PER_SECTION)
-			.map((line) => line.text);
-		shown += picked.length;
-		return picked.length > 0 ? [{ title: section.title, lines: picked }] : [];
+	const variations = previous
+		? NOTE_VARIATIONS.map(({ key, identity, label, good }): NoteVariationView => {
+				const change = now[key] - previous[key];
+				const resource = RESOURCE_IDS.find((id) => id === key) ?? null;
+				return {
+					identity,
+					label,
+					value: formatCompactRange(resource, change, change),
+					sense: senseOf(change * good)
+				};
+			})
+		: null;
+
+	// Une ligne par action (et cible), occurrences regroupées, effets additionnés.
+	const groups = new Map<string, { step: StepRecord; count: number; totals: StepTotals }>();
+	for (const step of entry.steps) {
+		const key = `${step.kind}:${step.id}:${step.target ?? ''}`;
+		const group = groups.get(key) ?? {
+			step,
+			count: 0,
+			totals: {
+				resources: new Map(),
+				gauges: new Map(),
+				supports: new Map(),
+				preparation: 0,
+				marks: new Map()
+			}
+		};
+		group.count += 1;
+		addStep(group.totals, step, content);
+		groups.set(key, group);
+	}
+	const actions = [...groups.entries()].map(([key, { step, count, totals }]): NoteActionView => {
+		const purchase = step.kind === 'purchase';
+		const base = purchase
+			? `Achat : ${content.upgrades[step.id]?.label ?? step.id}`
+			: (content.actions[step.id]?.label ?? step.id);
+		return {
+			key,
+			label: step.target ? `${base} : ${targetLabel(step.target, state, content)}` : base,
+			category: purchase ? null : (content.actions[step.id]?.category ?? null),
+			purchase,
+			count,
+			chips: totalChips(totals, content)
+		};
 	});
+	const journalLines = journalOfQuarter(entry, state, content).filter(
+		(line) => line.kind !== 'step' && line.text !== 'Trimestre calme : rien à signaler.'
+	).length;
 	return {
 		key: `t${entry.turn}`,
 		dateLabel: formatTurn(entry.turn + 1),
 		endedLabel: formatTurn(entry.turn),
-		opening: noteOpening(entry, lines, delta, state),
-		chips,
-		totals: previous === null,
-		sections,
-		more: Math.max(0, lines.length - shown),
+		variations,
+		actions,
+		journalLines,
 		adjustments: adjustments.find((adjustment) => adjustment.turn === state.turn)?.lines ?? []
 	};
 }
