@@ -373,7 +373,10 @@ describe('dossiers judiciaires', () => {
 
 	const quiet = (content: Content): Content => ({
 		...content,
-		balance: { ...content.balance, events: { ordinaryDrawsPerTurn: 0, ordinaryEventChance: 0 } }
+		balance: {
+			...content.balance,
+			events: { ...content.balance.events, ordinaryDrawsPerTurn: 0, ordinaryEventChance: 0 }
+		}
 	});
 	/**
 	 * Partie avec un fait (gravité 2) commis pendant le trimestre 1, puis un trimestre

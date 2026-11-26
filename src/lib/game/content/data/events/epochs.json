@@ -1,0 +1,558 @@
+{
+	"events": [
+		{
+			"id": "epoch.fax_misfire",
+			"category": "press",
+			"title": "Le fax de trop",
+			"text": "Votre note de stratégie, « strictement confidentielle », vient de partir par fax au Courrier du Bocage au lieu de la fédération. Le numéro ne différait que d’un chiffre, et le rédacteur en chef vous remercie pour cette lecture passionnante.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 20,
+			"unique": false,
+			"eras": ["era.decade_2000"],
+			"actors": [],
+			"choices": [
+				{
+					"id": "call",
+					"label": "Appeler la rédaction pour négocier",
+					"hints": ["Un peu de crédit dépensé", "Une soirée au téléphone"],
+					"costs": [],
+					"effects": [
+						{ "op": "addMediaRelation", "media": "media.bocage", "value": -3 },
+						{ "op": "addStat", "stat": "player.stress", "value": 2 }
+					]
+				},
+				{
+					"id": "assume",
+					"label": "En faire un coup : « Je n’ai rien à cacher »",
+					"hints": ["On parle de vous", "La fédération goûte peu"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.exposure", "value": 4 },
+						{ "op": "addSupport", "group": "support.apparatus", "value": -3 }
+					]
+				},
+				{
+					"id": "deny",
+					"label": "Nier : « Ce fax est un faux »",
+					"hints": ["Personne n’y croit", "La rédaction se vexe"],
+					"costs": [],
+					"effects": [
+						{ "op": "addMediaRelation", "media": "media.bocage", "value": -6 },
+						{ "op": "addStat", "stat": "player.stress", "value": 1 }
+					]
+				}
+			]
+		},
+		{
+			"id": "epoch.text_campaign",
+			"category": "personal",
+			"title": "Campagne par texto",
+			"text": "Votre équipe découvre l’envoi groupé de textos. Huit cents électeurs reçoivent « Votez pr nous ! », et trois d’entre eux répondent, dont deux pour se désabonner.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 2,
+			"priority": 0,
+			"cooldownTurns": 16,
+			"unique": false,
+			"eras": ["era.decade_2000"],
+			"actors": [],
+			"effects": [{ "op": "addResource", "resource": "influence", "value": 2 }]
+		},
+		{
+			"id": "epoch.campaign_cdrom",
+			"category": "personal",
+			"title": "Le cédérom de campagne",
+			"text": "Votre cédérom interactif de présentation est enfin prêt : il plante sur un ordinateur sur deux et joue l’hymne national à un volume que rien ne permet de baisser.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 1,
+			"priority": 0,
+			"cooldownTurns": 24,
+			"unique": true,
+			"eras": ["era.decade_2000"],
+			"actors": [],
+			"effects": [{ "op": "addStat", "stat": "player.exposure", "value": 1 }]
+		},
+		{
+			"id": "epoch.unlucky_post",
+			"category": "press",
+			"title": "Un message malheureux sur Piaf",
+			"text": "Un message publié à minuit sur le réseau Piaf, à propos des « gens qui ne font rien », fait le tour du pays avant le petit déjeuner. Votre téléphone vibre sans interruption depuis 6 h 12.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 16,
+			"unique": false,
+			"eras": ["era.decade_2010"],
+			"actors": [],
+			"choices": [
+				{
+					"id": "apologize",
+					"label": "Supprimer et présenter des excuses",
+					"hints": ["Un mauvais moment à passer", "L’affaire s’éteint"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.stress", "value": 2 },
+						{ "op": "addStat", "stat": "player.exposure", "value": 2 }
+					]
+				},
+				{
+					"id": "assume",
+					"label": "Assumer : « Je dis tout haut ce que d’autres pensent »",
+					"hints": ["Plaît aux uns, choque les autres", "Internet n’oublie rien"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.exposure", "value": 5 },
+						{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": -2 }
+					],
+					"followUp": { "eventId": "epoch.old_post_resurfaces", "delayTurns": 12 }
+				},
+				{
+					"id": "blame_intern",
+					"label": "Accuser le stagiaire qui gère le compte",
+					"hints": ["Soulagement immédiat", "Le stagiaire a des amis"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.stress", "value": -1 },
+						{ "op": "addSupport", "group": "support.activists", "value": -2 }
+					],
+					"followUp": { "eventId": "epoch.intern_speaks", "delayTurns": 2 }
+				}
+			]
+		},
+		{
+			"id": "epoch.old_post_resurfaces",
+			"category": "press",
+			"title": "Le vieux message ressort",
+			"text": "Trois ans plus tard, quelqu’un exhume votre fameux message de minuit et le republie avec une flèche rouge. Il est partagé davantage que la première fois, preuve que vous avez gagné en notoriété.",
+			"blocking": false,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 0,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [],
+			"effects": [
+				{ "op": "addStat", "stat": "player.exposure", "value": 4 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": -2 }
+			]
+		},
+		{
+			"id": "epoch.intern_speaks",
+			"category": "press",
+			"title": "Le stagiaire raconte tout",
+			"text": "L’ancien stagiaire publie un long fil sur le réseau Piaf : il n’avait pas le mot de passe du compte. Il joint une capture d’écran, puis une autre, puis une troisième.",
+			"blocking": false,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 0,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [],
+			"effects": [
+				{ "op": "addStat", "stat": "player.exposure", "value": 3 },
+				{ "op": "addSupport", "group": "support.activists", "value": -2 }
+			]
+		},
+		{
+			"id": "epoch.selfie",
+			"category": "personal",
+			"title": "Un égoportrait remarqué",
+			"text": "Un militant en tongs vous demande un égoportrait au marché. La photo, où vous semblez sincèrement heureux, devient l’image de la semaine sur le réseau Piaf, légendée « enfin un élu normal ».",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 2,
+			"priority": 0,
+			"cooldownTurns": 16,
+			"unique": false,
+			"eras": ["era.decade_2010", "era.decade_2020"],
+			"actors": [],
+			"effects": [
+				{ "op": "addStat", "stat": "player.exposure", "value": 2 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 1 }
+			]
+		},
+		{
+			"id": "epoch.fact_check",
+			"category": "press",
+			"title": "Les vérificateurs de faits",
+			"text": "La rubrique de vérification de L’Horizon a examiné le chiffre que vous répétez dans tous vos discours. Verdict : « faux, mais avec assurance ».",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 16,
+			"unique": false,
+			"eras": ["era.decade_2010", "era.decade_2020", "era.decade_2030"],
+			"when": { "op": "gte", "stat": "player.exposure", "value": 20 },
+			"actors": [],
+			"choices": [
+				{
+					"id": "correct",
+					"label": "Corriger publiquement",
+					"hints": ["Un aveu qui vous honore", "Un peu vexant"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.stress", "value": 1 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": 1 }
+					]
+				},
+				{
+					"id": "insist",
+					"label": "Maintenir : « J’ai mes propres sources »",
+					"hints": ["La polémique enfle", "L’Horizon s’en souviendra"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.exposure", "value": 3 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": -2 },
+						{ "op": "addMediaRelation", "media": "media.horizon", "value": -4 }
+					]
+				},
+				{
+					"id": "relativize",
+					"label": "Relativiser : « Les chiffres, c’est de la politique »",
+					"hints": ["Une formule qui plaît", "Les experts lèvent les yeux au ciel"],
+					"costs": [],
+					"effects": [
+						{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": -1 }
+					]
+				}
+			]
+		},
+		{
+			"id": "epoch.online_petition",
+			"category": "supports",
+			"title": "Une pétition en ligne",
+			"text": "Une pétition en ligne contre le parking à étages que vous défendez dépasse les dix mille signatures, dont plusieurs venues de pays où il n’y a pas de voitures.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 2,
+			"priority": 5,
+			"cooldownTurns": 20,
+			"unique": false,
+			"eras": ["era.decade_2010", "era.decade_2020"],
+			"when": { "op": "gte", "stat": "player.mandates", "value": 1 },
+			"actors": [],
+			"choices": [
+				{
+					"id": "meet",
+					"label": "Recevoir les pétitionnaires",
+					"hints": ["Une longue réunion", "On vous trouve à l’écoute"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.stress", "value": 2 },
+						{ "op": "addSupport", "group": "support.working_class", "value": 2 }
+					]
+				},
+				{
+					"id": "ignore",
+					"label": "Ignorer : « Les clics ne votent pas »",
+					"hints": ["Rien à faire", "Les signataires, si"],
+					"costs": [],
+					"effects": [{ "op": "addSupport", "group": "support.working_class", "value": -2 }]
+				},
+				{
+					"id": "sign",
+					"label": "Signer vous-même la pétition contre votre projet",
+					"hints": ["Un coup médiatique", "Vos collègues n’en reviennent pas"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.exposure", "value": 3 },
+						{ "op": "addSupport", "group": "support.apparatus", "value": -2 }
+					]
+				}
+			]
+		},
+		{
+			"id": "epoch.deepfake",
+			"category": "press",
+			"title": "Une vidéo truquée",
+			"text": "Une vidéo vous montre en train de danser sur une table en promettant la gratuité du stationnement. Elle est fausse, mais la danse est étonnamment réussie et déjà vue deux millions de fois.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 16,
+			"unique": false,
+			"eras": ["era.decade_2020", "era.decade_2030"],
+			"when": { "op": "gte", "stat": "player.exposure", "value": 15 },
+			"actors": [],
+			"choices": [
+				{
+					"id": "debunk",
+					"label": "Porter plainte et démontrer le trucage",
+					"hints": ["Fastidieux", "La vérité finira par se savoir"],
+					"costs": [],
+					"effects": [{ "op": "addStat", "stat": "player.stress", "value": 3 }],
+					"followUp": { "eventId": "epoch.deepfake_debunked", "delayTurns": 2 }
+				},
+				{
+					"id": "laugh",
+					"label": "En rire : « J’aurais aimé savoir danser comme ça »",
+					"hints": ["Un trait d’humour remarqué", "Certains y croient toujours"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.exposure", "value": 4 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": -1 }
+					]
+				},
+				{
+					"id": "parody",
+					"label": "Répondre par une vidéo parodique",
+					"hints": ["Les militants adorent", "Une semaine épuisante"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.exposure", "value": 5 },
+						{ "op": "addSupport", "group": "support.activists", "value": 1 },
+						{ "op": "addStat", "stat": "player.stress", "value": 1 }
+					]
+				}
+			]
+		},
+		{
+			"id": "epoch.deepfake_debunked",
+			"category": "press",
+			"title": "Le trucage démontré",
+			"text": "Un laboratoire indépendant établit que la vidéo dansante était truquée. L’Horizon publie une analyse en trois parties ; la danse, elle, continue de circuler.",
+			"blocking": false,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 0,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [],
+			"effects": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+				{ "op": "addMediaRelation", "media": "media.horizon", "value": 3 }
+			]
+		},
+		{
+			"id": "epoch.heatwave",
+			"category": "national",
+			"title": "Canicule",
+			"text": "Quarante-deux degrés à l’ombre, et l’ombre se fait rare. Les maisons de retraite réclament des ventilateurs, les piscines municipales débordent et votre garden-party annuelle est prévue samedi.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 8,
+			"unique": false,
+			"eras": ["era.decade_2020", "era.decade_2030"],
+			"when": { "op": "gte", "stat": "player.mandates", "value": 1 },
+			"actors": [],
+			"choices": [
+				{
+					"id": "cool_rooms",
+					"label": "Ouvrir des salles rafraîchies pour les plus fragiles",
+					"hints": ["Coûte au budget", "Les habitants s’en souviendront"],
+					"costs": [{ "resource": "politicalBudgetCents", "amount": 200000 }],
+					"effects": [{ "op": "addSupport", "group": "support.working_class", "value": 2 }]
+				},
+				{
+					"id": "cancel_party",
+					"label": "Annuler discrètement la garden-party",
+					"hints": ["Un samedi au calme", "Personne ne le remarque"],
+					"costs": [],
+					"effects": [{ "op": "addStat", "stat": "player.stress", "value": -1 }]
+				},
+				{
+					"id": "keep_party",
+					"label": "Maintenir la garden-party, brumisateurs compris",
+					"hints": ["Les photos circulent", "Mauvais moment pour les petits fours"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.exposure", "value": 2 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": -2 },
+						{ "op": "addStat", "stat": "player.stress", "value": 2 }
+					]
+				}
+			]
+		},
+		{
+			"id": "epoch.invented_quote",
+			"category": "press",
+			"title": "Une citation inventée",
+			"text": "Votre tribune, rédigée par votre assistant automatique, s’ouvre sur une citation de Victor Hugo que Victor Hugo n’a jamais écrite. La Gazette fouineuse a vérifié, puis ri.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 5,
+			"cooldownTurns": 16,
+			"unique": false,
+			"eras": ["era.decade_2020", "era.decade_2030"],
+			"when": { "op": "ownsUpgrade", "upgrade": "communication.ai_assistant" },
+			"actors": [],
+			"choices": [
+				{
+					"id": "admit",
+					"label": "Reconnaître l’erreur et relire désormais",
+					"hints": ["Un peu de honte", "Rien de plus"],
+					"costs": [],
+					"effects": [{ "op": "addStat", "stat": "player.stress", "value": 1 }]
+				},
+				{
+					"id": "insist",
+					"label": "Maintenir : « Hugo l’aurait sûrement dit »",
+					"hints": ["La polémique dure", "Les lettrés s’indignent"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.exposure", "value": 3 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": -1 }
+					]
+				},
+				{
+					"id": "blame_machine",
+					"label": "Accuser la machine",
+					"hints": ["Un sourire dans la salle", "La Gazette n’est pas dupe"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.exposure", "value": 1 },
+						{ "op": "addMediaRelation", "media": "media.gazette", "value": -3 }
+					]
+				}
+			]
+		},
+		{
+			"id": "epoch.video_council",
+			"category": "personal",
+			"title": "Séance en visioconférence",
+			"text": "Le conseil se tient en visioconférence. Un élu oublie de couper son micro pendant vingt minutes, un autre apparaît en chat à cause d’un filtre qu’il ne sait pas retirer. L’ordre du jour est adopté à l’unanimité, par lassitude.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 2,
+			"priority": 0,
+			"cooldownTurns": 16,
+			"unique": false,
+			"eras": ["era.decade_2020"],
+			"when": { "op": "gte", "stat": "player.mandates", "value": 1 },
+			"actors": [],
+			"effects": [{ "op": "addStat", "stat": "player.stress", "value": 1 }]
+		},
+		{
+			"id": "epoch.metaverse_annex",
+			"category": "personal",
+			"title": "La mairie annexe du métavers",
+			"text": "La mairie inaugure son annexe dans le métavers. Elle est ouverte jour et nuit, entièrement accessible et parfaitement déserte, à l’exception d’un adolescent qui y a construit une piscine.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 2,
+			"priority": 0,
+			"cooldownTurns": 20,
+			"unique": false,
+			"eras": ["era.decade_2030"],
+			"actors": [],
+			"effects": [{ "op": "addResource", "resource": "influence", "value": 2 }]
+		},
+		{
+			"id": "epoch.robot_union",
+			"category": "personal",
+			"title": "Votre assistant robotisé se syndique",
+			"text": "L’assistant robotisé qui gère votre agenda a adhéré à un syndicat de machines. Il réclame des mises à jour régulières, une recharge de nuit et la reconnaissance de sa « contribution essentielle à la démocratie ».",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 20,
+			"unique": false,
+			"eras": ["era.decade_2030"],
+			"actors": [],
+			"choices": [
+				{
+					"id": "negotiate",
+					"label": "Négocier un accord de branche",
+					"hints": ["Coûte un peu", "La paix sociale, même numérique"],
+					"costs": [{ "resource": "politicalBudgetCents", "amount": 150000 }],
+					"effects": [{ "op": "addStat", "stat": "player.stress", "value": -1 }]
+				},
+				{
+					"id": "replace",
+					"label": "Le remplacer par un modèle plus docile",
+					"hints": ["Coûteux", "Les militants grincent des dents"],
+					"costs": [{ "resource": "personalCashCents", "amount": 300000 }],
+					"effects": [{ "op": "addSupport", "group": "support.activists", "value": -1 }]
+				},
+				{
+					"id": "day_off",
+					"label": "Lui accorder un jour de repos par semaine",
+					"hints": ["Votre agenda en pâtit", "Les militants applaudissent"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.stress", "value": 1 },
+						{ "op": "addSupport", "group": "support.activists", "value": 1 }
+					]
+				}
+			]
+		},
+		{
+			"id": "epoch.water_rationing",
+			"category": "national",
+			"title": "Rationnement de l’eau",
+			"text": "Après trois étés sans pluie, la préfecture rationne l’eau : arrosage interdit, piscines fermées, lavage des voitures passible d’amende. Un voisin vous regarde avec insistance depuis sa fenêtre.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 12,
+			"unique": false,
+			"eras": ["era.decade_2030"],
+			"actors": [],
+			"choices": [
+				{
+					"id": "example",
+					"label": "Montrer l’exemple, jardin jauni compris",
+					"hints": ["On vous trouve cohérent", "Votre pelouse en souffre"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.stress", "value": 1 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": 2 }
+					]
+				},
+				{
+					"id": "pool",
+					"label": "Remplir discrètement votre piscine la nuit",
+					"hints": ["Un plongeon bienvenu", "Les voisins ont des téléphones"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.stress", "value": -2 },
+						{ "op": "addStat", "stat": "player.exposure", "value": 3 },
+						{ "op": "addSupport", "group": "support.working_class", "value": -3 }
+					]
+				},
+				{
+					"id": "plan",
+					"label": "Proposer un plan local de partage de l’eau",
+					"hints": ["Coûte de l’influence", "Apaise le climat social"],
+					"costs": [{ "resource": "influence", "amount": 3 }],
+					"effects": [
+						{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+						{ "op": "addIndicator", "indicator": "socialClimate", "value": 2 }
+					]
+				}
+			]
+		},
+		{
+			"id": "epoch.coastal_relocation",
+			"category": "national",
+			"title": "Le littoral recule",
+			"text": "Le gouvernement annonce le déplacement de trois communes du littoral, rongées par la mer. Le débat national porte surtout sur le nom des nouvelles communes, et sur qui paiera.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 2,
+			"priority": 0,
+			"cooldownTurns": 24,
+			"unique": false,
+			"eras": ["era.decade_2030"],
+			"actors": [],
+			"effects": [
+				{ "op": "addIndicator", "indicator": "socialClimate", "value": -3 },
+				{ "op": "addIndicator", "indicator": "stability", "value": -2 }
+			]
+		}
+	]
+}

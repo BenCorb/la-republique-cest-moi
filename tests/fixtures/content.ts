@@ -37,7 +37,12 @@ export const fixtureBalance = {
 	startingResources: { influence: 0, politicalBudgetCents: 10_000, personalCashCents: 100_000 },
 	wellbeing: neutralWellbeing,
 	// Aucun tirage ordinaire par défaut : les tests d'événements l'activent (`withEvents`).
-	events: { ordinaryDrawsPerTurn: 0, ordinaryEventChance: 0 },
+	events: {
+		ordinaryDrawsPerTurn: 0,
+		ordinaryEventChance: 0,
+		repeatPenaltyPercent: 0,
+		maxOccurrences: 0
+	},
 	// Monde immobile par défaut : les tests du monde l'activent (`withWorld`).
 	world: neutralWorld(),
 	// Personnages immobiles par défaut : ni retraite, ni révélation fortuite.
@@ -390,6 +395,11 @@ export function neutralWorld() {
 }
 
 export const fixtureWorld = {
+	/** Époques de test (P3-07) : 2000 puis 2010. */
+	eras: [
+		{ id: 'era.first', label: 'Première époque', description: 'Le début.', fromYear: 2000 },
+		{ id: 'era.second', label: 'Seconde époque', description: 'La suite.', fromYear: 2010 }
+	],
 	axes: [
 		{
 			id: 'economy',
@@ -1340,7 +1350,8 @@ export function withWellbeing(changes: Partial<Content['balance']['wellbeing']>)
  */
 export function withEvents(
 	eventIds: readonly string[],
-	events: EventsBalance = { ordinaryDrawsPerTurn: 1, ordinaryEventChance: 1 },
+	draws: Pick<EventsBalance, 'ordinaryDrawsPerTurn' | 'ordinaryEventChance'> &
+		Partial<EventsBalance> = { ordinaryDrawsPerTurn: 1, ordinaryEventChance: 1 },
 	base: Content = fixtureContent
 ): Content {
 	return {
@@ -1348,7 +1359,10 @@ export function withEvents(
 		eventIds: base.eventIds.filter(
 			(id) => eventIds.includes(id) || base.events[id]?.trigger === 'followUp'
 		),
-		balance: { ...base.balance, events }
+		balance: {
+			...base.balance,
+			events: { repeatPenaltyPercent: 0, maxOccurrences: 0, ...draws }
+		}
 	};
 }
 

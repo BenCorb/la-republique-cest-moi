@@ -78,7 +78,8 @@ import {
 	type UpgradeDefinition,
 	type WellbeingBalance,
 	type WorldBalance,
-	type WorldDefinition
+	type WorldDefinition,
+	type EraDefinition
 } from './types.ts';
 
 /** Identifiant stable : segments en minuscules séparés par des points (`activism.leaflets`). */
@@ -266,6 +267,7 @@ export const actionSchema: z.ZodType<ActionDefinition> = z
 				'reform'
 			])
 			.optional(),
+		fromEra: contentId.optional(),
 		category: z
 			.string()
 			.regex(/^[a-z][a-z0-9_]*$/, 'identifiant en minuscules (a-z, 0-9, _)')
@@ -337,6 +339,7 @@ export const upgradeSchema: z.ZodType<UpgradeDefinition> = z
 		requires: conditionSchema.optional(),
 		unavailableReason: frenchText.optional(),
 		ownedLabel: frenchText.optional(),
+		fromEra: contentId.optional(),
 		releaseEffects: z.array(effectSchema).optional(),
 		asset: assetSchema.optional()
 	})
@@ -398,7 +401,9 @@ export const wellbeingSchema: z.ZodType<WellbeingBalance> = z
 
 export const eventsBalanceSchema: z.ZodType<EventsBalance> = z.strictObject({
 	ordinaryDrawsPerTurn: nonNegativeInt,
-	ordinaryEventChance: probability
+	ordinaryEventChance: probability,
+	repeatPenaltyPercent: nonNegativeInt,
+	maxOccurrences: nonNegativeInt
 });
 
 /** Identifiant court : rôle d'acteur, identifiant de choix, étiquette. */
@@ -464,6 +469,8 @@ const eventBaseShape = {
 	priority: safeInt,
 	availableFromTurn: safeInt.optional(),
 	availableUntilTurn: safeInt.optional(),
+	eras: z.array(contentId).min(1).optional(),
+	maxOccurrences: positiveInt.optional(),
 	cooldownTurns: nonNegativeInt,
 	unique: z.boolean(),
 	when: conditionSchema.optional(),
@@ -579,7 +586,15 @@ const axisSchema: z.ZodType<AxisDefinition> = z.strictObject({
 	positiveLabel: frenchText
 });
 
+export const eraSchema: z.ZodType<EraDefinition> = z.strictObject({
+	id: contentId,
+	label: frenchText,
+	description: frenchText,
+	fromYear: safeInt
+});
+
 export const worldSchema: z.ZodType<WorldDefinition> = z.strictObject({
+	eras: z.array(eraSchema).min(1),
 	axes: z.array(axisSchema).length(AXIS_IDS.length),
 	parties: z.array(partySchema).min(2),
 	startingGoverningParty: contentId,

@@ -52,6 +52,7 @@ import {
 	sortedIds
 } from './characters.ts';
 import { applyPoliticalEffect, oppositionPartyId } from './world.ts';
+import { inEras } from './eras.ts';
 import { applyCareerEffect, careerEffectIssue, type CareerParts } from './career.ts';
 import { staffLeavesByEvent } from './staff.ts';
 import { applyPromiseEffect, expandPromiseEffects } from './promises.ts';
@@ -625,12 +626,25 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 			const occurrence = occurrences[id];
 			if (definition.unique && occurrence) return [];
 			if (occurrence && turn - occurrence.lastTurn < definition.cooldownTurns) return [];
+			// Répétition contrôlée (P3-07) : plafond d'occurrences par carrière.
+			const cap = definition.maxOccurrences ?? content.balance.events.maxOccurrences;
+			if (occurrence && cap > 0 && occurrence.count >= cap) return [];
 			if (pending.some((instance) => instance.eventId === id)) return [];
+			// Époques (P3-07) : un tirage ordinaire respecte l'époque ; une suite déjà programmée, non.
+			if (!inEras(definition.eras, turn, content)) return [];
 			if (!inWindow(definition, turn) || !conditionHolds(definition, context())) return [];
 			if (!actorsAvailable(definition, pool())) return [];
 			return [definition];
 		});
-		const totalWeight = candidates.reduce((total, definition) => total + definition.weight, 0);
+		// Chaque occurrence passée réduit le poids (P3-07) ; sans pénalité, le poids du catalogue.
+		const penalty = content.balance.events.repeatPenaltyPercent;
+		const weightOf = (definition: EventDefinition): number => {
+			const count = occurrences[definition.id]?.count ?? 0;
+			return penalty === 0 || count === 0
+				? definition.weight
+				: (definition.weight * 100) / (100 + penalty * count);
+		};
+		const totalWeight = candidates.reduce((total, definition) => total + weightOf(definition), 0);
 		if (totalWeight <= 0) continue;
 
 		const pick = nextFloat(rng);
@@ -638,7 +652,7 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		let threshold = pick.value * totalWeight;
 		const chosen =
 			candidates.find((definition) => {
-				threshold -= definition.weight;
+				threshold -= weightOf(definition);
 				return threshold < 0;
 			}) ?? candidates[candidates.length - 1];
 		if (!chosen) continue;

@@ -1,4 +1,30 @@
 {
+	"eras": [
+		{
+			"id": "era.decade_2000",
+			"fromYear": 2000,
+			"label": "Années 2000",
+			"description": "Presse écrite, journaux télévisés, fax et réseaux politiques traditionnels."
+		},
+		{
+			"id": "era.decade_2010",
+			"fromYear": 2010,
+			"label": "Années 2010",
+			"description": "Réseaux sociaux, militantisme en ligne et polémiques en cent quarante signes."
+		},
+		{
+			"id": "era.decade_2020",
+			"fromYear": 2020,
+			"label": "Années 2020",
+			"description": "Intelligence artificielle, vidéos truquées, canicules et communication tout numérique."
+		},
+		{
+			"id": "era.decade_2030",
+			"fromYear": 2030,
+			"label": "Années 2030",
+			"description": "Anticipation satirique : métavers municipal, assistants robotisés et rationnement de l’eau."
+		}
+	],
 	"axes": [
 		{
 			"id": "economy",

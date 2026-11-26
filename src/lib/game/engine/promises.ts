@@ -305,12 +305,14 @@ export interface PromisesResolution {
  *   2. promesses en cours arrivées à échéance : issue selon l'avancement, et ses
  *      effets ;
  *   3. rappel éventuel d'une promesse passée pendant une campagne en cours
- *      (au plus un par trimestre).
+ *      (au plus un par trimestre, et plus du tout quand l'événement de rappel
+ *      a atteint son plafond d'occurrences, P3-07).
  */
 export function resolvePromises(
 	parts: PromisesParts,
 	turn: Turn,
-	content: Content
+	content: Content,
+	occurrences: Readonly<Record<string, { readonly count: number }>> = {}
 ): PromisesResolution {
 	const rules = content.promiseRules;
 	let { player, world, rng } = parts;
@@ -395,13 +397,23 @@ export function resolvePromises(
 	const campaign = runningCampaigns(career.campaigns)
 		.filter((entry) => entry.declaredTurn < turn)
 		.sort((left, right) => ballotTurn(left) - ballotTurn(right))[0];
+	// Répétition contrôlée : un rappel ne dépasse pas le plafond de son événement (déjà programmés compris).
+	const recallAvailable = (eventId: string): boolean => {
+		const cap = content.events[eventId]?.maxOccurrences;
+		if (cap === undefined) return true;
+		const scheduledCount = scheduled.filter((entry) => entry.eventId === eventId).length;
+		return (occurrences[eventId]?.count ?? 0) + scheduledCount < cap;
+	};
 	if (campaign && rules.recallPercent > 0 && rules.maxRecalls > 0) {
 		const index = promises.findIndex(
 			(pledge) =>
 				(pledge.status === 'kept' || pledge.status === 'abandoned') &&
 				pledge.campaignId !== campaign.campaignId &&
 				pledge.recalls < rules.maxRecalls &&
-				(pledge.lastRecalledTurn === null || pledge.lastRecalledTurn < campaign.declaredTurn)
+				(pledge.lastRecalledTurn === null || pledge.lastRecalledTurn < campaign.declaredTurn) &&
+				recallAvailable(
+					pledge.status === 'kept' ? rules.recallEvents.kept : rules.recallEvents.abandoned
+				)
 		);
 		const pledge = index >= 0 ? promises[index] : undefined;
 		if (pledge) {

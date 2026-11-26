@@ -248,6 +248,7 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 			],
 			[
 				HIRE,
+				buy('communication.ai_assistant'),
 				buy('organization.donor_file'),
 				buy('organization.volunteer'),
 				buy('organization.local_office'),

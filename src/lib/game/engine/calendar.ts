@@ -11,7 +11,9 @@ export type Turn = number;
 
 export type Quarter = 1 | 2 | 3 | 4;
 
-export const START_YEAR = 2000;
+import { START_YEAR } from '../content/types.ts';
+
+export { START_YEAR };
 export const TURNS_PER_YEAR = 4;
 
 function assertTurn(turn: Turn): void {

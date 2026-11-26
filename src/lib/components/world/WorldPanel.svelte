@@ -25,6 +25,10 @@
 			<p class="mt-2 text-sm">
 				Gouvernement conduit par <span class="font-semibold">{world.governingParty}</span>.
 			</p>
+			<p class="mt-1 text-sm" data-testid="era">
+				Époque : <span class="font-semibold">{world.era.label}</span>
+				<span class="text-muted">— {world.era.description}</span>
+			</p>
 			<div class="mt-3 grid gap-4 md:grid-cols-3">
 				{#each world.indicators as indicator (indicator.id)}
 					<Gauge name={indicator.name} gauge={indicator.gauge} />

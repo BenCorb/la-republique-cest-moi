@@ -214,6 +214,7 @@
 			"priority": 20,
 			"cooldownTurns": 0,
 			"unique": false,
+			"maxOccurrences": 4,
 			"actors": [{ "role": "rival", "tags": ["rival"] }],
 			"choices": [
 				{
@@ -267,6 +268,7 @@
 			"priority": 0,
 			"cooldownTurns": 0,
 			"unique": false,
+			"maxOccurrences": 4,
 			"actors": [],
 			"effects": [
 				{ "op": "addSupport", "group": "support.working_class", "value": 1 },
