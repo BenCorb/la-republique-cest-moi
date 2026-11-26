@@ -700,6 +700,11 @@ test.describe('parcours de jeu', () => {
 				() => document.documentElement.scrollWidth - document.documentElement.clientWidth
 			);
 			expect(overflow, tab).toBeLessThanOrEqual(0);
+			// Seules les colonnes défilent : jamais la page entière (textes « sr-only » contenus).
+			const vertical = await page.evaluate(
+				() => document.documentElement.scrollHeight - document.documentElement.clientHeight
+			);
+			expect(vertical, tab).toBeLessThanOrEqual(0);
 			await expect(page.getByRole('button', { name: 'Trimestre suivant' })).toBeInViewport();
 		}
 	});
