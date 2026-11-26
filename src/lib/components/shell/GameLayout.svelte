@@ -6,7 +6,6 @@
 		Briefcase,
 		Calendar,
 		Flag,
-		ArrowRight,
 		Award,
 		Landmark,
 		LayoutDashboard,
@@ -25,6 +24,7 @@
 	import PlanNotebook from './PlanNotebook.svelte';
 	import PlanSheet from './PlanSheet.svelte';
 	import PressTicker from './PressTicker.svelte';
+	import { quarterHeadlines } from './press-rotation.ts';
 	import type { GameTab } from './tabs.ts';
 	import TurnControls from './TurnControls.svelte';
 
@@ -49,8 +49,8 @@
 		planSearch = focusSearch;
 		planOpen = true;
 	}
-	/** Un seul titre de presse : d'abord un article vous concernant, sinon le plus récent. */
-	const headline = $derived(view?.press.find((item) => item.aboutPlayer) ?? view?.press[0] ?? null);
+	/** Fil tournant de l'en-tête : titres du dernier trimestre publié (P3-13). */
+	const headlines = $derived(quarterHeadlines(view?.press ?? []));
 
 	const tabs: { id: GameTab; label: string; icon: typeof Calendar }[] = [
 		{ id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
@@ -113,29 +113,7 @@
 							</span>
 						</span>
 					</span>
-					{#if headline}
-						<button
-							type="button"
-							class="ml-auto flex max-w-[45%] min-w-0 items-center gap-2 rounded px-2 py-0.5 hover:bg-sidebar"
-							data-testid="press-item"
-							title="{headline.media} : {headline.title}"
-							onclick={() => onTab('news')}
-						>
-							<Newspaper class="size-3.5 shrink-0 text-muted" aria-hidden="true" />
-							<span
-								class="shrink-0 font-display text-xs font-bold tracking-wide uppercase {headline.critical
-									? 'text-warning'
-									: 'text-ink'}"
-							>
-								{headline.media}
-							</span>
-							<span class="flex min-w-0 flex-1 font-serif">
-								<PressTicker text={headline.title} />
-							</span>
-							<span class="sr-only">— lire les actualités</span>
-							<ArrowRight class="size-3.5 shrink-0 text-primary" aria-hidden="true" />
-						</button>
-					{/if}
+					<PressTicker items={headlines} onOpen={() => onTab('news')} />
 				</div>
 			</div>
 			<!-- Bande des indicateurs : date dans la colonne de la navigation, puis six cellules égales. -->

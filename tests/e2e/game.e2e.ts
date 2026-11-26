@@ -184,16 +184,17 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByRole('banner').getByTestId('press-item')).toContainText(
 			'Le Courrier du Bocage'
 		);
-		// Titre trop long pour sa place : il défile, sauf sous prefers-reduced-motion.
-		const ticker = page.getByRole('banner').getByTestId('press-item').locator('.ticker-text');
-		const overflows = await ticker.evaluate(
-			(element) => element.scrollWidth > (element.parentElement?.clientWidth ?? 0)
-		);
-		if (overflows) {
-			await expect(ticker).toHaveClass(/is-scrolling/);
-			await expect(ticker).not.toHaveCSS('animation-name', 'none');
+		// Fil tournant : le compteur fait passer d'un titre du trimestre au suivant.
+		const feed = page.getByRole('banner').getByTestId('press-item');
+		const next = feed.getByTestId('press-next');
+		if (await next.isVisible()) {
+			const first = await feed.getByTestId('press-title').textContent();
+			await expect(next).toHaveText(/^1\/\d+$/);
+			await next.click();
+			await expect(next).toHaveText(/^2\/\d+$/);
+			await expect(feed.getByTestId('press-title')).not.toHaveText(first ?? '');
 		}
-		await page.getByRole('banner').getByTestId('press-item').click();
+		await feed.getByRole('button', { name: /lire les actualités/ }).click();
 		await expect(page.getByRole('heading', { name: 'Actualités' })).toBeVisible();
 	});
 
@@ -754,6 +755,64 @@ test.describe('plan permanent (P3-13)', () => {
 		await expect(page.locator('#alert-bar-list')).toContainText('Élections municipales');
 		await page.keyboard.press('Escape');
 		await expect(page.locator('#alert-bar-list')).toBeHidden();
+	});
+
+	test('fait tourner les titres du trimestre dans l’en-tête', async ({ page }, testInfo) => {
+		test.setTimeout(60_000);
+		// Dernier trimestre à trois articles d'ambiance, dans trois médias différents.
+		const content = loadContentFromFiles();
+		const base = createGame({ seed: 'e2e-fil' }, content);
+		const played = transition(base, commitTurn(), content);
+		if (!played.ok) throw new Error(played.error.message);
+		const ambient = (mediaId: string, headlineId: string) => ({
+			mediaId,
+			topic: 'ambient' as const,
+			tone: 'neutral' as const,
+			headlineId,
+			subjectId: null,
+			detail: null,
+			supports: [],
+			exposure: 0
+		});
+		const history = played.state.history.map((entry) =>
+			entry.type === 'turn.resolved' && entry.turn === base.turn
+				? {
+						...entry,
+						press: {
+							relations: [],
+							articles: [
+								ambient('media.horizon', 'headline.ambient_pothole'),
+								ambient('media.gazette', 'headline.ambient_pool'),
+								ambient('media.bocage', 'headline.ambient_poll')
+							]
+						}
+					}
+				: entry
+		);
+		const state = { ...played.state, history };
+		const exported = exportSave(createEnvelope(state, content, '2026-11-26T10:00:00.000Z'));
+		const file = testInfo.outputPath(exported.fileName);
+		writeFileSync(file, exported.text);
+
+		await page.goto('./');
+		await page.getByTestId('import-input').setInputFiles(file);
+		await settleDecisions(page);
+		const feed = page.getByRole('banner').getByTestId('press-item');
+		const next = feed.getByTestId('press-next');
+		await expect(next).toHaveText('1/3');
+		const first = await feed.innerText();
+		// Rotation automatique, sans clic : environ 6 s pour un titre court, plus s’il défile.
+		await page.mouse.move(5, 600);
+		await expect(next).toHaveText('2/3', { timeout: 25_000 });
+		expect(await feed.innerText()).not.toBe(first);
+		// Survol : pause ; le compteur fait avancer à la main.
+		await feed.hover();
+		await next.click();
+		await expect(next).toHaveText('3/3');
+		await next.click();
+		await expect(next).toHaveText('1/3');
+		await page.waitForTimeout(7000);
+		await expect(next).toHaveText('1/3');
 	});
 
 	test('garde le plan à un clic sous 1 100 px', async ({ page }) => {
