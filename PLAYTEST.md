@@ -1363,3 +1363,141 @@ final ci-dessous.
 _À compléter après la session : testeur, seeds, durée chronométrée, nombre de décisions et
 d’arrêts, âge et cause de fin, irritants classés (bloquant, gênant, mineur) et décisions. Les
 chronométrages servent à recalibrer `ACTIVE_TIME_MODEL` (simulation)._
+
+## Playtest B1 — Contrôle de l’interface et des retours
+
+**Statut : en cours (26 novembre 2026).** Ce court playtest vérifie les corrections P3-11 à P3-15
+et P3-26 avant le lot de systèmes suivant. Les retours ci-dessous sont consignés au fil de la partie ;
+ils ne valent pas encore validation complète du jalon B1.
+
+### Résultats — retours en cours de session
+
+- **PT-B1-001 — Donner un résultat complet aux élections auxquelles le joueur participe
+  (26 novembre 2026, gênant, élections et lisibilité).** Le compte rendu d’une élection est moins
+  précis quand le joueur y participe que lorsqu’il n’est pas candidat. Dans le premier cas, il montre
+  surtout le score du joueur face à un adversaire principal ; dans le second, il détaille les résultats
+  de chaque parti. Cette asymétrie appauvrit les scrutins les plus importants pour la carrière et donne
+  l’impression d’un duel abstrait plutôt que d’une véritable élection.
+
+  **Objectif produit :** présenter pour toute élection un procès-verbal cohérent et crédible, où le
+  joueur est mis en évidence sans faire disparaître les autres forces en présence. Une municipale doit
+  aussi pouvoir faire apparaître des listes ou candidats sans étiquette, et pas seulement les partis
+  nationaux.
+
+  **Solution proposée :**
+
+  1. **Un modèle de résultat commun.** Conserver pour chaque scrutin la part de voix de toutes les
+     candidatures ou listes, leur étiquette éventuelle, leur rang et l’élu ou la liste gagnante. Le
+     score du joueur et celui de son adversaire principal restent disponibles pour le récit et les
+     rivalités, mais ne constituent plus l’intégralité du résultat.
+  2. **Une présentation identique pour tous les scrutins.** Afficher les candidatures triées par score,
+     avec couleur ou symbole du parti, pourcentage, rang et mention « élu », « battu » ou équivalent.
+     Mettre en avant la ligne du joueur et l’élu, puis permettre de replier le détail si le nombre de
+     candidatures devient important.
+  3. **Des candidatures adaptées au niveau du scrutin.** Aux municipales, générer des listes de partis,
+     des alliances locales et une ou plusieurs listes « sans étiquette » lorsque la taille et les traits
+     de la commune s’y prêtent. Aux régionales et aux scrutins nationaux, utiliser surtout les partis du
+     monde politique, avec une candidature indépendante seulement lorsque le contexte le justifie.
+  4. **Une résolution encore légère.** Il n’est pas nécessaire de simuler chaque électeur ni une
+     campagne complète pour tous les concurrents : répartir les voix à partir de la force des partis,
+     du territoire, du contexte et d’un aléa seedé suffit, sous réserve que le total fasse 100 % et que
+     le gagnant affiché soit celui réellement déterminé par le moteur.
+
+  **Critères de correction proposés :** le résultat détaillé est sérialisé et identique après reprise ;
+  toutes les parts totalisent 100 % après arrondi maîtrisé ; le joueur, son parti ou son absence
+  d’étiquette, son rang et l’élu sont explicites ; la note de cabinet, le journal, la presse et le bilan
+  lisent la même source ; une municipale peut comporter au moins une liste sans étiquette ; aucun
+  résultat caché avant le scrutin n’est révélé.
+
+- **PT-B1-002 — Demander l’investiture du parti avant une candidature nationale
+  (26 novembre 2026, proposition de règle, partis et carrière).** Lorsqu’il appartient à un parti, le
+  joueur peut actuellement déclarer sa candidature ; l’investiture est ensuite accordée ou refusée
+  automatiquement selon un seuil d’appui de l’appareil. Cette séquence ne fait pas sentir que les
+  investitures nationales sont une décision du parti, ni que le poids interne et la stature politique
+  du candidat comptent avant l’accès à l’étiquette.
+
+  **Orientation souhaitée :** pour une élection nationale, un joueur affilié doit d’abord demander
+  l’investiture. Il ne peut se présenter sous l’étiquette du parti, ni bénéficier de son poids électoral
+  et de ses moyens de campagne, sans son accord. Le parti peut refuser si le joueur manque d’appui dans
+  l’appareil, d’influence générale, d’implantation ou de crédibilité pour le scrutin visé.
+
+  **Parcours proposé :**
+
+  1. Remplacer l’action immédiate « Déclarer sa candidature » par « Demander l’investiture » pour les
+     législatives et sénatoriales lorsque le joueur est affilié. Un indépendant conserve l’action
+     « Se présenter sans étiquette ».
+  2. Avant la confirmation, afficher une appréciation compréhensible — « candidature soutenue »,
+     « investiture disputée » ou « peu probable » — et les facteurs observables : appui de l’appareil,
+     influence, mandats, ancrage territorial, popularité et présence d’un candidat mieux placé. Ne pas
+     révéler un seuil numérique caché ni garantir une décision incertaine.
+  3. Résoudre la demande de manière déterministe et seedée à partir de ces facteurs. Une forte position
+     interne doit rendre l’accord probable sans le rendre automatique dans tous les contextes ; un
+     refus doit être motivé dans le récit (« l’appareil préfère un sortant », « implantation jugée trop
+     faible », etc.).
+  4. Après un accord, ouvrir la campagne sous l’étiquette du parti et accorder ses moyens. Après un
+     refus, proposer explicitement de renoncer ou de maintenir une candidature dissidente / sans
+     étiquette, avec perte de l’aide du parti et conséquences possibles sur l’appareil et les relations.
+     Le parti ne bloque donc pas juridiquement toute candidature : il contrôle son investiture.
+
+  **Périmètre proposé :** appliquer d’abord cette règle aux législatives et aux sénatoriales, qui sont
+  les scrutins nationaux de la V1. Conserver provisoirement une candidature directe aux municipales et
+  aux régionales, puis décider après test si les élections de liste doivent elles aussi passer par une
+  investiture formelle.
+
+  **Critères de correction proposés :** aucune campagne nationale sous l’étiquette d’un parti ne peut
+  commencer sans accord enregistré ; une demande ne peut être résolue qu’une fois, y compris après
+  sauvegarde et reprise ; accord et refus sont atteignables par des états de carrière plausibles ; les
+  facteurs annoncés correspondent à ceux réellement utilisés ; un refus ouvre bien le choix entre
+  retrait et dissidence ; le calendrier et l’accélération s’arrêtent assez tôt pour accomplir la
+  démarche avant la clôture des candidatures.
+
+  **Décisions à fixer avant implémentation :** caractère entièrement déterministe ou partiellement
+  incertain de la décision du parti ; coût éventuel en temps de la demande ; effets exacts d’une
+  candidature dissidente ; extension ultérieure aux municipales et régionales. Cette correction
+  demandera d’aligner la « liberté de candidature » du GDD avec la distinction entre droit de se
+  présenter et droit d’utiliser l’étiquette du parti.
+
+- **PT-B1-003 — Montrer les effets de chaque événement dans la note de cabinet
+  (26 novembre 2026, gênant, feedback et suivi du trimestre).** Dans « Ce qui s’est passé », la note
+  de cabinet cite actuellement le nom d’un événement, mais pas ses conséquences. Les variations
+  globales du trimestre sont visibles plus haut, sans permettre de savoir si cet événement a fait
+  gagner de la popularité ou de l’influence, perdre de l’argent, augmenter le stress, ou modifier un
+  soutien. Le joueur voit donc qu’une scène a eu lieu, mais ne peut pas relier clairement la cause à
+  ses effets.
+
+  **Objectif produit :** chaque fait marquant de type événement doit résumer immédiatement ce qu’il a
+  réellement changé, avec le même langage visuel que l’agenda et les résultats de décision. La note
+  conserve ainsi sa fonction de récit du trimestre tout en devenant un outil fiable de suivi de la
+  partie.
+
+  **Solution proposée :**
+
+  1. Ajouter sous le titre ou à droite de chaque événement une rangée de petites pastilles d’effets :
+     icône de la ressource, signe et valeur réellement appliquée, par exemple « Popularité +3 »,
+     « Influence +2 », « Argent −500 € » ou « Stress +4 ».
+  2. Réutiliser l’identité visuelle et le composant de pastille existants (`EffectChip`) afin que la
+     couleur, l’icône, le sens gain / coût / risque et le libellé accessible restent cohérents dans
+     toute l’interface.
+  3. Construire ces pastilles depuis l’entrée de journal propre à l’événement, et non depuis la
+     variation nette de tout le trimestre. Les revenus, charges, actions ou autres événements du même
+     trimestre ne doivent pas être attribués par erreur à cette scène.
+  4. Montrer uniquement les conséquences déjà observables et effectivement résolues, y compris le
+     résultat réel d’un effet aléatoire. Les suites différées, traits cachés et conséquences encore
+     inconnues restent absents. En cas de nombreux effets, afficher les plus importants puis un détail
+     repliable afin de préserver la brièveté de la note.
+
+  **Critères de correction proposés :** tout événement cité dans une note affiche ses variations
+  observables de ressources, jauges et soutiens ; les valeurs concordent avec le résultat immédiat de
+  la décision et le journal ; gains et pertes sont compréhensibles sans dépendre uniquement de la
+  couleur ; aucun effet d’une autre source du trimestre ni aucune information cachée n’est mélangé ;
+  la note rouverte après une sauvegarde présente exactement les mêmes pastilles.
+
+  **Correction (P3-28, 26 novembre 2026) :** chaque événement de « Ce qui s’est passé » porte les
+  pastilles `EffectChip` de son propre enregistrement au journal (quatre au plus, le reste et les autres
+  conséquences sous « Détail »), construites par la même fonction que le résultat d’une décision ;
+  test de non-mélange et de reprise. À revoir en jeu.
+
+- **Suites données (26 novembre 2026).** PT-B1-001 devient P3-29 (procès-verbal commun des scrutins)
+  et PT-B1-002 devient P3-30 (investiture nationale), inscrites au §5.2 de `ROADMAP.md`. P3-30 attend
+  les décisions du créateur listées ci-dessus ; P3-29 peut précéder P3-30, dont l’affichage du
+  résultat dépend.

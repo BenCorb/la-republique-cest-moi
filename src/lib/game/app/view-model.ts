@@ -88,7 +88,8 @@ import {
 	type WorldRecord,
 	type PlanPreview,
 	type FamilyRecord,
-	type StaffRecord
+	type StaffRecord,
+	type EventRecord
 } from '../engine/index.ts';
 import {
 	GAUGE_NAMES,
@@ -933,6 +934,13 @@ export interface NoteHighlightView {
 	readonly chart: NoteChartView | null;
 	/** Bilan électoral de la carrière, joint au résultat d'une candidature. */
 	readonly record: { readonly won: number; readonly lost: number } | null;
+	/**
+	 * Effets observables propres au fait (PT-B1-003) : pastilles de l'événement
+	 * lui-même, jamais la variation nette du trimestre ; vide pour les autres faits.
+	 */
+	readonly chips: readonly ChipView[];
+	/** Autres conséquences de l'événement (mandats, partis, personnes…), repliées. */
+	readonly details: readonly string[];
 }
 
 /**
@@ -1819,6 +1827,31 @@ function buildOutcome(state: GameState, content: Content): OutcomeView | null {
 	const text = written
 		? render(variants[textHash(entry.instanceId) % variants.length]!)
 		: fallbackOutcome(entry, label);
+	const { chips, details } = effectChips(entry, state, content);
+	if (entry.deathCause) details.push('Fin de carrière.');
+	return {
+		instanceId: entry.instanceId,
+		dateLabel: formatTurn(entry.turn),
+		title: definition ? render(definition.title) : entry.eventId,
+		choice: label,
+		text,
+		written,
+		chips,
+		details
+	};
+}
+
+/**
+ * Pastilles des effets réellement appliqués par une décision ou un événement
+ * (P3-14, PT-B1-003) : ressources, jauges, soutiens, préparation et faits, puis
+ * phrases pour les autres conséquences. Lit uniquement l'entrée propre à la
+ * source : rien d'un autre poste du trimestre, rien de caché ni de différé.
+ */
+function effectChips(
+	entry: Pick<EventRecord, 'changes' | 'gauges' | 'politics' | 'people'>,
+	state: GameState,
+	content: Content
+): { chips: ChipView[]; details: string[] } {
 	const chips: ChipView[] = [
 		...resourceChips(entry.changes),
 		...entry.gauges.map((change) => gaugeChip(change.gauge, change.delta))
@@ -1853,17 +1886,7 @@ function buildOutcome(state: GameState, content: Content): OutcomeView | null {
 	}
 	const people = peopleText(entry.people, state, content);
 	if (people) details.push(lowerFirstUpper(people));
-	if (entry.deathCause) details.push('Fin de carrière.');
-	return {
-		instanceId: entry.instanceId,
-		dateLabel: formatTurn(entry.turn),
-		title: definition ? render(definition.title) : entry.eventId,
-		choice: label,
-		text,
-		written,
-		chips,
-		details
-	};
+	return { chips, details };
 }
 
 function lowerFirstUpper(text: string): string {
@@ -1936,7 +1959,9 @@ function noteHighlights(
 				title: `Candidature invalidée — ${label}`,
 				text: `Votre candidature n’a pas été retenue : ${result.reason ?? 'conditions non remplies'}.`,
 				chart: null,
-				record
+				record,
+				chips: [],
+				details: []
 			});
 			continue;
 		}
@@ -1952,7 +1977,9 @@ function noteHighlights(
 				playerPercent: result.playerPercent,
 				rival: rivalName || 'Adversaire'
 			},
-			record
+			record,
+			chips: [],
+			details: []
 		});
 	}
 	for (const result of deadlines?.ballots ?? []) {
@@ -1979,7 +2006,9 @@ function noteHighlights(
 						}))
 					}
 				: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	for (const change of deadlines?.mandates ?? []) {
@@ -1991,7 +2020,9 @@ function noteHighlights(
 			title: `Fin de mandat — ${mandateName(change.mandateId, state, content)}`,
 			text: 'Le mandat arrive à son terme ; le bureau se vide, les cartons se remplissent.',
 			chart: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	for (const step of entry.justice?.cases ?? []) {
@@ -2002,7 +2033,9 @@ function noteHighlights(
 			title: 'Justice',
 			text: caseStepMessage(step.caseId, step.kind, state, content),
 			chart: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	for (const line of worldLines(entry.world, state, content)) {
@@ -2013,7 +2046,9 @@ function noteHighlights(
 			title: 'Vie des partis',
 			text: line.text,
 			chart: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	for (const line of [
@@ -2029,7 +2064,9 @@ function noteHighlights(
 			title: 'Entourage',
 			text: line.text,
 			chart: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	if (entry.institutions && entry.institutions.politics.length > 0) {
@@ -2040,11 +2077,14 @@ function noteHighlights(
 			title: 'Institutions',
 			text: lowerFirstUpper(politicsText(entry.institutions.politics, content)) + '.',
 			chart: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	for (const event of entry.events) {
 		if (event.outcome !== 'applied') continue;
+		const { chips, details } = effectChips(event, state, content);
 		items.push({
 			key: `event:${event.instanceId}`,
 			kind: 'event',
@@ -2052,7 +2092,9 @@ function noteHighlights(
 			title: 'Événement',
 			text: `${eventTitle(event.eventId, event.actors, state, content)}.`,
 			chart: null,
-			record: null
+			record: null,
+			chips,
+			details
 		});
 	}
 	return items;
