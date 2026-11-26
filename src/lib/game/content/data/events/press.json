@@ -149,6 +149,9 @@
 				{
 					"id": "prepare",
 					"label": "Préparer le débat toute la nuit",
+					"outcome": [
+						"Nuit blanche, fiches colorées, trois cafés. Au micro de {journalist}, vous parlez du rond-point des Tilleuls comme d’un enjeu de civilisation ; {rival} cherche encore ses notes."
+					],
 					"hints": ["Prestation solide", "Nuit blanche"],
 					"costs": [],
 					"effects": [
@@ -181,6 +184,9 @@
 				{
 					"id": "improvise",
 					"label": "Improviser avec aplomb",
+					"outcome": [
+						"Vous improvisez avec aplomb face à {rival}. Le standard s’emballe, {journalist} sourit : la matinée aura au moins eu de l’animation."
+					],
 					"hints": ["Coup d’éclat ou faux pas", "Aucune préparation"],
 					"costs": [],
 					"effects": [
@@ -202,6 +208,9 @@
 				{
 					"id": "decline",
 					"label": "Laisser la place à {rival}",
+					"outcome": [
+						"Vous laissez le micro à {rival}, qui en profite pour parler longuement du rond-point et un peu de vous."
+					],
 					"hints": ["Pas de risque", "Le micro est à l’adversaire"],
 					"costs": [],
 					"effects": [

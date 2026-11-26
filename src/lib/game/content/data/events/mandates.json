@@ -386,6 +386,9 @@
 				{
 					"id": "sign",
 					"label": "Signer la pétition",
+					"outcome": [
+						"Vous signez sous le regard ému des Glycines. Quelque part, un opérateur téléphonique raye votre nom de sa liste de vœux."
+					],
 					"hints": ["Les riverains contents", "Les opérateurs moins"],
 					"costs": [],
 					"effects": [
@@ -396,6 +399,9 @@
 				{
 					"id": "explain",
 					"label": "Organiser une réunion d’explication",
+					"outcome": [
+						"Deux heures de réunion, un vidéoprojecteur capricieux et une carte des ondes que personne ne lit. À la sortie, on vous trouve « pédagogue », ce qui n’est pas tout à fait un compliment."
+					],
 					"hints": ["Une soirée entière", "Respect gagné"],
 					"costs": [],
 					"effects": [

@@ -132,7 +132,8 @@ const WORLD_VARIABLES = new Set<string>(WORLD_TEMPLATE_VARIABLES);
 function worldVariablesOf(definition: EventDefinition): WorldTemplateVariable[] {
 	const texts = [definition.title, definition.text];
 	if (definition.blocking) {
-		for (const choice of definition.choices) texts.push(choice.label, ...choice.hints);
+		for (const choice of definition.choices)
+			texts.push(choice.label, ...choice.hints, ...(choice.outcome ?? []));
 	}
 	const found = new Set<WorldTemplateVariable>();
 	for (const text of texts) {

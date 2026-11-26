@@ -126,6 +126,8 @@ Exemple indicatif :
 
 Avec un conseiller qualifié, une note signale des tendances plus fiables, éventuellement une fourchette si le moteur l’autorise. Avec un mauvais conseiller, la note peut être vague ou imparfaite, sans falsifier les coûts certains. L’interface ne révèle jamais directement les variables cachées. Après le choix, présenter ses conséquences observables et les nouvelles informations découvertes, sans révéler les suites secrètes.
 
+**Depuis P3-14 (26 novembre 2026, PT-P3-09-015) :** la fenêtre reste ouverte et le résultat remplace les choix : en-tête « Résultat » avec tampon « Décidé », titre de l’événement, choix entre guillemets, puis le récit (trois phrases au plus, deuxième personne) et les variations réellement appliquées, aléas compris, en pastilles — cinq au plus avant « Détail », qui déplie le reste et les autres conséquences (mandats, partis, personnes). Le récit vient du champ `outcome` du choix au catalogue ; à défaut, une phrase de repli sobre tirée de l’effet le plus visible. « Décision suivante » enchaîne sur la décision en attente, sinon « Continuer » ; le focus va à ce bouton. Le résultat n’est présenté qu’une fois : une reprise ne le rejoue pas (le journal le garde).
+
 ### 4.5 Organisation et entourage
 
 Distinguer effectifs génériques et personnages clés. Pour les premiers : nombre, coût, flux, disponibilité. Pour les seconds : portrait facultatif, nom, rôle, compétences et réseau connus, traits révélés, relation observable, mission, coût et disponibilité. Les traits inconnus restent explicitement inconnus ; aucune estimation cachée par simple infobulle.
@@ -144,7 +146,9 @@ Patrimoine : actifs possédés et opportunités d’achat, coût, revenu et entr
 
 La barre d’avance contient « Trimestre suivant », puis les commandes d’accélération lorsqu’elles sont implémentées. Elles indiquent le mode choisi et permettent d’interrompre la simulation. Si le temps s’arrête, expliquer pourquoi : choix narratif, échéance, alerte, plan invalide ou fin. Les trimestres simulés produisent un résumé groupé, avec détails consultables. Aucun gain hors ligne ; quitter l’onglet ne fait pas vieillir le personnage.
 
-Après un tour, un bilan court indique les variations principales et les actions effectuées. Pas de pop-up pour chaque revenu. Mettre en évidence les alertes prioritaires sans multiplier les notifications. Si aucun choix significatif n’est requis, permettre au joueur de continuer rapidement.
+Après un tour, un bilan court indique les variations principales et les actions effectuées. Pas de pop-up pour chaque revenu.
+
+**Note de cabinet (P3-14, 26 novembre 2026) :** après chaque trimestre manuel, une fenêtre centrale présente d’office la nouvelle date en feuillet de calendrier, une phrase d’ouverture sur le fait le plus marquant (fait de carrière, puis variation de popularité, de stress ou d’influence, sinon une phrase de trimestre calme), les soldes ou variations du trimestre en pastilles, puis au plus trois paragraphes de deux lignes (« Sur le terrain », « Au cabinet », « Dans les comptes ») et les retraits du plan reconduit. Les décisions déjà présentées n’y sont pas répétées. « Préparer ce trimestre » la ferme et ouvre l’agenda (« Voir la décision » si une décision attend, qui s’affiche ensuite) ; Échap la ferme aussi. Après une accélération, la même fenêtre devient la note de période (résumé groupé existant), avant la décision qui a arrêté le temps. La note se rouvre par le lien « Note du T… » sous la date de l’en-tête ; elle n’est jamais rejouée à la reprise. Seule transition : la feuille se pose (coupée sous `prefers-reduced-motion`). Mettre en évidence les alertes prioritaires sans multiplier les notifications. Si aucun choix significatif n’est requis, permettre au joueur de continuer rapidement.
 
 ## 6. Bilan de fin de carrière
 

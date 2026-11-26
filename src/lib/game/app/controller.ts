@@ -134,6 +134,13 @@ export interface ControllerSnapshot {
 	readonly pendingImport: PendingImport | null;
 	readonly notice: Notice | null;
 	readonly acceleration: AccelerationStatus | null;
+	/**
+	 * Résultat du dernier choix à présenter dans la fenêtre de décision (P3-14).
+	 * État de session : une reprise ne le rouvre pas (pas de rejeu).
+	 */
+	readonly outcomeOpen: boolean;
+	/** Note à présenter : trimestre manuel, période accélérée, ou aucune (P3-14). */
+	readonly note: 'quarter' | 'span' | null;
 }
 
 export type StartResult = 'started' | 'needs_confirmation' | 'failed';
@@ -157,6 +164,10 @@ export class GameController {
 	private accelerationToken = 0;
 	/** État au lancement de l'accélération en cours, pour le résumé groupé. */
 	private accelerationStart: GameState | null = null;
+	/** Instance dont le résultat est affiché (session seulement, P3-14). */
+	private outcomeFor: string | null = null;
+	/** Note de cabinet ouverte (session seulement, P3-14). */
+	private note: 'quarter' | 'span' | null = null;
 	private readonly listeners = new Set<Listener>();
 	private cachedSnapshot: ControllerSnapshot | null = null;
 
@@ -191,7 +202,9 @@ export class GameController {
 					}
 				: null,
 			notice: this.notice,
-			acceleration: this.acceleration
+			acceleration: this.acceleration,
+			outcomeOpen: this.outcomeFor !== null,
+			note: this.note
 		};
 		return this.cachedSnapshot;
 	}
@@ -293,6 +306,8 @@ export class GameController {
 		this.continuingUnsaved = false;
 		this.notice = null;
 		this.acceleration = null;
+		this.outcomeFor = null;
+		this.note = null;
 		this.home = this.readHome();
 		this.changed();
 	}
@@ -306,6 +321,8 @@ export class GameController {
 		this.continuingUnsaved = false;
 		this.notice = null;
 		this.acceleration = null;
+		this.outcomeFor = null;
+		this.note = null;
 		this.saveStatus = this.deps.storage ? status : { kind: 'unavailable' };
 	}
 
@@ -387,7 +404,37 @@ export class GameController {
 	commitTurn(): boolean {
 		if (this.acceleration?.running) return false;
 		this.acceleration = null;
-		return this.run(commitTurn({ steps: this.plan }), true);
+		const turn = this.state?.turn;
+		const done = this.run(commitTurn({ steps: this.plan }), true);
+		// Note de cabinet après chaque trimestre manuel, sauf fin de carrière (bilan).
+		if (done && this.state && this.state.turn !== turn && this.state.phase !== 'ended') {
+			this.outcomeFor = null;
+			this.note = 'quarter';
+			this.changed();
+		}
+		return done;
+	}
+
+	/** Ferme le résultat du choix (« Continuer » ou « Décision suivante »). */
+	dismissOutcome(): void {
+		if (this.outcomeFor === null) return;
+		this.outcomeFor = null;
+		this.changed();
+	}
+
+	/** Rouvre la note du dernier trimestre (date de l'en-tête). */
+	openQuarterNote(): void {
+		if (!this.state || this.acceleration?.running) return;
+		this.note = 'quarter';
+		this.changed();
+	}
+
+	/** Ferme la note ; la note de période referme aussi le résumé d'accélération. */
+	dismissNote(): void {
+		if (this.note === null) return;
+		if (this.note === 'span' && !this.acceleration?.running) this.acceleration = null;
+		this.note = null;
+		this.changed();
 	}
 
 	/** Libellé lisible d'une étape (notice des étapes retirées du plan). */
@@ -455,7 +502,13 @@ export class GameController {
 		if (this.acceleration?.running) return false;
 		const instanceId = this.state?.events.pending[0]?.instanceId;
 		if (!instanceId) return false;
-		return this.run(chooseEventCommand(instanceId, choiceId), true);
+		const done = this.run(chooseEventCommand(instanceId, choiceId), true);
+		// Résultat présenté dans la même fenêtre (P3-14), une seule fois.
+		if (done) {
+			this.outcomeFor = instanceId;
+			this.changed();
+		}
+		return done;
 	}
 
 	// -- Accélération -------------------------------------------------------
@@ -499,6 +552,8 @@ export class GameController {
 				? summarizeSpan(start, this.state, this.deps.content)
 				: null;
 		this.acceleration = { ...running, running: false, stopReason, message, summary };
+		// Note de période présentée d'office ; une décision qui a arrêté l'accélération suit.
+		if (summary && this.state?.phase !== 'ended') this.note = 'span';
 	}
 
 	/**
@@ -523,6 +578,8 @@ export class GameController {
 		};
 		this.acceleration = running;
 		this.notice = null;
+		this.note = null;
+		this.outcomeFor = null;
 		this.changed();
 
 		while (running.turnsAdvanced < maxTurns && this.state) {

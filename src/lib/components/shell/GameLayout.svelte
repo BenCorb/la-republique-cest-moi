@@ -129,6 +129,16 @@
 							&nbsp;·&nbsp;
 						</span><span class="mt-1 block text-xs text-muted">{view.age} ans</span>
 					</p>
+					{#if view.quarterNote && view.phase !== 'ended'}
+						<button
+							type="button"
+							class="self-start text-xs text-primary underline"
+							data-testid="reopen-note"
+							onclick={() => session.controller.openQuarterNote()}
+						>
+							Note du {view.quarterNote.endedLabel}
+						</button>
+					{/if}
 				</div>
 				<dl
 					class="grid grid-cols-6 divide-x divide-line max-[1100px]:grid-cols-3"

@@ -14,6 +14,7 @@ import {
 	type Effect,
 	PROMISE_PROGRESS_MAX,
 	type PromiseStatus,
+	type GaugeId,
 	type ResourceAmount,
 	type ResourceId
 } from '../content/types.ts';
@@ -37,6 +38,7 @@ import {
 	previewPlan,
 	renderTemplate,
 	type ChoiceRecord,
+	type ResourceChange,
 	type EffectRange,
 	type GameState,
 	type LegalCase,
@@ -861,9 +863,62 @@ export interface TerritoryView {
 	readonly region: string;
 }
 
+/**
+ * Résultat du dernier choix (P3-14) : récit, variations réellement appliquées
+ * (aléas compris) et détail. Tiré de l'entrée `event.resolved` du journal :
+ * aucune suite programmée ni information cachée n'y figure.
+ */
+export interface OutcomeView {
+	readonly instanceId: string;
+	readonly dateLabel: string;
+	readonly title: string;
+	readonly choice: string;
+	/** Récit du catalogue (`outcome`) ou texte de repli tiré des effets. */
+	readonly text: string;
+	/** Récit écrit au catalogue (sinon repli généré). */
+	readonly written: boolean;
+	/** Ressources, jauges, soutiens, préparation et faits, en pastilles. */
+	readonly chips: readonly ChipView[];
+	/** Autres conséquences constatées (mandats, partis, personnes…). */
+	readonly details: readonly string[];
+}
+
+/** Paragraphe court de la note de cabinet (« Sur le terrain »…). */
+export interface NoteSectionView {
+	readonly title: string;
+	readonly lines: readonly string[];
+}
+
+/**
+ * Note de cabinet du dernier trimestre (P3-14) : nouvelle date, phrase
+ * d'ouverture, variations nettes et trois paragraphes courts au plus. Tirée du
+ * journal sauvegardé : rouvrable après une reprise, jamais rejouée.
+ */
+export interface QuarterNoteView {
+	readonly key: string;
+	/** Trimestre qui commence (« T2 2004 »). */
+	readonly dateLabel: string;
+	/** Trimestre écoulé. */
+	readonly endedLabel: string;
+	readonly opening: string;
+	/** Variations nettes ; valeurs atteintes au premier trimestre (pas de point de départ). */
+	readonly chips: readonly ChipView[];
+	/** Vrai si `chips` donne des soldes (premier trimestre) plutôt que des variations. */
+	readonly totals: boolean;
+	readonly sections: readonly NoteSectionView[];
+	/** Lignes du journal non reprises, consultables au journal. */
+	readonly more: number;
+	/** Activités retirées du plan reconduit (P3-11). */
+	readonly adjustments: readonly string[];
+}
+
 export interface PlayerView {
 	/** Tendances des derniers trimestres (P3-08), vides en début de carrière. */
 	readonly trends: readonly TrendView[];
+	/** Résultat du dernier choix d'événement (P3-14), `null` avant le premier. */
+	readonly lastOutcome: OutcomeView | null;
+	/** Note de cabinet du dernier trimestre résolu (P3-14), `null` avant le premier. */
+	readonly quarterNote: QuarterNoteView | null;
 	readonly territory: TerritoryView;
 	readonly dateLabel: string;
 	readonly age: number;
@@ -1638,6 +1693,262 @@ function journalOfChoice(entry: ChoiceRecord, state: GameState, content: Content
 	];
 	if (entry.deathCause) lines.push({ kind: 'end', text: 'Fin de carrière.' });
 	return lines;
+}
+
+// -- Résultats et note de cabinet (P3-14) -----------------------------------
+
+/** Empreinte stable d'un texte (choix déterministe d'une variante, sans hasard de jeu). */
+function textHash(text: string): number {
+	let hash = 0x811c9dc5;
+	for (let index = 0; index < text.length; index += 1) {
+		hash ^= text.charCodeAt(index);
+		hash = Math.imul(hash, 0x01000193) >>> 0;
+	}
+	return hash;
+}
+
+function resourceChips(changes: readonly ResourceChange[]): ChipView[] {
+	return changes.map((change) => ({
+		identity: change.resource,
+		value: formatCompactRange(change.resource, change.delta, change.delta),
+		sense: senseOf(change.delta),
+		variable: false,
+		text: `${RESOURCE_NAMES[change.resource]} ${formatDelta(change.resource, change.delta)}`
+	}));
+}
+
+function gaugeChip(gauge: GaugeId, delta: number): ChipView {
+	return {
+		identity: gauge,
+		value: formatCompactRange(null, delta, delta),
+		sense:
+			gauge === 'player.exposure' ? 'neutral' : senseOf(gauge === 'player.stress' ? -delta : delta),
+		variable: false,
+		text: `${GAUGE_NAMES[gauge]} ${formatGaugeDelta(delta)}`
+	};
+}
+
+/** Phrase de repli (choix sans récit au catalogue) : sobre, tirée de l'effet le plus visible. */
+function fallbackOutcome(entry: ChoiceRecord, label: string): string {
+	const opening = `Vous tranchez : « ${label} ».`;
+	const money = entry.changes.find((change) => change.resource !== 'influence');
+	const influence = entry.changes.find((change) => change.resource === 'influence');
+	const stress = entry.gauges.find((change) => change.gauge === 'player.stress');
+	const support = entry.politics.find((change) => change.kind === 'support');
+	if (money && money.delta < 0)
+		return `${opening} La dépense est actée ; le service comptable soupire, mais signe.`;
+	if (money && money.delta > 0)
+		return `${opening} Les fonds arrivent ; personne ne demande trop d’où.`;
+	if (influence && influence.delta > 0)
+		return `${opening} Quelques portes s’entrouvrent ; on retient votre nom.`;
+	if (influence && influence.delta < 0) return `${opening} Quelques portes se referment, poliment.`;
+	if (support?.kind === 'support')
+		return support.delta > 0
+			? `${opening} L’écho est plutôt bon chez ceux qui comptent.`
+			: `${opening} Certains électeurs froncent les sourcils.`;
+	if (stress && stress.delta > 0) return `${opening} Vous le sentez passer.`;
+	if (stress && stress.delta < 0) return `${opening} Vous respirez un peu mieux.`;
+	return `${opening} L’affaire est classée, pour l’instant.`;
+}
+
+function buildOutcome(state: GameState, content: Content): OutcomeView | null {
+	const entry = state.history.findLast(
+		(candidate): candidate is ChoiceRecord => candidate.type === 'event.resolved'
+	);
+	if (!entry) return null;
+	const definition = content.events[entry.eventId];
+	const quarter = state.history.find(
+		(candidate): candidate is HistoryEntry =>
+			candidate.type === 'turn.resolved' &&
+			candidate.events.some((event) => event.instanceId === entry.instanceId)
+	);
+	const actors =
+		quarter?.events.find((event) => event.instanceId === entry.instanceId)?.actors ?? {};
+	const render = (text: string): string => renderTemplate(text, actors, content, state.characters);
+	const choice =
+		definition?.blocking === true
+			? definition.choices.find((candidate) => candidate.id === entry.choiceId)
+			: undefined;
+	const label = choice ? render(choice.label) : entry.choiceId;
+	const variants = choice?.outcome ?? [];
+	const written = variants.length > 0;
+	const text = written
+		? render(variants[textHash(entry.instanceId) % variants.length]!)
+		: fallbackOutcome(entry, label);
+	const chips: ChipView[] = [
+		...resourceChips(entry.changes),
+		...entry.gauges.map((change) => gaugeChip(change.gauge, change.delta))
+	];
+	const details: string[] = [];
+	for (const change of entry.politics) {
+		if (change.kind === 'support')
+			chips.push({
+				identity: change.groupId,
+				value: formatCompactRange(null, change.delta, change.delta),
+				sense: senseOf(change.delta),
+				variable: false,
+				text: `${content.supportGroups[change.groupId]?.label ?? change.groupId} ${formatGaugeDelta(change.delta)}`
+			});
+		else if (change.kind === 'preparation')
+			chips.push({
+				identity: 'preparation',
+				value: formatCompactRange(null, change.delta, change.delta),
+				sense: senseOf(change.delta),
+				variable: false,
+				text: `Préparation de campagne ${formatGaugeDelta(change.delta)}`
+			});
+		else if (change.kind === 'fact')
+			chips.push({
+				identity: 'justice.risk',
+				value: 'Risque',
+				sense: 'risk',
+				variable: false,
+				text: politicsText([change], content)
+			});
+		else details.push(lowerFirstUpper(politicsText([change], content)));
+	}
+	const people = peopleText(entry.people, state, content);
+	if (people) details.push(lowerFirstUpper(people));
+	if (entry.deathCause) details.push('Fin de carrière.');
+	return {
+		instanceId: entry.instanceId,
+		dateLabel: formatTurn(entry.turn),
+		title: definition ? render(definition.title) : entry.eventId,
+		choice: label,
+		text,
+		written,
+		chips,
+		details
+	};
+}
+
+function lowerFirstUpper(text: string): string {
+	return text.charAt(0).toLocaleUpperCase('fr-FR') + text.slice(1);
+}
+
+/** Paragraphes de la note : rubrique, familles de lignes du journal, deux lignes au plus. */
+const NOTE_SECTIONS: readonly {
+	readonly title: string;
+	readonly kinds: ReadonlySet<JournalLine['kind']>;
+}[] = [
+	{ title: 'Sur le terrain', kinds: new Set(['step', 'career', 'event']) },
+	{ title: 'Au cabinet', kinds: new Set(['people', 'world', 'end']) },
+	{ title: 'Dans les comptes', kinds: new Set(['economy', 'wellbeing']) }
+];
+const NOTE_LINES_PER_SECTION = 2;
+
+const QUIET_OPENINGS = [
+	'Un trimestre sans éclat : la République a tenu sans vous.',
+	'Rien de notable : les dossiers s’empilent, la cafetière tient bon.',
+	'Trimestre calme. Les couloirs bruissent d’autres noms que le vôtre.'
+] as const;
+
+function noteOpening(
+	entry: HistoryEntry,
+	lines: readonly JournalLine[],
+	delta: (key: keyof QuarterSnapshot) => number | null,
+	state: GameState
+): string {
+	if (state.end?.turn === entry.turn) return 'Le trimestre s’achève sur la fin de votre carrière.';
+	const career = lines.find((line) => line.kind === 'career');
+	if (career) return `Le fait du trimestre : ${lowerFirst(career.text)}.`;
+	const popularity = delta('popularity');
+	if (popularity !== null && Math.abs(popularity) >= 3)
+		return popularity > 0
+			? `Votre cote grimpe : popularité ${formatGaugeDelta(popularity)}.`
+			: `Votre cote s’effrite : popularité ${formatGaugeDelta(popularity)}.`;
+	const stress = delta('stress');
+	if (stress !== null && Math.abs(stress) >= 8)
+		return stress > 0
+			? `Le rythme se paie : stress ${formatGaugeDelta(stress)}.`
+			: `Vous soufflez enfin : stress ${formatGaugeDelta(stress)}.`;
+	const influence = delta('influence');
+	if (influence !== null && influence >= 5)
+		return `Votre carnet d’adresses s’épaissit : influence ${formatGaugeDelta(influence)}.`;
+	return QUIET_OPENINGS[entry.turn % QUIET_OPENINGS.length]!;
+}
+
+function buildQuarterNote(
+	state: GameState,
+	content: Content,
+	adjustments: readonly PlanAdjustment[]
+): QuarterNoteView | null {
+	const quarters = state.history.filter(
+		(entry): entry is HistoryEntry => entry.type === 'turn.resolved'
+	);
+	const entry = quarters.at(-1);
+	if (!entry) return null;
+	const previous = quarters.at(-2)?.snapshot ?? null;
+	const now = entry.snapshot;
+	const delta = (key: keyof QuarterSnapshot): number | null =>
+		previous ? now[key] - previous[key] : null;
+	const chips: ChipView[] = [
+		...RESOURCE_IDS.map((id): ChipView => {
+			const change = delta(id);
+			return change === null
+				? {
+						identity: id,
+						value: formatResource(id, now[id]),
+						sense: 'neutral',
+						variable: false,
+						text: `${RESOURCE_NAMES[id]} : ${formatResource(id, now[id])}`
+					}
+				: {
+						identity: id,
+						value: formatCompactRange(id, change, change),
+						sense: senseOf(change),
+						variable: false,
+						text: `${RESOURCE_NAMES[id]} ${formatDelta(id, change)}`
+					};
+		}),
+		...(
+			[
+				['popularity', 'popularity', 'Popularité', 1],
+				['health', 'player.health', 'Santé', 1],
+				['stress', 'player.stress', 'Stress', -1]
+			] as const
+		).map(([key, identity, name, good]): ChipView => {
+			const change = delta(key);
+			return change === null
+				? {
+						identity,
+						value: String(now[key]),
+						sense: 'neutral',
+						variable: false,
+						text: `${name} : ${now[key]}`
+					}
+				: {
+						identity,
+						value: formatCompactRange(null, change, change),
+						sense: senseOf(change * good),
+						variable: false,
+						text: `${name} ${formatGaugeDelta(change)}`
+					};
+		})
+	];
+	const lines = journalOfQuarter(entry, state, content).filter(
+		(line) => line.text !== 'Trimestre calme : rien à signaler.'
+	);
+	let shown = 0;
+	const sections = NOTE_SECTIONS.flatMap((section) => {
+		const picked = lines
+			.filter((line) => section.kinds.has(line.kind))
+			.slice(0, NOTE_LINES_PER_SECTION)
+			.map((line) => line.text);
+		shown += picked.length;
+		return picked.length > 0 ? [{ title: section.title, lines: picked }] : [];
+	});
+	return {
+		key: `t${entry.turn}`,
+		dateLabel: formatTurn(entry.turn + 1),
+		endedLabel: formatTurn(entry.turn),
+		opening: noteOpening(entry, lines, delta, state),
+		chips,
+		totals: previous === null,
+		sections,
+		more: Math.max(0, lines.length - shown),
+		adjustments: adjustments.find((adjustment) => adjustment.turn === state.turn)?.lines ?? []
+	};
 }
 
 function buildJournal(
@@ -3398,6 +3709,8 @@ export function projectView(
 
 	return {
 		trends: buildTrends(state),
+		lastOutcome: buildOutcome(state, content),
+		quarterNote: buildQuarterNote(state, content, adjustments),
 		territory: buildTerritory(state, content),
 		dateLabel: formatTurn(state.end ? state.end.turn : state.turn),
 		age: ageAt(state.player.birthTurn, state.end ? state.end.turn : state.turn),

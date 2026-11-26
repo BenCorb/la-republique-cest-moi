@@ -15,22 +15,44 @@ async function startCareer(page: Page, seed = 'e2e'): Promise<void> {
 	await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 25 ans');
 }
 
-/** Tranche les décisions éventuelles en prenant le premier choix disponible. */
+/** Boutons qui poursuivent après une note de cabinet ou le résultat d'un choix (P3-14). */
+const MOVE_ON = /^(Préparer ce trimestre|Voir la décision|Continuer|Décision suivante)/u;
+
+/** Referme la note de cabinet si elle est ouverte (P3-14). */
+async function closeNote(page: Page): Promise<void> {
+	const note = page.getByTestId('quarter-note');
+	if (await note.isVisible()) await note.getByRole('button', { name: MOVE_ON }).click();
+}
+
+/** Valide le trimestre, puis referme la note de cabinet qui le suit (P3-14). */
+async function nextQuarter(page: Page): Promise<void> {
+	await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+	await closeNote(page);
+}
+
+/**
+ * Referme notes et résultats, et tranche les décisions en prenant le premier
+ * choix disponible.
+ */
 async function settleDecisions(page: Page): Promise<void> {
 	const dialog = page.getByRole('dialog');
-	for (let index = 0; index < 5 && (await dialog.isVisible()); index += 1) {
-		await dialog.getByRole('button').and(page.locator(':enabled')).first().click();
+	for (let index = 0; index < 12 && (await dialog.isVisible()); index += 1) {
+		const moveOn = dialog.getByRole('button', { name: MOVE_ON });
+		if ((await moveOn.count()) > 0) await moveOn.first().click();
+		else await dialog.getByRole('button').and(page.locator(':enabled')).first().click();
 	}
 }
 
 /** Valide des trimestres vides jusqu'à l'apparition d'une décision (au plus `limit`). */
 async function advanceUntilDecision(page: Page, limit = 40): Promise<void> {
-	const next = page.getByRole('button', { name: 'Trimestre suivant' });
+	const decision = page.getByTestId('decision-dialog');
 	for (let index = 0; index < limit; index += 1) {
-		if (await page.getByRole('dialog').isVisible()) return;
-		await next.click();
+		await closeNote(page);
+		if (await decision.isVisible()) return;
+		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
 	}
-	await expect(page.getByRole('dialog')).toBeVisible();
+	await closeNote(page);
+	await expect(decision).toBeVisible();
 }
 
 test.describe('parcours de jeu', () => {
@@ -66,7 +88,7 @@ test.describe('parcours de jeu', () => {
 			page.getByRole('button', { name: 'Ajouter « Organiser une réunion publique » au plan' })
 		).toHaveCount(0);
 
-		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await nextQuarter(page);
 		await expect(page.getByTestId('game-date')).toHaveText('T2 2000 · 25 ans');
 		// Gain aléatoire du free-lance et effets du territoire tiré (P3-16) : valeurs
 		// attendues calculées par le même moteur et la même seed.
@@ -133,7 +155,7 @@ test.describe('parcours de jeu', () => {
 			.getByRole('button', { name: 'Prévoir la candidature : Élections municipales du T1 2001' })
 			.click();
 		await expect(municipal).toContainText('Candidature prévue ce trimestre.');
-		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await nextQuarter(page);
 		// Un événement peut survenir : il ne fait pas partie de ce parcours.
 		await expect(page.getByTestId('game-date')).toHaveText('T2 2000 · 25 ans');
 		await settleDecisions(page);
@@ -148,7 +170,7 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByTestId('offer-promise.tax_cut')).toContainText(
 			'Engagement prévu ce trimestre.'
 		);
-		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await nextQuarter(page);
 		await settleDecisions(page);
 		await page.getByRole('button', { name: 'Carrière', exact: true }).click();
 		await expect(page.getByTestId('pledge-pledge.1')).toContainText('Baisser les impôts');
@@ -178,7 +200,7 @@ test.describe('parcours de jeu', () => {
 			.getByRole('button', { name: 'Accorder une interview : Le Courrier du Bocage' })
 			.click();
 		await expect(bocage).toContainText('Accorder une interview : prévu ce trimestre.');
-		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await nextQuarter(page);
 		await settleDecisions(page);
 		// Fil de presse de l'en-tête : un article vous concernant passe en premier (P3-13).
 		await expect(page.getByRole('banner').getByTestId('press-item')).toContainText(
@@ -245,11 +267,11 @@ test.describe('parcours de jeu', () => {
 			'2 activités ce trimestre, dont 1 répétée ensuite'
 		);
 
-		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await nextQuarter(page);
 		await expect(page.getByTestId('game-date')).toHaveText('T2 2000 · 25 ans');
 		await settleDecisions(page);
 		await expect(page.getByTestId('time-used')).toHaveText('20/100');
-		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await nextQuarter(page);
 		await expect(page.getByTestId('game-date')).toHaveText('T3 2000 · 25 ans');
 		await settleDecisions(page);
 
@@ -275,7 +297,7 @@ test.describe('parcours de jeu', () => {
 		await expect(
 			page.getByRole('button', { name: 'Prévoir l’adhésion au Front du Non' })
 		).toBeDisabled();
-		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await nextQuarter(page);
 		// Un événement peut survenir : il ne fait pas partie de ce parcours.
 		await expect(page.getByTestId('game-date')).toHaveText('T2 2000 · 25 ans');
 		await settleDecisions(page);
@@ -295,7 +317,7 @@ test.describe('parcours de jeu', () => {
 			.getByRole('button', { name: 'Planifier l’achat « Recruter un militant bénévole »' })
 			.click();
 		await expect(page.getByText('Actif à partir du trimestre prochain.').first()).toBeVisible();
-		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await nextQuarter(page);
 		await page.getByRole('button', { name: 'Organisation', exact: true }).click();
 		const group = page.getByTestId('group-organization.volunteer');
 		await expect(group).toContainText('Militant bénévole');
@@ -305,7 +327,7 @@ test.describe('parcours de jeu', () => {
 		// Départ gratuit, effectif dès ce trimestre, annulable dans le plan.
 		await page.getByRole('button', { name: 'Prévoir un départ : Militant bénévole' }).click();
 		await expect(group).toContainText('1 départ prévu ce trimestre');
-		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await nextQuarter(page);
 		await page.getByRole('button', { name: 'Organisation', exact: true }).click();
 		await expect(group).toHaveCount(0);
 		await expect(page.getByText('Personne ne travaille encore pour vous.')).toBeVisible();
@@ -349,18 +371,20 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByTestId('acceleration-status')).toContainText(
 			'3 trimestres simulés : Élections législatives : candidatures ouvertes'
 		);
-		const summary = page.getByTestId('span-summary');
+		// Note de période présentée d'office (P3-14).
+		const summary = page.getByTestId('quarter-note').getByTestId('span-summary');
 		await expect(summary).toContainText('3 trimestres simulés du T1 2000 au T3 2000');
 		await summary.getByText('Détail trimestre par trimestre').click();
 		await expect(summary.getByRole('heading', { name: 'T2 2000' })).toBeVisible();
 		await expect(page.getByTestId('game-date')).toHaveText('T4 2000 · 25 ans');
+		await closeNote(page);
 
 		await page.getByRole('button', { name: 'Année suivante' }).click();
 		await expect(page.getByTestId('acceleration-status')).toContainText(
 			'4 trimestres simulés : limite demandée atteinte.'
 		);
 		await expect(page.getByTestId('game-date')).toHaveText('T4 2001 · 26 ans');
-		await page.getByRole('button', { name: 'Masquer le résumé' }).click();
+		await closeNote(page);
 		await expect(summary).toBeHidden();
 
 		await page.reload();
@@ -414,15 +438,17 @@ test.describe('parcours de jeu', () => {
 	}) => {
 		await startCareer(page, 'e2e-decision');
 		// Les échéances électorales arrêtent aussi le temps : relancer jusqu'à la décision.
-		const dialog = page.getByRole('dialog');
+		// La note de période précède la décision qui a arrêté le temps (P3-14).
+		const dialog = page.getByTestId('decision-dialog');
+		let stop = '';
 		for (let attempt = 0; attempt < 6 && !(await dialog.isVisible()); attempt += 1) {
 			await page.getByRole('button', { name: 'Jusqu’à une alerte' }).click();
-			await expect(page.getByTestId('acceleration-status')).not.toContainText('en cours');
+			await expect(page.getByTestId('quarter-note')).toBeVisible();
+			stop = (await page.getByTestId('span-stop').textContent()) ?? '';
+			await closeNote(page);
 		}
 		await expect(dialog).toBeVisible();
-		await expect(page.getByTestId('acceleration-status')).toContainText(
-			'une décision attend votre réponse'
-		);
+		expect(stop).toContain('une décision attend votre réponse');
 		const date = await page.getByTestId('game-date').textContent();
 
 		await page.reload();
@@ -436,20 +462,27 @@ test.describe('parcours de jeu', () => {
 	}) => {
 		await startCareer(page, 'e2e-decision');
 		await advanceUntilDecision(page);
-		const dialog = page.getByRole('dialog');
+		const dialog = page.getByTestId('decision-dialog');
 		const title = await dialog.getByRole('heading').textContent();
 		const date = await page.getByTestId('game-date').textContent();
 		await expect(page.getByRole('button', { name: 'Trimestre suivant' })).toBeDisabled();
 
 		await page.reload();
 		await page.getByRole('button', { name: 'Reprendre la carrière' }).click();
-		await expect(page.getByRole('dialog').getByRole('heading')).toHaveText(title ?? '');
+		await expect(page.getByTestId('decision-dialog').getByRole('heading')).toHaveText(title ?? '');
 		await expect(page.getByTestId('game-date')).toHaveText(date ?? '');
 
 		// La fenêtre de décision ne se ferme pas avec Échap ; le choix se fait au clavier.
 		await page.keyboard.press('Escape');
 		await expect(page.getByRole('dialog')).toBeVisible();
 		await page.keyboard.press('Enter');
+		// Résultat dans la même fenêtre (P3-14), focus sur « Continuer ».
+		await expect(page.getByTestId('decision-outcome')).toBeVisible();
+		await expect(
+			page.getByRole('button', { name: /^(Continuer|Décision suivante)/u })
+		).toBeFocused();
+		await page.keyboard.press('Enter');
+		await settleDecisions(page);
 		await expect(page.getByRole('dialog')).toBeHidden();
 
 		await page.getByRole('button', { name: 'Journal', exact: true }).click();
@@ -468,7 +501,7 @@ test.describe('parcours de jeu', () => {
 		await page.goto('./');
 		await page.getByTestId('import-input').setInputFiles(file);
 		await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 125 ans');
-		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await nextQuarter(page);
 
 		// Bilan (P3-08) : nécrologie adaptée à la cause (épuisement), distinctions et moments marquants.
 		await expect(
@@ -895,5 +928,63 @@ test.describe('plan permanent (P3-13)', () => {
 		await expect(
 			notebook.getByRole('button', { name: 'Retirer « Rencontrer des élus locaux »' })
 		).toBeEnabled();
+	});
+});
+
+test.describe('résultats et note de cabinet (P3-14)', () => {
+	test('présente la note après un trimestre, la rouvre, sans la rejouer à la reprise', async ({
+		page
+	}) => {
+		await startCareer(page, 'e2e-note');
+		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		const note = page.getByTestId('quarter-note');
+		await expect(note).toBeVisible();
+		await expect(note.getByRole('heading', { name: 'Note de cabinet' })).toBeVisible();
+		await expect(note).toContainText('Le T2 2000 commence.');
+		await expect(note.getByTestId('note-opening')).not.toBeEmpty();
+		const prepare = note.getByRole('button', { name: 'Préparer ce trimestre' });
+		await expect(prepare).toBeFocused();
+		await page.keyboard.press('Enter');
+		await expect(note).toBeHidden();
+		await expect(page.getByRole('button', { name: 'Agenda', exact: true })).toHaveAttribute(
+			'aria-current',
+			'page'
+		);
+
+		// Réouverture depuis la date de l'en-tête ; Échap la referme.
+		await page.getByTestId('reopen-note').click();
+		await expect(note).toBeVisible();
+		await page.keyboard.press('Escape');
+		await expect(note).toBeHidden();
+
+		// Reprise : la note n'est pas rejouée, mais reste disponible.
+		await page.reload();
+		await page.getByRole('button', { name: 'Reprendre la carrière' }).click();
+		await expect(page.getByTestId('game-date')).toHaveText('T2 2000 · 25 ans');
+		await expect(note).toBeHidden();
+		await expect(page.getByTestId('reopen-note')).toHaveText('Note du T1 2000');
+	});
+
+	test('montre le résultat d’un choix dans la même fenêtre, une seule fois', async ({ page }) => {
+		await startCareer(page, 'e2e-decision');
+		await advanceUntilDecision(page);
+		const dialog = page.getByTestId('decision-dialog');
+		const choice = dialog.locator('ul button:enabled').first();
+		const label = (await choice.locator('span').first().textContent()) ?? '';
+		await choice.click();
+
+		const outcome = dialog.getByTestId('decision-outcome');
+		await expect(outcome).toBeVisible();
+		await expect(outcome.getByRole('heading')).toHaveText(`« ${label} »`);
+		await expect(outcome.locator('#decision-text')).not.toBeEmpty();
+		await outcome.getByRole('button', { name: /^(Continuer|Décision suivante)/u }).click();
+		await settleDecisions(page);
+		await expect(dialog).toBeHidden();
+
+		await page.reload();
+		await page.getByRole('button', { name: 'Reprendre la carrière' }).click();
+		await expect(page.getByTestId('decision-dialog')).toBeHidden();
+		await page.getByRole('button', { name: 'Journal', exact: true }).click();
+		await expect(page.getByText(/^Décision — /)).toHaveCount(1);
 	});
 });
