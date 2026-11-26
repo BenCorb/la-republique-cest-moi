@@ -291,6 +291,9 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 				}
 			}
 		});
-		expect(content.eventIds.filter((id) => !seen.has(id))).toEqual([]);
+		// Événement rare (≈ 1 % des carrières simulées, rapport P3-15) : couvert par
+		// `tests/unit/repetition.test.ts`.
+		const targeted = new Set(['entourage.loyal_chief']);
+		expect(content.eventIds.filter((id) => !seen.has(id) && !targeted.has(id))).toEqual([]);
 	});
 });

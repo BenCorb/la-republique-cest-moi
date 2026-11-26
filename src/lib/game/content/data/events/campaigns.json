@@ -74,6 +74,7 @@
 			"trigger": "random",
 			"weight": 4,
 			"priority": 6,
+			"maxOccurrences": 4,
 			"cooldownTurns": 8,
 			"unique": false,
 			"when": {

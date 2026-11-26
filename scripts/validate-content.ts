@@ -11,6 +11,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { validateContent } from '../src/lib/game/content/validate.ts';
+import { MIN_HEADLINE_POOL, headlinePoolReport } from '../src/lib/game/engine/press.ts';
 
 export const DEFAULT_CONTENT_DIR = resolve(import.meta.dirname, '../src/lib/game/content/data');
 
@@ -46,6 +47,8 @@ export interface ContentReport {
 	directoryExists: boolean;
 	files: string[];
 	issues: ContentIssue[];
+	/** Avertissements non bloquants d'un contenu valide (pools de titres, P3-15). */
+	warnings?: ContentIssue[];
 }
 
 function listJsonFiles(dir: string): string[] {
@@ -121,7 +124,17 @@ export function validateGameContent(dir: string): ContentReport {
 		epitaphs: read('epitaphs.json'),
 		events
 	});
-	if (result.ok) return report;
+	if (result.ok) {
+		// Rapport non bloquant (P3-15) : pools de titres de presse trop petits.
+		const pools = headlinePoolReport(result.content);
+		return {
+			...report,
+			warnings: pools.map((pool) => ({
+				file: 'media.json',
+				message: `${pool.topic}/${pool.tone}/${pool.mediaId}${pool.detail ? `/${pool.detail}` : ''} : ${pool.size} titre(s), ${MIN_HEADLINE_POOL} visés`
+			}))
+		};
+	}
 	return {
 		...report,
 		issues: result.issues.map((issue) => ({
@@ -148,6 +161,15 @@ function main(): void {
 		console.error(`${report.issues.length} problème(s) de contenu.`);
 		process.exitCode = 1;
 		return;
+	}
+	const warnings = report.warnings ?? [];
+	if (warnings.length > 0) {
+		console.warn(
+			`⚠ ${warnings.length} pool(s) de titres de presse sous ${MIN_HEADLINE_POOL} titres (non bloquant, P3-15) ; détail : npm run content:validate -- --pools`
+		);
+		if (process.argv.includes('--pools')) {
+			for (const warning of warnings) console.warn(`  ${warning.file} : ${warning.message}`);
+		}
 	}
 	console.log(`${report.files.length} fichier(s) de contenu valide(s) dans ${shownDir}.`);
 }

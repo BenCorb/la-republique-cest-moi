@@ -17,6 +17,12 @@
  *   amplifié par l'exposition ; un article critique accroît l'exposition.
  * - Un média possédé (actif `asset.media`) n'empêche pas les autres d'écrire,
  *   et ses articles pèsent moins (crédibilité réduite).
+ * - Anti-répétition (P3-15, `WorldState.press`) : un titre n'est repris
+ *   qu'une fois épuisés tous les titres possibles de son pool (pioche sans
+ *   remise, jamais deux fois de suite le même au recyclage) ; au-delà de
+ *   `angleRepeatLimit` articles successifs sous le même angle, un sujet
+ *   secondaire n'est pas couvert ce trimestre, puis revient (la justice, les
+ *   interviews et les rachats sont toujours couverts).
  *
  * Valeurs provisoires de `media.json`.
  */
@@ -41,6 +47,7 @@ import type {
 	LegalCase,
 	MediaState,
 	OwnedUpgrade,
+	PressMemory,
 	PlayerState,
 	PressRecord,
 	PromisesRecord,
@@ -311,6 +318,100 @@ export function headlineCandidates(
 	);
 }
 
+/**
+ * Pioche sans remise (P3-15) : un titre du pool encore jamais paru depuis le
+ * dernier recyclage ; pool épuisé, ses titres redeviennent disponibles, sauf
+ * le dernier paru s'il en reste d'autres. Aucun tirage pour un seul candidat.
+ */
+export function drawHeadline(
+	pool: readonly HeadlineDefinition[],
+	memory: PressMemory,
+	rng: RngState
+): { headline: HeadlineDefinition | null; memory: PressMemory; rng: RngState } {
+	if (pool.length === 0) return { headline: null, memory, rng };
+	const ids = new Set(pool.map((headline) => headline.id));
+	const used = new Set(memory.usedHeadlines);
+	let fresh = pool.filter((headline) => !used.has(headline.id));
+	let usedHeadlines = memory.usedHeadlines;
+	if (fresh.length === 0) {
+		const last = [...memory.usedHeadlines].reverse().find((id) => ids.has(id));
+		usedHeadlines = memory.usedHeadlines.filter((id) => !ids.has(id));
+		fresh = pool.length > 1 ? pool.filter((headline) => headline.id !== last) : [...pool];
+	}
+	const choice = pickOne(fresh, rng);
+	const headline = choice.item;
+	if (!headline) return { headline: null, memory, rng: choice.rng };
+	return {
+		headline,
+		memory: { ...memory, usedHeadlines: [...usedHeadlines, headline.id] },
+		rng: choice.rng
+	};
+}
+
+/**
+ * Taille minimale visée pour un pool de titres (P3-15, décision déléguée :
+ * trois titres par combinaison sujet × tonalité × famille de média accessible).
+ */
+export const MIN_HEADLINE_POOL = 3;
+
+/** Combinaison de presse dont le pool de titres est trop petit. */
+export interface HeadlinePool {
+	readonly topic: ArticleTopic;
+	readonly tone: ArticleTone;
+	readonly mediaId: string;
+	readonly detail: string | null;
+	readonly size: number;
+}
+
+/**
+ * Pools de titres trop petits (P3-15) : pour chaque sujet, tonalité publiable,
+ * média qui le couvre et précision possible, le nombre de titres disponibles
+ * en début de partie. Rapport non bloquant, destiné à la vague de contenu.
+ */
+export function headlinePoolReport(
+	content: Content,
+	minimum: number = MIN_HEADLINE_POOL
+): HeadlinePool[] {
+	const report: HeadlinePool[] = [];
+	const topics = [...new Set(content.headlines.map((headline) => headline.topic))];
+	for (const topic of topics) {
+		const declared = [
+			...new Set(
+				content.headlines
+					.filter((headline) => headline.topic === topic)
+					.flatMap((headline) => headline.details ?? [])
+			)
+		].sort();
+		const details: (string | null)[] = declared.length > 0 ? declared : [null];
+		const tones: readonly ArticleTone[] = topic === 'ambient' ? ['neutral'] : ARTICLE_TONES;
+		for (const mediaId of content.mediaIds) {
+			const media = content.media[mediaId]!;
+			const covered = topic === 'ambient' || topic === 'interview' || media.coverage[topic] > 0;
+			if (!covered) continue;
+			for (const tone of tones) {
+				if (media.kind === 'satirical' && tone === 'favorable') continue;
+				for (const detail of details) {
+					const size = headlineCandidates(topic, tone, detail, media, 0, content).length;
+					if (size < minimum) report.push({ topic, tone, mediaId, detail, size });
+				}
+			}
+		}
+	}
+	return report;
+}
+
+/** Angle d'un article consacré au joueur (délai thématique, P3-15). */
+export function articleAngle(topic: ArticleTopic, detail: string | null): string {
+	return `${topic}:${detail ?? ''}`;
+}
+
+/** Sujets toujours couverts, quel que soit le délai thématique. */
+export const ALWAYS_COVERED_TOPICS: ReadonlySet<ArticleTopic> = new Set([
+	'justice',
+	'interview',
+	'ownership'
+]);
+
 export interface PressParts {
 	readonly player: PlayerState;
 	readonly world: WorldState;
@@ -333,12 +434,27 @@ export function resolvePress(
 	content: Content
 ): PressResolution {
 	let { player, world } = parts;
+	let memory = world.press;
 	const owned = ownedMedia(inputs.upgrades, content);
 	const listed = subjectsOf(inputs, player, world, parts.rng, content);
 	let rng = listed.rng;
 	const articles: Article[] = [];
+	const limit = content.press.angleRepeatLimit;
 	for (const subject of listed.subjects) {
 		if (articles.length >= content.press.maxArticlesPerTurn) break;
+		// Délai thématique : pas un article de plus sous un angle déjà répété `limit` fois de suite.
+		const angle = articleAngle(subject.topic, subject.detail);
+		const recent = memory.recentAngles.slice(-limit);
+		if (
+			!ALWAYS_COVERED_TOPICS.has(subject.topic) &&
+			recent.length >= limit &&
+			recent.every((entry) => entry === angle)
+		) {
+			// Le sujet passe son tour ; la pause compte comme un angle vide, si bien
+			// que le sujet revient au trimestre suivant.
+			memory = { ...memory, recentAngles: [...memory.recentAngles, ''].slice(-limit) };
+			continue;
+		}
 		let media: MediaDefinition | null;
 		if (subject.mediaId !== null) {
 			media = content.media[subject.mediaId] ?? null;
@@ -375,10 +491,14 @@ export function resolvePress(
 			inputs.turn,
 			content
 		);
-		const choice = pickOne(headlines, rng);
+		const choice = drawHeadline(headlines, memory, rng);
 		rng = choice.rng;
-		const headline = choice.item;
+		const headline = choice.headline;
 		if (!headline) throw new Error(`Aucun titre pour ${subject.topic} (${tone}).`);
+		memory = {
+			...choice.memory,
+			recentAngles: [...choice.memory.recentAngles, angle].slice(-limit)
+		};
 		const value = articleEffect(tone, media, player.exposure, isOwned, content);
 		const supports: { groupId: string; delta: number }[] = [];
 		if (value !== 0) {
@@ -424,9 +544,10 @@ export function resolvePress(
 	if (ambientMedia) {
 		const media = ambientMedia;
 		const headlines = headlineCandidates('ambient', 'neutral', null, media, inputs.turn, content);
-		const choice = pickOne(headlines, rng);
+		const choice = drawHeadline(headlines, memory, rng);
 		rng = choice.rng;
-		const headline = choice.item;
+		memory = choice.memory;
+		const headline = choice.headline;
 		if (headline) {
 			articles.push({
 				mediaId: media.id,
@@ -457,6 +578,6 @@ export function resolvePress(
 		media[mediaId] = { ...state, relation: next };
 		relations.push({ mediaId, delta: next - state.relation });
 	}
-	world = { ...world, media };
+	world = { ...world, media, press: memory };
 	return { parts: { player, world, rng }, record: { articles, relations } };
 }

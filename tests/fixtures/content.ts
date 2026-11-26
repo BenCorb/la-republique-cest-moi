@@ -1228,7 +1228,8 @@ export const fixtureMedia = {
 		lifestylePercent: 0,
 		lifestyleLevel: 2,
 		ambientPercent: 0,
-		interviewCooldownTurns: 4
+		interviewCooldownTurns: 4,
+		angleRepeatLimit: 2
 	}
 };
 

@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.29.0';
+export const RULES_VERSION = '0.31.0';
 
 export {
 	START_YEAR,
@@ -67,6 +67,7 @@ export {
 	type ReformRecord,
 	type Sentence,
 	type JournalEntry,
+	type PressMemory,
 	type ScheduledEvent,
 	type EconomyRecord,
 	type GaugeChange,
@@ -315,14 +316,20 @@ export {
 	type ReformsResolution
 } from './reforms.ts';
 export {
+	ALWAYS_COVERED_TOPICS,
+	MIN_HEADLINE_POOL,
+	articleAngle,
 	articleEffect,
 	articleTone,
+	drawHeadline,
 	followsPlayer,
 	headlineCandidates,
+	headlinePoolReport,
 	interviewIssue,
 	mediaIssue,
 	ownedMedia,
 	resolvePress,
+	type HeadlinePool,
 	type PressInputs,
 	type PressParts,
 	type PressResolution
