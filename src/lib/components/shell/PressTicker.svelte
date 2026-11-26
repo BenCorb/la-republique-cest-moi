@@ -37,7 +37,9 @@
 		mask-image: linear-gradient(90deg, transparent, #000 10px, #000 calc(100% - 10px), transparent);
 	}
 
+	/* Marges égales au fondu : aux deux arrêts, les lettres restent hors du dégradé. */
 	.ticker-text.is-scrolling {
+		padding-inline: 12px;
 		animation: ticker var(--ticker-duration) ease-in-out infinite;
 	}
 
@@ -66,6 +68,7 @@
 		}
 
 		.ticker-text.is-scrolling {
+			padding-inline: 0;
 			animation: none;
 			display: block;
 			overflow: hidden;
