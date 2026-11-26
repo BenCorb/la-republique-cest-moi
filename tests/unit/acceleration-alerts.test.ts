@@ -117,12 +117,13 @@ describe('arrêts motivés de l’accélération', () => {
 	it('retire la candidature déposée du plan, puis s’arrête au dernier trimestre de campagne et au résultat', () => {
 		const stopped = accelerate(start, { plan: EMPTY, maxTurns: 200 }, catalog).state;
 		const plan: TurnPlan = {
-			steps: [{ kind: 'action', id: 'campaign.declare', target: local.ballotId }]
+			steps: [{ kind: 'action', id: 'campaign.declare', target: local.ballotId, pinned: true }]
 		};
 		const declared = commit(stopped, plan);
+		// Même épinglée, la candidature déposée n'a plus d'objet : retirée avec son motif.
 		const carried = carryOverPlan(declared, plan, catalog);
 		expect(carried.plan.steps).toEqual([]);
-		expect(carried.dropped).toEqual(plan.steps);
+		expect(carried.removed.map((removal) => removal.step)).toEqual(plan.steps);
 
 		const toVote = accelerate(declared, { plan: EMPTY, maxTurns: 200 }, catalog);
 		expect(toVote.stopReason).toBe('alert');
@@ -195,7 +196,7 @@ describe('alertes d’entourage et de budget', () => {
 describe('résumé groupé d’une période', () => {
 	it('additionne les variations et reprend le journal de la période seulement', () => {
 		const start = commit(createGame({ seed: 'résumé' }, catalog));
-		const plan: TurnPlan = { steps: [{ kind: 'action', id: 'test.fixed' }] };
+		const plan: TurnPlan = { steps: [{ kind: 'action', id: 'test.fixed', pinned: true }] };
 		const run = accelerate(start, { plan, maxTurns: 3 }, catalog);
 		const summary = summarizeSpan(start, run.state, catalog);
 
