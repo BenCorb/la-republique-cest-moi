@@ -95,11 +95,15 @@ Une valeur courante et un flux estimé par trimestre par ressource. Séparer cla
 
 Les jauges (santé, stress, exposition, risque judiciaire, popularité) utilisent texte et repères en plus de la couleur. Si une jauge n’est pas encore implémentée, l’omettre. Un historique court des derniers trimestres est préférable aux graphiques décoratifs ; un graphique simple pourra être ajouté lorsque les données sont réellement utiles.
 
+**Depuis P3-08 :** une carte « Tendances » trace une courbe simple par ressource et par jauge (influence, budget politique, argent personnel, popularité, santé, stress) sur les douze derniers trimestres, avec la valeur actuelle et la variation en texte ; un écran « Actualités » présente le fil de presse des vingt derniers trimestres par trimestre, filtrable sur les articles vous concernant, et reste accessible sous 1 100 px où la colonne de presse est masquée. Une fois la carrière terminée, les alertes laissent place au bilan.
+
 ### 4.3 Agenda et planification
 
 Chaque action affiche un nom, une description courte, le coût en temps, les coûts financiers éventuels, les prérequis et les effets certains. Les actions indisponibles indiquent la raison. Le joueur ajoute ou retire une action du plan avant engagement ; la liste présente l’ordre d’exécution et le budget restant. Respecter les coûts et répétitions du catalogue, sans créer de règles de gameplay dans le composant.
 
 **Depuis le playtest de l’alpha (26 novembre 2026) :** les actions sont regroupées par thème (militantisme, parti, campagne, réseau, finances politiques, métier, vie personnelle…), en lignes compactes (nom, temps, coûts et effets principaux ; description et détail dépliables) avec un compteur « − n + ». Une action hors de portée (condition non remplie) est masquée et s’affiche à la demande avec son motif ; une action bloquée ce trimestre seulement (temps, argent, limite) reste visible, grisée, avec ce qui manque.
+
+**Depuis P3-08 (26 novembre 2026) :** chaque action du plan porte une épingle. Épinglée (par défaut), elle est reconduite au trimestre suivant ; désépinglée, elle est ponctuelle et retirée après le trimestre. La règle est la même pour un trimestre manuel et pour l’accélération ; un achat n’est jamais reconduit.
 
 Les erreurs sont localisées et expliquées. Le bouton de validation est désactivé si le plan est invalide ou une décision bloquante attend. Un plan vide est possible si les règles le permettent. Aucun passage du temps lors de la simple sélection. Les prévisions ne révèlent que les données autorisées et ne tirent pas de hasard. Préciser « actif à partir du trimestre prochain » pour un nouvel investissement ou recrutement.
 

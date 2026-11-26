@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Gauge from '#lib/components/common/Gauge.svelte';
 	import SpanSummary from './SpanSummary.svelte';
+	import TrendsCard from './TrendsCard.svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 
 	/**
@@ -63,6 +64,10 @@
 				les vacances aident à récupérer.
 			</p>
 		</section>
+
+		<div class="lg:col-span-2">
+			<TrendsCard trends={view.trends} />
+		</div>
 
 		<section class="card flex flex-col gap-4 lg:col-span-2" aria-labelledby="justice-title">
 			<h2 id="justice-title" class="section-title">Exposition et justice</h2>

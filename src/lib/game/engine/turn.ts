@@ -346,6 +346,8 @@ function commitTurn(
 				)
 			: null;
 
+	const finalPlayer = frontier?.player ?? settled?.player ?? wellbeing.player;
+	const finalResources = frontier?.resources ?? settled?.resources ?? production.resources;
 	const entry: HistoryEntry = {
 		type: 'turn.resolved',
 		turn: resolvedTurn,
@@ -373,7 +375,14 @@ function commitTurn(
 		promises: pledges?.record ?? null,
 		press: press?.record ?? null,
 		institutions: reforms?.record ?? null,
-		events: frontier?.records ?? []
+		events: frontier?.records ?? [],
+		snapshot: {
+			...finalResources,
+			popularity: finalPlayer.popularity,
+			health: finalPlayer.health,
+			stress: finalPlayer.stress,
+			exposure: finalPlayer.exposure
+		}
 	};
 
 	// 7. Phase suivante.
@@ -392,8 +401,8 @@ function commitTurn(
 			phase: end ? 'ended' : events.pending.length > 0 ? 'decision' : 'planning',
 			end,
 			rng: frontier?.rng ?? wealth?.rng ?? settled?.rng ?? wellbeing.rng,
-			player: frontier?.player ?? settled?.player ?? wellbeing.player,
-			resources: frontier?.resources ?? settled?.resources ?? production.resources,
+			player: finalPlayer,
+			resources: finalResources,
 			world: frontier?.world ?? settled?.world ?? production.world,
 			characters:
 				frontier?.characters ?? settled?.entourage.characters ?? production.entourage.characters,

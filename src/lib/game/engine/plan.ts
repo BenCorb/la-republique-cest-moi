@@ -163,13 +163,20 @@ function zeroRanges(): Record<ResourceId, { min: number; max: number }> {
 
 function readStep(item: unknown): PlanStep | null {
 	if (typeof item !== 'object' || item === null) return null;
-	const { kind, id, target } = item as { kind?: unknown; id?: unknown; target?: unknown };
+	const { kind, id, target, once } = item as {
+		kind?: unknown;
+		id?: unknown;
+		target?: unknown;
+		once?: unknown;
+	};
 	if ((kind !== 'action' && kind !== 'purchase') || typeof id !== 'string' || id.length === 0) {
 		return null;
 	}
-	if (target === undefined) return { kind, id };
+	if (once !== undefined && (once !== true || kind !== 'action')) return null;
+	const flag = once === true ? { once: true as const } : {};
+	if (target === undefined) return kind === 'action' ? { kind, id, ...flag } : { kind, id };
 	if (kind !== 'action' || typeof target !== 'string' || target.length === 0) return null;
-	return { kind, id, target };
+	return { kind, id, target, ...flag };
 }
 
 function targetOf(step: PlanStep): string | null {
@@ -898,8 +905,10 @@ export function carryOverPlan(
 	const kept: PlanStep[] = [];
 	const dropped: PlanStep[] = [];
 	plan.steps.forEach((step, index) => {
+		// Un achat et une étape ponctuelle (P3-08) ne sont jamais reconduits.
 		const obsolete =
 			step.kind === 'purchase' ||
+			step.once === true ||
 			preview.issues.some((issue) => issue.index === index && OBSOLETE_ISSUES.has(issue.code));
 		(obsolete ? dropped : kept).push(step);
 	});

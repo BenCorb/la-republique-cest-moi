@@ -6,6 +6,7 @@
 	import CareerEnd from '#lib/components/events/CareerEnd.svelte';
 	import DecisionDialog from '#lib/components/events/DecisionDialog.svelte';
 	import Journal from '#lib/components/journal/Journal.svelte';
+	import NewsPanel from '#lib/components/news/NewsPanel.svelte';
 	import Organisation from '#lib/components/organisation/Organisation.svelte';
 	import Wealth from '#lib/components/wealth/Wealth.svelte';
 	import WorldPanel from '#lib/components/world/WorldPanel.svelte';
@@ -107,6 +108,8 @@
 			<CareerPanel {session} />
 		{:else if tab === 'world'}
 			<WorldPanel {session} />
+		{:else if tab === 'news'}
+			<NewsPanel {session} />
 		{:else if tab === 'entourage'}
 			<EntouragePanel {session} />
 		{:else if tab === 'relations'}

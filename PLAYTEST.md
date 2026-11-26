@@ -73,18 +73,18 @@ exporter la sauvegarde pour garder une trace.
 
 ### Points à observer
 
-| Sujet        | Question                                                                                                 | Mesure CPU de référence                                       |
-| ------------ | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Rythme       | « Jusqu’à une alerte » s’arrête-t-il trop souvent pour les élections ?                                   | ≈ 25 arrêts d’élection par carrière avec un plan vide (P2-09) |
-| Durée        | Une carrière entre-t-elle dans 45–60 minutes actives ?                                                   | 174 trimestres, 34 décisions par carrière (P2-10)             |
-| Création     | Les origines et professions donnent-elles des débuts différents et lisibles ?                            | —                                                             |
-| Carrière     | Candidature, campagne, sondages et résultat sont-ils compréhensibles ? La défaite est-elle surmontable ? | —                                                             |
-| Entourage    | Recrutement, missions et conseils sont-ils utiles et lisibles ?                                          | —                                                             |
-| Famille      | La vie de famille apparaît-elle assez ?                                                                  | ≈ 0,1 enfant par carrière en simulation (P2-08)               |
-| Organisation | Le regroupement et le départ d’un militant suffisent-ils ?                                               | —                                                             |
-| Plan         | Le plan reconduit convient-il, ou faut-il épingler les tâches une par une ?                              | —                                                             |
-| Répétition   | Des événements reviennent-ils trop souvent ?                                                             | 8 occurrences au plus par carrière (P2-10)                    |
-| Satire       | Le ton des partis et des événements fonctionne-t-il ? Des textes à revoir ?                              | —                                                             |
+| Sujet        | Question                                                                                                 | Mesure CPU de référence                                                                     |
+| ------------ | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Rythme       | « Jusqu’à une alerte » s’arrête-t-il trop souvent pour les élections ?                                   | ≈ 25 arrêts d’élection par carrière avec un plan vide (P2-09)                               |
+| Durée        | Une carrière entre-t-elle dans 45–60 minutes actives ?                                                   | 174 trimestres, 34 décisions par carrière (P2-10)                                           |
+| Création     | Les origines et professions donnent-elles des débuts différents et lisibles ?                            | —                                                                                           |
+| Carrière     | Candidature, campagne, sondages et résultat sont-ils compréhensibles ? La défaite est-elle surmontable ? | —                                                                                           |
+| Entourage    | Recrutement, missions et conseils sont-ils utiles et lisibles ?                                          | —                                                                                           |
+| Famille      | La vie de famille apparaît-elle assez ?                                                                  | ≈ 0,1 enfant par carrière en simulation (P2-08)                                             |
+| Organisation | Le regroupement et le départ d’un militant suffisent-ils ?                                               | —                                                                                           |
+| Plan         | Le plan reconduit convient-il, ou faut-il épingler les tâches une par une ?                              | Décision du créateur (26 novembre 2026) : épinglage par étape, épinglées par défaut (P3-08) |
+| Répétition   | Des événements reviennent-ils trop souvent ?                                                             | 8 occurrences au plus par carrière (P2-10)                                                  |
+| Satire       | Le ton des partis et des événements fonctionne-t-il ? Des textes à revoir ?                              | —                                                                                           |
 
 ### Résultats
 

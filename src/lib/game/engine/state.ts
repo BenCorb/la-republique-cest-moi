@@ -757,6 +757,16 @@ export interface HistoryEntry {
 	readonly institutions: InstitutionsRecord | null;
 	/** Événements créés (ou suites annulées) au passage à T+1. */
 	readonly events: readonly EventRecord[];
+	/** Situation à l'issue du trimestre, pour les tendances du tableau de bord (P3-08). */
+	readonly snapshot: QuarterSnapshot;
+}
+
+/** Ressources et jauges principales à la fin d'un trimestre (P3-08). */
+export interface QuarterSnapshot extends Resources {
+	readonly popularity: number;
+	readonly health: number;
+	readonly stress: number;
+	readonly exposure: number;
 }
 
 /** Choix appliqué pour un événement bloquant, exactement une fois. */

@@ -4,6 +4,7 @@ export type GameTab =
 	| 'agenda'
 	| 'career'
 	| 'world'
+	| 'news'
 	| 'entourage'
 	| 'relations'
 	| 'organisation'
