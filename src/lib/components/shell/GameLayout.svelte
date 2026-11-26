@@ -6,8 +6,8 @@
 		Briefcase,
 		Calendar,
 		Flag,
+		ArrowRight,
 		Award,
-		Bell,
 		Landmark,
 		LayoutDashboard,
 		MapPin,
@@ -18,7 +18,7 @@
 		Wallet
 	} from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
-	import AlertList from '#lib/components/common/AlertList.svelte';
+	import AlertBar from './AlertBar.svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 	import SaveBanner from './SaveBanner.svelte';
 	import HeaderStat from './HeaderStat.svelte';
@@ -73,7 +73,7 @@
 </a>
 
 {#if view}
-	<div class="grid h-dvh grid-rows-[auto_1fr_auto]">
+	<div class="grid h-dvh grid-rows-[auto_auto_1fr_auto]">
 		<header class="border-b border-line bg-surface">
 			<div class="tricolor-rule h-1" aria-hidden="true"></div>
 			<!-- Bande d'identité : marque alignée sur la navigation, puis le personnage. -->
@@ -112,6 +112,27 @@
 							</span>
 						</span>
 					</span>
+					{#if headline}
+						<button
+							type="button"
+							class="ml-auto flex max-w-[45%] min-w-0 items-center gap-2 rounded px-2 py-0.5 hover:bg-sidebar"
+							data-testid="press-item"
+							title="{headline.media} : {headline.title}"
+							onclick={() => onTab('news')}
+						>
+							<Newspaper class="size-3.5 shrink-0 text-muted" aria-hidden="true" />
+							<span
+								class="shrink-0 font-display text-xs font-bold tracking-wide uppercase {headline.critical
+									? 'text-warning'
+									: 'text-ink'}"
+							>
+								{headline.media}
+							</span>
+							<span class="truncate font-serif">{headline.title}</span>
+							<span class="sr-only">— lire les actualités</span>
+							<ArrowRight class="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+						</button>
+					{/if}
 				</div>
 			</div>
 			<!-- Bande des indicateurs : date dans la colonne de la navigation, puis six cellules égales. -->
@@ -163,6 +184,7 @@
 				</dl>
 			</div>
 		</header>
+		<AlertBar alerts={view.alerts} />
 
 		<div class="grid min-h-0 grid-cols-[200px_1fr] min-[1100px]:grid-cols-[200px_1fr_300px]">
 			<nav aria-label="Écrans de la partie" class="border-r border-line bg-sidebar p-3">
@@ -188,65 +210,14 @@
 
 			<main id="contenu" tabindex="-1" class="min-h-0 overflow-y-auto p-5 focus:outline-none">
 				<SaveBanner {session} />
-				<section class="mb-4 min-[1100px]:hidden" aria-label="Alertes">
-					<AlertList alerts={view.alerts} />
-				</section>
 				{@render children()}
 			</main>
 
 			<aside
-				class="hidden min-h-0 flex-col gap-6 overflow-y-auto border-l border-line bg-sidebar p-4 min-[1100px]:flex"
-				aria-label="Plan, alertes et presse"
+				class="hidden min-h-0 overflow-y-auto border-l border-line bg-sidebar p-4 min-[1100px]:block"
+				aria-label="Plan du trimestre"
 			>
 				<PlanNotebook {session} onEdit={openPlan} />
-				<section aria-labelledby="alertes-title">
-					<h2 id="alertes-title" class="section-title flex items-center gap-2">
-						<Bell class="size-4" aria-hidden="true" /> Alertes
-					</h2>
-					<div class="mt-2">
-						<AlertList alerts={view.alerts} />
-					</div>
-				</section>
-				<section aria-labelledby="presse-title">
-					<h2 id="presse-title" class="section-title flex items-center gap-2">
-						<Newspaper class="size-4" aria-hidden="true" /> La presse
-					</h2>
-					{#if headline}
-						<div
-							class="mt-2 rounded-sm bg-surface px-3 py-2 text-sm shadow-sm shadow-ink/10 {headline.critical
-								? 'border-l-2 border-warning'
-								: ''}"
-							data-testid="press-item"
-						>
-							<span class="flex items-baseline justify-between gap-2 text-xs">
-								<span class="font-display font-bold tracking-wide text-ink uppercase">
-									{headline.media}
-								</span>
-								<span class="shrink-0 text-muted">{headline.dateLabel}</span>
-							</span>
-							<span class="mt-0.5 block font-serif">{headline.title}</span>
-							<span class="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
-								<span
-									class="rounded-full border px-1.5 {headline.critical
-										? 'border-warning text-warning'
-										: 'border-line text-muted'}"
-								>
-									{headline.toneLabel ?? 'Ambiance'}
-								</span>
-								{#if headline.effects}<span class="text-muted">{headline.effects}</span>{/if}
-							</span>
-						</div>
-					{:else}
-						<p class="mt-2 text-sm text-muted">Pas encore de nouvelles.</p>
-					{/if}
-					<button
-						type="button"
-						class="mt-2 text-sm text-primary underline"
-						onclick={() => onTab('news')}
-					>
-						Toutes les actualités{view.press.length > 1 ? ` (${view.press.length})` : ''}
-					</button>
-				</section>
 			</aside>
 		</div>
 

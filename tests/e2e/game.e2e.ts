@@ -180,10 +180,12 @@ test.describe('parcours de jeu', () => {
 		await expect(bocage).toContainText('Accorder une interview : prévu ce trimestre.');
 		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
 		await settleDecisions(page);
-		const press = page.getByRole('complementary', { name: 'Alertes et presse' });
-		await expect(
-			press.getByTestId('press-item').filter({ hasText: 'Le Courrier du Bocage' }).first()
-		).toBeVisible();
+		// Fil de presse de l'en-tête : un article vous concernant passe en premier (P3-13).
+		await expect(page.getByRole('banner').getByTestId('press-item')).toContainText(
+			'Le Courrier du Bocage'
+		);
+		await page.getByRole('banner').getByTestId('press-item').click();
+		await expect(page.getByRole('heading', { name: 'Actualités' })).toBeVisible();
 	});
 
 	test('présente les institutions et réserve les réformes aux parlementaires', async ({ page }) => {
@@ -728,6 +730,21 @@ test.describe('plan permanent (P3-13)', () => {
 		);
 		expect(await main.evaluate((element) => element.scrollTop)).toBe(before);
 		await expect(page.getByTestId('plan-notebook').getByTestId('notebook-step')).toHaveCount(1);
+	});
+
+	test('regroupe les alertes dans un bandeau sous l’en-tête', async ({ page }) => {
+		await startCareer(page);
+		const bar = page.getByTestId('alert-bar');
+		for (const tab of ['Tableau de bord', 'Agenda', 'Journal'])
+			await page.getByRole('button', { name: tab, exact: true }).click();
+		await expect(bar).toBeVisible();
+		const infos = bar.getByRole('button', { name: /information/ });
+		await expect(infos).toHaveAttribute('aria-expanded', 'false');
+		await infos.click();
+		await expect(infos).toHaveAttribute('aria-expanded', 'true');
+		await expect(page.locator('#alert-bar-list')).toContainText('Élections municipales');
+		await page.keyboard.press('Escape');
+		await expect(page.locator('#alert-bar-list')).toBeHidden();
 	});
 
 	test('garde le plan à un clic sous 1 100 px', async ({ page }) => {
