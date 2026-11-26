@@ -91,14 +91,17 @@ describe('plan et trimestres', () => {
 		game.addStep({ kind: 'action', id: 'test.earn' });
 		game.addStep({ kind: 'action', id: 'test.spend_cash' });
 		expect(game.snapshot().view?.plan.valid).toBe(true);
-		game.moveStep(0, 1);
-		expect(game.snapshot().view?.plan.valid).toBe(false);
+		// Avancer la dépense la rend impossible : elle est retirée, le plan reste valide.
 		game.moveStep(1, -1);
-		game.removeStep(1);
+		expect(game.snapshot().view?.plan.valid).toBe(true);
 		expect(game.snapshot().plan).toEqual([{ kind: 'action', id: 'test.earn' }]);
+		game.addStep({ kind: 'action', id: 'test.random' });
+		game.togglePin(0);
+		game.removeStep(1);
+		expect(game.snapshot().plan).toEqual([{ kind: 'action', id: 'test.earn', pinned: true }]);
 		expect(game.commitTurn()).toBe(true);
 		expect(game.snapshot().view?.dateLabel).toBe('T2 2000');
-		expect(game.snapshot().plan).toEqual([{ kind: 'action', id: 'test.earn' }]);
+		expect(game.snapshot().plan).toEqual([{ kind: 'action', id: 'test.earn', pinned: true }]);
 		expect(game.snapshot().notice).toBeNull();
 	});
 
@@ -107,23 +110,24 @@ describe('plan et trimestres', () => {
 		game.newCareer();
 		game.addStep({ kind: 'action', id: 'test.earn' });
 		game.addStep({ kind: 'purchase', id: 'test.donors' });
+		game.togglePin(0);
+		game.togglePin(1);
 		expect(game.commitTurn()).toBe(true);
-		expect(game.snapshot().plan).toEqual([{ kind: 'action', id: 'test.earn' }]);
-		expect(game.snapshot().notice).toMatchObject({ level: 'info' });
-		expect(game.snapshot().notice?.details).toEqual([expect.stringContaining('Achat')]);
+		// Un achat n'est jamais épinglé ni reconduit ; son expiration n'est pas signalée.
+		expect(game.snapshot().plan).toEqual([{ kind: 'action', id: 'test.earn', pinned: true }]);
+		expect(game.snapshot().notice).toBeNull();
 	});
 
-	it('refuse un plan invalide avec des messages lisibles, sans rien changer', () => {
+	it('refuse une étape impossible avec un message lisible, sans rien changer', () => {
 		const game = controller();
 		game.newCareer();
-		game.addStep({ kind: 'action', id: 'test.expensive' });
 		const before = game.snapshot().view;
-		expect(game.commitTurn()).toBe(false);
+		expect(game.addStep({ kind: 'action', id: 'test.expensive' })).toBe(false);
 		const snapshot = game.snapshot();
-		expect(snapshot.notice?.text).toBe('Le plan du trimestre n’est pas valide.');
+		expect(snapshot.notice?.text).toBe('« Dépense lourde » n’a pas été ajoutée au plan.');
 		expect(snapshot.notice?.details[0]).toContain('Budget politique insuffisant');
 		expect(snapshot.view?.dateLabel).toBe(before?.dateLabel);
-		expect(snapshot.plan).toHaveLength(1);
+		expect(snapshot.plan).toHaveLength(0);
 	});
 
 	it('indique pourquoi une action ne peut pas être ajoutée', () => {
@@ -183,6 +187,7 @@ describe('accélération', () => {
 		const game = controller(storage);
 		game.newCareer();
 		game.addStep({ kind: 'action', id: 'test.fixed' });
+		game.togglePin(0);
 
 		expect(await game.accelerate(4)).toBe(true);
 		const snapshot = game.snapshot();
@@ -190,7 +195,7 @@ describe('accélération', () => {
 		expect(snapshot.view?.resources.find((resource) => resource.id === 'influence')?.value).toBe(
 			'8'
 		);
-		expect(snapshot.plan).toEqual([{ kind: 'action', id: 'test.fixed' }]);
+		expect(snapshot.plan).toEqual([{ kind: 'action', id: 'test.fixed', pinned: true }]);
 		expect(snapshot.acceleration).toMatchObject({
 			running: false,
 			turnsAdvanced: 4,
@@ -248,29 +253,42 @@ describe('accélération', () => {
 		expect(saved.status === 'loaded' && saved.envelope.state.phase).toBe('decision');
 	});
 
-	it('s’arrête si le plan récurrent devient invalide', async () => {
+	it('retire les activités épinglées devenues impossibles et s’arrête sur le plan vide', async () => {
 		const game = controller();
 		game.newCareer();
 		game.addStep({ kind: 'action', id: 'test.fixed' });
 		game.addStep({ kind: 'action', id: 'test.fixed' });
+		game.togglePin(0);
+		game.togglePin(1);
 
 		await game.accelerate(40);
-		const acceleration = game.snapshot().acceleration;
-		expect(acceleration?.stopReason).toBe('invalid_plan');
-		expect(acceleration?.turnsAdvanced).toBeGreaterThan(0);
-		expect(game.snapshot().view?.plan.valid).toBe(false);
+		const snapshot = game.snapshot();
+		expect(snapshot.acceleration?.stopReason).toBe('empty_plan');
+		expect(snapshot.acceleration?.message).toMatch(/plus aucune activité/u);
+		expect(snapshot.plan).toEqual([]);
+		expect(snapshot.view?.plan.valid).toBe(true);
+		expect(snapshot.notice?.text).toBe('Plan ajusté :');
+		expect(snapshot.notice?.details).toEqual([
+			expect.stringMatching(/^Gain fixe retiré — Budget politique insuffisant/u),
+			expect.stringMatching(/^Gain fixe retiré — Budget politique insuffisant/u)
+		]);
+		const journal = snapshot.view?.journal.flatMap((quarter) => quarter.lines) ?? [];
+		expect(journal.filter((line) => line.text.startsWith('Plan ajusté :'))).toHaveLength(2);
 	});
 
 	it('n’achète qu’une fois pendant l’accélération et résume la période', async () => {
 		const game = controller();
 		game.newCareer();
 		game.addStep({ kind: 'purchase', id: 'test.donors' });
+		game.addStep({ kind: 'action', id: 'test.random' });
+		game.togglePin(1);
 
 		await game.accelerate(4);
 		const snapshot = game.snapshot();
 		expect(snapshot.acceleration).toMatchObject({ turnsAdvanced: 4, stopReason: 'limit_reached' });
-		expect(snapshot.plan).toEqual([]);
-		expect(snapshot.notice?.details).toEqual([expect.stringContaining('Achat')]);
+		expect(snapshot.plan).toEqual([{ kind: 'action', id: 'test.random', pinned: true }]);
+		// Un achat expiré n'est pas un retrait : aucune notice.
+		expect(snapshot.notice).toBeNull();
 		const summary = snapshot.acceleration?.summary;
 		expect(summary).toMatchObject({ turns: 4, period: 'du T1 2000 au T4 2000' });
 		expect(summary?.quarters).toHaveLength(4);
