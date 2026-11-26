@@ -30,6 +30,7 @@ import {
 	fixtureWealth,
 	fixturePromises,
 	fixtureMedia,
+	fixtureInstitutions,
 	fixtureCareer,
 	fixtureSupports,
 	fixtureTraits,
@@ -151,7 +152,8 @@ function political(
 		justice: fixtureJustice,
 		wealth: fixtureWealth,
 		promises: fixturePromises,
-		media: fixtureMedia
+		media: fixtureMedia,
+		institutions: fixtureInstitutions
 	});
 }
 

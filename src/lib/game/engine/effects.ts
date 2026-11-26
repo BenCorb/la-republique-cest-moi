@@ -21,6 +21,7 @@ import type { StaffEffect } from './staff.ts';
 import type { FamilyEffect } from './family.ts';
 import type { PoliticalEffect } from './world.ts';
 import type { PromiseEffect } from './promises.ts';
+import type { ReformEffect } from './reforms.ts';
 
 export type EffectRange =
 	| {
@@ -63,6 +64,8 @@ export type EffectRange =
 			readonly change: 'make' | 'advance' | 'amend' | 'abandon';
 			readonly value: number;
 	  }
+	/** Proposition de réforme institutionnelle, votée à la fin du trimestre (P3-05). */
+	| { readonly kind: 'reform' }
 	/** Média (P3-03) : relation (`media` : identifiant ou `target`) ou interview ciblée. */
 	| {
 			readonly kind: 'media';
@@ -101,7 +104,9 @@ export type ResolvedEffect =
 	/** Changement de train de vie (P3-02), appliqué au joueur. */
 	| { readonly kind: 'lifestyle'; readonly effect: LifestyleEffect; readonly rng: RngState }
 	/** Promesse du registre, appliquée par `applyPromiseEffect` (P3-04). */
-	| { readonly kind: 'promise'; readonly effect: PromiseEffect; readonly rng: RngState };
+	| { readonly kind: 'promise'; readonly effect: PromiseEffect; readonly rng: RngState }
+	/** Proposition de réforme, appliquée par `applyReformEffect` (P3-05, actions seulement). */
+	| { readonly kind: 'reform'; readonly effect: ReformEffect; readonly rng: RngState };
 
 export type LifestyleEffect = Extract<Effect, { op: 'setLifestyle' }>;
 
@@ -198,6 +203,8 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'media', change: 'relation', media: effect.media, value: effect.value };
 		case 'giveInterview':
 			return { kind: 'media', change: 'interview', media: 'target', value: 0 };
+		case 'proposeReform':
+			return { kind: 'reform' };
 		default: {
 			const unknown: never = effect;
 			throw new Error(`Effet inconnu : ${JSON.stringify(unknown)}`);
@@ -223,6 +230,8 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 		case 'addMediaRelation':
 		case 'giveInterview':
 			return { kind: 'politics', effect, rng };
+		case 'proposeReform':
+			return { kind: 'reform', effect, rng };
 		case 'addRelation':
 		case 'revealTraits':
 			return { kind: 'people', effect, rng };

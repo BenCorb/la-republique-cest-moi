@@ -86,7 +86,15 @@ const politicalChange = z.discriminatedUnion('kind', [
 		delta: int
 	}),
 	z.strictObject({ kind: z.literal('mediaRelation'), mediaId: id, delta: int }),
-	z.strictObject({ kind: z.literal('interview'), mediaId: id })
+	z.strictObject({ kind: z.literal('interview'), mediaId: id }),
+	z.strictObject({
+		kind: z.literal('reform'),
+		reformId: id,
+		parameterId: id,
+		levelId: id,
+		origin: z.enum(['player', 'government']),
+		change: z.enum(['proposed', 'adopted', 'rejected', 'enacted'])
+	})
 ]);
 
 const peopleChange = z.discriminatedUnion('kind', [
@@ -238,6 +246,13 @@ const turnEntry = z.strictObject({
 				})
 			),
 			relations: z.array(z.strictObject({ mediaId: id, delta: int }))
+		})
+		.nullable(),
+	institutions: z
+		.strictObject({
+			changes: z.array(resourceChange),
+			gauges: z.array(gaugeChange),
+			politics: z.array(politicalChange)
 		})
 		.nullable(),
 	justice: z
@@ -414,7 +429,21 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 	institutions: z.strictObject({
 		incompatibilities: z.array(z.tuple([id, id])),
 		maxMandates: int,
-		prerequisites: z.record(id, z.array(id))
+		prerequisites: z.record(id, z.array(id)),
+		parameters: z.record(id, id),
+		reforms: z.array(
+			z.strictObject({
+				reformId: id,
+				parameterId: id,
+				levelId: id,
+				fromLevelId: id,
+				origin: z.enum(['player', 'government']),
+				proposedTurn: int,
+				status: z.enum(['proposed', 'rejected', 'scheduled', 'enacted']),
+				adoptionPercent: int.nullable(),
+				activationTurn: int.nullable()
+			})
+		)
 	}),
 	facts: z.array(
 		z.strictObject({

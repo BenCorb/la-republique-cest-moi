@@ -77,6 +77,7 @@ describe('scénario : passage du temps', () => {
 				wealth: { valueChange: 0, failed: [] },
 				promises: { changes: [], gauges: [], politics: [] },
 				press: { articles: [], relations: [] },
+				institutions: { changes: [], gauges: [], politics: [] },
 				events: []
 			}
 		]);

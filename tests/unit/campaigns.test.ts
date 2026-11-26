@@ -30,6 +30,7 @@ import {
 	fixtureWealth,
 	fixturePromises,
 	fixtureMedia,
+	fixtureInstitutions,
 	fixtureSupports,
 	fixtureTraits,
 	fixtureUpgrades,
@@ -97,7 +98,8 @@ function load(balance: unknown = fixtureBalance): Content {
 		justice: fixtureJustice,
 		wealth: fixtureWealth,
 		promises: fixturePromises,
-		media: fixtureMedia
+		media: fixtureMedia,
+		institutions: fixtureInstitutions
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;
@@ -415,7 +417,8 @@ describe('remboursement des frais de campagne', () => {
 			justice: fixtureJustice,
 			wealth: fixtureWealth,
 			promises: fixturePromises,
-			media: fixtureMedia
+			media: fixtureMedia,
+			institutions: fixtureInstitutions
 		});
 		if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 		return result.content;

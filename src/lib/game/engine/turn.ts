@@ -16,6 +16,7 @@
  *   5. échéances : fins de mandat, scrutins, calendrier ........... P2-02
  *      puis justice, patrimoine et promesses ...................... P3-01, P3-02, P3-04
  *      puis fil de presse (articles, relations des médias) ........ P3-03
+ *      puis réformes institutionnelles (votes, entrée en vigueur) . P3-05
  *   6. passage à T+1 (une seule fois), journal du trimestre T,
  *      suites dues et tirage des événements ......................... P1-01, P1-05
  *   7. phase `decision` si un choix bloquant attend, sinon `planning`  P1-01, P1-05
@@ -40,6 +41,7 @@ import { resolveExposure, resolveJustice } from './justice.ts';
 import { comfortStress, revalueAssets } from './wealth.ts';
 import { resolvePromises } from './promises.ts';
 import { resolvePress } from './press.ts';
+import { effectiveContent, resolveReforms } from './reforms.ts';
 import { resolveStaffFrontier, resolveStaffProduction } from './staff.ts';
 import { resolveFamily } from './family.ts';
 import type {
@@ -80,10 +82,12 @@ function phaseError(state: GameState): CommandError | null {
 function commitTurn(
 	state: GameState,
 	command: CommitTurnCommand,
-	content: Content
+	catalog: Content
 ): TransitionResult {
 	const blocked = phaseError(state);
 	if (blocked) return reject(state, blocked);
+	// Règles en vigueur pendant T : le catalogue modifié par les niveaux institutionnels (P3-05).
+	const content = effectiveContent(catalog, state.institutions.parameters);
 
 	// 1. Validation complète, identique à la prévision affichée au joueur.
 	const preview = previewPlan(state, command.plan, content);
@@ -297,25 +301,41 @@ function commitTurn(
 			)
 		: null;
 
+	// 5 sexies. Réformes institutionnelles : votes, réforme du gouvernement, entrée en vigueur.
+	const reforms =
+		pledges && press
+			? resolveReforms(
+					{
+						player: press.parts.player,
+						resources: pledges.parts.resources,
+						world: press.parts.world,
+						career: pledges.parts.career,
+						rng: press.parts.rng
+					},
+					resolvedTurn,
+					content
+				)
+			: null;
+
 	// 6. Passage à T+1, puis suites dues et tirage des événements (sauf fin de carrière).
 	const frontier =
-		settled && pledges && press
+		settled && pledges && reforms
 			? resolveEventFrontier(
 					{
 						turn: nextTurn,
-						player: press.parts.player,
-						resources: pledges.parts.resources,
+						player: reforms.parts.player,
+						resources: reforms.parts.resources,
 						upgrades: wealth!.upgrades,
-						rng: press.parts.rng,
+						rng: reforms.parts.rng,
 						nextInstanceNumber: execution.nextInstanceNumber,
 						events: {
 							...state.events,
 							scheduled: [...state.events.scheduled, ...justice!.scheduled, ...pledges.scheduled]
 						},
-						world: press.parts.world,
+						world: reforms.parts.world,
 						characters: settled.entourage.characters,
 						relationships: settled.entourage.relationships,
-						career: pledges.parts.career,
+						career: reforms.parts.career,
 						staff: settled.entourage.staff,
 						shortlists: settled.entourage.shortlists,
 						facts: settled.facts,
@@ -351,6 +371,7 @@ function commitTurn(
 		wealth: wealth?.record ?? null,
 		promises: pledges?.record ?? null,
 		press: press?.record ?? null,
+		institutions: reforms?.record ?? null,
 		events: frontier?.records ?? []
 	};
 

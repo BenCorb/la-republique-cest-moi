@@ -53,6 +53,11 @@ import {
 	type PromisesBalance,
 	type PromisesDefinition,
 	type HeadlineDefinition,
+	type InstitutionLevel,
+	type InstitutionModifiers,
+	type InstitutionParameter,
+	type ReformsBalance,
+	type ReformsCatalog,
 	type MediaCatalog,
 	type MediaDefinition,
 	type PressBalance,
@@ -99,6 +104,7 @@ export const conditionSchema: z.ZodType<Condition> = z.lazy(() =>
 		z.strictObject({ op: z.literal('profession'), profession: contentId }),
 		z.strictObject({ op: z.literal('lifestyle'), lifestyle: contentId }),
 		z.strictObject({ op: z.literal('ownsUpgrade'), upgrade: contentId }),
+		z.strictObject({ op: z.literal('institution'), parameter: contentId, level: contentId }),
 		z.strictObject({
 			op: z.literal('support'),
 			group: contentId,
@@ -225,7 +231,8 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 			'variation non nulle de -100 à 100'
 		)
 	}),
-	z.strictObject({ op: z.literal('giveInterview') })
+	z.strictObject({ op: z.literal('giveInterview') }),
+	z.strictObject({ op: z.literal('proposeReform') })
 ]);
 
 export const resourceAmountSchema: z.ZodType<ResourceAmount> = z.strictObject({
@@ -255,7 +262,8 @@ export const actionSchema: z.ZodType<ActionDefinition> = z
 				'asset',
 				'promise',
 				'pledge',
-				'media'
+				'media',
+				'reform'
 			])
 			.optional(),
 		category: z
@@ -816,6 +824,55 @@ export const pressBalanceSchema: z.ZodType<PressBalance> = z.strictObject({
 	lifestyleLevel: nonNegativeInt,
 	ambientPercent: percent,
 	interviewCooldownTurns: nonNegativeInt
+});
+
+const modifierPercent = safeInt.refine((value) => value >= 0 && value <= 300, 'de 0 à 300 %');
+
+export const institutionModifiersSchema: z.ZodType<InstitutionModifiers> = z.strictObject({
+	maxMandates: positiveInt.optional(),
+	revealPercent: modifierPercent.optional(),
+	convictionPercent: modifierPercent.optional(),
+	dismissalBonus: smallPercent.optional(),
+	popularityWeightPercent: percent.optional(),
+	partyWeightPercent: percent.optional(),
+	incumbentBonus: nonNegativeInt.optional(),
+	criticalPressPercent: modifierPercent.optional(),
+	nationalExposure: percent.optional()
+});
+
+export const institutionLevelSchema: z.ZodType<InstitutionLevel> = z.strictObject({
+	id: contentId,
+	label: frenchText,
+	description: frenchText,
+	modifiers: institutionModifiersSchema,
+	effects: z.array(effectSchema)
+});
+
+export const institutionParameterSchema: z.ZodType<InstitutionParameter> = z.strictObject({
+	id: contentId,
+	label: frenchText,
+	description: frenchText,
+	startLevel: contentId,
+	levels: z.array(institutionLevelSchema).min(2)
+});
+
+export const reformsBalanceSchema: z.ZodType<ReformsBalance> = z.strictObject({
+	proposerMandates: z.array(contentId).min(1),
+	baseAdoptionPercent: percent,
+	governingBonusPercent: percent,
+	ministerMandate: contentId,
+	ministerBonusPercent: percent,
+	apparatusWeightPercent: percent,
+	stabilityWeightPercent: percent,
+	adoptionPercent: intRange,
+	rejectionEffects: z.array(effectSchema),
+	autonomousPercent: percent
+});
+
+/** Paramètres institutionnels et règles des réformes (`institutions.json`, P3-05). */
+export const reformsCatalogSchema: z.ZodType<ReformsCatalog> = z.strictObject({
+	parameters: z.array(institutionParameterSchema).min(1),
+	balance: reformsBalanceSchema
 });
 
 /** Médias, titres de presse et règles du fil de presse (`media.json`, P3-03). */

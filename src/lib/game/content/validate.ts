@@ -23,6 +23,7 @@ import {
 	wealthCatalogSchema,
 	promisesCatalogSchema,
 	mediaCatalogSchema,
+	reformsCatalogSchema,
 	upgradeCatalogSchema,
 	worldSchema
 } from './schemas.ts';
@@ -56,6 +57,8 @@ import {
 	type PromiseDefinition,
 	type PromisesDefinition,
 	type MediaCatalog,
+	type InstitutionParameter,
+	type ReformsCatalog,
 	type MediaDefinition,
 	type ResourceAmount,
 	type TraitDefinition,
@@ -102,6 +105,8 @@ export interface RawContent {
 	readonly promises: unknown;
 	/** Médias, titres de presse et règles du fil de presse (`media.json`). */
 	readonly media: unknown;
+	/** Paramètres institutionnels et règles des réformes (`institutions.json`). */
+	readonly institutions: unknown;
 }
 
 export type ContentValidation =
@@ -279,6 +284,8 @@ interface Refs {
 	readonly lifestyles: ReadonlySet<string>;
 	readonly media: ReadonlySet<string>;
 	readonly upgrades: ReadonlySet<string>;
+	/** Niveaux institutionnels, par paramètre. */
+	readonly institutions: ReadonlyMap<string, ReadonlySet<string>>;
 }
 
 /** Vérifie les partis et mandats cités par une condition. */
@@ -305,6 +312,27 @@ function conditionIssues(
 			return refs.origins.has(condition.origin)
 				? []
 				: [{ source, path: `${path}.origin`, message: `origine inconnue : ${condition.origin}` }];
+		case 'institution': {
+			const levels = refs.institutions.get(condition.parameter);
+			if (!levels) {
+				return [
+					{
+						source,
+						path: `${path}.parameter`,
+						message: `paramètre institutionnel inconnu : ${condition.parameter}`
+					}
+				];
+			}
+			return levels.has(condition.level)
+				? []
+				: [
+						{
+							source,
+							path: `${path}.level`,
+							message: `niveau inconnu pour ${condition.parameter} : ${condition.level}`
+						}
+					];
+		}
 		case 'ownsUpgrade':
 			return refs.upgrades.has(condition.upgrade)
 				? []
@@ -540,6 +568,15 @@ function effectIssues(
 					});
 				}
 				break;
+			case 'proposeReform':
+				if (targetKind !== 'reform') {
+					issues.push({
+						source,
+						path: at,
+						message: 'proposition réservée aux actions ciblant une réforme'
+					});
+				}
+				break;
 			case 'giveInterview':
 				if (targetKind !== 'media') {
 					issues.push({
@@ -659,7 +696,8 @@ function crossCheckPolitics(
 				effect.op === 'makePromise' ||
 				(effect.op === 'advancePromise' && targetKind === 'pledge') ||
 				(effect.op === 'addMediaRelation' && effect.media === 'target') ||
-				effect.op === 'giveInterview'
+				effect.op === 'giveInterview' ||
+				effect.op === 'proposeReform'
 		);
 		if (targetKind !== null && !usesTarget) {
 			issues.push({
@@ -1221,6 +1259,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	const wealthCatalog = wealthCatalogSchema.safeParse(raw.wealth);
 	const promisesCatalog = promisesCatalogSchema.safeParse(raw.promises);
 	const mediaCatalog = mediaCatalogSchema.safeParse(raw.media);
+	const reformsCatalog = reformsCatalogSchema.safeParse(raw.institutions);
 	const eventFiles = Object.keys(raw.events)
 		.sort()
 		.map((source) => ({ source, parsed: eventCatalogSchema.safeParse(raw.events[source]) }));
@@ -1244,6 +1283,9 @@ export function validateContent(raw: RawContent): ContentValidation {
 		issues.push(...zodIssues('promises.json', promisesCatalog.error));
 	}
 	if (!mediaCatalog.success) issues.push(...zodIssues('media.json', mediaCatalog.error));
+	if (!reformsCatalog.success) {
+		issues.push(...zodIssues('institutions.json', reformsCatalog.error));
+	}
 	for (const { source, parsed } of eventFiles) {
 		if (!parsed.success) issues.push(...zodIssues(source, parsed.error));
 	}
@@ -1262,6 +1304,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 		!wealthCatalog.success ||
 		!promisesCatalog.success ||
 		!mediaCatalog.success ||
+		!reformsCatalog.success ||
 		eventFiles.some(({ parsed }) => !parsed.success)
 	) {
 		return { ok: false, issues };
@@ -1347,13 +1390,20 @@ export function validateContent(raw: RawContent): ContentValidation {
 		offenses: new Set(justiceCatalog.data.offenses.map((offense) => offense.id)),
 		lifestyles: new Set(wealthCatalog.data.lifestyles.map((lifestyle) => lifestyle.id)),
 		media: new Set(mediaCatalog.data.media.map((media) => media.id)),
-		upgrades: new Set(upgradeList.map((upgrade) => upgrade.id))
+		upgrades: new Set(upgradeList.map((upgrade) => upgrade.id)),
+		institutions: new Map(
+			reformsCatalog.data.parameters.map((parameter) => [
+				parameter.id,
+				new Set(parameter.levels.map((level) => level.id))
+			])
+		)
 	};
 	issues.push(...crossCheckWealth(wealthCatalog.data, upgradeList, knownIds));
 	issues.push(...crossCheckJustice(justiceCatalog.data, refs, knownIds, sourcedEvents));
 	issues.push(...crossCheckPolitics(actionList, upgradeList, sourcedEvents, refs));
 	issues.push(...crossCheckPromises(promisesCatalog.data, refs, knownIds, sourcedEvents));
 	issues.push(...crossCheckMedia(mediaCatalog.data, upgradeList, refs, knownIds));
+	issues.push(...crossCheckReforms(reformsCatalog.data, career.institutions, refs, knownIds));
 	issues.push(
 		...crossCheckProfiles(
 			profileData.origins,
@@ -1424,6 +1474,14 @@ export function validateContent(raw: RawContent): ContentValidation {
 	for (const offense of justiceCatalog.data.offenses) offenses[offense.id] = offense;
 	const promises: Record<string, PromiseDefinition> = {};
 	for (const promise of promisesCatalog.data.promises) promises[promise.id] = promise;
+	const institutionParameters: Record<string, InstitutionParameter> = {};
+	const institutionLevels: Record<string, { parameterId: string; index: number }> = {};
+	for (const parameter of reformsCatalog.data.parameters) {
+		institutionParameters[parameter.id] = parameter;
+		parameter.levels.forEach((level, index) => {
+			institutionLevels[level.id] = { parameterId: parameter.id, index };
+		});
+	}
 	const media: Record<string, MediaDefinition> = {};
 	for (const entry of mediaCatalog.data.media) media[entry.id] = entry;
 	return {
@@ -1444,6 +1502,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 				wealth: wealthCatalog.data,
 				promises: promisesCatalog.data,
 				media: mediaCatalog.data,
+				institutions: reformsCatalog.data,
 				events: Object.fromEntries(eventFiles.map(({ source, parsed }) => [source, parsed.data]))
 			}),
 			balance: balance.data,
@@ -1495,9 +1554,91 @@ export function validateContent(raw: RawContent): ContentValidation {
 			media,
 			mediaIds: mediaCatalog.data.media.map((entry) => entry.id),
 			headlines: mediaCatalog.data.headlines,
-			press: mediaCatalog.data.balance
+			press: mediaCatalog.data.balance,
+			institutionParameters,
+			institutionParameterIds: reformsCatalog.data.parameters.map((parameter) => parameter.id),
+			institutionLevels,
+			reforms: reformsCatalog.data.balance
 		}
 	};
+}
+
+/** Effets permis à l'adoption ou au rejet d'une réforme : certains, sur ressources, jauges et soutiens. */
+const REFORM_EFFECT_OPS: ReadonlySet<string> = new Set(['addResource', 'addStat', 'addSupport']);
+
+/**
+ * Réformes institutionnelles (P3-05) : identifiants uniques (paramètres et
+ * niveaux), niveau de départ existant, effets certains, mandats connus,
+ * bornes d'adoption ordonnées ; un plafond de cumul de départ identique à
+ * celui de `career.json`.
+ */
+function crossCheckReforms(
+	catalog: ReformsCatalog,
+	institutions: InstitutionsDefinition,
+	refs: Refs,
+	knownIds: Set<string>
+): ContentIssue[] {
+	const source = 'institutions.json';
+	const issues: ContentIssue[] = [];
+	const checkEffects = (effects: readonly Effect[], path: string): void => {
+		issues.push(...effectIssues(effects, refs, null, source, path));
+		effects.forEach((effect, index) => {
+			if (!REFORM_EFFECT_OPS.has(effect.op)) {
+				issues.push({
+					source,
+					path: `${path}[${index}]`,
+					message: `effet non permis pour une réforme : ${effect.op}`
+				});
+			}
+		});
+	};
+	catalog.parameters.forEach((parameter, index) => {
+		const path = `parameters[${index}]`;
+		for (const id of [parameter.id, ...parameter.levels.map((level) => level.id)]) {
+			if (knownIds.has(id)) {
+				issues.push({ source, path, message: `identifiant en double : ${id}` });
+			}
+			knownIds.add(id);
+		}
+		const start = parameter.levels.find((level) => level.id === parameter.startLevel);
+		if (!start) {
+			issues.push({
+				source,
+				path: `${path}.startLevel`,
+				message: `niveau de départ inconnu : ${parameter.startLevel}`
+			});
+		}
+		const cap = start?.modifiers.maxMandates;
+		if (cap !== undefined && cap !== institutions.maxMandates) {
+			issues.push({
+				source,
+				path: `${path}.startLevel`,
+				message: `plafond de cumul de départ différent de career.json (${institutions.maxMandates})`
+			});
+		}
+		parameter.levels.forEach((level, levelIndex) => {
+			checkEffects(level.effects, `${path}.levels[${levelIndex}].effects`);
+		});
+	});
+	const balance = catalog.balance;
+	for (const [key, mandateId] of [
+		...balance.proposerMandates.map((id) => ['proposerMandates', id] as const),
+		['ministerMandate', balance.ministerMandate] as const
+	]) {
+		if (!refs.mandates.has(mandateId)) {
+			issues.push({ source, path: `balance.${key}`, message: `mandat inconnu : ${mandateId}` });
+		}
+	}
+	const { min, max } = balance.adoptionPercent;
+	if (min < 0 || max > 100 || min > max) {
+		issues.push({
+			source,
+			path: 'balance.adoptionPercent',
+			message: 'bornes d’adoption de 0 à 100, minimum inférieur au maximum'
+		});
+	}
+	checkEffects(balance.rejectionEffects, 'balance.rejectionEffects');
+	return issues;
 }
 
 /** Précisions de sujet permises dans un titre, par sujet (P3-03). */

@@ -26,6 +26,7 @@ import {
 	fixtureWealth,
 	fixturePromises,
 	fixtureMedia,
+	fixtureInstitutions,
 	fixtureSupports,
 	fixtureTraits,
 	fixtureUpgrades,
@@ -60,7 +61,8 @@ function load(): Content {
 		justice: fixtureJustice,
 		wealth: fixtureWealth,
 		promises: fixturePromises,
-		media: fixtureMedia
+		media: fixtureMedia,
+		institutions: fixtureInstitutions
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	// Aucun événement aléatoire : seules les échéances et alertes interrompent le temps.

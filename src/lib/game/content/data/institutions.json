@@ -1,0 +1,214 @@
+{
+	"parameters": [
+		{
+			"id": "institution.cumul",
+			"label": "Cumul des mandats",
+			"description": "Combien de mandats un même élu peut détenir à la fois. Tout le monde y gagne ou y perd : vous, vos adversaires et les barons qui cumulent depuis 1983.",
+			"startLevel": "cumul.standard",
+			"levels": [
+				{
+					"id": "cumul.single",
+					"label": "Non-cumul strict",
+					"description": "Deux mandats au plus. Les électeurs applaudissent ; les présidents de conseil départemental découvrent les joies du choix.",
+					"modifiers": { "maxMandates": 2 },
+					"effects": [
+						{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+						{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+						{ "op": "addSupport", "group": "support.apparatus", "value": -4 }
+					]
+				},
+				{
+					"id": "cumul.standard",
+					"label": "Cumul limité",
+					"description": "Trois mandats au plus, la mairie d’une petite commune comprise. Un compromis que personne n’aime vraiment.",
+					"modifiers": { "maxMandates": 3 },
+					"effects": []
+				},
+				{
+					"id": "cumul.extended",
+					"label": "Cumul élargi",
+					"description": "Quatre mandats au plus, « pour garder le lien avec le terrain ». Le terrain, lui, ne vous voit plus beaucoup.",
+					"modifiers": { "maxMandates": 4 },
+					"effects": [
+						{ "op": "addSupport", "group": "support.apparatus", "value": 4 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": -3 },
+						{ "op": "addSupport", "group": "support.working_class", "value": -2 }
+					]
+				}
+			]
+		},
+		{
+			"id": "institution.justice",
+			"label": "Indépendance de la justice",
+			"description": "Le lien entre le parquet et la Chancellerie. Les dossiers de vos rivaux en dépendent autant que les vôtres.",
+			"startLevel": "justice.standard",
+			"levels": [
+				{
+					"id": "justice.supervised",
+					"label": "Parquet sous tutelle",
+					"description": "Les procureurs « tiennent la Chancellerie informée ». Les dossiers sensibles prennent l’habitude de s’égarer, quel que soit le prévenu.",
+					"modifiers": { "convictionPercent": 70, "dismissalBonus": 15 },
+					"effects": [
+						{ "op": "addSupport", "group": "support.activists", "value": -4 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": -2 },
+						{ "op": "addSupport", "group": "support.business", "value": 2 }
+					]
+				},
+				{
+					"id": "justice.standard",
+					"label": "Indépendance encadrée",
+					"description": "Des procureurs nommés par le gouvernement, des juges qui ne le sont pas. Un équilibre que chacun trouve déséquilibré dans son propre sens.",
+					"modifiers": {},
+					"effects": []
+				},
+				{
+					"id": "justice.independent",
+					"label": "Parquet indépendant",
+					"description": "Plus aucune instruction ministérielle. Les juges ne demandent plus la permission, et les élus découvrent la ponctualité des convocations.",
+					"modifiers": { "convictionPercent": 120, "dismissalBonus": -10 },
+					"effects": [
+						{ "op": "addSupport", "group": "support.activists", "value": 3 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+						{ "op": "addSupport", "group": "support.apparatus", "value": -3 }
+					]
+				}
+			]
+		},
+		{
+			"id": "institution.transparency",
+			"label": "Transparence financière",
+			"description": "Ce que les élus doivent déclarer de leur patrimoine et de leurs financements. Plus c’est transparent, plus les vieilles affaires remontent, y compris celles des autres.",
+			"startLevel": "transparency.standard",
+			"levels": [
+				{
+					"id": "transparency.opaque",
+					"label": "Secret des affaires",
+					"description": "Les déclarations de patrimoine sont confidentielles et facultatives. Elles sont surtout introuvables.",
+					"modifiers": { "revealPercent": 60 },
+					"effects": [
+						{ "op": "addSupport", "group": "support.business", "value": 3 },
+						{ "op": "addSupport", "group": "support.wealthy", "value": 2 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": -3 }
+					]
+				},
+				{
+					"id": "transparency.standard",
+					"label": "Déclarations sur l’honneur",
+					"description": "Chaque élu déclare son patrimoine, sur l’honneur. L’honneur est rarement vérifié.",
+					"modifiers": {},
+					"effects": []
+				},
+				{
+					"id": "transparency.strict",
+					"label": "Haute autorité de la transparence",
+					"description": "Une autorité indépendante épluche les comptes, publie tout en ligne et ne connaît personne. Les placards s’ouvrent, tous les placards.",
+					"modifiers": { "revealPercent": 150 },
+					"effects": [
+						{ "op": "addSupport", "group": "support.middle_class", "value": 3 },
+						{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+						{ "op": "addSupport", "group": "support.wealthy", "value": -2 },
+						{ "op": "addSupport", "group": "support.apparatus", "value": -2 }
+					]
+				}
+			]
+		},
+		{
+			"id": "institution.ballot",
+			"label": "Mode de scrutin",
+			"description": "Ce qui compte le plus pour être élu : votre nom ou celui de votre parti. Vos adversaires sont soumis aux mêmes règles.",
+			"startLevel": "ballot.majority",
+			"levels": [
+				{
+					"id": "ballot.majority",
+					"label": "Scrutin majoritaire",
+					"description": "Un nom, une circonscription, un vainqueur. La notoriété personnelle et la prime au sortant pèsent lourd.",
+					"modifiers": {},
+					"effects": [
+						{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+						{ "op": "addSupport", "group": "support.apparatus", "value": -2 }
+					]
+				},
+				{
+					"id": "ballot.mixed",
+					"label": "Dose de proportionnelle",
+					"description": "Une part des sièges répartie à la proportionnelle. Le parti compte davantage, le sortant un peu moins.",
+					"modifiers": {
+						"popularityWeightPercent": 33,
+						"partyWeightPercent": 70,
+						"incumbentBonus": 4
+					},
+					"effects": [
+						{ "op": "addSupport", "group": "support.apparatus", "value": 2 },
+						{ "op": "addSupport", "group": "support.activists", "value": 1 }
+					]
+				},
+				{
+					"id": "ballot.proportional",
+					"label": "Proportionnelle intégrale",
+					"description": "Des listes de partis et des places négociées en bureau politique. Être bien vu de l’appareil vaut mieux qu’être connu des électeurs.",
+					"modifiers": {
+						"popularityWeightPercent": 25,
+						"partyWeightPercent": 80,
+						"incumbentBonus": 2
+					},
+					"effects": [
+						{ "op": "addSupport", "group": "support.apparatus", "value": 4 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": -1 }
+					]
+				}
+			]
+		},
+		{
+			"id": "institution.press",
+			"label": "Liberté de la presse",
+			"description": "La protection des sources et l’accès des journalistes à l’information. Une presse muselée vous épargne, et vos rivaux aussi.",
+			"startLevel": "press.standard",
+			"levels": [
+				{
+					"id": "press.controlled",
+					"label": "Presse sous surveillance",
+					"description": "Secret des sources « aménagé », accréditations au compte-gouttes. Les articles critiques se font rares et prudents ; la presse nationale vous oublie volontiers.",
+					"modifiers": { "criticalPressPercent": 50, "nationalExposure": 45 },
+					"effects": [
+						{ "op": "addSupport", "group": "support.activists", "value": -4 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": -2 },
+						{ "op": "addSupport", "group": "support.wealthy", "value": 1 }
+					]
+				},
+				{
+					"id": "press.standard",
+					"label": "Liberté encadrée",
+					"description": "Une presse libre, des procès en diffamation et des déjeuners qui arrondissent les angles.",
+					"modifiers": {},
+					"effects": []
+				},
+				{
+					"id": "press.free",
+					"label": "Presse protégée",
+					"description": "Secret des sources sanctuarisé et droit d’accès aux documents publics. Les journalistes s’intéressent à tout le monde, et plus tôt.",
+					"modifiers": { "criticalPressPercent": 150, "nationalExposure": 20 },
+					"effects": [
+						{ "op": "addSupport", "group": "support.activists", "value": 3 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+						{ "op": "addSupport", "group": "support.apparatus", "value": -2 }
+					]
+				}
+			]
+		}
+	],
+	"balance": {
+		"proposerMandates": ["mandate.deputy", "mandate.senator", "mandate.minister"],
+		"baseAdoptionPercent": 25,
+		"governingBonusPercent": 25,
+		"ministerMandate": "mandate.minister",
+		"ministerBonusPercent": 15,
+		"apparatusWeightPercent": 30,
+		"stabilityWeightPercent": 20,
+		"adoptionPercent": { "min": 5, "max": 85 },
+		"rejectionEffects": [
+			{ "op": "addResource", "resource": "influence", "value": -5 },
+			{ "op": "addStat", "stat": "player.stress", "value": 3 }
+		],
+		"autonomousPercent": 2
+	}
+}

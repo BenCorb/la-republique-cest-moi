@@ -89,6 +89,7 @@ describe('contrôle des invariants', () => {
 						wealth: null,
 						promises: null,
 						press: null,
+						institutions: null,
 						events: []
 					},
 					{
@@ -113,6 +114,7 @@ describe('contrôle des invariants', () => {
 						wealth: null,
 						promises: null,
 						press: null,
+						institutions: null,
 						events: []
 					}
 				]

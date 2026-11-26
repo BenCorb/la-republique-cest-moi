@@ -32,6 +32,7 @@ import {
 	fixtureWealth,
 	fixturePromises,
 	fixtureMedia,
+	fixtureInstitutions,
 	fixtureTraits,
 	fixtureUpgrades,
 	fixtureWorld,
@@ -121,7 +122,8 @@ function load(
 		justice: fixtureJustice,
 		wealth: fixtureWealth,
 		promises: fixturePromises,
-		media: fixtureMedia
+		media: fixtureMedia,
+		institutions: fixtureInstitutions
 	});
 }
 

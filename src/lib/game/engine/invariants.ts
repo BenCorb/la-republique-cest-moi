@@ -25,6 +25,7 @@ import { activeMandates, conflictingMandates, cumulatedMandates } from './career
 import { computePopularity } from './supports.ts';
 import { caseInstanceId, factInstanceId } from './justice.ts';
 import { isOpenPledge, pledgeInstanceId } from './promises.ts';
+import { reformInstanceId } from './reforms.ts';
 import { START_TURN, STATE_SCHEMA_VERSION, type GameState } from './state.ts';
 
 const PHASES = new Set(['planning', 'decision', 'ended']);
@@ -138,6 +139,7 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
 	violations.push(...checkCaseInvariants(state));
 	violations.push(...checkPromiseInvariants(state));
 	violations.push(...checkMediaInvariants(state));
+	violations.push(...checkReformInvariants(state));
 	if (content) violations.push(...checkContentReferences(state, content));
 	return violations;
 }
@@ -148,6 +150,49 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
  * datée, échéance non échue tant que la partie continue, au plus une promesse
  * ouverte par promesse type.
  */
+/**
+ * Réformes (P3-05) : séquence, aucune proposition non votée entre deux
+ * trimestres, entrée en vigueur datée cohérente avec l'état, une seule
+ * réforme en attente par paramètre.
+ */
+function checkReformInvariants(state: GameState): string[] {
+	const violations: string[] = [];
+	const pending = new Set<string>();
+	state.institutions.reforms.forEach((reform, index) => {
+		const id = reform.reformId;
+		if (id !== reformInstanceId(index + 1)) violations.push(`réforme hors séquence : ${id}`);
+		if (reform.proposedTurn > state.turn) violations.push(`date de proposition invalide : ${id}`);
+		// Une proposition reste non votée seulement si la carrière s'est terminée avant le vote.
+		if (reform.status === 'proposed' && state.phase !== 'ended') {
+			violations.push(`réforme non votée : ${id}`);
+		}
+		if (reform.status === 'scheduled') {
+			// Après une fin de carrière, plus rien n'entre en vigueur.
+			if (
+				reform.activationTurn === null ||
+				(state.phase !== 'ended' && reform.activationTurn <= state.turn)
+			) {
+				violations.push(`entrée en vigueur échue : ${id}`);
+			}
+			if (pending.has(reform.parameterId)) {
+				violations.push(`deux réformes en attente : ${reform.parameterId}`);
+			}
+			pending.add(reform.parameterId);
+		}
+		if (
+			reform.status === 'enacted' &&
+			(reform.activationTurn === null || reform.activationTurn > state.turn)
+		) {
+			violations.push(`entrée en vigueur future : ${id}`);
+		}
+		const undated = reform.status === 'rejected' || reform.status === 'proposed';
+		if (undated !== (reform.activationTurn === null)) {
+			violations.push(`date d’entrée en vigueur incohérente : ${id}`);
+		}
+	});
+	return violations;
+}
+
 /** Médias (P3-03) : relations entières bornées, interviews passées. */
 function checkMediaInvariants(state: GameState): string[] {
 	const violations: string[] = [];
@@ -668,6 +713,25 @@ function checkCareerInvariants(state: GameState): string[] {
  */
 export function checkContentReferences(state: GameState, content: Content): string[] {
 	const violations: string[] = [];
+	for (const parameterId of content.institutionParameterIds) {
+		const levelId = state.institutions.parameters[parameterId];
+		const level = content.institutionParameters[parameterId]?.levels.find(
+			(entry) => entry.id === levelId
+		);
+		if (!level) {
+			violations.push(`niveau institutionnel inconnu : ${parameterId} = ${String(levelId)}`);
+		} else if (
+			level.modifiers.maxMandates !== undefined &&
+			level.modifiers.maxMandates !== state.institutions.maxMandates
+		) {
+			violations.push(`plafond du cumul différent du niveau en vigueur : ${level.id}`);
+		}
+	}
+	if (
+		Object.keys(state.institutions.parameters).length !== content.institutionParameterIds.length
+	) {
+		violations.push('paramètres institutionnels différents du catalogue');
+	}
 	const mediaIds = Object.keys(state.world.media).sort();
 	const catalogMedia = [...content.mediaIds].sort();
 	if (mediaIds.join() !== catalogMedia.join()) {

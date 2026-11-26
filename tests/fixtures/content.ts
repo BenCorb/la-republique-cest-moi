@@ -1221,6 +1221,78 @@ export const fixtureMedia = {
 	}
 };
 
+/**
+ * Institutions de test (P3-05) : le cumul (2, 3 ou 4 mandats) et la presse,
+ * sans réforme autonome du gouvernement : le PRNG des tests existants est inchangé.
+ */
+export const fixtureInstitutions = {
+	parameters: [
+		{
+			id: 'institution.cumul',
+			label: 'Cumul',
+			description: 'Plafond du cumul.',
+			startLevel: 'cumul.standard',
+			levels: [
+				{
+					id: 'cumul.single',
+					label: 'Deux mandats',
+					description: 'Strict.',
+					modifiers: { maxMandates: 2 },
+					effects: [{ op: 'addSupport', group: 'support.workers', value: 2 }]
+				},
+				{
+					id: 'cumul.standard',
+					label: 'Trois mandats',
+					description: 'Standard.',
+					modifiers: { maxMandates: 3 },
+					effects: []
+				},
+				{
+					id: 'cumul.extended',
+					label: 'Quatre mandats',
+					description: 'Large.',
+					modifiers: { maxMandates: 4 },
+					effects: []
+				}
+			]
+		},
+		{
+			id: 'institution.press',
+			label: 'Presse',
+			description: 'Liberté de la presse.',
+			startLevel: 'press.standard',
+			levels: [
+				{
+					id: 'press.standard',
+					label: 'Encadrée',
+					description: 'Standard.',
+					modifiers: {},
+					effects: []
+				},
+				{
+					id: 'press.free',
+					label: 'Protégée',
+					description: 'Libre.',
+					modifiers: { criticalPressPercent: 200, nationalExposure: 10 },
+					effects: []
+				}
+			]
+		}
+	],
+	balance: {
+		proposerMandates: ['mandate.deputy', 'mandate.minister'],
+		baseAdoptionPercent: 50,
+		governingBonusPercent: 20,
+		ministerMandate: 'mandate.minister',
+		ministerBonusPercent: 10,
+		apparatusWeightPercent: 0,
+		stabilityWeightPercent: 0,
+		adoptionPercent: { min: 0, max: 100 },
+		rejectionEffects: [{ op: 'addResource', resource: 'influence', value: -5 }],
+		autonomousPercent: 0
+	}
+};
+
 function load(): Content {
 	const result = validateContent({
 		actions: fixtureActions,
@@ -1237,7 +1309,8 @@ function load(): Content {
 		justice: fixtureJustice,
 		wealth: fixtureWealth,
 		promises: fixturePromises,
-		media: fixtureMedia
+		media: fixtureMedia,
+		institutions: fixtureInstitutions
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;

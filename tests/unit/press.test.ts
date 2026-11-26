@@ -28,6 +28,7 @@ import {
 	fixtureEvents,
 	fixtureJustice,
 	fixtureMedia,
+	fixtureInstitutions,
 	fixturePromises,
 	fixtureProfiles,
 	fixtureSupports,
@@ -122,6 +123,7 @@ function raw(overrides: Partial<RawContent> = {}): RawContent {
 		wealth: fixtureWealth,
 		promises: fixturePromises,
 		media: pressCatalog,
+		institutions: fixtureInstitutions,
 		...overrides
 	};
 }

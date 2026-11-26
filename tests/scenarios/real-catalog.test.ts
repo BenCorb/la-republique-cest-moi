@@ -34,6 +34,20 @@ const hire = (target: string): PlanStep => ({ kind: 'action', id: 'staff.hire', 
 /** Marqueurs : prendre un engagement de campagne, préparer les réformes en cours (P3-04). */
 const PROMISE = { kind: 'action', id: 'campaign.pledge', target: '*' } as const;
 const REFORM = { kind: 'action', id: 'mandate.prepare_reform', target: '*' } as const;
+/** Marqueur : proposer la première réforme institutionnelle possible de la liste (P3-05). */
+const INSTITUTION = {
+	kind: 'action',
+	id: 'mandate.propose_institutional_reform',
+	target: '*'
+} as const;
+const INSTITUTION_WISHES = [
+	'ballot.mixed',
+	'ballot.proportional',
+	'cumul.extended',
+	'justice.supervised',
+	'transparency.strict',
+	'press.free'
+];
 
 function choosePlan(state: GameState, wishes: readonly PlanStep[]): TurnPlan {
 	let candidate: PlanStep[] = wishes.flatMap((step): PlanStep[] => {
@@ -62,6 +76,12 @@ function choosePlan(state: GameState, wishes: readonly PlanStep[]): TurnPlan {
 					).valid
 			);
 			return pick ? [{ kind: 'action', id: 'campaign.pledge', target: pick }] : [];
+		}
+		if (step === INSTITUTION) {
+			const pick = INSTITUTION_WISHES.find(
+				(target) => previewPlan(state, { steps: [{ ...INSTITUTION, target }] }, content).valid
+			);
+			return pick ? [{ ...INSTITUTION, target: pick }] : [];
 		}
 		if (step === REFORM) {
 			return state.promises
@@ -247,6 +267,7 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 				{ kind: 'action', id: 'party.join', target: content.world.startingGoverningParty },
 				CANDIDACY,
 				REFORM,
+				INSTITUTION,
 				PROMISE,
 				buy('wealth.local_media'),
 				HIRE,

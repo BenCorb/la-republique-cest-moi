@@ -25,6 +25,7 @@ import { EMPTY_FAMILY, createFamily, type FamilyRecord } from './family.ts';
 import { applyPoliticalEffect } from './world.ts';
 import { gaugeKey } from './effects.ts';
 import { createWorld } from './world.ts';
+import { startingParameters } from './reforms.ts';
 
 /** Version du format de l'état, à incrémenter avec une migration explicite. */
 export const STATE_SCHEMA_VERSION = 1;
@@ -292,6 +293,37 @@ export interface StaffRecord {
 export interface InstitutionsState extends InstitutionsDefinition {
 	/** Mandats à détenir pour en obtenir un autre, par définition (copie de `requires`). */
 	readonly prerequisites: Readonly<Record<string, readonly string[]>>;
+	/** Niveau en vigueur de chaque paramètre institutionnel (P3-05). */
+	readonly parameters: Readonly<Record<string, string>>;
+	/** Réformes proposées ou décidées, dans l'ordre (`reform.N`, jamais supprimées). */
+	readonly reforms: readonly ReformRecord[];
+}
+
+/**
+ * Réforme institutionnelle (P3-05) : proposée par le joueur (votée à la
+ * frontière du trimestre) ou décidée par le gouvernement ; adoptée, elle entre
+ * en vigueur au 1er janvier suivant et persiste.
+ */
+export interface ReformRecord {
+	readonly reformId: string;
+	readonly parameterId: string;
+	readonly levelId: string;
+	/** Niveau en vigueur au moment de la proposition. */
+	readonly fromLevelId: string;
+	readonly origin: 'player' | 'government';
+	readonly proposedTurn: Turn;
+	readonly status: 'proposed' | 'rejected' | 'scheduled' | 'enacted';
+	/** Chance d'adoption au vote (proposition du joueur), `null` sinon. */
+	readonly adoptionPercent: number | null;
+	/** Trimestre d'entrée en vigueur (1er janvier), une fois adoptée. */
+	readonly activationTurn: Turn | null;
+}
+
+/** Réformes à la frontière : votes, réformes du gouvernement, entrées en vigueur (P3-05). */
+export interface InstitutionsRecord {
+	readonly changes: readonly ResourceChange[];
+	readonly gauges: readonly GaugeChange[];
+	readonly politics: readonly PoliticalChange[];
 }
 
 /** Variation politique produite par un effet (journal). */
@@ -352,7 +384,16 @@ export type PoliticalChange =
 	/** Relation d'un média envers le joueur (P3-03). */
 	| { readonly kind: 'mediaRelation'; readonly mediaId: string; readonly delta: number }
 	/** Interview accordée, publiée à la frontière du trimestre (P3-03). */
-	| { readonly kind: 'interview'; readonly mediaId: string };
+	| { readonly kind: 'interview'; readonly mediaId: string }
+	/** Étape d'une réforme institutionnelle (P3-05). */
+	| {
+			readonly kind: 'reform';
+			readonly reformId: string;
+			readonly parameterId: string;
+			readonly levelId: string;
+			readonly origin: 'player' | 'government';
+			readonly change: 'proposed' | 'adopted' | 'rejected' | 'enacted';
+	  };
 
 /**
  * Étapes d'une promesse : annoncée (`made`), en cours après la victoire
@@ -712,6 +753,8 @@ export interface HistoryEntry {
 	readonly promises: PromisesRecord | null;
 	/** Fil de presse du trimestre, `null` si la carrière s'est terminée avant. */
 	readonly press: PressRecord | null;
+	/** Réformes institutionnelles, `null` si la carrière s'est terminée avant. */
+	readonly institutions: InstitutionsRecord | null;
 	/** Événements créés (ou suites annulées) au passage à T+1. */
 	readonly events: readonly EventRecord[];
 }
@@ -879,7 +922,9 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 					const requires = content.mandates[id]?.requires ?? [];
 					return requires.length > 0 ? [[id, [...requires]]] : [];
 				})
-			)
+			),
+			parameters: startingParameters(content),
+			reforms: []
 		},
 		facts: [],
 		cases: [],

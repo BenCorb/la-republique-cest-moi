@@ -163,6 +163,8 @@ export type Condition =
 	| { readonly op: 'lifestyle'; readonly lifestyle: string }
 	/** Le joueur possède au moins un exemplaire de cette amélioration (P3-03). */
 	| { readonly op: 'ownsUpgrade'; readonly upgrade: string }
+	/** Niveau en vigueur d'un paramètre institutionnel (P3-05). */
+	| { readonly op: 'institution'; readonly parameter: string; readonly level: string }
 	/** Soutien d'un groupe comparé à une valeur. */
 	| {
 			readonly op: 'support';
@@ -291,7 +293,12 @@ export type Effect =
 	 */
 	| { readonly op: 'addMediaRelation'; readonly media: string; readonly value: number }
 	/** Interview accordée au média choisi dans le plan (`target`) : article à la frontière. */
-	| { readonly op: 'giveInterview' };
+	| { readonly op: 'giveInterview' }
+	/**
+	 * Proposition de réforme institutionnelle (P3-05) : le niveau choisi dans le
+	 * plan (`target`), soumis au vote à la frontière du trimestre.
+	 */
+	| { readonly op: 'proposeReform' };
 
 /** États d'une promesse (GDD §7.5). */
 export const PROMISE_STATUSES = [
@@ -358,6 +365,76 @@ export interface PromisesBalance {
 export interface PromisesDefinition {
 	readonly promises: readonly PromiseDefinition[];
 	readonly balance: PromisesBalance;
+}
+
+/**
+ * Effets d'un niveau institutionnel sur les règles (P3-05), tous facultatifs :
+ * ils s'appliquent à tous les acteurs tant que le niveau est en vigueur.
+ */
+export interface InstitutionModifiers {
+	/** Plafond du cumul des mandats (absolu). */
+	readonly maxMandates?: number | undefined;
+	/** Chance de révélation des faits, en % de celle de la justice (100 : inchangée). */
+	readonly revealPercent?: number | undefined;
+	/** Probabilité de condamnation, en % de celle de la justice. */
+	readonly convictionPercent?: number | undefined;
+	/** Points ajoutés à la chance de classement sans suite. */
+	readonly dismissalBonus?: number | undefined;
+	/** Poids de la popularité, du parti et prime du sortant dans le score d'un scrutin (absolus). */
+	readonly popularityWeightPercent?: number | undefined;
+	readonly partyWeightPercent?: number | undefined;
+	readonly incumbentBonus?: number | undefined;
+	/** Effet des articles critiques, en % de celui du catalogue des médias. */
+	readonly criticalPressPercent?: number | undefined;
+	/** Exposition à partir de laquelle les médias nationaux suivent le joueur (absolue). */
+	readonly nationalExposure?: number | undefined;
+}
+
+/** Niveau d'un paramètre institutionnel (P3-05). */
+export interface InstitutionLevel {
+	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	readonly modifiers: InstitutionModifiers;
+	/** Effets certains pour le joueur quand sa proposition est adoptée (soutiens, ressources, jauges). */
+	readonly effects: readonly Effect[];
+}
+
+/**
+ * Paramètre institutionnel réformable (P3-05, GDD §10.2) : niveaux ordonnés ;
+ * une réforme passe au niveau voisin, jamais plus loin d'un coup.
+ */
+export interface InstitutionParameter {
+	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	readonly startLevel: string;
+	readonly levels: readonly InstitutionLevel[];
+}
+
+/** Règles des réformes institutionnelles ; hypothèses provisoires d'équilibrage. */
+export interface ReformsBalance {
+	/** Mandats permettant de proposer une réforme (au moins un). */
+	readonly proposerMandates: readonly string[];
+	/** Chance d'adoption : base, bonus si le parti du joueur gouverne, bonus ministre, en points. */
+	readonly baseAdoptionPercent: number;
+	readonly governingBonusPercent: number;
+	readonly ministerMandate: string;
+	readonly ministerBonusPercent: number;
+	/** Points par point d'écart à 50 du soutien de l'appareil et de la stabilité, en %. */
+	readonly apparatusWeightPercent: number;
+	readonly stabilityWeightPercent: number;
+	/** Bornes de la chance d'adoption, en %. */
+	readonly adoptionPercent: IntRange;
+	/** Effets certains d'un rejet pour le joueur. */
+	readonly rejectionEffects: readonly Effect[];
+	/** Chance, par trimestre, que le gouvernement adopte de lui-même une réforme, en %. */
+	readonly autonomousPercent: number;
+}
+
+export interface ReformsCatalog {
+	readonly parameters: readonly InstitutionParameter[];
+	readonly balance: ReformsBalance;
 }
 
 /** Bornes de la relation d'un média envers le joueur (P3-03). */
@@ -596,7 +673,7 @@ export interface ActionDefinition {
 	 */
 	/** `asset` : un actif patrimonial possédé ; `upgrade` : un autre exemplaire de l'organisation. */
 	/** `promise` : une promesse type à annoncer ; `pledge` : une promesse en cours (P3-04). */
-	/** `media` : un média du catalogue (P3-03). */
+	/** `media` : un média du catalogue (P3-03) ; `reform` : un niveau institutionnel (P3-05). */
 	readonly target?:
 		| 'party'
 		| 'mandate'
@@ -608,6 +685,7 @@ export interface ActionDefinition {
 		| 'promise'
 		| 'pledge'
 		| 'media'
+		| 'reform'
 		| undefined;
 }
 
@@ -1291,4 +1369,12 @@ export interface Content {
 	readonly mediaIds: readonly string[];
 	readonly headlines: readonly HeadlineDefinition[];
 	readonly press: PressBalance;
+	/** Paramètres institutionnels réformables, par identifiant, ordre du catalogue (P3-05). */
+	readonly institutionParameters: Readonly<Record<string, InstitutionParameter>>;
+	readonly institutionParameterIds: readonly string[];
+	/** Niveaux, par identifiant : paramètre et rang dans l'ordre des niveaux. */
+	readonly institutionLevels: Readonly<
+		Record<string, { readonly parameterId: string; readonly index: number }>
+	>;
+	readonly reforms: ReformsBalance;
 }

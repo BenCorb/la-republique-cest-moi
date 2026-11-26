@@ -101,7 +101,7 @@ describe('alpha : trajectoires distinctes', { timeout: LONG_SCENARIO_TIMEOUT }, 
 });
 
 describe('alpha : cumul légal à chaque trimestre', { timeout: LONG_SCENARIO_TIMEOUT }, () => {
-	const { maxMandates, incompatibilities } = content.institutions;
+	const { incompatibilities } = content.institutions;
 
 	function playCareer(
 		seed: string,
@@ -145,8 +145,9 @@ describe('alpha : cumul légal à chaque trimestre', { timeout: LONG_SCENARIO_TI
 				playCareer(`cumul-${strategy}-${index}`, strategy, (state) => {
 					const held = activeMandates(state.mandates).map((mandate) => mandate.mandateId);
 					// La mairie s'exerce au sein du conseil municipal et ne compte pas à part.
+					// Plafond en vigueur : une réforme peut l'avoir changé (P3-05).
 					expect(cumulatedMandates(state.mandates, state.institutions).length).toBeLessThanOrEqual(
-						maxMandates
+						state.institutions.maxMandates
 					);
 					for (const [first, second] of incompatibilities) {
 						expect(held.includes(first) && held.includes(second), `${first} + ${second}`).toBe(

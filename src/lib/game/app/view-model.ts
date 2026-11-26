@@ -53,6 +53,11 @@ import {
 	type PromiseRecord,
 	isOpenPledge,
 	type Article,
+	activationLabel,
+	adoptionPercent,
+	effectiveContent,
+	evaluateCondition,
+	type CareerParts,
 	followsPlayer,
 	ownedMedia,
 	type StaffLeaveReason,
@@ -328,6 +333,48 @@ export interface WorldView {
 	readonly joinActionId: string | null;
 	readonly joinTimeCost: number;
 	readonly joinCosts: readonly string[];
+	/** Institutions modifiables (P3-05). */
+	readonly institutions: InstitutionsView;
+}
+
+/** Réforme possible d'un paramètre : passage au niveau voisin. */
+export interface ReformOptionView {
+	readonly levelId: string;
+	readonly label: string;
+	readonly description: string;
+	/** Effets pour le joueur si sa proposition est adoptée. */
+	readonly effects: readonly string[];
+	readonly planned: boolean;
+	readonly addable: boolean;
+	readonly reason: string | null;
+}
+
+export interface InstitutionParameterView {
+	readonly parameterId: string;
+	readonly label: string;
+	readonly description: string;
+	readonly currentLabel: string;
+	readonly currentDescription: string;
+	/** Échelle des niveaux, dans l'ordre du catalogue. */
+	readonly levels: readonly {
+		readonly levelId: string;
+		readonly label: string;
+		readonly current: boolean;
+	}[];
+	/** Réforme en attente, en clair, sinon `null`. */
+	readonly pending: string | null;
+	readonly options: readonly ReformOptionView[];
+}
+
+export interface InstitutionsView {
+	readonly actionId: string | null;
+	/** Chance d'adoption d'une proposition du joueur, s'il peut en déposer. */
+	readonly adoptionPercent: number | null;
+	/** Motif d'indisponibilité de la proposition (mandat manquant…), sinon `null`. */
+	readonly lockedReason: string | null;
+	readonly parameters: readonly InstitutionParameterView[];
+	/** Réformes passées, de la plus récente à la plus ancienne. */
+	readonly history: readonly { readonly key: string; readonly text: string }[];
 }
 
 export interface PersonView {
@@ -839,6 +886,8 @@ function describeEffect(range: EffectRange, content: Content): string {
 					: range.change === 'amend'
 						? 'Promesse amendée'
 						: 'Promesse abandonnée';
+		case 'reform':
+			return 'Réforme soumise au vote à la fin du trimestre';
 		case 'media':
 			return range.change === 'interview'
 				? 'Interview publiée à la fin du trimestre'
@@ -913,6 +962,19 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 					return `relation avec ${content.media[change.mediaId]?.name ?? change.mediaId} ${change.delta > 0 ? 'améliorée' : 'dégradée'}`;
 				case 'interview':
 					return `interview accordée à ${content.media[change.mediaId]?.name ?? change.mediaId}`;
+				case 'reform': {
+					const parameter =
+						content.institutionParameters[change.parameterId]?.label ?? change.parameterId;
+					const level = levelOf(change.levelId, content)?.label ?? change.levelId;
+					const who = change.origin === 'government' ? 'le gouvernement' : 'vous';
+					return change.change === 'proposed'
+						? `réforme proposée — ${parameter} : « ${level} »`
+						: change.change === 'adopted'
+							? `réforme adoptée (${who}) — ${parameter} : « ${level} »`
+							: change.change === 'rejected'
+								? `réforme rejetée — ${parameter} : « ${level} »`
+								: `entrée en vigueur — ${parameter} : « ${level} »`;
+				}
 			}
 		})
 		.join(', ');
@@ -1118,6 +1180,10 @@ function targetLabel(target: string, state: GameState, content: Content): string
 		return `« ${content.promises[target]?.label ?? target} »`;
 	}
 	if (Object.hasOwn(content.media, target)) return content.media[target]?.name ?? target;
+	if (Object.hasOwn(content.institutionLevels, target)) {
+		const parameterId = content.institutionLevels[target]?.parameterId ?? '';
+		return `${content.institutionParameters[parameterId]?.label ?? parameterId} → « ${levelOf(target, content)?.label ?? target} »`;
+	}
 	const pledge = state.promises.find((entry) => entry.pledgeId === target);
 	if (pledge) return `« ${content.promises[pledge.promiseId]?.label ?? pledge.promiseId} »`;
 	if (target.startsWith('upgrade.')) {
@@ -1252,6 +1318,14 @@ function journalOfQuarter(entry: HistoryEntry, state: GameState, content: Conten
 			politicsText(entry.promises.politics, content)
 		);
 		if (effects) lines.push({ kind: 'career', text: `Promesses — ${effects}` });
+	}
+	if (entry.institutions) {
+		const effects = joinParts(
+			changesText(entry.institutions.changes),
+			gaugesText(entry.institutions.gauges),
+			politicsText(entry.institutions.politics, content)
+		);
+		if (effects) lines.push({ kind: 'career', text: `Institutions — ${effects}` });
 	}
 	for (const article of entry.press?.articles ?? []) {
 		const effects = articleEffects(article, content);
@@ -1737,7 +1811,131 @@ function buildWorld(state: GameState, plan: readonly PlanStep[], content: Conten
 		leave,
 		joinActionId,
 		joinTimeCost: joinAction?.timeCost ?? 0,
-		joinCosts: joinAction ? amounts(joinAction.costs, -1) : []
+		joinCosts: joinAction ? amounts(joinAction.costs, -1) : [],
+		institutions: buildInstitutions(state, plan, content)
+	};
+}
+
+function careerPartsOf(state: GameState): CareerParts {
+	return {
+		mandates: state.mandates,
+		ballots: state.ballots,
+		campaigns: state.campaigns,
+		institutions: state.institutions,
+		promises: state.promises
+	};
+}
+
+function levelOf(levelId: string, content: Content) {
+	const parameterId = content.institutionLevels[levelId]?.parameterId;
+	return parameterId
+		? content.institutionParameters[parameterId]?.levels.find((level) => level.id === levelId)
+		: undefined;
+}
+
+const REFORM_STATUS_TEXT: Readonly<Record<string, string>> = {
+	rejected: 'rejetée',
+	scheduled: 'adoptée',
+	enacted: 'en vigueur',
+	proposed: 'proposée'
+};
+
+function buildInstitutions(
+	state: GameState,
+	plan: readonly PlanStep[],
+	content: Content
+): InstitutionsView {
+	const actionId = content.actionIds.find((id) => content.actions[id]?.target === 'reform') ?? null;
+	const action = actionId ? content.actions[actionId] : undefined;
+	const conditionContext = {
+		turn: state.turn,
+		player: state.player,
+		resources: state.resources,
+		upgrades: state.upgrades,
+		world: state.world,
+		mandates: state.mandates,
+		campaigns: state.campaigns,
+		institutions: state.institutions,
+		staff: state.staff,
+		facts: state.facts,
+		cases: state.cases,
+		promises: state.promises
+	};
+	const allowed = !action?.requires || evaluateCondition(conditionContext, action.requires);
+	const parameters = content.institutionParameterIds.flatMap(
+		(parameterId): InstitutionParameterView[] => {
+			const parameter = content.institutionParameters[parameterId];
+			if (!parameter) return [];
+			const currentId = state.institutions.parameters[parameterId] ?? parameter.startLevel;
+			const current = parameter.levels.find((level) => level.id === currentId);
+			const currentIndex = parameter.levels.findIndex((level) => level.id === currentId);
+			const pendingReform = state.institutions.reforms.find(
+				(reform) => reform.parameterId === parameterId && reform.status === 'scheduled'
+			);
+			const pending = pendingReform
+				? `${pendingReform.origin === 'government' ? 'Décidé par le gouvernement' : 'Votre réforme a été adoptée'} : « ${levelOf(pendingReform.levelId, content)?.label ?? pendingReform.levelId} » au ${activationLabel(pendingReform.activationTurn ?? state.turn)}.`
+				: null;
+			const options = actionId
+				? parameter.levels
+						.filter((_level, index) => Math.abs(index - currentIndex) === 1)
+						.map((level): ReformOptionView => {
+							const step: PlanStep = { kind: 'action', id: actionId, target: level.id };
+							const planned = plan.some(
+								(entry) =>
+									entry.kind === 'action' && entry.id === actionId && entry.target === level.id
+							);
+							const add = planned
+								? { addable: false, reason: null }
+								: addability(state, plan, step, content);
+							return {
+								levelId: level.id,
+								label: level.label,
+								description: level.description,
+								effects: level.effects.map((effect) =>
+									describeEffect(effectRange(effect), content)
+								),
+								planned,
+								addable: add.addable,
+								reason: allowed ? add.reason : null
+							};
+						})
+				: [];
+			return [
+				{
+					parameterId,
+					label: parameter.label,
+					description: parameter.description,
+					currentLabel: current?.label ?? currentId,
+					currentDescription: current?.description ?? '',
+					levels: parameter.levels.map((level) => ({
+						levelId: level.id,
+						label: level.label,
+						current: level.id === currentId
+					})),
+					pending,
+					options
+				}
+			];
+		}
+	);
+	const history = [...state.institutions.reforms].reverse().map((reform) => {
+		const parameter =
+			content.institutionParameters[reform.parameterId]?.label ?? reform.parameterId;
+		const level = levelOf(reform.levelId, content)?.label ?? reform.levelId;
+		const origin = reform.origin === 'government' ? 'gouvernement' : 'votre proposition';
+		return {
+			key: reform.reformId,
+			text: `${formatTurn(reform.proposedTurn)} — ${parameter} : « ${level} » (${origin}, ${REFORM_STATUS_TEXT[reform.status] ?? reform.status})`
+		};
+	});
+	return {
+		actionId,
+		adoptionPercent: allowed
+			? adoptionPercent(state.player, state.world, careerPartsOf(state), content)
+			: null,
+		lockedReason: allowed ? null : (action?.unavailableReason ?? null),
+		parameters,
+		history
 	};
 }
 
@@ -2447,8 +2645,10 @@ export function creationOptions(content: Content): {
 export function projectView(
 	state: GameState,
 	plan: readonly PlanStep[],
-	content: Content
+	catalog: Content
 ): PlayerView {
+	// Règles en vigueur (P3-05) : sondages, presse et justice affichés selon les institutions.
+	const content = effectiveContent(catalog, state.institutions.parameters);
 	const preview = previewPlan(state, { steps: plan }, content);
 	const steps: PlanStepView[] = preview.steps.map((step) => {
 		const upgrade = step.kind === 'purchase' && step.id ? content.upgrades[step.id] : undefined;
