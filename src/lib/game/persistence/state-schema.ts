@@ -361,7 +361,11 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 		indicators: z.strictObject({ economy: int, socialClimate: int, stability: int }),
 		parties: z.record(id, z.strictObject({ strength: int, leaderId: id })),
 		governingPartyId: id,
-		media: z.record(id, z.strictObject({ relation: int, interviewTurn: int.nullable() }))
+		media: z.record(id, z.strictObject({ relation: int, interviewTurn: int.nullable() })),
+		press: z.strictObject({
+			usedHeadlines: z.record(text, z.array(id)),
+			recentAngles: z.array(text)
+		})
 	}),
 	characters: z.record(
 		id,

@@ -173,6 +173,26 @@ export interface WorldState {
 	readonly governingPartyId: string;
 	/** Médias du catalogue, par identifiant (P3-03). */
 	readonly media: Readonly<Record<string, MediaState>>;
+	/** Mémoire anti-répétition du fil de presse (P3-15). */
+	readonly press: PressMemory;
+}
+
+/**
+ * Mémoire du fil de presse (P3-15) : pioche sans remise des titres et délai
+ * thématique des articles consacrés au joueur.
+ */
+export interface PressMemory {
+	/**
+	 * Par pool (`headlinePoolKey` : sujet, tonalité, précision, famille de
+	 * média), titres parus depuis son dernier recyclage, du plus ancien au plus
+	 * récent : un titre n'y revient qu'une fois le pool épuisé.
+	 */
+	readonly usedHeadlines: Readonly<Record<string, readonly string[]>>;
+	/**
+	 * Angles (`sujet:précision`) des derniers articles consacrés au joueur, du
+	 * plus ancien au plus récent ; une chaîne vide marque un sujet passé sous silence.
+	 */
+	readonly recentAngles: readonly string[];
 }
 
 /** Média envers le joueur (P3-03) : relation et dernière interview accordée. */

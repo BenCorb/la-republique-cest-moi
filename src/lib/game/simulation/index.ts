@@ -67,6 +67,12 @@ export interface EventFrequency {
 	readonly count: number;
 }
 
+/** Parutions d'un même titre de presse au cours d'une carrière (P3-15). */
+export interface HeadlineFrequency {
+	readonly headlineId: string;
+	readonly count: number;
+}
+
 export interface SimulationRun {
 	readonly seed: string;
 	readonly strategy: SimulationStrategy;
@@ -86,6 +92,11 @@ export interface SimulationRun {
 	readonly quartersWithSuspension: number;
 	readonly eventsExperienced: number;
 	readonly eventOccurrences: readonly EventFrequency[];
+	/** Événements vus plus de deux fois dans la carrière (scènes répétées, P3-15). */
+	readonly repeatedEvents: number;
+	/** Parutions de titres déjà parus dans la carrière, et titres parus (P3-15). */
+	readonly repeatedHeadlines: number;
+	readonly headlineOccurrences: readonly HeadlineFrequency[];
 	/** Parti du joueur en fin de carrière (`null` : sans étiquette). */
 	readonly finalParty: string | null;
 	/** Nombre d'adhésions successives (changements de camp compris). */
@@ -201,6 +212,25 @@ export interface AggregateEventFrequency extends EventFrequency {
 	readonly maxPerCareer: number;
 }
 
+export interface AggregateHeadlineFrequency extends HeadlineFrequency {
+	readonly careers: number;
+	readonly maxPerCareer: number;
+}
+
+/** Couverture du catalogue sur le lot (P3-15) : contenus jamais atteints et catégories. */
+export interface ContentCoverage {
+	/** Événements du catalogue jamais survenus (tirés ou suites). */
+	readonly eventsNeverReached: readonly string[];
+	readonly headlinesNeverUsed: readonly string[];
+	/** Par catégorie : événements du catalogue, atteints, et occurrences totales. */
+	readonly categories: Readonly<
+		Record<
+			string,
+			{ readonly events: number; readonly reached: number; readonly occurrences: number }
+		>
+	>;
+}
+
 export interface ProblemSeed {
 	readonly seed: string;
 	readonly strategy: SimulationStrategy;
@@ -244,6 +274,11 @@ export interface SimulationAggregate {
 	>;
 	readonly strategies: readonly StrategySummary[];
 	readonly events: readonly AggregateEventFrequency[];
+	/** Répétitions et couverture du contenu (P3-15). */
+	readonly repeatedEvents: Distribution;
+	readonly repeatedHeadlines: Distribution;
+	readonly headlines: readonly AggregateHeadlineFrequency[];
+	readonly coverage: ContentCoverage;
 	readonly problemSeeds: readonly ProblemSeed[];
 }
 
@@ -730,6 +765,20 @@ function justiceCounts(
 	};
 }
 
+/** Titres parus dans la carrière, nouvelles d'ambiance comprises, par identifiant. */
+function headlineFrequencies(state: GameState): HeadlineFrequency[] {
+	const counts = new Map<string, number>();
+	for (const entry of state.history) {
+		if (entry.type !== 'turn.resolved') continue;
+		for (const article of entry.press?.articles ?? []) {
+			counts.set(article.headlineId, (counts.get(article.headlineId) ?? 0) + 1);
+		}
+	}
+	return [...counts.entries()]
+		.map(([headlineId, count]) => ({ headlineId, count }))
+		.sort((left, right) => left.headlineId.localeCompare(right.headlineId));
+}
+
 function eventFrequencies(state: GameState): EventFrequency[] {
 	return Object.entries(state.events.occurrences)
 		.map(([eventId, occurrence]) => ({ eventId, count: occurrence.count }))
@@ -775,6 +824,12 @@ function finalizeRun(
 		quartersWithSuspension: summary.quartersWithSuspension,
 		eventsExperienced: summary.eventsExperienced,
 		eventOccurrences: eventFrequencies(state),
+		repeatedEvents: eventFrequencies(state).filter((event) => event.count > 2).length,
+		repeatedHeadlines: headlineFrequencies(state).reduce(
+			(total, headline) => total + headline.count - 1,
+			0
+		),
+		headlineOccurrences: headlineFrequencies(state),
 		finalParty: state.player.partyId,
 		affiliations: state.player.affiliations.length,
 		quartersAffiliated: affiliatedQuarters(state),
@@ -1076,7 +1131,57 @@ function aggregateEvents(runs: readonly SimulationRun[]): AggregateEventFrequenc
 		.sort((left, right) => right.count - left.count || left.eventId.localeCompare(right.eventId));
 }
 
-function aggregateRuns(runs: readonly SimulationRun[]): SimulationAggregate {
+function aggregateHeadlines(runs: readonly SimulationRun[]): AggregateHeadlineFrequency[] {
+	const totals = new Map<string, { count: number; careers: number; maxPerCareer: number }>();
+	for (const run of runs) {
+		for (const headline of run.headlineOccurrences) {
+			const current = totals.get(headline.headlineId) ?? { count: 0, careers: 0, maxPerCareer: 0 };
+			totals.set(headline.headlineId, {
+				count: current.count + headline.count,
+				careers: current.careers + 1,
+				maxPerCareer: Math.max(current.maxPerCareer, headline.count)
+			});
+		}
+	}
+	return [...totals.entries()]
+		.map(([headlineId, values]) => ({ headlineId, ...values }))
+		.sort(
+			(left, right) => right.count - left.count || left.headlineId.localeCompare(right.headlineId)
+		);
+}
+
+/** Contenus jamais atteints et couverture par catégorie d'événements (P3-15). */
+function contentCoverage(runs: readonly SimulationRun[], content: Content): ContentCoverage {
+	const occurrences = new Map<string, number>();
+	for (const run of runs) {
+		for (const event of run.eventOccurrences) {
+			occurrences.set(event.eventId, (occurrences.get(event.eventId) ?? 0) + event.count);
+		}
+	}
+	const usedHeadlines = new Set(
+		runs.flatMap((run) => run.headlineOccurrences.map((headline) => headline.headlineId))
+	);
+	const categories: Record<string, { events: number; reached: number; occurrences: number }> = {};
+	for (const eventId of content.eventIds) {
+		const category = content.events[eventId]!.category;
+		const current = categories[category] ?? { events: 0, reached: 0, occurrences: 0 };
+		const count = occurrences.get(eventId) ?? 0;
+		categories[category] = {
+			events: current.events + 1,
+			reached: current.reached + (count > 0 ? 1 : 0),
+			occurrences: current.occurrences + count
+		};
+	}
+	return {
+		eventsNeverReached: content.eventIds.filter((eventId) => !occurrences.has(eventId)),
+		headlinesNeverUsed: content.headlines
+			.map((headline) => headline.id)
+			.filter((id) => !usedHeadlines.has(id)),
+		categories
+	};
+}
+
+function aggregateRuns(runs: readonly SimulationRun[], content: Content): SimulationAggregate {
 	const causes: Record<string, number> = {};
 	for (const run of runs) {
 		if (run.endCause) causes[run.endCause] = (causes[run.endCause] ?? 0) + 1;
@@ -1128,6 +1233,10 @@ function aggregateRuns(runs: readonly SimulationRun[]): SimulationAggregate {
 			runs.some((run) => run.strategy === strategy)
 		).map((strategy) => strategySummary(strategy, runs)),
 		events: aggregateEvents(runs),
+		repeatedEvents: distribution(runs.map((run) => run.repeatedEvents)),
+		repeatedHeadlines: distribution(runs.map((run) => run.repeatedHeadlines)),
+		headlines: aggregateHeadlines(runs),
+		coverage: contentCoverage(runs, content),
 		problemSeeds: runs.flatMap((run): ProblemSeed[] =>
 			run.status === 'ended'
 				? []
@@ -1181,7 +1290,7 @@ export function simulateBatch(config: SimulationConfig, content: Content): Simul
 		contentVersion: content.version,
 		config,
 		unavailableMetrics: [],
-		aggregate: aggregateRuns(runs),
+		aggregate: aggregateRuns(runs, content),
 		runs
 	};
 }
@@ -1214,6 +1323,8 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'quartersWithSuspension',
 		'eventsExperienced',
 		'eventOccurrences',
+		'repeatedEvents',
+		'repeatedHeadlines',
 		'finalParty',
 		'affiliations',
 		'quartersAffiliated',
@@ -1285,6 +1396,8 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.quartersWithSuspension,
 		run.eventsExperienced,
 		JSON.stringify(run.eventOccurrences),
+		run.repeatedEvents,
+		run.repeatedHeadlines,
 		run.finalParty,
 		run.affiliations,
 		run.quartersAffiliated,

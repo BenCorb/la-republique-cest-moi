@@ -1316,6 +1316,10 @@ parties réelles.
   4. Réduire les nouvelles d’ambiance génériques au profit d’articles liés à l’état du monde et du
      territoire ; les ambiances restantes varient selon l’époque et la région.
 
+  **Traité en partie par P3-15 (26 novembre 2026, ARCHITECTURE §8.4 quaterdecies)** : règles
+  anti-répétition, instrumentation et signalement des pools trop petits ; la production de contenu
+  reste à P3-24.
+
   **Règles anti-répétition :** mémoriser les identifiants de titres récemment publiés et utiliser une
   pioche sans remise par média ou famille de sujet avant de recycler le pool. Appliquer également un
   délai thématique afin d’éviter trois articles successifs sur le même angle. Pour les événements,

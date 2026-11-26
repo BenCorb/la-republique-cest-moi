@@ -10,6 +10,7 @@
 			"weight": 5,
 			"priority": 8,
 			"availableFromTurn": 5,
+			"maxOccurrences": 3,
 			"cooldownTurns": 16,
 			"unique": false,
 			"when": {
@@ -139,6 +140,7 @@
 			"weight": 3,
 			"priority": 8,
 			"availableFromTurn": 17,
+			"maxOccurrences": 3,
 			"cooldownTurns": 16,
 			"unique": false,
 			"when": {

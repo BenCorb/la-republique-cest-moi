@@ -142,6 +142,7 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
 	violations.push(...checkMediaInvariants(state));
 	violations.push(...checkReformInvariants(state));
 	if (content) violations.push(...checkContentReferences(state, content));
+	if (content) violations.push(...checkPressMemory(state, content));
 	return violations;
 }
 
@@ -211,6 +212,25 @@ function checkMediaInvariants(state: GameState): string[] {
 		) {
 			violations.push(`date d’interview invalide : ${mediaId}`);
 		}
+	}
+	return violations;
+}
+
+/** Mémoire du fil de presse (P3-15) : titres connus, sans doublon ; angles bornés. */
+function checkPressMemory(state: GameState, content: Content): string[] {
+	const violations: string[] = [];
+	const { usedHeadlines, recentAngles } = state.world.press;
+	const known = new Set(content.headlines.map((headline) => headline.id));
+	for (const [key, ids] of Object.entries(usedHeadlines)) {
+		const seen = new Set<string>();
+		for (const id of ids) {
+			if (!known.has(id)) violations.push(`titre inconnu dans la mémoire de presse : ${id}`);
+			if (seen.has(id)) violations.push(`titre en double dans le pool ${key} : ${id}`);
+			seen.add(id);
+		}
+	}
+	if (recentAngles.length > content.press.angleRepeatLimit) {
+		violations.push('mémoire des angles de presse plus longue que le délai thématique');
 	}
 	return violations;
 }

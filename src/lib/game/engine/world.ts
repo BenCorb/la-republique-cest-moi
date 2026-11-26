@@ -100,7 +100,8 @@ export function createWorld(rng: RngState, turn: Turn, content: Content): WorldC
 					mediaId,
 					{ relation: content.media[mediaId]?.baseRelation ?? 0, interviewTurn: null }
 				])
-			)
+			),
+			press: { usedHeadlines: {}, recentAngles: [] }
 		},
 		characters,
 		rng: currentRng

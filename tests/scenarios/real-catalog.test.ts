@@ -296,7 +296,7 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 		];
 		const seen = new Set<string>();
 		strategies.forEach((wishes, strategy) => {
-			for (let seed = 0; seed < 60; seed += 1) {
+			for (let seed = 0; seed < 100; seed += 1) {
 				const state = career(`atteinte-${strategy}-${seed}`, wishes, 400, seed);
 				for (const entry of quarters(state.history)) {
 					for (const event of entry.events) {
@@ -306,9 +306,16 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 			}
 		});
 		// Événements rares, couverts par des tests ciblés : le permis signé par un maire
-		// (P3-12, `tests/unit/capabilities.test.ts`) et la révélation d'une affaire de
-		// l'entourage (≈ 1 % des carrières, test qui suit).
-		const targeted = new Set(['press.donor_investigation', 'justice.entourage_revelation']);
+		// (P3-12, `tests/unit/capabilities.test.ts`), « Un rempart » (≈ 1 % des
+		// carrières, rapport P3-15, `tests/unit/repetition.test.ts`), le retour du
+		// donateur vénal (`tests/unit/capabilities.test.ts`) et la révélation d'une
+		// affaire de l'entourage (≈ 1 % des carrières, test qui suit).
+		const targeted = new Set([
+			'press.donor_investigation',
+			'entourage.loyal_chief',
+			'relations.donor_returns',
+			'justice.entourage_revelation'
+		]);
 		expect(content.eventIds.filter((id) => !seen.has(id) && !targeted.has(id))).toEqual([]);
 	});
 

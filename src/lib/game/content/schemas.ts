@@ -858,7 +858,8 @@ export const pressBalanceSchema: z.ZodType<PressBalance> = z.strictObject({
 	lifestylePercent: percent,
 	lifestyleLevel: nonNegativeInt,
 	ambientPercent: percent,
-	interviewCooldownTurns: nonNegativeInt
+	interviewCooldownTurns: nonNegativeInt,
+	angleRepeatLimit: positiveInt
 });
 
 const modifierPercent = safeInt.refine((value) => value >= 0 && value <= 300, 'de 0 à 300 %');

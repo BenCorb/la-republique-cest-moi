@@ -656,6 +656,12 @@ export interface PressBalance {
 	readonly ambientPercent: number;
 	/** Délai minimal entre deux interviews au même média, en trimestres. */
 	readonly interviewCooldownTurns: number;
+	/**
+	 * Délai thématique (P3-15) : nombre maximal d'articles successifs consacrés
+	 * au joueur sous le même angle (sujet et précision) ; la justice, les
+	 * interviews et les rachats sont toujours couverts.
+	 */
+	readonly angleRepeatLimit: number;
 }
 
 export interface MediaCatalog {

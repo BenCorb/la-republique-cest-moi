@@ -451,6 +451,7 @@
 		"lifestylePercent": 15,
 		"lifestyleLevel": 2,
 		"ambientPercent": 60,
-		"interviewCooldownTurns": 4
+		"interviewCooldownTurns": 4,
+		"angleRepeatLimit": 2
 	}
 }
