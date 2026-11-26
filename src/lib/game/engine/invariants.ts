@@ -9,6 +9,8 @@ import {
 	ATTITUDE_MAX,
 	ATTITUDE_MIN,
 	FACT_SEVERITY_MAX,
+	MEDIA_RELATION_MAX,
+	MEDIA_RELATION_MIN,
 	GAUGE_MAX,
 	GAUGE_MIN,
 	INDICATOR_IDS,
@@ -135,6 +137,7 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
 	violations.push(...checkFactInvariants(state));
 	violations.push(...checkCaseInvariants(state));
 	violations.push(...checkPromiseInvariants(state));
+	violations.push(...checkMediaInvariants(state));
 	if (content) violations.push(...checkContentReferences(state, content));
 	return violations;
 }
@@ -145,6 +148,27 @@ export function checkInvariants(state: GameState, content?: Content): string[] {
  * datée, échéance non échue tant que la partie continue, au plus une promesse
  * ouverte par promesse type.
  */
+/** Médias (P3-03) : relations entières bornées, interviews passées. */
+function checkMediaInvariants(state: GameState): string[] {
+	const violations: string[] = [];
+	for (const [mediaId, media] of Object.entries(state.world.media)) {
+		if (
+			!Number.isSafeInteger(media.relation) ||
+			media.relation < MEDIA_RELATION_MIN ||
+			media.relation > MEDIA_RELATION_MAX
+		) {
+			violations.push(`relation de média hors bornes : ${mediaId} = ${media.relation}`);
+		}
+		if (
+			media.interviewTurn !== null &&
+			(media.interviewTurn < START_TURN || media.interviewTurn > state.turn)
+		) {
+			violations.push(`date d’interview invalide : ${mediaId}`);
+		}
+	}
+	return violations;
+}
+
 function checkPromiseInvariants(state: GameState): string[] {
 	const violations: string[] = [];
 	const open = new Set<string>();
@@ -644,6 +668,11 @@ function checkCareerInvariants(state: GameState): string[] {
  */
 export function checkContentReferences(state: GameState, content: Content): string[] {
 	const violations: string[] = [];
+	const mediaIds = Object.keys(state.world.media).sort();
+	const catalogMedia = [...content.mediaIds].sort();
+	if (mediaIds.join() !== catalogMedia.join()) {
+		violations.push(`médias différents du catalogue : ${mediaIds.join(', ')}`);
+	}
 	if (!Object.hasOwn(content.lifestyles, state.player.lifestyle)) {
 		violations.push(`train de vie inconnu : ${state.player.lifestyle}`);
 	}

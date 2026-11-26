@@ -22,10 +22,13 @@ import {
 	justiceCatalogSchema,
 	wealthCatalogSchema,
 	promisesCatalogSchema,
+	mediaCatalogSchema,
 	upgradeCatalogSchema,
 	worldSchema
 } from './schemas.ts';
 import {
+	ARTICLE_TONES,
+	ARTICLE_TOPICS,
 	PARTY_REFERENCES,
 	PROMISE_VARIABLE,
 	TREASURY_IDS,
@@ -52,6 +55,8 @@ import {
 	type WealthDefinition,
 	type PromiseDefinition,
 	type PromisesDefinition,
+	type MediaCatalog,
+	type MediaDefinition,
 	type ResourceAmount,
 	type TraitDefinition,
 	type UpgradeDefinition,
@@ -95,6 +100,8 @@ export interface RawContent {
 	readonly wealth: unknown;
 	/** Promesses types et règles du registre (`promises.json`). */
 	readonly promises: unknown;
+	/** Médias, titres de presse et règles du fil de presse (`media.json`). */
+	readonly media: unknown;
 }
 
 export type ContentValidation =
@@ -270,6 +277,8 @@ interface Refs {
 	readonly professions: ReadonlySet<string>;
 	readonly offenses: ReadonlySet<string>;
 	readonly lifestyles: ReadonlySet<string>;
+	readonly media: ReadonlySet<string>;
+	readonly upgrades: ReadonlySet<string>;
 }
 
 /** Vérifie les partis et mandats cités par une condition. */
@@ -296,6 +305,16 @@ function conditionIssues(
 			return refs.origins.has(condition.origin)
 				? []
 				: [{ source, path: `${path}.origin`, message: `origine inconnue : ${condition.origin}` }];
+		case 'ownsUpgrade':
+			return refs.upgrades.has(condition.upgrade)
+				? []
+				: [
+						{
+							source,
+							path: `${path}.upgrade`,
+							message: `amélioration inconnue : ${condition.upgrade}`
+						}
+					];
 		case 'lifestyle':
 			return refs.lifestyles.has(condition.lifestyle)
 				? []
@@ -509,6 +528,27 @@ function effectIssues(
 					});
 				}
 				break;
+			case 'addMediaRelation':
+				if (effect.media === 'target' ? targetKind !== 'media' : !refs.media.has(effect.media)) {
+					issues.push({
+						source,
+						path: `${at}.media`,
+						message:
+							effect.media === 'target'
+								? '« target » réservé aux actions ciblant un média'
+								: `média inconnu : ${effect.media}`
+					});
+				}
+				break;
+			case 'giveInterview':
+				if (targetKind !== 'media') {
+					issues.push({
+						source,
+						path: at,
+						message: 'interview réservée aux actions ciblant un média'
+					});
+				}
+				break;
 			case 'makePromise':
 				if (targetKind !== 'promise') {
 					issues.push({
@@ -617,7 +657,9 @@ function crossCheckPolitics(
 				effect.op === 'dismissStaff' ||
 				effect.op === 'releaseUpgrade' ||
 				effect.op === 'makePromise' ||
-				(effect.op === 'advancePromise' && targetKind === 'pledge')
+				(effect.op === 'advancePromise' && targetKind === 'pledge') ||
+				(effect.op === 'addMediaRelation' && effect.media === 'target') ||
+				effect.op === 'giveInterview'
 		);
 		if (targetKind !== null && !usesTarget) {
 			issues.push({
@@ -1178,6 +1220,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	const justiceCatalog = justiceCatalogSchema.safeParse(raw.justice);
 	const wealthCatalog = wealthCatalogSchema.safeParse(raw.wealth);
 	const promisesCatalog = promisesCatalogSchema.safeParse(raw.promises);
+	const mediaCatalog = mediaCatalogSchema.safeParse(raw.media);
 	const eventFiles = Object.keys(raw.events)
 		.sort()
 		.map((source) => ({ source, parsed: eventCatalogSchema.safeParse(raw.events[source]) }));
@@ -1200,6 +1243,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	if (!promisesCatalog.success) {
 		issues.push(...zodIssues('promises.json', promisesCatalog.error));
 	}
+	if (!mediaCatalog.success) issues.push(...zodIssues('media.json', mediaCatalog.error));
 	for (const { source, parsed } of eventFiles) {
 		if (!parsed.success) issues.push(...zodIssues(source, parsed.error));
 	}
@@ -1217,6 +1261,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 		!justiceCatalog.success ||
 		!wealthCatalog.success ||
 		!promisesCatalog.success ||
+		!mediaCatalog.success ||
 		eventFiles.some(({ parsed }) => !parsed.success)
 	) {
 		return { ok: false, issues };
@@ -1300,12 +1345,15 @@ export function validateContent(raw: RawContent): ContentValidation {
 		mandates: new Set(career.mandates.map((mandate) => mandate.id)),
 		elections: new Set(career.elections.map((election) => election.id)),
 		offenses: new Set(justiceCatalog.data.offenses.map((offense) => offense.id)),
-		lifestyles: new Set(wealthCatalog.data.lifestyles.map((lifestyle) => lifestyle.id))
+		lifestyles: new Set(wealthCatalog.data.lifestyles.map((lifestyle) => lifestyle.id)),
+		media: new Set(mediaCatalog.data.media.map((media) => media.id)),
+		upgrades: new Set(upgradeList.map((upgrade) => upgrade.id))
 	};
 	issues.push(...crossCheckWealth(wealthCatalog.data, upgradeList, knownIds));
 	issues.push(...crossCheckJustice(justiceCatalog.data, refs, knownIds, sourcedEvents));
 	issues.push(...crossCheckPolitics(actionList, upgradeList, sourcedEvents, refs));
 	issues.push(...crossCheckPromises(promisesCatalog.data, refs, knownIds, sourcedEvents));
+	issues.push(...crossCheckMedia(mediaCatalog.data, upgradeList, refs, knownIds));
 	issues.push(
 		...crossCheckProfiles(
 			profileData.origins,
@@ -1376,6 +1424,8 @@ export function validateContent(raw: RawContent): ContentValidation {
 	for (const offense of justiceCatalog.data.offenses) offenses[offense.id] = offense;
 	const promises: Record<string, PromiseDefinition> = {};
 	for (const promise of promisesCatalog.data.promises) promises[promise.id] = promise;
+	const media: Record<string, MediaDefinition> = {};
+	for (const entry of mediaCatalog.data.media) media[entry.id] = entry;
 	return {
 		ok: true,
 		content: {
@@ -1393,6 +1443,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 				justice: justiceCatalog.data,
 				wealth: wealthCatalog.data,
 				promises: promisesCatalog.data,
+				media: mediaCatalog.data,
 				events: Object.fromEntries(eventFiles.map(({ source, parsed }) => [source, parsed.data]))
 			}),
 			balance: balance.data,
@@ -1440,9 +1491,127 @@ export function validateContent(raw: RawContent): ContentValidation {
 			},
 			promises,
 			promiseIds: promisesCatalog.data.promises.map((promise) => promise.id),
-			promiseRules: promisesCatalog.data.balance
+			promiseRules: promisesCatalog.data.balance,
+			media,
+			mediaIds: mediaCatalog.data.media.map((entry) => entry.id),
+			headlines: mediaCatalog.data.headlines,
+			press: mediaCatalog.data.balance
 		}
 	};
+}
+
+/** Précisions de sujet permises dans un titre, par sujet (P3-03). */
+const HEADLINE_DETAILS: Readonly<Record<string, readonly string[]>> = {
+	justice: ['revealed', 'dismissed', 'indicted', 'appealed', 'acquitted', 'convicted'],
+	promise: ['kept', 'partial', 'abandoned'],
+	election: ['won', 'lost']
+};
+
+/** Variables permises dans un titre : `{subject}` et `{media}` ; rien d'autre. */
+const HEADLINE_VARIABLES: ReadonlySet<string> = new Set(['subject', 'media']);
+
+/**
+ * Médias et fil de presse (P3-03) : identifiants uniques, groupes connus,
+ * titres aux variables permises et précisions valides, un titre générique
+ * (sans restriction) pour chaque sujet et tonalité, actifs médiatiques
+ * rattachés à un média connu, un seul exemplaire et un seul actif par média.
+ */
+function crossCheckMedia(
+	catalog: MediaCatalog,
+	upgrades: readonly UpgradeDefinition[],
+	refs: Refs,
+	knownIds: Set<string>
+): ContentIssue[] {
+	const source = 'media.json';
+	const issues: ContentIssue[] = [];
+	catalog.media.forEach((entry, index) => {
+		const path = `media[${index}]`;
+		if (knownIds.has(entry.id)) {
+			issues.push({ source, path: `${path}.id`, message: `identifiant en double : ${entry.id}` });
+		}
+		knownIds.add(entry.id);
+		entry.groups.forEach((group, groupIndex) => {
+			if (!refs.groups.has(group)) {
+				issues.push({
+					source,
+					path: `${path}.groups[${groupIndex}]`,
+					message: `groupe de soutien inconnu : ${group}`
+				});
+			}
+		});
+	});
+	catalog.headlines.forEach((headline, index) => {
+		const path = `headlines[${index}]`;
+		if (knownIds.has(headline.id)) {
+			issues.push({
+				source,
+				path: `${path}.id`,
+				message: `identifiant en double : ${headline.id}`
+			});
+		}
+		knownIds.add(headline.id);
+		for (const match of headline.text.matchAll(TEMPLATE_VARIABLE)) {
+			const name = match[1] ?? '';
+			if (!HEADLINE_VARIABLES.has(name) || (headline.topic === 'ambient' && name !== 'media')) {
+				issues.push({ source, path: `${path}.text`, message: `variable non permise : {${name}}` });
+			}
+		}
+		const allowed = HEADLINE_DETAILS[headline.topic] ?? [];
+		for (const detail of headline.details ?? []) {
+			if (!allowed.includes(detail)) {
+				issues.push({ source, path: `${path}.details`, message: `précision inconnue : ${detail}` });
+			}
+		}
+		if (headline.topic === 'ambient' && headline.tone !== 'neutral') {
+			issues.push({ source, path: `${path}.tone`, message: 'une nouvelle d’ambiance est neutre' });
+		}
+	});
+	const generic = (topic: string, tone: string): boolean =>
+		catalog.headlines.some(
+			(headline) =>
+				headline.topic === topic &&
+				headline.tone === tone &&
+				headline.kinds === undefined &&
+				headline.details === undefined &&
+				headline.fromYear === undefined
+		);
+	for (const topic of ARTICLE_TOPICS) {
+		for (const tone of topic === 'ambient' ? (['neutral'] as const) : ARTICLE_TONES) {
+			if (!generic(topic, tone)) {
+				issues.push({
+					source,
+					path: 'headlines',
+					message: `aucun titre générique pour le sujet « ${topic} » (${tone})`
+				});
+			}
+		}
+	}
+	const owners = new Map<string, string>();
+	upgrades.forEach((upgrade, index) => {
+		const mediaId = upgrade.asset?.media;
+		if (mediaId === undefined) return;
+		const path = `upgrades[${index}].asset.media`;
+		if (!refs.media.has(mediaId)) {
+			issues.push({ source: 'upgrades.json', path, message: `média inconnu : ${mediaId}` });
+		}
+		if (upgrade.maxOwned !== 1) {
+			issues.push({
+				source: 'upgrades.json',
+				path: `upgrades[${index}].maxOwned`,
+				message: 'un actif médiatique se possède en un seul exemplaire'
+			});
+		}
+		const previous = owners.get(mediaId);
+		if (previous) {
+			issues.push({
+				source: 'upgrades.json',
+				path,
+				message: `média déjà rattaché à ${previous}`
+			});
+		}
+		owners.set(mediaId, upgrade.id);
+	});
+	return issues;
 }
 
 /** Effets permis dans une promesse : certains, sur les ressources, jauges et soutiens. */

@@ -52,6 +52,9 @@ import {
 	type PromiseChange,
 	type PromiseRecord,
 	isOpenPledge,
+	type Article,
+	followsPlayer,
+	ownedMedia,
 	type StaffLeaveReason,
 	activeMandates,
 	activeStaff,
@@ -425,6 +428,53 @@ export interface CareerView {
 	readonly pastCampaigns: readonly CampaignView[];
 	/** Registre des promesses et engagements possibles (P3-04). */
 	readonly promises: PromisesView;
+	/** Médias et relations (P3-03). */
+	readonly media: MediaView;
+}
+
+/** Bouton d'une action ciblant un média (interview, déjeuner). */
+export interface MediaActionView {
+	readonly actionId: string;
+	readonly label: string;
+	readonly planned: boolean;
+	readonly addable: boolean;
+	readonly reason: string | null;
+}
+
+/** Média du catalogue et sa relation au joueur (P3-03). */
+export interface MediaOutletView {
+	readonly mediaId: string;
+	readonly name: string;
+	readonly kindLabel: string;
+	readonly line: string;
+	readonly description: string;
+	readonly audienceLabel: string;
+	readonly relationLabel: string;
+	readonly owned: boolean;
+	/** Le média suit-il le joueur (média local, ou exposition suffisante) ? */
+	readonly follows: boolean;
+	readonly actions: readonly MediaActionView[];
+}
+
+export interface MediaView {
+	readonly outlets: readonly MediaOutletView[];
+	/** Seuil d'exposition au-delà duquel les médias nationaux suivent le joueur. */
+	readonly nationalExposure: number;
+}
+
+/** Article du fil de presse (P3-03). */
+export interface PressItemView {
+	readonly key: string;
+	readonly dateLabel: string;
+	readonly media: string;
+	readonly title: string;
+	/** L'article concerne le joueur (sinon : nouvelle d'ambiance). */
+	readonly aboutPlayer: boolean;
+	readonly toneLabel: string | null;
+	/** Information critique (article défavorable), à distinguer de l'ambiance. */
+	readonly critical: boolean;
+	/** Effets sur les soutiens, en clair (vide si aucun). */
+	readonly effects: string;
 }
 
 /** Promesse type que le candidat peut annoncer (P3-04). */
@@ -676,11 +726,8 @@ export interface PlayerView {
 	readonly organisation: readonly OrganisationGroupView[];
 	readonly decision: DecisionView | null;
 	readonly journal: readonly JournalTurnView[];
-	readonly press: readonly {
-		readonly key: string;
-		readonly dateLabel: string;
-		readonly title: string;
-	}[];
+	/** Fil de presse : articles des derniers trimestres, du plus récent au plus ancien. */
+	readonly press: readonly PressItemView[];
 	readonly alerts: readonly Alert[];
 	readonly summary: SummaryView | null;
 	readonly world: WorldView;
@@ -792,6 +839,10 @@ function describeEffect(range: EffectRange, content: Content): string {
 					: range.change === 'amend'
 						? 'Promesse amendée'
 						: 'Promesse abandonnée';
+		case 'media':
+			return range.change === 'interview'
+				? 'Interview publiée à la fin du trimestre'
+				: `Relation (${range.media === 'target' ? 'média choisi' : (content.media[range.media]?.name ?? range.media)}) ${formatGaugeDelta(range.value)}`;
 	}
 }
 
@@ -858,6 +909,10 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 					return `« ${content.promises[change.promiseId]?.label ?? change.promiseId} » : ${PROMISE_CHANGE_LABELS[change.change]}`;
 				case 'promiseProgress':
 					return `« ${content.promises[change.promiseId]?.label ?? change.promiseId} » : avancement + ${change.delta}`;
+				case 'mediaRelation':
+					return `relation avec ${content.media[change.mediaId]?.name ?? change.mediaId} ${change.delta > 0 ? 'améliorée' : 'dégradée'}`;
+				case 'interview':
+					return `interview accordée à ${content.media[change.mediaId]?.name ?? change.mediaId}`;
 			}
 		})
 		.join(', ');
@@ -1062,6 +1117,7 @@ function targetLabel(target: string, state: GameState, content: Content): string
 	if (Object.hasOwn(content.promises, target)) {
 		return `« ${content.promises[target]?.label ?? target} »`;
 	}
+	if (Object.hasOwn(content.media, target)) return content.media[target]?.name ?? target;
 	const pledge = state.promises.find((entry) => entry.pledgeId === target);
 	if (pledge) return `« ${content.promises[pledge.promiseId]?.label ?? pledge.promiseId} »`;
 	if (target.startsWith('upgrade.')) {
@@ -1197,6 +1253,15 @@ function journalOfQuarter(entry: HistoryEntry, state: GameState, content: Conten
 		);
 		if (effects) lines.push({ kind: 'career', text: `Promesses — ${effects}` });
 	}
+	for (const article of entry.press?.articles ?? []) {
+		const effects = articleEffects(article, content);
+		if (!effects) continue;
+		const media = content.media[article.mediaId]?.name ?? article.mediaId;
+		lines.push({
+			kind: 'career',
+			text: `Presse — ${media} : « ${articleTitle(article, state, content)} » — ${effects}`
+		});
+	}
 	if (entry.mandates.changes.length > 0) {
 		lines.push({
 			kind: 'economy',
@@ -1272,20 +1337,148 @@ function buildJournal(state: GameState, content: Content): JournalTurnView[] {
 		.map(([turn, lines]) => ({ key: `t${turn}`, label: formatTurn(turn), lines }));
 }
 
-function buildPress(state: GameState, content: Content): PlayerView['press'] {
-	const items: { key: string; dateLabel: string; title: string }[] = [];
-	for (const entry of state.history) {
-		if (entry.type !== 'turn.resolved') continue;
-		for (const event of entry.events) {
-			if (event.outcome === 'cancelled' || !event.instanceId) continue;
-			items.push({
-				key: event.instanceId,
-				dateLabel: formatTurn(entry.turn + 1),
-				title: eventTitle(event.eventId, event.actors, state, content)
-			});
+const TONE_LABELS: Readonly<Record<string, string>> = {
+	critical: 'Critique',
+	neutral: 'Neutre',
+	favorable: 'Favorable'
+};
+
+const MEDIA_KIND_LABELS: Readonly<Record<string, string>> = {
+	reference: 'Quotidien de référence',
+	popular: 'Quotidien populaire',
+	news_channel: 'Chaîne d’information continue',
+	satirical: 'Hebdomadaire satirique',
+	regional: 'Presse régionale'
+};
+
+function lowerFirst(text: string): string {
+	return text.charAt(0).toLocaleLowerCase('fr-FR') + text.slice(1);
+}
+
+/** Sujet d'un article, tel qu'il est cité dans le titre (`{subject}`). */
+function articleSubject(article: Article, state: GameState, content: Content): string {
+	const id = article.subjectId;
+	if (id === null) return '';
+	switch (article.topic) {
+		case 'justice': {
+			const legalCase = state.cases.find((entry) => entry.caseId === id);
+			const fact = state.facts.find((entry) => entry.factId === legalCase?.factId);
+			const label = fact ? content.offenses[fact.offenseId]?.label : undefined;
+			return label ? lowerFirst(label) : 'justice';
 		}
+		case 'promise': {
+			const pledge = state.promises.find((entry) => entry.pledgeId === id);
+			return pledge ? (content.promises[pledge.promiseId]?.label ?? pledge.promiseId) : id;
+		}
+		case 'election': {
+			const campaign = state.campaigns.find((entry) => entry.campaignId === id);
+			return campaign ? (content.elections[campaign.electionId]?.label ?? campaign.electionId) : id;
+		}
+		default:
+			return content.media[id]?.name ?? id;
 	}
-	return items.reverse().slice(0, 6);
+}
+
+/** Titre d'un article : gabarit du catalogue, variables résolues. */
+export function articleTitle(article: Article, state: GameState, content: Content): string {
+	const headline = content.headlines.find((entry) => entry.id === article.headlineId);
+	if (!headline) return article.headlineId;
+	const subject = articleSubject(article, state, content);
+	const media = content.media[article.mediaId]?.name ?? article.mediaId;
+	return headline.text.replaceAll('{subject}', subject).replaceAll('{media}', media);
+}
+
+function articleEffects(article: Article, content: Content): string {
+	return [
+		...article.supports.map(
+			(change) =>
+				`${content.supportGroups[change.groupId]?.label ?? change.groupId} ${formatGaugeDelta(change.delta)}`
+		),
+		...(article.exposure !== 0 ? [`Exposition ${formatGaugeDelta(article.exposure)}`] : [])
+	].join(', ');
+}
+
+function buildPress(state: GameState, content: Content): PlayerView['press'] {
+	const items: PressItemView[] = [];
+	for (const entry of state.history) {
+		if (entry.type !== 'turn.resolved' || !entry.press) continue;
+		entry.press.articles.forEach((article, index) => {
+			const aboutPlayer = article.topic !== 'ambient';
+			items.push({
+				key: `t${entry.turn}-a${index}`,
+				dateLabel: formatTurn(entry.turn + 1),
+				media: content.media[article.mediaId]?.name ?? article.mediaId,
+				title: articleTitle(article, state, content),
+				aboutPlayer,
+				toneLabel: aboutPlayer ? (TONE_LABELS[article.tone] ?? null) : null,
+				critical: aboutPlayer && article.tone === 'critical',
+				effects: articleEffects(article, content)
+			});
+		});
+	}
+	return items.reverse().slice(0, 8);
+}
+
+function audienceLabel(audience: number): string {
+	return audience >= 50
+		? 'Forte audience'
+		: audience >= 30
+			? 'Audience moyenne'
+			: 'Audience confidentielle';
+}
+
+/** Relation d'un média, en clair (aucun chiffre affiché). */
+export function mediaRelationLabel(relation: number): string {
+	if (relation >= 50) return 'Très bienveillant';
+	if (relation >= 20) return 'Bienveillant';
+	if (relation > -20) return 'Neutre';
+	if (relation > -50) return 'Réservé';
+	return 'Hostile';
+}
+
+function buildMedia(state: GameState, plan: readonly PlanStep[], content: Content): MediaView {
+	const actionIds = content.actionIds.filter((id) => content.actions[id]?.target === 'media');
+	const owned = ownedMedia(state.upgrades, content);
+	const outlets = content.mediaIds.flatMap((mediaId): MediaOutletView[] => {
+		const definition = content.media[mediaId];
+		if (!definition) return [];
+		const isOwned = owned.has(mediaId);
+		return [
+			{
+				mediaId,
+				name: definition.name,
+				kindLabel: MEDIA_KIND_LABELS[definition.kind] ?? definition.kind,
+				line: definition.line,
+				description: definition.description,
+				audienceLabel: audienceLabel(definition.audience),
+				relationLabel: isOwned
+					? 'Votre propriété'
+					: mediaRelationLabel(state.world.media[mediaId]?.relation ?? 0),
+				owned: isOwned,
+				follows: followsPlayer(definition, state.player.exposure, content),
+				actions: isOwned
+					? []
+					: actionIds.map((actionId) => {
+							const step: PlanStep = { kind: 'action', id: actionId, target: mediaId };
+							const isPlanned = plan.some(
+								(entry) =>
+									entry.kind === 'action' && entry.id === actionId && entry.target === mediaId
+							);
+							const add = isPlanned
+								? { addable: false, reason: null }
+								: addability(state, plan, step, content);
+							return {
+								actionId,
+								label: content.actions[actionId]?.label ?? actionId,
+								planned: isPlanned,
+								addable: add.addable,
+								reason: add.reason
+							};
+						})
+			}
+		];
+	});
+	return { outlets, nationalExposure: content.press.nationalExposure };
 }
 
 /** Somme des montants par ressource, dans l'ordre des ressources. */
@@ -1903,6 +2096,7 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 			})),
 		declareActionId,
 		promises: buildPromises(state, plan, content),
+		media: buildMedia(state, plan, content),
 		pastCampaigns: state.campaigns
 			.filter((campaign) => campaign.status !== 'running')
 			.map(campaignView)

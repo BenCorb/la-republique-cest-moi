@@ -1,0 +1,456 @@
+{
+	"media": [
+		{
+			"id": "media.horizon",
+			"name": "L’Horizon",
+			"kind": "reference",
+			"line": "Quotidien de référence, grave et un peu condescendant",
+			"description": "Trois colonnes d’éditorial, aucune photo en une et une rubrique « Débats » où l’on s’indigne avec mesure. Ses lecteurs le citent plus souvent qu’ils ne le lisent.",
+			"scope": "national",
+			"audience": 40,
+			"baseRelation": 0,
+			"groups": ["support.middle_class", "support.wealthy", "support.apparatus"],
+			"coverage": {
+				"justice": 3,
+				"promise": 5,
+				"election": 4,
+				"lifestyle": 1,
+				"ownership": 3
+			},
+			"amplifyPercent": 100
+		},
+		{
+			"id": "media.petit_populaire",
+			"name": "Le Petit Populaire",
+			"kind": "popular",
+			"line": "Quotidien populaire : faits divers, people et colère du comptoir",
+			"description": "Gros titres, petites phrases et un sondage par jour. Lu au café, commenté au bureau, découpé par votre mère.",
+			"scope": "national",
+			"audience": 55,
+			"baseRelation": 0,
+			"groups": ["support.working_class", "support.middle_class"],
+			"coverage": {
+				"justice": 5,
+				"promise": 2,
+				"election": 2,
+				"lifestyle": 5,
+				"ownership": 2
+			},
+			"amplifyPercent": 100
+		},
+		{
+			"id": "media.info_non_stop",
+			"name": "Info Non-Stop",
+			"kind": "news_channel",
+			"line": "Chaîne d’information continue : tout, tout de suite, en boucle",
+			"description": "Un bandeau rouge « ALERTE » allumé en permanence, des plateaux de quatre experts de tout et une même image diffusée quarante fois. Rien n’y dure, mais tout s’y amplifie.",
+			"scope": "national",
+			"audience": 60,
+			"baseRelation": 0,
+			"groups": ["support.working_class", "support.middle_class", "support.wealthy"],
+			"coverage": {
+				"justice": 5,
+				"promise": 3,
+				"election": 5,
+				"lifestyle": 3,
+				"ownership": 3
+			},
+			"amplifyPercent": 125
+		},
+		{
+			"id": "media.gazette",
+			"name": "La Gazette fouineuse",
+			"kind": "satirical",
+			"line": "Hebdomadaire satirique : le scandale du mercredi",
+			"description": "Huit pages, pas de publicité et des sources dans tous les ministères. On ne lui accorde jamais une bonne presse : au mieux, il vous oublie une semaine.",
+			"scope": "national",
+			"audience": 25,
+			"baseRelation": -10,
+			"groups": ["support.activists", "support.apparatus", "support.middle_class"],
+			"coverage": {
+				"justice": 5,
+				"promise": 4,
+				"election": 1,
+				"lifestyle": 4,
+				"ownership": 5
+			},
+			"amplifyPercent": 100
+		},
+		{
+			"id": "media.bocage",
+			"name": "Le Courrier du Bocage",
+			"kind": "regional",
+			"line": "Presse régionale, avec Radio Bocage FM : comices, conseils municipaux et chiens écrasés",
+			"description": "Le quotidien du département et sa radio, Radio Bocage FM. Tout le monde le lit, ne serait-ce que pour les avis d’obsèques ; il suit les élus locaux de très près, faute d’en avoir d’autres.",
+			"scope": "local",
+			"audience": 30,
+			"baseRelation": 10,
+			"groups": ["support.working_class", "support.middle_class", "support.business"],
+			"coverage": {
+				"justice": 3,
+				"promise": 4,
+				"election": 5,
+				"lifestyle": 2,
+				"ownership": 1
+			},
+			"amplifyPercent": 100
+		}
+	],
+	"headlines": [
+		{
+			"id": "headline.justice_critical",
+			"topic": "justice",
+			"tone": "critical",
+			"text": "Affaire de {subject} : l’étau se resserre"
+		},
+		{
+			"id": "headline.justice_neutral",
+			"topic": "justice",
+			"tone": "neutral",
+			"text": "Affaire de {subject} : « Je fais confiance à la justice de mon pays »"
+		},
+		{
+			"id": "headline.justice_favorable",
+			"topic": "justice",
+			"tone": "favorable",
+			"text": "Affaire de {subject} : et si c’était surtout de l’acharnement ?"
+		},
+		{
+			"id": "headline.justice_revealed",
+			"topic": "justice",
+			"tone": "critical",
+			"details": ["revealed"],
+			"text": "Révélations : une affaire de {subject} éclabousse la vie politique locale"
+		},
+		{
+			"id": "headline.justice_revealed_satire",
+			"topic": "justice",
+			"tone": "critical",
+			"kinds": ["satirical"],
+			"details": ["revealed"],
+			"text": "Affaire de {subject} : « Je ne savais pas, mais j’ai signé »"
+		},
+		{
+			"id": "headline.justice_revealed_channel",
+			"topic": "justice",
+			"tone": "critical",
+			"kinds": ["news_channel"],
+			"details": ["revealed", "indicted"],
+			"text": "ALERTE — Affaire de {subject} : notre envoyé spécial en direct devant un domicile depuis 6 heures"
+		},
+		{
+			"id": "headline.justice_indicted",
+			"topic": "justice",
+			"tone": "critical",
+			"details": ["indicted"],
+			"text": "Affaire de {subject} : une mise en examen, « simple formalité », assure l’avocat"
+		},
+		{
+			"id": "headline.justice_convicted",
+			"topic": "justice",
+			"tone": "critical",
+			"details": ["convicted"],
+			"text": "Affaire de {subject} : la condamnation tombe, les amis d’hier se découvrent à peine connaissances"
+		},
+		{
+			"id": "headline.justice_acquitted",
+			"topic": "justice",
+			"tone": "favorable",
+			"details": ["acquitted", "dismissed"],
+			"text": "Affaire de {subject} : la relaxe, et une conférence de presse pour le faire savoir"
+		},
+		{
+			"id": "headline.justice_acquitted_neutral",
+			"topic": "justice",
+			"tone": "neutral",
+			"details": ["acquitted", "dismissed"],
+			"text": "Affaire de {subject} : fin de partie judiciaire, faute de preuves"
+		},
+		{
+			"id": "headline.justice_reference",
+			"topic": "justice",
+			"tone": "critical",
+			"kinds": ["reference"],
+			"text": "Affaire de {subject} : ce que ce dossier révèle de nos mœurs politiques"
+		},
+		{
+			"id": "headline.promise_critical",
+			"topic": "promise",
+			"tone": "critical",
+			"text": "« {subject} » : une promesse de campagne qui n’a pas survécu au mandat"
+		},
+		{
+			"id": "headline.promise_neutral",
+			"topic": "promise",
+			"tone": "neutral",
+			"text": "« {subject} » : un bilan en demi-teinte"
+		},
+		{
+			"id": "headline.promise_favorable",
+			"topic": "promise",
+			"tone": "favorable",
+			"text": "« {subject} » : promesse tenue, et ce n’est pas si fréquent"
+		},
+		{
+			"id": "headline.promise_abandoned_satire",
+			"topic": "promise",
+			"tone": "critical",
+			"kinds": ["satirical"],
+			"details": ["abandoned"],
+			"text": "« {subject} » : promesse retrouvée au fond d’un tiroir, en parfait état"
+		},
+		{
+			"id": "headline.promise_kept_satire",
+			"topic": "promise",
+			"tone": "neutral",
+			"kinds": ["satirical"],
+			"details": ["kept"],
+			"text": "« {subject} » : un élu tient une promesse, une enquête est ouverte"
+		},
+		{
+			"id": "headline.promise_partial",
+			"topic": "promise",
+			"tone": "neutral",
+			"details": ["partial"],
+			"text": "« {subject} » : promesse tenue à moitié, reste à savoir laquelle"
+		},
+		{
+			"id": "headline.promise_reference",
+			"topic": "promise",
+			"tone": "favorable",
+			"kinds": ["reference"],
+			"details": ["kept"],
+			"text": "« {subject} » : l’art oublié de faire ce que l’on a dit"
+		},
+		{
+			"id": "headline.election_critical",
+			"topic": "election",
+			"tone": "critical",
+			"text": "{subject} : une victoire, mais à quel prix ?"
+		},
+		{
+			"id": "headline.election_neutral",
+			"topic": "election",
+			"tone": "neutral",
+			"text": "{subject} : les résultats sont tombés"
+		},
+		{
+			"id": "headline.election_favorable",
+			"topic": "election",
+			"tone": "favorable",
+			"text": "{subject} : la révélation du scrutin"
+		},
+		{
+			"id": "headline.election_lost",
+			"topic": "election",
+			"tone": "neutral",
+			"details": ["lost"],
+			"text": "{subject} : « On prend acte et on prépare la suite »"
+		},
+		{
+			"id": "headline.election_lost_critical",
+			"topic": "election",
+			"tone": "critical",
+			"details": ["lost"],
+			"text": "{subject} : chronique d’une déroute annoncée"
+		},
+		{
+			"id": "headline.election_regional",
+			"topic": "election",
+			"tone": "favorable",
+			"kinds": ["regional"],
+			"details": ["won"],
+			"text": "{subject} : victoire d’un enfant du pays, fête à la salle polyvalente"
+		},
+		{
+			"id": "headline.election_channel",
+			"topic": "election",
+			"tone": "neutral",
+			"kinds": ["news_channel"],
+			"text": "{subject} : nos quatre experts commentent un score pendant trois heures"
+		},
+		{
+			"id": "headline.lifestyle_critical",
+			"topic": "lifestyle",
+			"tone": "critical",
+			"text": "Montres, chauffeur et grands crus : un train de vie qui interroge"
+		},
+		{
+			"id": "headline.lifestyle_neutral",
+			"topic": "lifestyle",
+			"tone": "neutral",
+			"text": "Train de vie : « J’ai bien le droit d’en profiter un peu, comme tout le monde »"
+		},
+		{
+			"id": "headline.lifestyle_favorable",
+			"topic": "lifestyle",
+			"tone": "favorable",
+			"text": "Art de recevoir : dans l’intimité d’une table politique très courue"
+		},
+		{
+			"id": "headline.lifestyle_popular",
+			"topic": "lifestyle",
+			"tone": "critical",
+			"kinds": ["popular"],
+			"text": "EXCLUSIF — On a compté les voitures : trois au garage, zéro au covoiturage"
+		},
+		{
+			"id": "headline.lifestyle_satire",
+			"topic": "lifestyle",
+			"tone": "critical",
+			"kinds": ["satirical"],
+			"text": "Plan de sobriété : désormais, une seule piscine chauffée par résidence secondaire"
+		},
+		{
+			"id": "headline.interview_critical",
+			"topic": "interview",
+			"tone": "critical",
+			"text": "Entretien : l’art de ne pas répondre, en quarante minutes"
+		},
+		{
+			"id": "headline.interview_neutral",
+			"topic": "interview",
+			"tone": "neutral",
+			"text": "Entretien : « Je ne me pose pas la question »"
+		},
+		{
+			"id": "headline.interview_favorable",
+			"topic": "interview",
+			"tone": "favorable",
+			"text": "Grand entretien : « Le pays a besoin de cohérence, et j’en ai »"
+		},
+		{
+			"id": "headline.interview_channel",
+			"topic": "interview",
+			"tone": "critical",
+			"kinds": ["news_channel"],
+			"text": "Sur notre plateau, un invité quitte le studio au bout de six minutes"
+		},
+		{
+			"id": "headline.interview_regional",
+			"topic": "interview",
+			"tone": "favorable",
+			"kinds": ["regional"],
+			"text": "Au micro de Radio Bocage FM : « Le Bocage, c’est d’abord des gens »"
+		},
+		{
+			"id": "headline.ownership_critical",
+			"topic": "ownership",
+			"tone": "critical",
+			"text": "Rachat de {subject} : la rédaction s’inquiète pour son indépendance"
+		},
+		{
+			"id": "headline.ownership_neutral",
+			"topic": "ownership",
+			"tone": "neutral",
+			"text": "Presse : {subject} change de mains, le nouveau propriétaire promet de « ne rien changer »"
+		},
+		{
+			"id": "headline.ownership_favorable",
+			"topic": "ownership",
+			"tone": "favorable",
+			"text": "{subject} sauvé de la faillite : un repreneur au secours de la presse locale"
+		},
+		{
+			"id": "headline.ownership_satire",
+			"topic": "ownership",
+			"tone": "critical",
+			"kinds": ["satirical"],
+			"text": "{subject} racheté : premier éditorial du nouveau patron, consacré au nouveau patron"
+		},
+		{
+			"id": "headline.ambient_pothole",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "Le nid-de-poule de la départementale 12 fête ses dix ans, en présence de trois élus"
+		},
+		{
+			"id": "headline.ambient_pool",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "Le ministre de la Sobriété énergétique inaugure sa troisième piscine chauffée"
+		},
+		{
+			"id": "headline.ambient_poll",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "Sondage : 62 % des Français ne font plus confiance aux sondages"
+		},
+		{
+			"id": "headline.ambient_roundabout",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "Le rond-point du Bocage remporte le prix du rond-point le plus inutile de l’année"
+		},
+		{
+			"id": "headline.ambient_reform",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "La commission chargée de simplifier les commissions crée deux sous-commissions"
+		},
+		{
+			"id": "headline.ambient_strike",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "Grève : les contrôleurs des grévistes cessent le travail par solidarité"
+		},
+		{
+			"id": "headline.ambient_cheese",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "Comice agricole : le fromage local élu « meilleur ambassadeur du territoire », devant le député"
+		},
+		{
+			"id": "headline.ambient_summit",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "Sommet européen : accord historique pour se revoir dans six mois"
+		},
+		{
+			"id": "headline.ambient_channel",
+			"topic": "ambient",
+			"tone": "neutral",
+			"kinds": ["news_channel"],
+			"text": "ALERTE — Il pleut en novembre : nos experts débattent des causes"
+		},
+		{
+			"id": "headline.ambient_regional",
+			"topic": "ambient",
+			"tone": "neutral",
+			"kinds": ["regional"],
+			"text": "Fête de la châtaigne : record d’affluence et de tickets de tombola invendus"
+		},
+		{
+			"id": "headline.ambient_blog",
+			"topic": "ambient",
+			"tone": "neutral",
+			"fromYear": 2005,
+			"text": "Les élus découvrent les blogs : un sénateur publie ses vœux de 2003"
+		},
+		{
+			"id": "headline.ambient_network",
+			"topic": "ambient",
+			"tone": "neutral",
+			"fromYear": 2009,
+			"text": "Réseaux sociaux : un ministre s’excuse d’un message qu’il dit ne pas avoir écrit, ni lu"
+		}
+	],
+	"balance": {
+		"maxArticlesPerTurn": 3,
+		"nationalExposure": 30,
+		"toneThreshold": 30,
+		"toneEffects": {
+			"critical": -3,
+			"neutral": 0,
+			"favorable": 2
+		},
+		"maxEffect": 4,
+		"criticalExposure": 2,
+		"ownedEffectPercent": 50,
+		"relationDriftPercent": 10,
+		"lifestylePercent": 15,
+		"lifestyleLevel": 2,
+		"ambientPercent": 60,
+		"interviewCooldownTurns": 4
+	}
+}

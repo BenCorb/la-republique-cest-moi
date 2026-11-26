@@ -88,6 +88,7 @@ describe('contrôle des invariants', () => {
 						justice: null,
 						wealth: null,
 						promises: null,
+						press: null,
 						events: []
 					},
 					{
@@ -111,6 +112,7 @@ describe('contrôle des invariants', () => {
 						justice: null,
 						wealth: null,
 						promises: null,
+						press: null,
 						events: []
 					}
 				]

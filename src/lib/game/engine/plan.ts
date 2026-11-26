@@ -44,6 +44,7 @@ import type {
 	WorldState
 } from './state.ts';
 import { applyPoliticalEffect, isPoliticalEffect } from './world.ts';
+import { interviewIssue, mediaIssue } from './press.ts';
 import {
 	activeMandates,
 	applyCareerEffect,
@@ -492,6 +493,15 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 					target === null
 						? 'choisissez une promesse en cours'
 						: pledgeIssue(target, workingCareer.promises);
+				if (issue) fail('invalid_target', `« ${label} » : ${issue}.`);
+			} else if (definition.target === 'media') {
+				const issue =
+					target === null
+						? 'choisissez un média'
+						: (mediaIssue(target, workingPlayer, upgrades, content) ??
+							(definition.effects.some((effect) => effect.op === 'giveInterview')
+								? interviewIssue(workingWorld, target, state.turn, content)
+								: null));
 				if (issue) fail('invalid_target', `« ${label} » : ${issue}.`);
 			} else if (definition.target === 'mandate') {
 				const held = activeMandates(workingCareer.mandates).some(

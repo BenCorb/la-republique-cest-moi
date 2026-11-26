@@ -15,6 +15,7 @@
  *   3 ter. salaires et missions de l'entourage ................... P2-05
  *   5. échéances : fins de mandat, scrutins, calendrier ........... P2-02
  *      puis justice, patrimoine et promesses ...................... P3-01, P3-02, P3-04
+ *      puis fil de presse (articles, relations des médias) ........ P3-03
  *   6. passage à T+1 (une seule fois), journal du trimestre T,
  *      suites dues et tirage des événements ......................... P1-01, P1-05
  *   7. phase `decision` si un choix bloquant attend, sinon `planning`  P1-01, P1-05
@@ -38,6 +39,7 @@ import { resolveSupports } from './supports.ts';
 import { resolveExposure, resolveJustice } from './justice.ts';
 import { comfortStress, revalueAssets } from './wealth.ts';
 import { resolvePromises } from './promises.ts';
+import { resolvePress } from './press.ts';
 import { resolveStaffFrontier, resolveStaffProduction } from './staff.ts';
 import { resolveFamily } from './family.ts';
 import type {
@@ -278,22 +280,39 @@ function commitTurn(
 				)
 			: null;
 
+	// 5 quinquies. Fil de presse : articles du trimestre, retour des relations des médias.
+	const press = pledges
+		? resolvePress(
+				{ player: pledges.parts.player, world: pledges.parts.world, rng: pledges.parts.rng },
+				{
+					turn: resolvedTurn,
+					upgrades: wealth!.upgrades,
+					campaigns: pledges.parts.career.campaigns,
+					ballots: pledges.parts.career.ballots,
+					cases: settled!.cases,
+					justice: justice!.record,
+					promises: pledges.record
+				},
+				content
+			)
+		: null;
+
 	// 6. Passage à T+1, puis suites dues et tirage des événements (sauf fin de carrière).
 	const frontier =
-		settled && pledges
+		settled && pledges && press
 			? resolveEventFrontier(
 					{
 						turn: nextTurn,
-						player: pledges.parts.player,
+						player: press.parts.player,
 						resources: pledges.parts.resources,
 						upgrades: wealth!.upgrades,
-						rng: pledges.parts.rng,
+						rng: press.parts.rng,
 						nextInstanceNumber: execution.nextInstanceNumber,
 						events: {
 							...state.events,
 							scheduled: [...state.events.scheduled, ...justice!.scheduled, ...pledges.scheduled]
 						},
-						world: pledges.parts.world,
+						world: press.parts.world,
 						characters: settled.entourage.characters,
 						relationships: settled.entourage.relationships,
 						career: pledges.parts.career,
@@ -331,6 +350,7 @@ function commitTurn(
 		justice: justice?.record ?? null,
 		wealth: wealth?.record ?? null,
 		promises: pledges?.record ?? null,
+		press: press?.record ?? null,
 		events: frontier?.records ?? []
 	};
 

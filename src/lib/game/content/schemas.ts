@@ -11,8 +11,12 @@
  */
 import { z } from 'zod';
 import {
+	ARTICLE_TONES,
+	ARTICLE_TOPICS,
 	AXIS_IDS,
 	AXIS_MAX,
+	MEDIA_KINDS,
+	MEDIA_RELATION_MAX,
 	AXIS_MIN,
 	COMPARISON_OPS,
 	FACT_SEVERITY_MAX,
@@ -48,6 +52,10 @@ import {
 	type PromiseDefinition,
 	type PromisesBalance,
 	type PromisesDefinition,
+	type HeadlineDefinition,
+	type MediaCatalog,
+	type MediaDefinition,
+	type PressBalance,
 	type SentenceRule,
 	type MandateDefinition,
 	type SupportGroupDefinition,
@@ -90,6 +98,7 @@ export const conditionSchema: z.ZodType<Condition> = z.lazy(() =>
 		z.strictObject({ op: z.literal('origin'), origin: contentId }),
 		z.strictObject({ op: z.literal('profession'), profession: contentId }),
 		z.strictObject({ op: z.literal('lifestyle'), lifestyle: contentId }),
+		z.strictObject({ op: z.literal('ownsUpgrade'), upgrade: contentId }),
 		z.strictObject({
 			op: z.literal('support'),
 			group: contentId,
@@ -207,7 +216,16 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 		value: safeInt.refine((value) => value > 0 && value <= 100, 'avancement de 1 à 100')
 	}),
 	z.strictObject({ op: z.literal('amendPromise') }),
-	z.strictObject({ op: z.literal('abandonPromise') })
+	z.strictObject({ op: z.literal('abandonPromise') }),
+	z.strictObject({
+		op: z.literal('addMediaRelation'),
+		media: z.union([contentId, z.literal('target')]),
+		value: safeInt.refine(
+			(value) => value !== 0 && Math.abs(value) <= MEDIA_RELATION_MAX,
+			'variation non nulle de -100 à 100'
+		)
+	}),
+	z.strictObject({ op: z.literal('giveInterview') })
 ]);
 
 export const resourceAmountSchema: z.ZodType<ResourceAmount> = z.strictObject({
@@ -236,7 +254,8 @@ export const actionSchema: z.ZodType<ActionDefinition> = z
 				'upgrade',
 				'asset',
 				'promise',
-				'pledge'
+				'pledge',
+				'media'
 			])
 			.optional(),
 		category: z
@@ -274,7 +293,8 @@ export const assetSchema: z.ZodType<AssetDefinition> = z.strictObject({
 	economySensitivityPercent: smallPercent,
 	failurePerMille: safeInt.refine((value) => value >= 0 && value <= 1000, 'de 0 à 1000'),
 	salePercent: smallPercent.refine((value) => value >= 0, 'part positive ou nulle'),
-	stressPerTurn: smallPercent
+	stressPerTurn: smallPercent,
+	media: contentId.optional()
 });
 
 export const lifestyleSchema: z.ZodType<LifestyleDefinition> = z.strictObject({
@@ -744,6 +764,65 @@ export const promisesBalanceSchema: z.ZodType<PromisesBalance> = z.strictObject(
 	recallPercent: percent,
 	maxRecalls: nonNegativeInt,
 	recallEvents: z.strictObject({ kept: contentId, abandoned: contentId })
+});
+
+const mediaCoverage = safeInt.refine((value) => value >= 0 && value <= 10, 'goût de 0 à 10');
+
+export const mediaSchema: z.ZodType<MediaDefinition> = z.strictObject({
+	id: contentId,
+	name: frenchText,
+	kind: z.enum(MEDIA_KINDS),
+	line: frenchText,
+	description: frenchText,
+	scope: z.enum(['national', 'local']),
+	audience: safeInt.refine((value) => value >= 1 && value <= 100, 'audience de 1 à 100'),
+	baseRelation: smallPercent,
+	groups: z.array(contentId).min(1),
+	coverage: z.strictObject({
+		justice: mediaCoverage,
+		promise: mediaCoverage,
+		election: mediaCoverage,
+		lifestyle: mediaCoverage,
+		ownership: mediaCoverage
+	}),
+	amplifyPercent: safeInt.refine((value) => value >= 0 && value <= 300, 'de 0 à 300 %')
+});
+
+export const headlineSchema: z.ZodType<HeadlineDefinition> = z.strictObject({
+	id: contentId,
+	topic: z.enum(ARTICLE_TOPICS),
+	tone: z.enum(ARTICLE_TONES),
+	text: frenchText,
+	kinds: z.array(z.enum(MEDIA_KINDS)).min(1).optional(),
+	details: z
+		.array(z.string().regex(/^[a-z][a-z_]*$/, 'précision en minuscules'))
+		.min(1)
+		.optional(),
+	fromYear: safeInt.optional()
+});
+
+const toneEffect = safeInt.refine((value) => Math.abs(value) <= 20, 'effet de -20 à 20');
+
+export const pressBalanceSchema: z.ZodType<PressBalance> = z.strictObject({
+	maxArticlesPerTurn: positiveInt,
+	nationalExposure: safeInt.refine((value) => value >= 0 && value <= 100, 'de 0 à 100'),
+	toneThreshold: safeInt.refine((value) => value >= 1 && value <= 100, 'de 1 à 100'),
+	toneEffects: z.strictObject({ critical: toneEffect, neutral: toneEffect, favorable: toneEffect }),
+	maxEffect: positiveInt,
+	criticalExposure: nonNegativeInt,
+	ownedEffectPercent: percent,
+	relationDriftPercent: percent,
+	lifestylePercent: percent,
+	lifestyleLevel: nonNegativeInt,
+	ambientPercent: percent,
+	interviewCooldownTurns: nonNegativeInt
+});
+
+/** Médias, titres de presse et règles du fil de presse (`media.json`, P3-03). */
+export const mediaCatalogSchema: z.ZodType<MediaCatalog> = z.strictObject({
+	media: z.array(mediaSchema).min(1),
+	headlines: z.array(headlineSchema).min(1),
+	balance: pressBalanceSchema
 });
 
 /** Promesses types et règles du registre (`promises.json`, P3-04). */

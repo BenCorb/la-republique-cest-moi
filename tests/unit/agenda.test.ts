@@ -14,6 +14,7 @@ import {
 	fixtureJustice,
 	fixtureWealth,
 	fixturePromises,
+	fixtureMedia,
 	fixtureSupports,
 	fixtureTraits,
 	fixtureUpgrades,
@@ -37,7 +38,8 @@ function validate(actions: unknown) {
 		profiles: fixtureProfiles,
 		justice: fixtureJustice,
 		wealth: fixtureWealth,
-		promises: fixturePromises
+		promises: fixturePromises,
+		media: fixtureMedia
 	});
 }
 

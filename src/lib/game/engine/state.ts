@@ -6,6 +6,8 @@
  */
 import { GAUGE_MAX } from '../content/types.ts';
 import type {
+	ArticleTone,
+	ArticleTopic,
 	Content,
 	GaugeId,
 	IndicatorId,
@@ -165,6 +167,16 @@ export interface WorldState {
 	/** États des partis du catalogue, par identifiant. */
 	readonly parties: Readonly<Record<string, PartyState>>;
 	readonly governingPartyId: string;
+	/** Médias du catalogue, par identifiant (P3-03). */
+	readonly media: Readonly<Record<string, MediaState>>;
+}
+
+/** Média envers le joueur (P3-03) : relation et dernière interview accordée. */
+export interface MediaState {
+	/** Relation envers le joueur, de -100 à 100 ; revient vers celle du catalogue. */
+	readonly relation: number;
+	/** Trimestre de la dernière interview, `null` si aucune. */
+	readonly interviewTurn: Turn | null;
 }
 
 export type MandateEndReason = 'term' | 'resigned' | 'government_change' | 'replaced' | 'removed';
@@ -336,7 +348,11 @@ export type PoliticalChange =
 			readonly pledgeId: string;
 			readonly promiseId: string;
 			readonly delta: number;
-	  };
+	  }
+	/** Relation d'un média envers le joueur (P3-03). */
+	| { readonly kind: 'mediaRelation'; readonly mediaId: string; readonly delta: number }
+	/** Interview accordée, publiée à la frontière du trimestre (P3-03). */
+	| { readonly kind: 'interview'; readonly mediaId: string };
 
 /**
  * Étapes d'une promesse : annoncée (`made`), en cours après la victoire
@@ -459,6 +475,32 @@ export interface JusticeRecord {
 	readonly changes: readonly ResourceChange[];
 	readonly gauges: readonly GaugeChange[];
 	readonly politics: readonly PoliticalChange[];
+}
+
+/**
+ * Article du fil de presse (P3-03) : un média, un sujet, une tonalité et un
+ * titre du catalogue, avec ses effets sur les groupes de lecteurs.
+ */
+export interface Article {
+	readonly mediaId: string;
+	readonly topic: ArticleTopic;
+	readonly tone: ArticleTone;
+	readonly headlineId: string;
+	/** Sujet : dossier (`case.N`), promesse (`pledge.N`), candidature (`campaign.N`), média, ou `null`. */
+	readonly subjectId: string | null;
+	/** Précision du sujet (`revealed`, `kept`, `won`…), `null` sinon. */
+	readonly detail: string | null;
+	/** Variations de soutien des groupes qui lisent le média. */
+	readonly supports: readonly { readonly groupId: string; readonly delta: number }[];
+	/** Exposition ajoutée par l'article. */
+	readonly exposure: number;
+}
+
+/** Fil de presse à la frontière du trimestre (P3-03). */
+export interface PressRecord {
+	readonly articles: readonly Article[];
+	/** Retour des relations vers leur référence. */
+	readonly relations: readonly { readonly mediaId: string; readonly delta: number }[];
 }
 
 /** Échéances résolues à la fin du trimestre (étape 5 de l'ordre de tour). */
@@ -668,6 +710,8 @@ export interface HistoryEntry {
 	readonly wealth: WealthRecord | null;
 	/** Promesses (réalisation, issues, rappels), `null` si la carrière s'est terminée avant. */
 	readonly promises: PromisesRecord | null;
+	/** Fil de presse du trimestre, `null` si la carrière s'est terminée avant. */
+	readonly press: PressRecord | null;
 	/** Événements créés (ou suites annulées) au passage à T+1. */
 	readonly events: readonly EventRecord[];
 }

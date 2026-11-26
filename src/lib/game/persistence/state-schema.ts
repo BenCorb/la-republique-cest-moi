@@ -6,7 +6,14 @@
  * contrôlée par `checkInvariants`.
  */
 import { z } from 'zod';
-import { GAUGE_IDS, INDICATOR_IDS, PROMISE_STATUSES, RESOURCE_IDS } from '../content/types.ts';
+import {
+	ARTICLE_TONES,
+	ARTICLE_TOPICS,
+	GAUGE_IDS,
+	INDICATOR_IDS,
+	PROMISE_STATUSES,
+	RESOURCE_IDS
+} from '../content/types.ts';
 import { RNG_ALGORITHM, STATE_SCHEMA_VERSION, type GameState } from '../engine/index.ts';
 
 const int = z.number().int().refine(Number.isSafeInteger, 'entier sûr attendu');
@@ -77,7 +84,9 @@ const politicalChange = z.discriminatedUnion('kind', [
 		pledgeId: id,
 		promiseId: id,
 		delta: int
-	})
+	}),
+	z.strictObject({ kind: z.literal('mediaRelation'), mediaId: id, delta: int }),
+	z.strictObject({ kind: z.literal('interview'), mediaId: id })
 ]);
 
 const peopleChange = z.discriminatedUnion('kind', [
@@ -214,6 +223,23 @@ const turnEntry = z.strictObject({
 			politics: z.array(politicalChange)
 		})
 		.nullable(),
+	press: z
+		.strictObject({
+			articles: z.array(
+				z.strictObject({
+					mediaId: id,
+					topic: z.enum(ARTICLE_TOPICS),
+					tone: z.enum(ARTICLE_TONES),
+					headlineId: id,
+					subjectId: id.nullable(),
+					detail: z.string().max(60).nullable(),
+					supports: z.array(z.strictObject({ groupId: id, delta: int })),
+					exposure: int
+				})
+			),
+			relations: z.array(z.strictObject({ mediaId: id, delta: int }))
+		})
+		.nullable(),
 	justice: z
 		.strictObject({
 			cases: z.array(
@@ -305,7 +331,8 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 	world: z.strictObject({
 		indicators: z.strictObject({ economy: int, socialClimate: int, stability: int }),
 		parties: z.record(id, z.strictObject({ strength: int, leaderId: id })),
-		governingPartyId: id
+		governingPartyId: id,
+		media: z.record(id, z.strictObject({ relation: int, interviewTurn: int.nullable() }))
 	}),
 	characters: z.record(
 		id,

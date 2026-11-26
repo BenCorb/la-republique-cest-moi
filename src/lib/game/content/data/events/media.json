@@ -1,0 +1,204 @@
+{
+	"events": [
+		{
+			"id": "media.live_trap",
+			"category": "press",
+			"title": "Plateau piégé",
+			"text": "Info Non-Stop vous invite pour « un débat apaisé ». Sur le plateau, quatre experts, un bandeau « POLÉMIQUE » et un extrait vidéo de vous, sorti de son contexte avec beaucoup de soin.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": { "op": "gte", "stat": "player.exposure", "value": 30 },
+			"actors": [],
+			"choices": [
+				{
+					"id": "stay_calm",
+					"label": "Garder son calme et répondre point par point",
+					"hints": ["La chaîne vous trouve « bon client »", "Un exercice éprouvant"],
+					"costs": [],
+					"effects": [
+						{ "op": "addMediaRelation", "media": "media.info_non_stop", "value": 6 },
+						{ "op": "addStat", "stat": "player.exposure", "value": 3 },
+						{ "op": "addStat", "stat": "player.stress", "value": 3 }
+					]
+				},
+				{
+					"id": "counter",
+					"label": "Retourner l’attaque contre « le système médiatique »",
+					"hints": ["Plaît aux uns, agace les autres", "La chaîne s’en souviendra"],
+					"costs": [],
+					"effects": [
+						{ "op": "addMediaRelation", "media": "media.info_non_stop", "value": -10 },
+						{ "op": "addStat", "stat": "player.exposure", "value": 6 },
+						{ "op": "addSupport", "group": "support.working_class", "value": 2 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": -2 }
+					]
+				},
+				{
+					"id": "walk_out",
+					"label": "Quitter le plateau en direct",
+					"hints": ["Fin du supplice", "La séquence tournera en boucle"],
+					"costs": [],
+					"effects": [
+						{ "op": "addMediaRelation", "media": "media.info_non_stop", "value": -15 },
+						{ "op": "addStat", "stat": "player.exposure", "value": 4 },
+						{ "op": "addStat", "stat": "player.stress", "value": -1 }
+					]
+				}
+			]
+		},
+		{
+			"id": "media.reference_portrait",
+			"category": "press",
+			"title": "Un portrait dans L’Horizon",
+			"text": "L’Horizon prépare un portrait de vous pour sa dernière page, celle que lisent les gens qui ne lisent que la dernière page. La journaliste souhaite « vous suivre quelques jours, en toute simplicité ».",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 2,
+			"priority": 5,
+			"cooldownTurns": 20,
+			"unique": false,
+			"when": { "op": "gte", "stat": "player.exposure", "value": 40 },
+			"actors": [],
+			"choices": [
+				{
+					"id": "open_doors",
+					"label": "Ouvrir grand les portes",
+					"hints": ["Une relation qui s’améliore", "Vous serez davantage sous les projecteurs"],
+					"costs": [],
+					"effects": [
+						{ "op": "addMediaRelation", "media": "media.horizon", "value": 10 },
+						{ "op": "addStat", "stat": "player.exposure", "value": 4 },
+						{ "op": "addStat", "stat": "player.stress", "value": 2 }
+					]
+				},
+				{
+					"id": "mother",
+					"label": "La renvoyer vers votre mère, « qui me connaît mieux que personne »",
+					"hints": ["Un portrait attendrissant, peut-être", "Votre mère sera ravie"],
+					"costs": [],
+					"effects": [
+						{ "op": "addMediaRelation", "media": "media.horizon", "value": 3 },
+						{ "op": "addStat", "stat": "player.stress", "value": -1 }
+					]
+				},
+				{
+					"id": "decline",
+					"label": "Décliner poliment",
+					"hints": ["Aucun risque", "La rédaction n’aime pas qu’on lui dise non"],
+					"costs": [],
+					"effects": [{ "op": "addMediaRelation", "media": "media.horizon", "value": -6 }]
+				}
+			]
+		},
+		{
+			"id": "media.owner_scoop",
+			"category": "press",
+			"title": "Un scoop maison",
+			"text": "La rédaction du Courrier du Bocage, votre journal, tient des documents embarrassants sur {rival}, en pleine campagne. Le rédacteur en chef vous demande votre avis, en précisant qu’il ne vous le demande pas.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 10,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{ "op": "ownsUpgrade", "upgrade": "wealth.local_media" },
+					{ "op": "gte", "stat": "player.campaigning", "value": 1 }
+				]
+			},
+			"actors": [{ "role": "rival", "tags": ["rival"] }],
+			"choices": [
+				{
+					"id": "publish",
+					"label": "« Le public a le droit de savoir »",
+					"hints": [
+						"Un coup dur pour {rival}",
+						"La presse nationale goûte peu le mélange des genres"
+					],
+					"costs": [],
+					"effects": [
+						{ "op": "prepareCampaign", "value": 4 },
+						{ "op": "addStat", "stat": "player.exposure", "value": 4 },
+						{
+							"op": "addRelation",
+							"role": "rival",
+							"value": -15,
+							"memory": "Votre journal a publié un dossier contre lui en pleine campagne."
+						},
+						{ "op": "addMediaRelation", "media": "media.horizon", "value": -6 },
+						{ "op": "addMediaRelation", "media": "media.gazette", "value": -8 }
+					]
+				},
+				{
+					"id": "verify",
+					"label": "Exiger des vérifications, quitte à attendre",
+					"hints": ["Un journal qui gagne en crédibilité", "Le scoop perd de sa fraîcheur"],
+					"costs": [],
+					"effects": [
+						{ "op": "prepareCampaign", "value": 1 },
+						{ "op": "addMediaRelation", "media": "media.horizon", "value": 3 }
+					]
+				},
+				{
+					"id": "bury",
+					"label": "Ne pas s’en mêler : la rédaction décide",
+					"hints": ["Rien ne change", "Des journalistes reconnaissants"],
+					"costs": [],
+					"effects": [{ "op": "addStat", "stat": "player.stress", "value": -1 }]
+				}
+			]
+		},
+		{
+			"id": "media.newsroom_revolt",
+			"category": "press",
+			"title": "La rédaction se rebiffe",
+			"text": "Motion de défiance à la rédaction du Courrier du Bocage : les journalistes réclament une charte d’indépendance « gravée dans le marbre, ou au moins dans le règlement intérieur ». Radio Bocage FM menace de passer de la musique toute la journée.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 5,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": { "op": "ownsUpgrade", "upgrade": "wealth.local_media" },
+			"actors": [],
+			"choices": [
+				{
+					"id": "charter",
+					"label": "Signer la charte d’indépendance",
+					"hints": ["Les confrères saluent le geste", "Votre journal vous échappe un peu"],
+					"costs": [],
+					"effects": [
+						{ "op": "addMediaRelation", "media": "media.horizon", "value": 5 },
+						{ "op": "addMediaRelation", "media": "media.gazette", "value": 4 },
+						{ "op": "addStat", "stat": "player.stress", "value": -1 }
+					]
+				},
+				{
+					"id": "impose",
+					"label": "Rappeler qui signe les chèques",
+					"hints": ["L’affaire s’ébruite", "Les militants n’aiment pas"],
+					"costs": [],
+					"effects": [
+						{ "op": "addMediaRelation", "media": "media.gazette", "value": -10 },
+						{ "op": "addStat", "stat": "player.exposure", "value": 5 },
+						{ "op": "addSupport", "group": "support.activists", "value": -2 },
+						{ "op": "addStat", "stat": "player.stress", "value": 2 }
+					]
+				},
+				{
+					"id": "bonus",
+					"label": "Acheter la paix : une prime pour toute la rédaction",
+					"hints": ["Le calme revient", "Coûteux"],
+					"costs": [{ "resource": "personalCashCents", "amount": 500000 }],
+					"effects": [{ "op": "addStat", "stat": "player.stress", "value": -1 }]
+				}
+			]
+		}
+	]
+}

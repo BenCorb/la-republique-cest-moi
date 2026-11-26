@@ -62,6 +62,13 @@ export type EffectRange =
 			readonly kind: 'promise';
 			readonly change: 'make' | 'advance' | 'amend' | 'abandon';
 			readonly value: number;
+	  }
+	/** Média (P3-03) : relation (`media` : identifiant ou `target`) ou interview ciblée. */
+	| {
+			readonly kind: 'media';
+			readonly change: 'relation' | 'interview';
+			readonly media: string;
+			readonly value: number;
 	  };
 
 export type ResolvedEffect =
@@ -187,6 +194,10 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'promise', change: 'amend', value: 0 };
 		case 'abandonPromise':
 			return { kind: 'promise', change: 'abandon', value: 0 };
+		case 'addMediaRelation':
+			return { kind: 'media', change: 'relation', media: effect.media, value: effect.value };
+		case 'giveInterview':
+			return { kind: 'media', change: 'interview', media: 'target', value: 0 };
 		default: {
 			const unknown: never = effect;
 			throw new Error(`Effet inconnu : ${JSON.stringify(unknown)}`);
@@ -209,6 +220,8 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 		case 'addPartyStrength':
 		case 'joinParty':
 		case 'leaveParty':
+		case 'addMediaRelation':
+		case 'giveInterview':
 			return { kind: 'politics', effect, rng };
 		case 'addRelation':
 		case 'revealTraits':

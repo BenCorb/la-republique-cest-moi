@@ -48,6 +48,7 @@ function game(
 			justice: null,
 			wealth: null,
 			promises: null,
+			press: null,
 			events: []
 		})),
 		resources: { ...base.resources, ...resources },
