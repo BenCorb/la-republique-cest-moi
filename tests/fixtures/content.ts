@@ -537,6 +537,8 @@ export const fixtureEvents = {
 				priority: 0,
 				cooldownTurns: 0,
 				unique: false,
+				// Une offre de financement suppose une activité politique (P3-12).
+				when: { op: 'capability', capability: 'political_activity' },
 				actors: [{ role: 'cousin', tags: ['family'] }],
 				choices: [
 					{
@@ -945,9 +947,15 @@ export const fixtureJustice = {
 		{
 			id: 'offense.test_financing',
 			label: 'Financement de test',
-			description: 'Des fonds de test.'
+			description: 'Des fonds de test.',
+			capability: 'political_activity'
 		},
-		{ id: 'offense.test_favour', label: 'Faveur de test', description: 'Une faveur de test.' }
+		{
+			id: 'offense.test_favour',
+			label: 'Faveur de test',
+			description: 'Une faveur de test.',
+			capability: 'political_activity'
+		}
 	],
 	balance: {
 		riskPerSeverity: 8,

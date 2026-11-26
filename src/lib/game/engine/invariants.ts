@@ -15,6 +15,7 @@ import {
 	GAUGE_MIN,
 	INDICATOR_IDS,
 	PROMISE_PROGRESS_MAX,
+	POST_VARIABLE,
 	PROMISE_VARIABLE,
 	RESOURCE_IDS,
 	WORLD_TEMPLATE_VARIABLES,
@@ -220,11 +221,13 @@ function checkPressMemory(state: GameState, content: Content): string[] {
 	const violations: string[] = [];
 	const { usedHeadlines, recentAngles } = state.world.press;
 	const known = new Set(content.headlines.map((headline) => headline.id));
-	const seen = new Set<string>();
-	for (const id of usedHeadlines) {
-		if (!known.has(id)) violations.push(`titre inconnu dans la mémoire de presse : ${id}`);
-		if (seen.has(id)) violations.push(`titre en double dans la mémoire de presse : ${id}`);
-		seen.add(id);
+	for (const [key, ids] of Object.entries(usedHeadlines)) {
+		const seen = new Set<string>();
+		for (const id of ids) {
+			if (!known.has(id)) violations.push(`titre inconnu dans la mémoire de presse : ${id}`);
+			if (seen.has(id)) violations.push(`titre en double dans le pool ${key} : ${id}`);
+			seen.add(id);
+		}
 	}
 	if (recentAngles.length > content.press.angleRepeatLimit) {
 		violations.push('mémoire des angles de presse plus longue que le délai thématique');
@@ -812,6 +815,13 @@ export function checkContentReferences(state: GameState, content: Content): stri
 			if (role === PROMISE_VARIABLE) {
 				if (!Object.hasOwn(content.promises, actorId)) {
 					violations.push(`promesse inconnue pour un événement : ${actorId}`);
+				}
+				continue;
+			}
+			// Poste lié à un événement de sujet `post` (P3-12) ; son titulaire est un personnage.
+			if (role === POST_VARIABLE) {
+				if (!Object.hasOwn(content.posts, actorId)) {
+					violations.push(`poste inconnu pour un événement : ${actorId}`);
 				}
 				continue;
 			}

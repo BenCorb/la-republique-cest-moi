@@ -18,8 +18,9 @@
  * - Un média possédé (actif `asset.media`) n'empêche pas les autres d'écrire,
  *   et ses articles pèsent moins (crédibilité réduite).
  * - Anti-répétition (P3-15, `WorldState.press`) : un titre n'est repris
- *   qu'une fois épuisés tous les titres possibles de son pool (pioche sans
- *   remise, jamais deux fois de suite le même au recyclage) ; au-delà de
+ *   qu'une fois épuisés tous les titres possibles de son pool (sujet,
+ *   tonalité, précision, famille du média ; pioche sans remise, jamais deux
+ *   fois de suite le même au recyclage) ; au-delà de
  *   `angleRepeatLimit` articles successifs sous le même angle, un sujet
  *   secondaire n'est pas couvert ce trimestre, puis revient (la justice, les
  *   interviews et les rachats sont toujours couverts).
@@ -319,23 +320,38 @@ export function headlineCandidates(
 }
 
 /**
- * Pioche sans remise (P3-15) : un titre du pool encore jamais paru depuis le
- * dernier recyclage ; pool épuisé, ses titres redeviennent disponibles, sauf
- * le dernier paru s'il en reste d'autres. Aucun tirage pour un seul candidat.
+ * Clé d'un pool de titres (P3-15) : sujet, tonalité, précision et famille du
+ * média. La date n'y entre pas : un titre daté rejoint son pool en cours de route.
+ */
+export function headlinePoolKey(
+	topic: ArticleTopic,
+	tone: ArticleTone,
+	detail: string | null,
+	kind: MediaDefinition['kind']
+): string {
+	return `${topic}:${tone}:${detail ?? ''}:${kind}`;
+}
+
+/**
+ * Pioche sans remise (P3-15), par pool : un titre encore jamais paru dans ce
+ * pool depuis son dernier recyclage ; pool épuisé, ses titres redeviennent
+ * disponibles, sauf le dernier paru s'il en reste d'autres. Aucun tirage pour
+ * un seul candidat.
  */
 export function drawHeadline(
 	pool: readonly HeadlineDefinition[],
+	key: string,
 	memory: PressMemory,
 	rng: RngState
 ): { headline: HeadlineDefinition | null; memory: PressMemory; rng: RngState } {
 	if (pool.length === 0) return { headline: null, memory, rng };
-	const ids = new Set(pool.map((headline) => headline.id));
-	const used = new Set(memory.usedHeadlines);
+	const previous = memory.usedHeadlines[key] ?? [];
+	const used = new Set(previous);
 	let fresh = pool.filter((headline) => !used.has(headline.id));
-	let usedHeadlines = memory.usedHeadlines;
+	let kept = previous;
 	if (fresh.length === 0) {
-		const last = [...memory.usedHeadlines].reverse().find((id) => ids.has(id));
-		usedHeadlines = memory.usedHeadlines.filter((id) => !ids.has(id));
+		const last = previous.at(-1);
+		kept = [];
 		fresh = pool.length > 1 ? pool.filter((headline) => headline.id !== last) : [...pool];
 	}
 	const choice = pickOne(fresh, rng);
@@ -343,7 +359,10 @@ export function drawHeadline(
 	if (!headline) return { headline: null, memory, rng: choice.rng };
 	return {
 		headline,
-		memory: { ...memory, usedHeadlines: [...usedHeadlines, headline.id] },
+		memory: {
+			...memory,
+			usedHeadlines: { ...memory.usedHeadlines, [key]: [...kept, headline.id] }
+		},
 		rng: choice.rng
 	};
 }
@@ -491,7 +510,12 @@ export function resolvePress(
 			inputs.turn,
 			content
 		);
-		const choice = drawHeadline(headlines, memory, rng);
+		const choice = drawHeadline(
+			headlines,
+			headlinePoolKey(subject.topic, tone, subject.detail, media.kind),
+			memory,
+			rng
+		);
 		rng = choice.rng;
 		const headline = choice.headline;
 		if (!headline) throw new Error(`Aucun titre pour ${subject.topic} (${tone}).`);
@@ -544,7 +568,12 @@ export function resolvePress(
 	if (ambientMedia) {
 		const media = ambientMedia;
 		const headlines = headlineCandidates('ambient', 'neutral', null, media, inputs.turn, content);
-		const choice = drawHeadline(headlines, memory, rng);
+		const choice = drawHeadline(
+			headlines,
+			headlinePoolKey('ambient', 'neutral', null, media.kind),
+			memory,
+			rng
+		);
 		rng = choice.rng;
 		memory = choice.memory;
 		const headline = choice.headline;

@@ -146,6 +146,11 @@
 					"label": "Accepter et prononcer le mot de soutien",
 					"hints": ["Trésorerie confortable", "Promesse embarrassante"],
 					"costs": [],
+					"requires": {
+						"op": "capability",
+						"capability": "public_office"
+					},
+					"unavailableReason": "Sans mandat, votre soutien n’engage aucune décision publique.",
 					"effects": [
 						{
 							"op": "addResource",
@@ -182,6 +187,57 @@
 					]
 				},
 				{
+					"id": "accept_funds",
+					"label": "Accepter le financement contre une tribune favorable",
+					"hints": [
+						"Trésorerie confortable",
+						"Des fonds hors des comptes, qui pourraient coûter cher"
+					],
+					"costs": [],
+					"requires": {
+						"op": "not",
+						"condition": {
+							"op": "capability",
+							"capability": "public_office"
+						}
+					},
+					"unavailableReason": "Élu, vous ne pouvez plus vous contenter d’une tribune.",
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "politicalBudgetCents",
+							"value": 40000
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						},
+						{
+							"op": "addRelation",
+							"role": "donor",
+							"value": 10,
+							"memory": "Vous avez signé une tribune pour son projet de lotissement."
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 4
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": -3
+						},
+						{
+							"op": "recordFact",
+							"offense": "offense.illegal_financing",
+							"severity": 1,
+							"accomplices": ["donor"]
+						}
+					]
+				},
+				{
 					"id": "refuse",
 					"label": "Refuser, cette fois",
 					"hints": ["Relation refroidie"],
@@ -202,7 +258,11 @@
 					"costs": [],
 					"effects": []
 				}
-			]
+			],
+			"when": {
+				"op": "capability",
+				"capability": "political_activity"
+			}
 		},
 		{
 			"id": "relations.leaky_volunteer",

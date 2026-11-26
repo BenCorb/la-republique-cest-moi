@@ -278,11 +278,23 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 				act('organization.fundraising'),
 				act('personal.freelance'),
 				act('personal.rest')
+			],
+			// Candidat sans étiquette, proche des milieux d'affaires : les faveurs d'un
+			// maire et d'un élu exigent un mandat (P3-12).
+			[
+				CANDIDACY,
+				act('organization.gala'),
+				buy('organization.donor_file'),
+				HIRE,
+				act('campaign.canvass'),
+				act('organization.fundraising'),
+				act('network.meet_officials'),
+				act('personal.freelance')
 			]
 		];
 		const seen = new Set<string>();
 		strategies.forEach((wishes, strategy) => {
-			for (let seed = 0; seed < 60; seed += 1) {
+			for (let seed = 0; seed < 100; seed += 1) {
 				const state = career(`atteinte-${strategy}-${seed}`, wishes, 400, seed);
 				for (const entry of quarters(state.history)) {
 					for (const event of entry.events) {
@@ -291,9 +303,15 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 				}
 			}
 		});
-		// Événement rare (≈ 1 % des carrières simulées, rapport P3-15) : couvert par
-		// `tests/unit/repetition.test.ts`.
-		const targeted = new Set(['entourage.loyal_chief']);
+		// Événements rares, couverts par des tests ciblés : le permis signé par un maire
+		// (P3-12, `tests/unit/capabilities.test.ts`) et « Un rempart » (≈ 1 % des
+		// carrières, rapport P3-15, `tests/unit/repetition.test.ts`) ; le retour du
+		// donateur vénal (`tests/unit/capabilities.test.ts`).
+		const targeted = new Set([
+			'press.donor_investigation',
+			'entourage.loyal_chief',
+			'relations.donor_returns'
+		]);
 		expect(content.eventIds.filter((id) => !seen.has(id) && !targeted.has(id))).toEqual([]);
 	});
 });

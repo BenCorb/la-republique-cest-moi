@@ -243,18 +243,13 @@
 			"id": "personal.family_job_request",
 			"category": "personal",
 			"title": "Un poste pour la famille",
-			"text": "{relative} vient de découvrir une vocation pour le service public, précisément au moment où votre organisation recrute. Son expérience correspond mal au poste, son carnet d’adresses beaucoup mieux.",
+			"text": "{relative} vient de découvrir une vocation pour le service public, et plus précisément pour le poste « {post} » de votre entourage. Son expérience correspond mal au poste, son carnet d’adresses beaucoup mieux.",
 			"blocking": true,
 			"trigger": "random",
 			"weight": 5,
 			"priority": 10,
 			"cooldownTurns": 16,
 			"unique": false,
-			"when": {
-				"op": "gte",
-				"stat": "upgrades.owned",
-				"value": 1
-			},
 			"actors": [
 				{
 					"role": "relative",
@@ -264,25 +259,68 @@
 			"choices": [
 				{
 					"id": "hire",
-					"label": "Le recruter",
-					"hints": ["Soutien relationnel en hausse", "Vigilance médiatique possible"],
+					"label": "Le recruter au poste « {post} »",
+					"hints": ["Un salaire de plus à verser", "Vigilance médiatique possible"],
 					"costs": [],
 					"effects": [
+						{
+							"op": "hireActor",
+							"role": "relative"
+						},
 						{
 							"op": "addResource",
 							"resource": "influence",
 							"value": 2
 						},
 						{
+							"op": "addRelation",
+							"role": "relative",
+							"value": 20,
+							"memory": "Vous lui avez offert le poste « {post} »."
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": -3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": -3
+						},
+						{
+							"op": "recordFact",
+							"offense": "offense.fictitious_job",
+							"severity": 1,
+							"accomplices": ["relative"]
+						}
+					],
+					"followUp": {
+						"eventId": "personal.family_hire_rumour",
+						"delayTurns": 3
+					}
+				},
+				{
+					"id": "replace",
+					"label": "Remplacer {incumbent} par {relative}",
+					"hints": ["{incumbent} sera renvoyé", "Vigilance médiatique possible"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "hireActor",
+							"role": "relative",
+							"replace": true
+						},
+						{
 							"op": "addResource",
-							"resource": "politicalBudgetCents",
-							"value": -15000
+							"resource": "influence",
+							"value": 2
 						},
 						{
 							"op": "addRelation",
 							"role": "relative",
 							"value": 20,
-							"memory": "Vous lui avez offert un poste."
+							"memory": "Vous lui avez offert le poste « {post} »."
 						},
 						{
 							"op": "addSupport",
@@ -308,10 +346,15 @@
 				},
 				{
 					"id": "open_selection",
-					"label": "Organiser une sélection ouverte",
-					"hints": ["Procédure exemplaire", "Réaction familiale incertaine"],
+					"label": "Le soumettre à une sélection ouverte",
+					"hints": ["Sa candidature rejoint la présélection", "Réaction familiale incertaine"],
 					"costs": [],
 					"effects": [
+						{
+							"op": "shortlistActor",
+							"role": "relative",
+							"profile": "profile.connected"
+						},
 						{
 							"op": "addStat",
 							"stat": "player.stress",
@@ -349,7 +392,8 @@
 						}
 					]
 				}
-			]
+			],
+			"subject": "post"
 		},
 		{
 			"id": "personal.family_hire_rumour",
@@ -365,7 +409,7 @@
 			"actors": [
 				{
 					"role": "relative",
-					"tags": ["family", "job_seeker"]
+					"tags": ["family", "staff"]
 				},
 				{
 					"role": "journalist",

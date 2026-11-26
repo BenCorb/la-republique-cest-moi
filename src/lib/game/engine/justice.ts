@@ -18,12 +18,14 @@
 import {
 	GAUGE_MAX,
 	GAUGE_MIN,
+	type CapabilityId,
 	type Content,
 	type IntRange,
 	type ResourceId,
 	type Resources
 } from '../content/types.ts';
 import type { Turn } from './calendar.ts';
+import { hasCapability, type ConditionContext } from './conditions.ts';
 import { activeMandates, endMandates, type CareerParts } from './career.ts';
 import { applyGauge, clampGauge, type FactEffect } from './effects.ts';
 import { nextFloat, nextInt, type RngState } from './random.ts';
@@ -54,6 +56,43 @@ export function factInstanceId(rank: number): string {
  * Inscrit un fait. Les protagonistes sont les acteurs de l'événement pour les
  * rôles cités ; un rôle sans acteur (personnage parti) est simplement omis.
  */
+const CAPABILITY_MISSING: { readonly [K in CapabilityId]: string } = {
+	political_activity: 'Sans activité politique, personne ne vous confie de fonds.',
+	local_power: 'Il faut détenir un pouvoir local (une mairie) pour cela.',
+	public_office: 'Il faut exercer un mandat pour cela.',
+	real_hire: 'Aucune embauche réelle n’a eu lieu.',
+	organization_funds: 'Il faut une organisation dotée de fonds pour cela.'
+};
+
+/**
+ * Garde du registre (P3-12) : raison pour laquelle ce fait ne peut pas être
+ * commis, ou `null`. La capacité de l'infraction se lit sur l'état ; un emploi
+ * fictif (`real_hire`) exige qu'un protagoniste du fait soit réellement en
+ * poste dans l'entourage, embauché au besoin par un effet antérieur du choix.
+ */
+export function factIssue(
+	effect: FactEffect,
+	context: ConditionContext,
+	actors: Readonly<Record<string, string>>,
+	content: Content
+): string | null {
+	const capability = content.offenses[effect.offense]?.capability;
+	if (capability === undefined) return `Infraction inconnue : ${effect.offense}.`;
+	if (capability === 'real_hire') {
+		const roles = [
+			...(effect.author === undefined ? [] : [effect.author]),
+			...(effect.accomplices ?? [])
+		];
+		const hired = roles.some((role) =>
+			context.staff.some(
+				(member) => member.status === 'active' && member.characterId === actors[role]
+			)
+		);
+		return hired ? null : CAPABILITY_MISSING.real_hire;
+	}
+	return hasCapability(context, capability) ? null : CAPABILITY_MISSING[capability];
+}
+
 export function createFact(
 	effect: FactEffect,
 	facts: readonly Fact[],

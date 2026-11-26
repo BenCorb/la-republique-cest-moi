@@ -233,7 +233,13 @@
 			"priority": 0,
 			"cooldownTurns": 12,
 			"unique": false,
-			"when": { "op": "holdsMandate", "mandate": "mandate.minister" },
+			"when": {
+				"op": "all",
+				"conditions": [
+					{ "op": "holdsMandate", "mandate": "mandate.minister" },
+					{ "op": "capability", "capability": "public_office" }
+				]
+			},
 			"actors": [],
 			"choices": [
 				{

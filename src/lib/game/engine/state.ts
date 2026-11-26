@@ -180,10 +180,11 @@ export interface WorldState {
  */
 export interface PressMemory {
 	/**
-	 * Titres parus depuis le dernier recyclage de leur pool, du plus ancien au
-	 * plus récent : un titre n'y revient qu'une fois son pool épuisé.
+	 * Par pool (`headlinePoolKey` : sujet, tonalité, précision, famille de
+	 * média), titres parus depuis son dernier recyclage, du plus ancien au plus
+	 * récent : un titre n'y revient qu'une fois le pool épuisé.
 	 */
-	readonly usedHeadlines: readonly string[];
+	readonly usedHeadlines: Readonly<Record<string, readonly string[]>>;
 	/**
 	 * Angles (`sujet:précision`) des derniers articles consacrés au joueur, du
 	 * plus ancien au plus récent ; une chaîne vide marque un sujet passé sous silence.

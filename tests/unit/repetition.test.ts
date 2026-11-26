@@ -11,6 +11,7 @@ import {
 	describePendingEvent,
 	drawHeadline,
 	headlineCandidates,
+	headlinePoolKey,
 	headlinePoolReport,
 	previewPlan,
 	resolvePress,
@@ -34,7 +35,8 @@ const headline = (id: string): HeadlineDefinition => ({
 	tone: 'neutral',
 	text: id
 });
-const EMPTY: PressMemory = { usedHeadlines: [], recentAngles: [] };
+const EMPTY: PressMemory = { usedHeadlines: {}, recentAngles: [] };
+const KEY = 'ambient:neutral::reference';
 
 describe('pioche sans remise des titres (P3-15)', () => {
 	it('épuise le pool avant toute reprise, puis ne répète jamais le dernier titre', () => {
@@ -43,7 +45,7 @@ describe('pioche sans remise des titres (P3-15)', () => {
 		let rng = createRng('titres');
 		const drawn: string[] = [];
 		for (let index = 0; index < 30; index += 1) {
-			const draw = drawHeadline(pool, memory, rng);
+			const draw = drawHeadline(pool, KEY, memory, rng);
 			memory = draw.memory;
 			rng = draw.rng;
 			drawn.push(draw.headline!.id);
@@ -54,7 +56,7 @@ describe('pioche sans remise des titres (P3-15)', () => {
 			expect(drawn[index]).not.toBe(drawn[index - 1]);
 		}
 		// La mémoire ne garde que les titres parus depuis le dernier recyclage.
-		expect(memory.usedHeadlines.length).toBeLessThanOrEqual(pool.length);
+		expect(memory.usedHeadlines[KEY]!.length).toBeLessThanOrEqual(pool.length);
 	});
 
 	it('reste déterministe et ne tire rien pour un pool d’un seul titre', () => {
@@ -63,7 +65,7 @@ describe('pioche sans remise des titres (P3-15)', () => {
 			let memory = EMPTY;
 			let rng = createRng('déterminisme');
 			return Array.from({ length: 10 }, () => {
-				const draw = drawHeadline(pool, memory, rng);
+				const draw = drawHeadline(pool, KEY, memory, rng);
 				memory = draw.memory;
 				rng = draw.rng;
 				return draw.headline!.id;
@@ -71,10 +73,19 @@ describe('pioche sans remise des titres (P3-15)', () => {
 		};
 		expect(run()).toEqual(run());
 		const rng = createRng('seul');
-		const single = drawHeadline([headline('a')], { ...EMPTY, usedHeadlines: ['a'] }, rng);
+		const single = drawHeadline(
+			[headline('a')],
+			KEY,
+			{ ...EMPTY, usedHeadlines: { [KEY]: ['a'] } },
+			rng
+		);
 		expect(single.headline?.id).toBe('a');
 		expect(single.rng).toEqual(rng);
-		expect(single.memory.usedHeadlines).toEqual(['a']);
+		expect(single.memory.usedHeadlines[KEY]).toEqual(['a']);
+		// Les pools sont indépendants : un titre paru dans l'un reste neuf dans l'autre.
+		const other = drawHeadline([headline('a'), headline('b')], 'autre', single.memory, rng);
+		expect(other.memory.usedHeadlines[KEY]).toEqual(['a']);
+		expect(other.memory.usedHeadlines['autre']).toHaveLength(1);
 	});
 
 	it('signale les pools de titres trop petits sans bloquer la validation', () => {
@@ -130,13 +141,15 @@ describe('presse et événements sur une carrière (P3-15)', () => {
 
 	it('ne reprend un titre qu’après épuisement de son pool', () => {
 		expect(articles.length).toBeGreaterThan(20);
+		// Dernière parution de chaque titre, par pool (sujet, tonalité, précision, famille de média).
 		const lastSeen = new Map<string, number>();
 		let repeats = 0;
 		for (const article of articles) {
-			const previous = lastSeen.get(article.headlineId);
+			const media = content.media[article.mediaId]!;
+			const key = headlinePoolKey(article.topic, article.tone, article.detail, media.kind);
+			const previous = lastSeen.get(`${key}|${article.headlineId}`);
 			if (previous !== undefined) {
 				repeats += 1;
-				const media = content.media[article.mediaId]!;
 				const pool = headlineCandidates(
 					article.topic,
 					article.tone,
@@ -149,10 +162,10 @@ describe('presse et événements sur une carrière (P3-15)', () => {
 				const previousYear = yearOf(previous);
 				for (const other of pool) {
 					if ((other.fromYear ?? 0) > previousYear) continue;
-					expect(lastSeen.has(other.id), other.id).toBe(true);
+					expect(lastSeen.has(`${key}|${other.id}`), other.id).toBe(true);
 				}
 			}
-			lastSeen.set(article.headlineId, article.turn);
+			lastSeen.set(`${key}|${article.headlineId}`, article.turn);
 		}
 		expect(repeats).toBeGreaterThan(0);
 	});
@@ -185,7 +198,7 @@ describe('presse et événements sur une carrière (P3-15)', () => {
 	});
 
 	it('sauvegarde la mémoire de presse avec la partie', () => {
-		expect(state.world.press.usedHeadlines.length).toBeGreaterThan(0);
+		expect(Object.keys(state.world.press.usedHeadlines).length).toBeGreaterThan(0);
 		const read = importSave(
 			exportSave(createEnvelope(state, content, '2026-11-26T10:00:00.000Z')).text,
 			content

@@ -116,10 +116,13 @@ describe('catalogue narratif du prototype', () => {
 			for (const actors of possible) {
 				for (const text of texts(event)) {
 					// Un événement de sujet `promise` reçoit sa promesse du moteur.
+					// Un événement de sujet `post` reçoit son poste (P3-12), vacant ou occupé.
 					const withPromise =
 						event.subject === 'promise'
 							? { ...actors, promise: content.promiseIds[0] ?? '' }
-							: actors;
+							: event.subject === 'post'
+								? { ...actors, post: content.postIds[0] ?? '' }
+								: actors;
 					const rendered = renderTemplate(text, withPromise, content, game.characters);
 					expect(rendered).not.toMatch(/[{}]|undefined|null/);
 					expect(rendered.trim().length).toBeGreaterThan(0);

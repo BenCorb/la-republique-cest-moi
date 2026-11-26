@@ -545,3 +545,171 @@ export function resolveStaffFrontier(
 	}
 	return { entourage: parts, rng: current, record: { departures, shortlisted } };
 }
+
+// ---------------------------------------------------------------------------
+// Poste lié à un événement (P3-12)
+// ---------------------------------------------------------------------------
+
+/**
+ * Poste d'un événement de sujet `post`, fixé à sa création : le premier poste
+ * débloqué et vacant dans l'ordre du catalogue, sinon le premier débloqué et
+ * occupé, avec son titulaire ; `null` si aucun poste n'est débloqué.
+ */
+export function bindEventPost(
+	staff: readonly StaffMember[],
+	context: ConditionContext,
+	content: Content
+): { postId: string; incumbentId: string | null } | null {
+	const unlocked = content.postIds.filter((postId) => postUnlocked(postId, context, content));
+	const vacant = unlocked.find((postId) => occupantOf(staff, postId) === null);
+	if (vacant !== undefined) return { postId: vacant, incumbentId: null };
+	const occupied = unlocked[0];
+	if (occupied === undefined) return null;
+	return { postId: occupied, incumbentId: occupantOf(staff, occupied)!.characterId };
+}
+
+export type PostEffect = Extract<Effect, { op: 'hireActor' | 'shortlistActor' }>;
+
+/** Variables d'un événement de sujet `post` : poste lié et titulaire éventuel. */
+export interface PostBinding {
+	readonly postId: string | null;
+	readonly incumbentId: string | null;
+	readonly actorId: string | null;
+}
+
+/**
+ * Raison pour laquelle l'effet ne peut s'appliquer, ou `null` (P3-12) : le
+ * choix correspondant est alors indisponible. L'embauche d'un proche contourne
+ * l'attractivité mais pas les salaires : la réserve de l'entourage s'applique.
+ */
+export function postEffectIssue(
+	effect: PostEffect,
+	binding: PostBinding,
+	parts: EntourageParts,
+	context: ConditionContext | null,
+	content: Content
+): string | null {
+	const post = binding.postId === null ? undefined : content.posts[binding.postId];
+	if (!post || binding.postId === null) return 'Aucun poste n’est concerné.';
+	const actor = binding.actorId === null ? undefined : parts.characters[binding.actorId];
+	if (!actor || actor.status !== 'active') return 'Cette personne n’est plus disponible.';
+	if (activeStaff(parts.staff).some((member) => member.characterId === actor.id)) {
+		return 'Cette personne fait déjà partie de votre entourage.';
+	}
+	if (context && !postUnlocked(binding.postId, context, content)) {
+		return post.unavailableReason ?? `Le poste « ${post.label} » n’est pas accessible.`;
+	}
+	const occupant = occupantOf(parts.staff, binding.postId);
+	if (effect.op === 'shortlistActor') {
+		return occupant ? `Le poste « ${post.label} » est déjà pourvu.` : null;
+	}
+	if (!effect.replace && occupant) return `Le poste « ${post.label} » est déjà pourvu.`;
+	if (effect.replace) {
+		if (!occupant) return `Le poste « ${post.label} » est vacant : personne à remplacer.`;
+		if (occupant.characterId !== binding.incumbentId) {
+			return 'Le titulaire du poste a changé entre-temps.';
+		}
+	}
+	if (context) {
+		const remaining = effect.replace
+			? parts.staff.filter((member) => member.characterId !== occupant?.characterId)
+			: parts.staff;
+		const reserve = hireReserveCents(remaining, post.salaryCents, content);
+		if (context.resources.politicalBudgetCents < reserve) {
+			const quarters = content.balance.entourage.hireReserveQuarters;
+			return `Budget politique insuffisant : il faut ${euros(reserve)} pour couvrir ${quarters} trimestre${quarters > 1 ? 's' : ''} de salaires de l’entourage.`;
+		}
+	}
+	return null;
+}
+
+/**
+ * Embauche de l'acteur au poste lié (le titulaire renvoyé d'abord, s'il s'agit
+ * d'un remplacement) ou ajout à la présélection du poste. Un effet devenu
+ * impossible n'a aucun effet (le choix est refusé en amont). Comme toute
+ * recrue, le collaborateur produit à partir du trimestre suivant.
+ */
+export function applyPostEffect(
+	effect: PostEffect,
+	binding: PostBinding,
+	parts: EntourageParts,
+	turn: Turn,
+	context: ConditionContext | null,
+	content: Content
+): { parts: EntourageParts; changes: PoliticalChange[] } {
+	if (postEffectIssue(effect, binding, parts, context, content)) return { parts, changes: [] };
+	const postId = binding.postId!;
+	const post = content.posts[postId]!;
+	const actor = parts.characters[binding.actorId!]!;
+	if (effect.op === 'shortlistActor') {
+		const candidate: Character = {
+			...actor,
+			tags: [
+				...actor.tags.filter((tag) => tag !== 'job_seeker' && tag !== 'candidate'),
+				'candidate'
+			]
+		};
+		return {
+			parts: {
+				...parts,
+				characters: { ...parts.characters, [actor.id]: candidate },
+				shortlists: {
+					...parts.shortlists,
+					[postId]: [
+						...(parts.shortlists[postId] ?? []).filter((entry) => entry.characterId !== actor.id),
+						{ characterId: actor.id, profileId: effect.profile }
+					]
+				}
+			},
+			changes: []
+		};
+	}
+	const changes: PoliticalChange[] = [];
+	let current = parts;
+	if (effect.replace && binding.incumbentId !== null) {
+		const dismissed = applyStaffEffect(
+			{ op: 'dismissStaff' },
+			current,
+			turn,
+			binding.incumbentId,
+			context,
+			content
+		);
+		current = dismissed.parts;
+		changes.push(...dismissed.changes);
+	}
+	const hired: Character = {
+		...actor,
+		tags: [
+			...actor.tags.filter((tag) => !['job_seeker', 'candidate', 'staff', post.tag].includes(tag)),
+			'staff',
+			post.tag
+		]
+	};
+	// Le poste est pourvu : sa présélection disparaît, et le proche quitte toute autre liste.
+	const shortlists: Record<string, readonly ShortlistEntry[]> = {};
+	for (const [id, entries] of Object.entries(current.shortlists)) {
+		if (id === postId) continue;
+		shortlists[id] = entries.filter((entry) => entry.characterId !== actor.id);
+	}
+	return {
+		parts: {
+			...current,
+			shortlists,
+			characters: { ...current.characters, [actor.id]: hired },
+			staff: [
+				...current.staff,
+				{
+					characterId: actor.id,
+					postId,
+					hiredTurn: turn,
+					missionId: post.missions[0]!.id,
+					status: 'active',
+					leftTurn: null,
+					leaveReason: null
+				}
+			]
+		},
+		changes: [...changes, { kind: 'hired', characterId: actor.id, postId }]
+	};
+}
