@@ -25,6 +25,11 @@ const context: ConditionContext = {
 		popularity: 0,
 		origin: 'origin.neutral',
 		profession: 'profession.none',
+		territory: {
+			regionId: 'region.test',
+			departmentCode: '14',
+			homeTown: { name: 'Testville', sizeId: 'town_size.test', traitIds: [] }
+		},
 		family: {
 			partnerId: null,
 			childrenIds: [],

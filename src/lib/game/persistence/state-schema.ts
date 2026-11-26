@@ -330,6 +330,11 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 		popularity: int,
 		origin: id,
 		profession: id,
+		territory: z.strictObject({
+			regionId: id,
+			departmentCode: z.string().regex(/^(\d{2}|2[AB])$/u),
+			homeTown: z.strictObject({ name: text, sizeId: id, traitIds: z.array(id) })
+		}),
 		family: z.strictObject({
 			partnerId: id.nullable(),
 			childrenIds: z.array(id),

@@ -252,7 +252,12 @@ export class GameController {
 	 * qu'avec `replaceExisting`, après confirmation du joueur.
 	 */
 	newCareer(
-		options: { replaceExisting?: boolean; origin?: string; profession?: string } = {}
+		options: {
+			replaceExisting?: boolean;
+			origin?: string;
+			profession?: string;
+			region?: string;
+		} = {}
 	): StartResult {
 		this.home = this.readHome();
 		const hasExisting = this.home.existing !== null || this.home.unreadable !== null;
@@ -261,7 +266,8 @@ export class GameController {
 			{
 				seed: this.deps.newSeed(),
 				...(options.origin ? { origin: options.origin } : {}),
-				...(options.profession ? { profession: options.profession } : {})
+				...(options.profession ? { profession: options.profession } : {}),
+				...(options.region ? { region: options.region } : {})
 			},
 			this.deps.content
 		);

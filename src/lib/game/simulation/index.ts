@@ -42,7 +42,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 17;
+export const SIMULATION_REPORT_VERSION = 18;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -122,6 +122,9 @@ export interface SimulationRun {
 	readonly distinctOpponents: number;
 	/** Profil de départ et famille en fin de carrière (P2-08). */
 	readonly origin: string;
+	/** Territoire d'origine (P3-16) : région et taille de la commune. */
+	readonly region: string;
+	readonly townSize: string;
 	readonly profession: string;
 	readonly children: number;
 	readonly separations: number;
@@ -860,6 +863,8 @@ function finalizeRun(
 			state.campaigns.flatMap((campaign) => (campaign.opponentId ? [campaign.opponentId] : []))
 		).size,
 		origin: state.player.origin,
+		region: state.player.territory.regionId,
+		townSize: state.player.territory.homeTown.sizeId,
 		profession: state.player.profession,
 		children: state.player.family.childrenIds.length,
 		promisesMade: state.promises.length,
@@ -964,7 +969,8 @@ export function simulateCareer(
 			seed,
 			origin: content.originIds[hashSeed(`${seed}:origine`) % content.originIds.length]!,
 			profession:
-				content.professionIds[hashSeed(`${seed}:profession`) % content.professionIds.length]!
+				content.professionIds[hashSeed(`${seed}:profession`) % content.professionIds.length]!,
+			region: content.regionIds[hashSeed(`${seed}:region`) % content.regionIds.length]!
 		},
 		content
 	);
@@ -1336,6 +1342,8 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'distinctOpponents',
 		'maxRivalEncounters',
 		'origin',
+		'region',
+		'townSize',
 		'profession',
 		'children',
 		'separations',
@@ -1407,6 +1415,8 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.distinctOpponents,
 		run.maxRivalEncounters,
 		run.origin,
+		run.region,
+		run.townSize,
 		run.profession,
 		run.children,
 		run.separations,

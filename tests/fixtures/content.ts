@@ -151,7 +151,67 @@ export const fixtureProfiles = {
 			]
 		}
 	],
-	defaults: { origin: 'origin.neutral', profession: 'profession.none' }
+	defaults: { origin: 'origin.neutral', profession: 'profession.none', region: 'region.test' },
+	// Territoire neutre (P3-16) : aucun effet, si bien que les tests existants n'en dépendent pas.
+	territory: {
+		regions: [
+			{
+				id: 'region.test',
+				name: 'Région de test',
+				departments: [
+					{ code: '75', name: 'Capitale de test', startable: false },
+					{ code: '14', name: 'Département de test', startable: true }
+				],
+				toponymy: { roots: ['Testville', 'Montessai', 'Brouillon'], rivers: ['Essai'], pays: [] }
+			},
+			{
+				id: 'region.other',
+				name: 'Autre région',
+				departments: [{ code: '29', name: 'Autre département', startable: true }],
+				toponymy: { roots: ['Ailleurs', 'Autrefois', 'Lointain'], rivers: ['Rive'], pays: ['Pays'] }
+			}
+		],
+		sizes: [
+			{
+				id: 'town_size.test',
+				label: 'Petite ville',
+				description: 'Taille de test.',
+				weight: 1,
+				rivalStrengthModifier: 0,
+				effects: []
+			}
+		],
+		traits: [
+			{
+				id: 'town_trait.quiet',
+				label: 'paisible',
+				description: 'Trait de test.',
+				excludes: [],
+				effects: [],
+				origins: []
+			},
+			{
+				id: 'town_trait.busy',
+				label: 'animée',
+				description: 'Trait de test.',
+				excludes: [],
+				effects: [],
+				origins: []
+			}
+		],
+		traitsPerTown: { min: 1, max: 2 },
+		toponymy: {
+			patterns: [
+				{ pattern: '{root}', weight: 1 },
+				{ pattern: '{root}-sur-{river}', weight: 1 },
+				{ pattern: '{root}-en-{pays}', weight: 1 }
+			],
+			saints: ['Testin'],
+			complements: ['des-Tests'],
+			plurals: ['Essais'],
+			standalone: ['La Roche-Test']
+		}
+	}
 };
 
 /** Deux postes de test : un ouvert avec de l'influence, un réservé aux élus. */

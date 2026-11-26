@@ -26,6 +26,7 @@ import { applyPoliticalEffect } from './world.ts';
 import { gaugeKey } from './effects.ts';
 import { createWorld } from './world.ts';
 import { startingParameters } from './reforms.ts';
+import { createTerritory, territoryEffects, type TerritoryState } from './territory.ts';
 
 /** Version du format de l'état, à incrémenter avec une migration explicite. */
 export const STATE_SCHEMA_VERSION = 1;
@@ -73,6 +74,8 @@ export interface PlayerState {
 	/** Origine sociale et profession choisies à la création (P2-08). */
 	readonly origin: string;
 	readonly profession: string;
+	/** Territoire d'origine : région choisie, département et commune tirés (P3-16). */
+	readonly territory: TerritoryState;
 	readonly family: FamilyState;
 }
 
@@ -868,15 +871,20 @@ export interface NewGameConfig {
 	/** Origine et profession choisies (P2-08) ; à défaut, le profil par défaut du catalogue. */
 	readonly origin?: string;
 	readonly profession?: string;
+	/** Région d'origine (P3-16) ; à défaut, celle du profil par défaut. */
+	readonly region?: string;
 }
 
 export function createGame(config: NewGameConfig, content: Content): GameState {
 	const originId = config.origin ?? content.defaultProfile.origin;
 	const professionId = config.profession ?? content.defaultProfile.profession;
+	const regionId = config.region ?? content.defaultProfile.region;
 	const origin = content.origins[originId];
 	const profession = content.professions[professionId];
 	if (!origin) throw new Error(`Origine inconnue : ${originId}`);
 	if (!profession) throw new Error(`Profession inconnue : ${professionId}`);
+	// Territoire tiré sur un PRNG dérivé : aucun autre tirage n'en est décalé.
+	const territory = createTerritory(config.seed, regionId, content);
 
 	// Paysage initial fixe ; seuls les dirigeants sont tirés (GDD §8.1).
 	const world = createWorld(createRng(config.seed), START_TURN, content);
@@ -897,10 +905,15 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		popularity: computePopularity(startingSupports(content), content),
 		origin: originId,
 		profession: professionId,
+		territory,
 		family: EMPTY_FAMILY
 	};
 	const resources: Record<ResourceId, number> = { ...content.balance.startingResources };
-	for (const effect of [...origin.effects, ...profession.effects]) {
+	for (const effect of [
+		...origin.effects,
+		...profession.effects,
+		...territoryEffects(territory, originId, content)
+	]) {
 		if (effect.op === 'addResource') {
 			resources[effect.resource] = Math.max(0, resources[effect.resource] + effect.value);
 		} else if (effect.op === 'addStat') {

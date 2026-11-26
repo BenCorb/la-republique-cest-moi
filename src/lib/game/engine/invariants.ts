@@ -734,6 +734,21 @@ function checkCareerInvariants(state: GameState): string[] {
  */
 export function checkContentReferences(state: GameState, content: Content): string[] {
 	const violations: string[] = [];
+	// Territoire d'origine (P3-16) : région, département de la région, taille et traits connus.
+	const { territory } = state.player;
+	const region = content.regions[territory.regionId];
+	if (!region) violations.push(`région inconnue : ${territory.regionId}`);
+	else if (!region.departments.some((entry) => entry.code === territory.departmentCode)) {
+		violations.push(`département hors de la région : ${territory.departmentCode}`);
+	}
+	if (!content.territory.sizes.some((size) => size.id === territory.homeTown.sizeId)) {
+		violations.push(`taille de commune inconnue : ${territory.homeTown.sizeId}`);
+	}
+	for (const traitId of territory.homeTown.traitIds) {
+		if (!content.territory.traits.some((trait) => trait.id === traitId)) {
+			violations.push(`trait de commune inconnu : ${traitId}`);
+		}
+	}
 	for (const parameterId of content.institutionParameterIds) {
 		const levelId = state.institutions.parameters[parameterId];
 		const level = content.institutionParameters[parameterId]?.levels.find(

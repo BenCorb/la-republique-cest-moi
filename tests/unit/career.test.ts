@@ -444,12 +444,13 @@ describe('mandats et cumul', () => {
 describe('projection et alertes', () => {
 	it('annonce la clôture des candidatures puis l’échéance proche', () => {
 		const filing = advanceTo(createGame({ seed: 'alerte' }, catalog), 38);
+		const local = `Élection locale (${filing.player.territory.homeTown.name})`;
 		expect(projectView(filing, [], catalog).alerts.map((alert) => alert.text)).toContain(
-			'Élection locale : dernier trimestre pour déposer une candidature.'
+			`${local} : dernier trimestre pour déposer une candidature.`
 		);
 		const after = advanceTo(filing, 39);
 		expect(projectView(after, [], catalog).alerts.map((alert) => alert.text)).toContain(
-			'Élection locale au T1 2010, dans 1 trimestre.'
+			`${local} au T1 2010, dans 1 trimestre.`
 		);
 	});
 
@@ -458,10 +459,12 @@ describe('projection et alertes', () => {
 		// Ordre d'attribution volontairement désordonné : la mairie suit tout de même son conseil.
 		const state = holding(base, 'mandate.deputy', 'mandate.councillor', 'mandate.mayor');
 		const career = projectView(state, [], catalog).career;
+		// Chaque mandat cite son lieu : département ou commune du joueur (P3-16).
+		const town = state.player.territory.homeTown.name;
 		expect(career.mandates.map((mandate) => [mandate.label, mandate.within])).toEqual([
-			['Siège national', null],
-			['Siège local', null],
-			['Mairie', 'Siège local']
+			['Siège national (Département de test)', null],
+			[`Siège local (${town})`, null],
+			[`Mairie (${town})`, `Siège local (${town})`]
 		]);
 		expect(career.cumulCount).toBe(2);
 	});

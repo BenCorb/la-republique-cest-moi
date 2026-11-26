@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.31.0';
+export const RULES_VERSION = '0.32.0';
 
 export {
 	START_YEAR,
@@ -108,6 +108,16 @@ export {
 	type WorldRecord,
 	type WorldState
 } from './state.ts';
+export {
+	createTerritory,
+	departmentOf,
+	generateTownName,
+	localRivalModifier,
+	placeOf,
+	territoryEffects,
+	type HomeTown,
+	type TerritoryState
+} from './territory.ts';
 export {
 	EMPTY_FAMILY,
 	applyFamilyEffect,

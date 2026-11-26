@@ -26,6 +26,7 @@ import {
 import { ageAt, formatTurn, type Turn } from './calendar.ts';
 import { addRelation, generatePerson, meet, sortedIds } from './characters.ts';
 import { nextInt, type RngState } from './random.ts';
+import { localRivalModifier } from './territory.ts';
 import type {
 	Ballot,
 	BallotShare,
@@ -750,8 +751,11 @@ export function campaignPoll(
 ): { readonly min: number; readonly max: number } {
 	const definition = content.elections[campaign.electionId];
 	if (!definition) return { min: 0, max: 0 };
-	// Le sondage ne connaît de l'adversaire que ses traits connus du joueur.
-	const rival = opponentStrength(campaign, characters, campaigns, content, true);
+	// Le sondage ne connaît de l'adversaire que ses traits connus du joueur ;
+	// la taille de la commune pèse sur la concurrence locale (P3-16).
+	const rival =
+		opponentStrength(campaign, characters, campaigns, content, true) +
+		localRivalModifier(player.territory, campaign.electionId, content);
 	const incumbent = activeMandates(mandates).some(
 		(mandate) => mandate.mandateId === definition.grants
 	);
@@ -992,7 +996,9 @@ export function resolveDeadlines(
 					outgoing.has(definition.grants),
 					content
 				);
-				let rival = opponentStrength(campaign, characters, career.campaigns, content);
+				let rival =
+					opponentStrength(campaign, characters, career.campaigns, content) +
+					localRivalModifier(player.territory, campaign.electionId, content);
 				if (campaignBalance.volatility > 0) {
 					const own = nextInt(currentRng, -campaignBalance.volatility, campaignBalance.volatility);
 					const other = nextInt(own.rng, -campaignBalance.volatility, campaignBalance.volatility);

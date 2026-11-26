@@ -46,6 +46,8 @@ import {
 	type Condition,
 	type Content,
 	type Effect,
+	type TerritoryDefinition,
+	type TownTraitDefinition,
 	type ElectionDefinition,
 	type EventDefinition,
 	type InstitutionsDefinition,
@@ -974,6 +976,164 @@ function crossCheckProfiles(
 	return issues;
 }
 
+/** Variables permises dans un modèle de nom de commune (P3-16). */
+export const TOPONYM_VARIABLES = [
+	'root',
+	'river',
+	'pays',
+	'saint',
+	'complement',
+	'plural',
+	'standalone'
+] as const;
+
+/** Combinaisons de traits possibles pour une taille de commune (P3-16). */
+function traitSetExists(territory: TerritoryDefinition, sizeId: string): boolean {
+	const allowed = territory.traits.filter(
+		(trait) => trait.sizes === undefined || trait.sizes.includes(sizeId)
+	);
+	const search = (start: number, chosen: readonly TownTraitDefinition[]): boolean => {
+		if (chosen.length >= territory.traitsPerTown.min) return true;
+		for (let index = start; index < allowed.length; index += 1) {
+			const trait = allowed[index]!;
+			const clash = chosen.some(
+				(other) => other.excludes.includes(trait.id) || trait.excludes.includes(other.id)
+			);
+			if (!clash && search(index + 1, [...chosen, trait])) return true;
+		}
+		return false;
+	};
+	return search(0, []);
+}
+
+/**
+ * Territoire d'origine (P3-16) : régions et départements uniques, au moins un
+ * département de départ par région, tailles et traits cohérents (références,
+ * effets de création, combinaisons possibles), modèles de noms valides.
+ */
+function crossCheckTerritory(
+	territory: TerritoryDefinition,
+	defaultRegion: string,
+	refs: Refs,
+	knownIds: Set<string>
+): ContentIssue[] {
+	const issues: ContentIssue[] = [];
+	const source = 'profiles.json';
+	const unique = (id: string, path: string): void => {
+		if (knownIds.has(id)) issues.push({ source, path, message: `identifiant en double : ${id}` });
+		knownIds.add(id);
+	};
+	const codes = new Set<string>();
+	territory.regions.forEach((region, index) => {
+		const path = `territory.regions[${index}]`;
+		unique(region.id, `${path}.id`);
+		region.departments.forEach((department, departmentIndex) => {
+			if (codes.has(department.code)) {
+				issues.push({
+					source,
+					path: `${path}.departments[${departmentIndex}].code`,
+					message: `département en double : ${department.code}`
+				});
+			}
+			codes.add(department.code);
+		});
+		if (!region.departments.some((department) => department.startable)) {
+			issues.push({ source, path, message: `aucun département de départ : ${region.id}` });
+		}
+	});
+	if (!territory.regions.some((region) => region.id === defaultRegion)) {
+		issues.push({ source, path: 'defaults.region', message: `région inconnue : ${defaultRegion}` });
+	}
+	const sizeIds = new Set(territory.sizes.map((size) => size.id));
+	const traitIds = new Set(territory.traits.map((trait) => trait.id));
+	const checkEffects = (effects: readonly Effect[], path: string): void => {
+		effects.forEach((effect, effectIndex) => {
+			if (!PROFILE_EFFECTS.has(effect.op)) {
+				issues.push({
+					source,
+					path: `${path}[${effectIndex}]`,
+					message: `effet non permis à la création : ${effect.op}`
+				});
+			}
+		});
+		issues.push(...effectIssues(effects, refs, null, source, path));
+	};
+	territory.sizes.forEach((size, index) => {
+		unique(size.id, `territory.sizes[${index}].id`);
+		checkEffects(size.effects, `territory.sizes[${index}].effects`);
+	});
+	territory.traits.forEach((trait, index) => {
+		const path = `territory.traits[${index}]`;
+		unique(trait.id, `${path}.id`);
+		for (const other of trait.excludes) {
+			if (!traitIds.has(other) || other === trait.id) {
+				issues.push({ source, path: `${path}.excludes`, message: `trait inconnu : ${other}` });
+			}
+		}
+		for (const size of trait.sizes ?? []) {
+			if (!sizeIds.has(size)) {
+				issues.push({ source, path: `${path}.sizes`, message: `taille inconnue : ${size}` });
+			}
+		}
+		checkEffects(trait.effects, `${path}.effects`);
+		trait.origins.forEach((entry, originIndex) => {
+			if (!refs.origins.has(entry.origin)) {
+				issues.push({
+					source,
+					path: `${path}.origins[${originIndex}].origin`,
+					message: `origine inconnue : ${entry.origin}`
+				});
+			}
+			checkEffects(entry.effects, `${path}.origins[${originIndex}].effects`);
+		});
+	});
+	const { min, max } = territory.traitsPerTown;
+	if (min > max || max > territory.traits.length) {
+		issues.push({
+			source,
+			path: 'territory.traitsPerTown',
+			message: 'nombre de traits par commune incohérent'
+		});
+	} else {
+		for (const size of territory.sizes) {
+			if (!traitSetExists(territory, size.id)) {
+				issues.push({
+					source,
+					path: 'territory.traits',
+					message: `aucune combinaison de ${min} traits compatibles pour ${size.id}`
+				});
+			}
+		}
+	}
+	const known = new Set<string>(TOPONYM_VARIABLES);
+	const checkPatterns = (patterns: readonly { readonly pattern: string }[], path: string): void => {
+		patterns.forEach((entry, index) => {
+			const variables = [...entry.pattern.matchAll(/\{([a-z]+)\}/gu)].map((match) => match[1]!);
+			if (variables.length === 0 || variables.some((variable) => !known.has(variable))) {
+				issues.push({
+					source,
+					path: `${path}[${index}]`,
+					message: `modèle de nom invalide : ${entry.pattern}`
+				});
+			}
+			if (/[{}]/u.test(entry.pattern.replace(/\{[a-z]+\}/gu, ''))) {
+				issues.push({
+					source,
+					path: `${path}[${index}]`,
+					message: 'accolade isolée dans un modèle de nom'
+				});
+			}
+		});
+	};
+	checkPatterns(territory.toponymy.patterns, 'territory.toponymy.patterns');
+	territory.regions.forEach((region, index) => {
+		if (region.toponymy.patterns) {
+			checkPatterns(region.toponymy.patterns, `territory.regions[${index}].toponymy.patterns`);
+		}
+	});
+	return issues;
+}
+
 /** Effets permis dans une mission (production déterministe, proportionnelle à la compétence). */
 const MISSION_EFFECTS = new Set(['addResource', 'addSupport', 'addStat', 'prepareCampaign']);
 
@@ -1582,6 +1742,9 @@ export function validateContent(raw: RawContent): ContentValidation {
 			knownIds
 		)
 	);
+	issues.push(
+		...crossCheckTerritory(profileData.territory, profileData.defaults.region, refs, knownIds)
+	);
 	const postList = entourageCatalog.data.posts;
 	issues.push(...crossCheckEntourage(postList, refs, knownIds));
 	const traitIdSet = new Set(traitList.map((trait) => trait.id));
@@ -1698,6 +1861,11 @@ export function validateContent(raw: RawContent): ContentValidation {
 			professions,
 			professionIds: profileData.professions.map((profession) => profession.id),
 			defaultProfile: profileData.defaults,
+			territory: profileData.territory,
+			regions: Object.fromEntries(
+				profileData.territory.regions.map((region) => [region.id, region])
+			),
+			regionIds: profileData.territory.regions.map((region) => region.id),
 			posts,
 			postIds: postList.map((post) => post.id),
 			candidateProfiles: entourageCatalog.data.profiles,
