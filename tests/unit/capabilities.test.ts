@@ -205,6 +205,41 @@ describe('le petit service du donateur (P3-12)', () => {
 	});
 });
 
+describe('le retour du donateur (P3-12)', () => {
+	it('survient avec un donateur vénal bien disposé, décliné selon le mandat', () => {
+		const only = withEvents(['relations.donor_returns'], undefined, content);
+		const donor = Object.values(fresh.characters).find((character) =>
+			character.tags.includes('donor')
+		)!;
+		const courted = (state: GameState): GameState => ({
+			...state,
+			characters: {
+				...state.characters,
+				[donor.id]: { ...donor, traits: ['trait.venality'] }
+			},
+			relationships: {
+				...state.relationships,
+				[donor.id]: { metTurn: 0, attitude: 30, memories: [] }
+			}
+		});
+		const available = (state: GameState) => {
+			const next = commit(courted(state), only);
+			const view = describePendingEvent(next, only)!;
+			expect(view.eventId).toBe('relations.donor_returns');
+			return Object.fromEntries(view.choices.map((choice) => [choice.id, choice.available]));
+		};
+		// Élu : prise illégale d'intérêts ; sans mandat mais organisé : tribune payée.
+		expect(available(holding(fresh, 'mandate.municipal_councillor'))).toMatchObject({
+			accept: true,
+			accept_funds: false
+		});
+		expect(available({ ...powerful, mandates: [] })).toMatchObject({
+			accept: false,
+			accept_funds: true
+		});
+	});
+});
+
 describe('un poste pour la famille (P3-12)', () => {
 	const family = withEvents(['personal.family_job_request'], undefined, content);
 	const quiet = withEvents([], { ordinaryDrawsPerTurn: 0, ordinaryEventChance: 0 }, content);
