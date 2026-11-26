@@ -17,8 +17,8 @@ compte, aucune IA au runtime ; les sauvegardes restent dans le navigateur.
 > alpha) sont terminées. En phase 3, la justice, le patrimoine, les promesses, les médias, les
 > réformes institutionnelles, les époques, l’interface et le bilan définitifs sont intégrés à
 > `main` ; l’équilibrage par simulation (P3-09) est fait, il reste à le valider par une partie
-> chronométrée, puis vient la livraison (P3-10). **Le site publié montre encore l’alpha** (avant la
-> phase 3) : il n’est redéployé que sur demande. Pendant le développement, une sauvegarde écrite par
+> chronométrée, puis vient la livraison (P3-10). Le site publié montre l’état de `main` au 26 novembre 2026
+> (phase 3 intégrée, avant P3-10) ; il n’est redéployé que sur demande. Pendant le développement, une sauvegarde écrite par
 > d’anciennes règles est refusée, sans être effacée. L’avancement fait foi dans
 > [ROADMAP.md](ROADMAP.md).
 
