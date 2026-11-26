@@ -9,7 +9,8 @@
 	 */
 	interface Props {
 		acceleration: AccelerationStatus;
-		onDismiss: () => void;
+		/** Absent dans la note de période (P3-14), qui a ses propres boutons. */
+		onDismiss?: () => void;
 	}
 
 	let { acceleration, onDismiss }: Props = $props();
@@ -18,7 +19,7 @@
 
 {#if summary}
 	<section
-		class="card flex flex-col gap-3 lg:col-span-2"
+		class="flex flex-col gap-3 {onDismiss ? 'card lg:col-span-2' : ''}"
 		aria-labelledby="span-title"
 		data-testid="span-summary"
 	>
@@ -32,14 +33,16 @@
 				</h2>
 				<p class="text-sm text-primary" data-testid="span-stop">{acceleration.message}</p>
 			</div>
-			<button
-				type="button"
-				class="btn-secondary btn-small"
-				aria-label="Masquer le résumé"
-				onclick={onDismiss}
-			>
-				<X class="size-3.5" aria-hidden="true" />
-			</button>
+			{#if onDismiss}
+				<button
+					type="button"
+					class="btn-secondary btn-small"
+					aria-label="Masquer le résumé"
+					onclick={onDismiss}
+				>
+					<X class="size-3.5" aria-hidden="true" />
+				</button>
+			{/if}
 		</div>
 		{#if acceleration.alerts.length > 1}
 			<ul class="flex flex-col gap-1 text-sm text-warning">

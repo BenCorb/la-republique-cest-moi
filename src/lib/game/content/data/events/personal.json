@@ -197,6 +197,9 @@
 				{
 					"id": "go",
 					"label": "Y aller et payer l’addition",
+					"outcome": [
+						"Vous parlez politique dès l’entrée, évidemment, mais aussi du reste. {friend} vous retrouve tel qu’avant, ou presque ; l’addition, elle, a pris de l’assurance."
+					],
 					"hints": ["Un vrai moment de détente", "Une addition salée"],
 					"costs": [
 						{
@@ -221,6 +224,9 @@
 				{
 					"id": "decline",
 					"label": "Prétexter une réunion",
+					"outcome": [
+						"« Une réunion importante. » {friend} répond par un simple « bien sûr », ce qui est pire qu’un reproche."
+					],
 					"hints": ["Votre agenda reste plein", "L’amitié, un peu moins"],
 					"costs": [],
 					"effects": [
@@ -260,6 +266,9 @@
 				{
 					"id": "hire",
 					"label": "Le recruter au poste « {post} »",
+					"outcome": [
+						"{relative} prend ses fonctions au poste « {post} » avec un enthousiasme débordant et un badge tout neuf. Au repas de famille, on vous trouve soudain formidable."
+					],
 					"hints": ["Un salaire de plus à verser", "Vigilance médiatique possible"],
 					"costs": [],
 					"effects": [
@@ -303,6 +312,9 @@
 				{
 					"id": "replace",
 					"label": "Remplacer {incumbent} par {relative}",
+					"outcome": [
+						"{incumbent} libère son bureau sans un mot ; {relative} y installe déjà ses photos de vacances. Au repas de famille, on vous trouve soudain formidable."
+					],
 					"hints": ["{incumbent} sera renvoyé", "Vigilance médiatique possible"],
 					"costs": [],
 					"effects": [
@@ -347,6 +359,9 @@
 				{
 					"id": "open_selection",
 					"label": "Le soumettre à une sélection ouverte",
+					"outcome": [
+						"{relative} rejoint la liste des candidats, comme tout le monde. Vous lui expliquez que c’est « plus juste ainsi » ; le silence qui suit est très familial."
+					],
 					"hints": ["Sa candidature rejoint la présélection", "Réaction familiale incertaine"],
 					"costs": [],
 					"effects": [
@@ -376,6 +391,9 @@
 				{
 					"id": "refuse",
 					"label": "Refuser",
+					"outcome": [
+						"Vous refusez, avec des mots choisis. {relative} ne répond rien, et l’ambiance des prochaines fêtes s’annonce fraîche."
+					],
 					"hints": ["L’organisation reste sereine", "Tensions familiales possibles"],
 					"costs": [],
 					"effects": [

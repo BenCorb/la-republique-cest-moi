@@ -5,6 +5,7 @@
 	import Dashboard from '#lib/components/dashboard/Dashboard.svelte';
 	import CareerEnd from '#lib/components/events/CareerEnd.svelte';
 	import DecisionDialog from '#lib/components/events/DecisionDialog.svelte';
+	import NoteDialog from '#lib/components/events/NoteDialog.svelte';
 	import Journal from '#lib/components/journal/Journal.svelte';
 	import NewsPanel from '#lib/components/news/NewsPanel.svelte';
 	import Organisation from '#lib/components/organisation/Organisation.svelte';
@@ -124,14 +125,30 @@
 		{/if}
 	</GameLayout>
 
-	{#if snapshot.view?.decision}
-		{#key snapshot.view.decision.instanceId}
-			<DecisionDialog
-				decision={snapshot.view.decision}
-				disabled={!snapshot.canAct}
-				onChoose={(choiceId: string) => session?.controller.choose(choiceId)}
-			/>
-		{/key}
+	<!-- Note de cabinet d'abord (P3-14), puis décision et son résultat. -->
+	{#if snapshot.note && snapshot.view && !snapshot.view.summary}
+		<NoteDialog
+			mode={snapshot.note}
+			note={snapshot.view.quarterNote}
+			acceleration={snapshot.acceleration}
+			decisionPending={snapshot.view.decision !== null}
+			onPrepare={() => {
+				session?.controller.dismissNote();
+				tab = 'agenda';
+			}}
+			onJournal={() => {
+				session?.controller.dismissNote();
+				tab = 'journal';
+			}}
+		/>
+	{:else if snapshot.view?.decision || (snapshot.outcomeOpen && snapshot.view?.lastOutcome)}
+		<DecisionDialog
+			decision={snapshot.view.decision}
+			outcome={snapshot.outcomeOpen ? snapshot.view.lastOutcome : null}
+			disabled={!snapshot.canAct}
+			onChoose={(choiceId: string) => session?.controller.choose(choiceId)}
+			onContinue={() => session?.controller.dismissOutcome()}
+		/>
 	{/if}
 {/if}
 

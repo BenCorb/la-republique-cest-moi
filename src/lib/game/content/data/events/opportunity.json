@@ -152,6 +152,9 @@
 				{
 					"id": "accept",
 					"label": "Accepter le poste",
+					"outcome": [
+						"Vous voilà administrateur. Le gratin était excellent ; la réunion, nettement moins. Les amis du patrimoine retiennent votre nom pour la prochaine plaque commémorative."
+					],
 					"hints": ["Réseau local en hausse", "Des réunions en plus"],
 					"costs": [],
 					"effects": [
@@ -170,6 +173,9 @@
 				{
 					"id": "decline",
 					"label": "Décliner",
+					"outcome": [
+						"Vous déclinez avec un courriel d’une politesse exemplaire. Le gratin se mangera sans vous."
+					],
 					"hints": ["Rien ne change"],
 					"costs": [],
 					"effects": []

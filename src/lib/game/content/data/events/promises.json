@@ -18,6 +18,9 @@
 				{
 					"id": "hold",
 					"label": "Tenir la promesse coûte que coûte",
+					"outcome": [
+						"Vous tenez « {promise} », coûte que coûte. Le directeur financier range son tableau rouge avec une dignité de martyr."
+					],
 					"hints": ["La réforme avance nettement", "Vos nerfs en pâtissent"],
 					"costs": [],
 					"effects": [
@@ -28,6 +31,9 @@
 				{
 					"id": "stagger",
 					"label": "Étaler la réforme sur plusieurs années",
+					"outcome": [
+						"La réforme s’étalera sur plusieurs années : « {promise} », mais par petites tranches. Le tableau du directeur financier vire à l’orange."
+					],
 					"hints": [
 						"Elle ne sera au mieux que partiellement tenue",
 						"Un calendrier plus raisonnable"
@@ -42,6 +48,9 @@
 				{
 					"id": "drop",
 					"label": "Renoncer : « la conjoncture ne le permet pas »",
+					"outcome": [
+						"« La conjoncture ne le permet pas. » La phrase sort toute seule ; « {promise} » rejoint les archives, rubrique regrets."
+					],
 					"hints": ["Soulagement immédiat", "Ceux qui y croyaient s’en souviendront"],
 					"costs": [],
 					"effects": [
@@ -69,6 +78,9 @@
 				{
 					"id": "resist",
 					"label": "Leur tenir tête",
+					"outcome": [
+						"Vous raccompagnez la délégation jusqu’à l’ascenseur, chiffres compris. « {promise} » continue son chemin ; les cartes de visite épaisses aussi, ailleurs."
+					],
 					"hints": ["La réforme avance", "Les milieux d’affaires s’en souviendront"],
 					"costs": [],
 					"effects": [
@@ -80,6 +92,9 @@
 				{
 					"id": "deal",
 					"label": "Accepter « quelques amendements techniques »",
+					"outcome": [
+						"Quelques amendements techniques plus tard, « {promise} » avance, plus légère. Les costumes sobres repartent ravis de leur expertise."
+					],
 					"hints": ["Elle ne sera au mieux que partiellement tenue", "Des amis bien placés"],
 					"costs": [],
 					"effects": [
@@ -91,6 +106,9 @@
 				{
 					"id": "bury",
 					"label": "Enterrer discrètement le projet",
+					"outcome": [
+						"Le projet disparaît dans un tiroir profond. La délégation vous remercie de votre « sens des responsabilités » ; vos électeurs, eux, n’ont pas encore remarqué."
+					],
 					"hints": [
 						"Les milieux d’affaires apprécient",
 						"Vos électeurs beaucoup moins, le jour où ils l’apprendront"
@@ -122,6 +140,9 @@
 				{
 					"id": "force",
 					"label": "Passer en force",
+					"outcome": [
+						"Les engins arrivent sous les casseroles. « {promise} » avance au pas de charge, et les banderoles changent de slogan : il s’agit maintenant de vous."
+					],
 					"hints": ["La réforme avance nettement", "Climat tendu, stress assuré"],
 					"costs": [],
 					"effects": [
@@ -133,6 +154,9 @@
 				{
 					"id": "consult",
 					"label": "Ouvrir une grande concertation",
+					"outcome": [
+						"Une grande concertation s’ouvre, avec post-it, ateliers et médiateur. « {promise} » avancera, mais à la vitesse d’un tour de table."
+					],
 					"hints": ["Elle ne sera au mieux que partiellement tenue", "L’apaisement"],
 					"costs": [],
 					"effects": [
@@ -144,6 +168,9 @@
 				{
 					"id": "withdraw",
 					"label": "Retirer le projet « pour mieux le reprendre »",
+					"outcome": [
+						"Vous retirez le projet « pour mieux le reprendre ». Les riverains rangent leurs casseroles ; ceux qui voulaient « {promise} » ressortent les leurs."
+					],
 					"hints": ["Fin des casseroles", "Personne n’y croit"],
 					"costs": [],
 					"effects": [
@@ -171,6 +198,9 @@
 				{
 					"id": "hold",
 					"label": "Tenir bon, quitte à se fâcher",
+					"outcome": [
+						"Vous tenez bon sur « {promise} ». Dans les couloirs, certains saluts deviennent des hochements de tête, puis plus rien du tout."
+					],
 					"hints": ["La réforme avance nettement", "L’appareil vous le fera payer"],
 					"costs": [],
 					"effects": [
@@ -182,6 +212,9 @@
 				{
 					"id": "water_down",
 					"label": "Édulcorer le texte en commission",
+					"outcome": [
+						"En commission, le texte perd quelques articles et gagne beaucoup d’amis. « {promise} » survit, en version allégée."
+					],
 					"hints": [
 						"Elle ne sera au mieux que partiellement tenue",
 						"Des collègues reconnaissants"
@@ -196,6 +229,9 @@
 				{
 					"id": "forget",
 					"label": "Laisser le texte s’enliser",
+					"outcome": [
+						"Le texte s’enlise, doucement, sans que personne n’ait rien décidé. Les collègues retrouvent le sourire ; « {promise} » prend la poussière."
+					],
 					"hints": ["Le calme revient dans les couloirs", "La presse finira par s’en apercevoir"],
 					"costs": [],
 					"effects": [
@@ -224,6 +260,9 @@
 				{
 					"id": "own_it",
 					"label": "Assumer : « J’ai changé d’avis, c’est aussi ça, gouverner »",
+					"outcome": [
+						"« J’ai changé d’avis, c’est aussi ça, gouverner. » Un silence, puis quelques applaudissements. {rival} range son vieux tract, un peu déçu."
+					],
 					"hints": ["La franchise plaît un peu", "Un moment pénible"],
 					"costs": [],
 					"effects": [
@@ -235,6 +274,9 @@
 				{
 					"id": "blame",
 					"label": "Accuser la conjoncture et vos prédécesseurs",
+					"outcome": [
+						"Vous accusez la conjoncture et vos prédécesseurs, en détail. Les caméras ont déjà tourné vers quelqu’un d’autre."
+					],
 					"hints": ["Classique, donc peu convaincant", "L’affaire retombe vite"],
 					"costs": [],
 					"effects": [
@@ -245,6 +287,9 @@
 				{
 					"id": "counter",
 					"label": "Contre-attaquer sur le bilan de {rival}",
+					"outcome": [
+						"Vous ressortez le bilan de {rival}, chiffres à l’appui. Le débat dégénère en échange de tracts jaunis ; la presse adore."
+					],
 					"hints": ["Une campagne qui se durcit", "Les caméras adorent"],
 					"costs": [],
 					"effects": [

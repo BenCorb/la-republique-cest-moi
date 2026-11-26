@@ -1504,6 +1504,9 @@ function crossCheckEvents(
 				choice.hints.forEach((hint, hintIndex) =>
 					checkText(hint, `${choicePath}.hints[${hintIndex}]`)
 				);
+				choice.outcome?.forEach((text, outcomeIndex) =>
+					checkText(text, `${choicePath}.outcome[${outcomeIndex}]`)
+				);
 				issues.push(
 					...duplicateResources(choice.costs, source, `${choicePath}.costs`, 'les coûts')
 				);

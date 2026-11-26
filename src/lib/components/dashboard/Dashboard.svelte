@@ -13,7 +13,6 @@
 	import ResourceTile from '#lib/components/common/ResourceTile.svelte';
 	import StatBar from '#lib/components/common/StatBar.svelte';
 	import TierBadge from '#lib/components/common/TierBadge.svelte';
-	import SpanSummary from './SpanSummary.svelte';
 	import TrendsCard from './TrendsCard.svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 
@@ -28,7 +27,6 @@
 
 	let { session }: Props = $props();
 	const view = $derived(session.snapshot.view);
-	const acceleration = $derived(session.snapshot.acceleration);
 	const lastQuarter = $derived(view?.journal[0] ?? null);
 	const active = $derived(
 		view?.producers.filter((producer) => producer.status === 'active').length ?? 0
@@ -59,12 +57,6 @@
 
 {#if view}
 	<div class="grid gap-4 lg:grid-cols-3">
-		{#if acceleration && !acceleration.running && acceleration.summary}
-			<div class="lg:col-span-3">
-				<SpanSummary {acceleration} onDismiss={() => session.controller.dismissAcceleration()} />
-			</div>
-		{/if}
-
 		{#each view.resources as resource (resource.id)}
 			{@const trend = trendOf(resource.id)}
 			<section

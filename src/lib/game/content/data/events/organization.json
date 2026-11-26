@@ -30,6 +30,9 @@
 				{
 					"id": "arbitrate",
 					"label": "Arbitrer soi-même",
+					"outcome": [
+						"Vous tranchez la question de la police de caractères en réunion plénière. {volunteer} repart soulagé ; {other_volunteer} vous fait la tête et le fait savoir à la photocopieuse."
+					],
 					"hints": ["Organisation apaisée", "Une soirée entière de médiation"],
 					"costs": [],
 					"effects": [
@@ -60,6 +63,9 @@
 				{
 					"id": "pizza",
 					"label": "Organiser une soirée pizza de réconciliation",
+					"outcome": [
+						"Quatre pizzas, deux bouteilles et un karaoké improvisé plus tard, {volunteer} et {other_volunteer} trinquent ensemble. Le prochain tract sera en Times, par consensus."
+					],
 					"hints": ["Ambiance retrouvée", "Budget politique en baisse"],
 					"costs": [
 						{
@@ -95,6 +101,9 @@
 				{
 					"id": "ignore",
 					"label": "Laisser faire",
+					"outcome": [
+						"Vous laissez faire. La querelle s’installe, les clans se forment, et la machine à café devient une frontière."
+					],
 					"hints": ["Rien à faire", "L’ambiance se dégrade"],
 					"costs": [],
 					"effects": [

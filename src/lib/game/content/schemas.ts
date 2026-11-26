@@ -468,7 +468,8 @@ const eventChoiceSchema: z.ZodType<EventChoice> = z
 		requires: conditionSchema.optional(),
 		unavailableReason: frenchText.optional(),
 		effects: z.array(effectSchema),
-		followUp: followUpSchema.optional()
+		followUp: followUpSchema.optional(),
+		outcome: z.array(frenchText).min(1).optional()
 	})
 	.refine(
 		(choice) => (choice.requires === undefined) === (choice.unavailableReason === undefined),

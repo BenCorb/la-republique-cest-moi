@@ -87,6 +87,9 @@
 				{
 					"id": "prepare",
 					"label": "Répéter toute la semaine",
+					"outcome": [
+						"Une semaine de fiches, de chronomètre et de répétitions devant le miroir. Sur le plateau, vos réponses tombent pile dans les quarante-cinq secondes ; l’animateur, frustré, coupe la parole à quelqu’un d’autre."
+					],
 					"hints": ["Campagne mieux préparée", "Semaine éprouvante"],
 					"costs": [],
 					"effects": [
@@ -105,6 +108,9 @@
 				{
 					"id": "improvise",
 					"label": "Y aller au culot",
+					"outcome": [
+						"Vous arrivez les mains dans les poches et repartez avec deux formules que la salle de rédaction répète déjà. Personne ne se souvient de votre programme, tout le monde de votre aplomb."
+					],
 					"hints": ["Un peu de préparation"],
 					"costs": [],
 					"effects": [
@@ -118,6 +124,9 @@
 				{
 					"id": "skip",
 					"label": "Envoyer un porte-parole",
+					"outcome": [
+						"Votre porte-parole récite les éléments de langage avec application. Le chronomètre géant n’a jamais semblé aussi patient."
+					],
 					"hints": ["Rien de gagné, rien de perdu"],
 					"costs": [],
 					"effects": []

@@ -1493,6 +1493,13 @@ export interface EventChoice {
 	readonly unavailableReason?: string | undefined;
 	readonly effects: readonly Effect[];
 	readonly followUp?: FollowUp | undefined;
+	/**
+	 * Récit du résultat, affiché juste après le choix (P3-14) : deuxième personne,
+	 * trois phrases au plus, variables d'acteurs permises. Plusieurs variantes
+	 * possibles, choisies de façon déterministe par l'instance ; jamais de suite
+	 * cachée ni d'issue future. Absent : texte de repli généré depuis les effets.
+	 */
+	readonly outcome?: readonly string[] | undefined;
 }
 
 interface EventBase {
