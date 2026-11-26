@@ -168,7 +168,7 @@ Plan de travail **validé par le créateur le 25 novembre 2026** (voir « Décis
 
 ### 5.2 Corrections et compléments du playtest P3-09 (26 novembre 2026)
 
-Plan établi à partir des seize retours PT-P3-09-001 à 016 de `PLAYTEST.md`. Il s’insère entre le premier volet de P3-09 (fait) et la livraison P3-10. Chiffres provisoires, à éprouver par simulation puis au playtest. Une branche et une pull request par tâche (`feat/p3-11-agenda-ponctuel`…, pied `Refs: P3-11`), conformément à la règle de la phase 3.
+Plan établi à partir des seize retours PT-P3-09-001 à 016 de `PLAYTEST.md`, complété par la refonte visuelle demandée par le créateur (P3-26, P3-27). Il s’insère entre le premier volet de P3-09 (fait) et la livraison P3-10. Chiffres provisoires, à éprouver par simulation puis au playtest. Une branche et une pull request par tâche (`feat/p3-11-agenda-ponctuel`…, pied `Refs: P3-11`), conformément à la règle de la phase 3.
 
 **Décisions du créateur (26 novembre 2026) :**
 
@@ -177,6 +177,7 @@ Plan établi à partir des seize retours PT-P3-09-001 à 016 de `PLAYTEST.md`. I
 3. **Recrutement (PT-004 à 006)** : version complète en V1 : salaire contractuel, attractivité, acceptation et négociation, recherche à trois niveaux, vérification de dossier, progression des juniors et renégociations.
 4. **Géographie (PT-002/003)** : les 13 régions métropolitaines actuelles (millésime figé du COG Insee), un quotidien régional fictif par région. Anachronisme assumé pour une France alternative qui débute en 2000 ; outre-mer exclu de la V1.
 5. **Âge de départ** : le choix de l’âge (P3-06) est abandonné ; l’âge reste fixe à 25 ans, avec origine sociale, terrain d’engagement et territoire.
+6. **Direction visuelle** : refonte pour un aspect plus ludique et moins « tableur » avant la V1, limitée aux icônes, barres, pastilles, couleurs et mise en page ; pas d’illustrations dessinées ni d’éléments très interactifs (étude : `DESIGN.md` §10).
 
 **Décisions déléguées (prises pour ce plan, révisables) :**
 
@@ -199,10 +200,11 @@ Plan établi à partir des seize retours PT-P3-09-001 à 016 de `PLAYTEST.md`. I
 |---|---|---|---|---|---|---|
 | 1 | P3-11 | Agenda ponctuel par défaut et retrait automatique | 007, 011 | — | M | Ajout jamais épinglé ; reconduction des seules épingles ; retraits en cascade et occurrences partielles ; notice et journal ; même règle en manuel et accéléré ; arrêt sur plan devenu vide ; `DESIGN`/`ARCHITECTURE` alignés |
 | 1 | P3-12 | Cohérence des affaires et embauche familiale | 008, 009 | — | M | Table de capacités et garde moteur ; audit de tous les `recordFact` (dont `gala_table`) ; suites réévaluées à échéance ; le proche recruté est un vrai collaborateur, productif à T+1, jamais embauché deux fois après reprise |
-| 2 | P3-13 | Plan permanent dans la coque | 012 | P3-11 | M | Carnet présent dans tous les onglets ; panneau sans perte d’onglet ni de défilement ; état étroit ; verrouillage pendant l’accélération ; e2e |
-| 2 | P3-14 | Résultat des décisions et note de trimestre | 015 | P3-11 | M | Effets réels (aléas compris) sans fuite d’informations cachées ; décisions enchaînées ; note après trimestre manuel, note de période après accélération ; réouverture ; pas de rejeu après reprise ; champ `outcome` déclaratif au catalogue |
+| 2 | P3-26 | Direction visuelle et composants | — | — | M | Maquette de l’agenda et du tableau de bord validée par le créateur ; table d’identité des ressources (icône, couleur, libellé) ; composants de `DESIGN.md` §10.5 ; en-tête, agenda, tableau de bord et alertes passés au nouveau style ; contrastes AA, `prefers-reduced-motion`, aucune fuite d’information cachée |
+| 2 | P3-13 | Plan permanent dans la coque | 012 | P3-11, P3-26 | M | Carnet présent dans tous les onglets ; panneau sans perte d’onglet ni de défilement ; état étroit ; verrouillage pendant l’accélération ; e2e |
+| 2 | P3-14 | Résultat des décisions et note de trimestre | 015 | P3-11, P3-26 | M | Effets réels (aléas compris) sans fuite d’informations cachées ; décisions enchaînées ; note après trimestre manuel, note de période après accélération ; réouverture ; pas de rejeu après reprise ; champ `outcome` déclaratif au catalogue |
 | 2 | P3-15 | Anti-répétition et instrumentation du contenu | 016 | — | S | Mémoire sérialisée des titres, pioche sans remise, délai thématique, plafonds par événement ; rapport de couverture et de répétitions en simulation ; validation des pools trop petits |
-| — | Playtest B1 | Court playtest de contrôle | — | P3-11 à 15 | — | Agenda, carnet et retours jugés satisfaisants ; corrections mineures avant le lot suivant |
+| — | Playtest B1 | Court playtest de contrôle | — | P3-11 à 15, P3-26 | — | Agenda, carnet, retours et nouveau style jugés satisfaisants ; corrections mineures avant le lot suivant |
 | 3 | P3-16 | Territoire d’origine | 002 | — | L | `region`, `department`, `homeTown` sérialisés ; 13 régions ; générateur de communes seedé et validé ; noms visibles en campagne, mandat, presse et bilan ; effets légers de taille et de traits validés par simulation |
 | 3 | P3-17 | Terrain d’engagement | 001 | P3-16 | M | Six terrains, effets et actions propres ; création réécrite ; GDD mis à jour ; tests de création |
 | 3 | P3-18 | Presse régionale | 003 | P3-16 | M | 13 titres ; rôle `regional_anchor` ; accès des médias selon territoire, exposition et mandat ; événements et rachat migrés ; couverture croisée simple |
@@ -214,10 +216,11 @@ Plan établi à partir des seize retours PT-P3-09-001 à 016 de `PLAYTEST.md`. I
 | — | Playtest B2 | Playtest des systèmes | — | P3-16 à 23 | — | Deux carrières ; sensation de progression, territoire, équipe et militants jugés lisibles |
 | 4 | P3-24 | Contenu, vague 1 : quotidien et conséquences | 015, 016 | P3-14 à 23 | L | Matrice de couverture remplie pour les états courants ; textes de résultat pour les choix importants ; presse diversifiée par média et par région |
 | 4 | P3-25 | Contenu, vague 2 : chaînes et uniques | 016 | P3-24 | L | Chaînes à personnages récurrents, événements uniques par fonction ; événements de croissance militante et d’équipe |
-| 5 | P3-09 | Équilibrage, second volet et chronométrage | — | P3-25 | M | Lots de 500 carrières rejoués ; épuisement de la stratégie ambitieuse revu ; playtest chronométré final (protocole `PLAYTEST.md`) ; aucune anomalie critique |
+| 4 | P3-27 | Cohérence visuelle finale | — | P3-25 | S | Écrans restants (journal, monde politique, relations, patrimoine, justice, bilan) au style de P3-26 ; critères de `DESIGN.md` §10.9 vérifiés |
+| 5 | P3-09 | Équilibrage, second volet et chronométrage | — | P3-25, P3-27 | M | Lots de 500 carrières rejoués ; épuisement de la stratégie ambitieuse revu ; playtest chronométré final (protocole `PLAYTEST.md`) ; aucune anomalie critique |
 | 5 | P3-10 | Livraison statique | — | P3-09 | S | Inchangé ; premier format de sauvegarde conservé et migrations |
 
-Les tâches de même priorité sans dépendance entre elles et sans fichiers communs peuvent avancer en parallèle sur des branches distinctes (par exemple P3-11 et P3-12, puis P3-16 et P3-19). Chaque tâche qui change l’état incrémente la version des règles ; les sauvegardes de l’alpha restent refusées comme obsolètes jusqu’à P3-10.
+Les écrans créés par P3-13 à P3-23 utilisent d’emblée les composants de P3-26. Les tâches de même priorité sans dépendance entre elles et sans fichiers communs peuvent avancer en parallèle sur des branches distinctes (par exemple P3-11 et P3-12, puis P3-16 et P3-19). Chaque tâche qui change l’état incrémente la version des règles ; les sauvegardes de l’alpha restent refusées comme obsolètes jusqu’à P3-10.
 
 **Après la V1 :** déménagement, parachutage, grandes villes réelles et départementales ; outre-mer ; plusieurs médias par région ; trafic d’influence ; délégation complète des tâches de l’organisation ; débauchage par un rival et réputation d’employeur.
 

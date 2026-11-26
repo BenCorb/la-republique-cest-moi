@@ -6,7 +6,7 @@
 
 ## 1. Intention
 
-Un outil de gestion politique à l’apparence institutionnelle, dont le sérieux contraste avec l’absurdité des événements. Le joueur doit avoir l’impression de consulter les dossiers de son propre cabinet, pas de jouer à un clicker coloré. L’interface sert d’abord à prendre des décisions, à comprendre les conséquences du trimestre et à lire des histoires.
+Un outil de gestion politique à l’apparence institutionnelle, dont le sérieux contraste avec l’absurdité des événements. Le joueur doit avoir l’impression de consulter les dossiers de son propre cabinet, pas de jouer à un clicker coloré. **Révisé le 26 novembre 2026 (demande du créateur) :** le jeu devient un dossier de cabinet *mis en scène*, plus ludique et moins textuel, par les icônes, les jauges et les pastilles, sans illustrations dessinées (§10). L’interface sert d’abord à prendre des décisions, à comprendre les conséquences du trimestre et à lire des histoires.
 
 - Desktop-first, navigateur, clavier et souris ; aucun objectif mobile pour la V1.
 - Priorité à la lisibilité et au rythme : les actions courantes doivent être rapides, les décisions importantes mises en scène.
@@ -168,3 +168,101 @@ L’humour repose sur le contraste entre langage administratif et situations abs
 Prototype : une carrière de bout en bout sans onglet factice, plan compréhensible, budgets distincts, passage de tour toujours accessible, décision bloquante traitable, reprise fidèle et bilan. Tester les écrans à 1440 × 900 et 1280 × 720, les longues chaînes de texte, valeurs élevées, listes vides, erreurs et navigation clavier.
 
 Alpha : candidature et échéances lisibles, comparaison de candidats sans fuite d’informations cachées, délégation et accélération compréhensibles. V1 : dossier judiciaire, patrimoine, promesses et institutions intégrés sans surcharge. Vérifier le rythme avec de vrais joueurs ; simplifier tout écran dont l’usage nécessite trop de clics récurrents.
+
+## 10. Direction visuelle V1 — étude (26 novembre 2026)
+
+**Statut :** étude préparatoire de la tâche P3-26 (`ROADMAP.md` §5.2). Elle oriente la maquette à valider par le créateur ; palette, police et composants restent provisoires jusqu’à cette validation.
+
+**Demande du créateur (26 novembre 2026) :** rendre le jeu plus ludique et moins « tableur », avec davantage d’indications visuelles, en restant dans les icônes, les barres, les pastilles et la mise en page. Pas d’illustrations dessinées ni d’éléments très interactifs en V1.
+
+### 10.1 Diagnostic de l’interface actuelle
+
+Observé sur une carrière neuve à 1440 × 900 (agenda et tableau de bord) :
+
+- **Tout a le même poids.** Chaque bloc est une carte à bordure fine, titre serif et texte gris : l’œil ne trouve ni point d’entrée ni hiérarchie entre l’urgent, l’utile et l’ambiance.
+- **Les ressources sont du texte.** L’en-tête aligne « Influence 2 · Budget politique 100 € · Argent personnel 3 000 € » sans icône ni couleur propre ; seules trois barres très fines (popularité, santé, stress) donnent une forme.
+- **Les coûts et effets sont des phrases.** Une ligne d’agenda comme « 15 pts · Budget politique − 20 € · Influence + 1 à 3 · Soutien : Classes populaires + 1 » se lit mot à mot : rien ne distingue d’un coup d’œil un coût d’un gain.
+- **Les tableaux dominent.** « Ressource / Actuel / Prévu ce trimestre » et les prévisions du plan ressemblent à une feuille de calcul ; les paragraphes d’explication restent affichés en permanence.
+- **Le temps ne se voit pas.** La date est un petit texte de l’en-tête ; rien ne marque le passage d’un trimestre (traité aussi par P3-14).
+- **Les personnes n’ont pas de visage.** Personnages, collaborateurs et adversaires sont des noms en texte, sans repère visuel stable.
+- **Les alertes se ressemblent toutes.** Même encadré bleu « Information » pour une échéance lointaine et une urgence.
+
+La base est saine : tokens de couleur, Lucide, contraste correct, structure en trois colonnes. Le problème tient à l’absence d’un **langage visuel du jeu**, pas à la technique.
+
+### 10.2 Références étudiées
+
+Jeux de gestion, de politique ou de bureaucratie dont l’interface reste surtout typographique et iconographique, sans dépendre d’illustrations. Il s’agit de leçons de conception, pas d’éléments à reproduire.
+
+| Référence | Ce qui fonctionne | Leçon pour le jeu |
+|---|---|---|
+| *Reigns* | Quatre ressources réduites à quatre icônes à jauge ; avant de choisir, un point plus ou moins gros signale quelles jauges vont bouger, sans dire dans quel sens | Montrer **quelles** ressources un choix touche (pastilles d’icônes) plutôt qu’une phrase ; compatible avec les tendances sans révéler l’issue |
+| *Papers, Please* | Bureaucratie mise en scène par des objets : documents, tampons, guichet ; l’absurde naît du sérieux administratif | Les décisions et rapports deviennent des **pièces de dossier** (note, tampon, en-tête de service) plutôt que des cartes génériques |
+| *Suzerain* | Jeu politique très textuel rendu lisible par une forte typographie, des dossiers par personnage et des pastilles de relation | Le texte peut rester central s’il est **mis en page** : titres forts, citations, fiches de personnage avec repère visuel |
+| *Democracy* (série) | Chaque politique et chaque groupe a une icône ronde colorée ; les liens d’effet sont visibles par couleur | Une **icône et une couleur par ressource et par groupe**, réutilisées partout (en-tête, agenda, choix, résultats) |
+| *Frostpunk* | Deux grandes jauges émotionnelles toujours visibles ; les changements se lisent par flèches et couleurs | Mettre en avant 3 ou 4 jauges vitales avec flèches de tendance, plutôt qu’une dizaine de chiffres égaux |
+| *Football Manager* | Interface dense, mais attributs colorés par seuil, pastilles d’état et comparaison côte à côte | Les **valeurs qualitatives par paliers colorés** (compétence, relation, implantation) se comparent mieux qu’un nombre |
+| *Game Dev Tycoon* | Les gains apparaissent en petites bulles qui montent ; le jeu est simple mais le progrès se sent | Un **retour bref sur les variations** (+3 qui apparaît puis se fixe) donne la sensation de jeu à peu de frais |
+| *Crusader Kings III* | Icônes partout, infobulles imbriquées pour le détail | Le détail vit dans des **infobulles et dépliants**, la surface reste iconique (déjà amorcé par l’agenda) |
+
+### 10.3 Intention révisée
+
+L’intention du §1 évolue : le jeu garde l’**allure institutionnelle** qui fait contraste avec l’absurde, mais devient un **dossier de cabinet mis en scène** plutôt qu’un outil de gestion. Le sérieux vient des matières (papier, tampons, en-têtes administratifs, une de journal, affiche électorale) ; le côté jeu vient des icônes, des jauges, des couleurs de ressource, des pastilles et des retours de variation. Ni clicker bariolé, ni tableur.
+
+### 10.4 Principes
+
+1. **Une ressource = une icône + une couleur**, partout. Influence, budget politique, argent personnel, temps, popularité, santé, stress, exposition, risque judiciaire, préparation, et chaque groupe de soutien. Le texte accompagne l’icône aux endroits clés (accessibilité), l’icône seule suffit dans les listes denses avec libellé accessible.
+2. **Des pastilles plutôt que des phrases.** Coûts et effets s’affichent en pastilles : icône, signe et valeur, couleur selon le sens (coût, gain, incertain). Une fourchette devient « +1–3 » ; un effet aléatoire porte un symbole dédié.
+3. **Des barres plutôt que des nombres seuls.** Toute valeur bornée (0–100) a sa barre avec repères de seuil et mot de palier ; les ressources non bornées ont un chiffre fort et une flèche de tendance.
+4. **Hiérarchie en trois niveaux.** (a) Ce qui exige une action (décision, plan, alerte critique) : couleur pleine, gros corps. (b) L’état du personnage : jauges et chiffres forts. (c) L’ambiance et le détail : petit corps, repliable ou en infobulle. Aucun paragraphe d’aide permanent : aide derrière une icône « ? ».
+5. **Le temps a du poids.** La date devient un élément de calendrier (trimestre et année en grand) ; chaque passage de trimestre la met en scène brièvement (P3-14).
+6. **Les personnes ont un repère.** Médaillon généré : initiales, couleur stable dérivée de l’identifiant, forme ou liseré selon le rôle (famille, parti, rival, collaborateur, média), petite icône d’humeur ou de relation. Pas de visage dessiné.
+7. **Objets de dossier pour les moments forts.** Décision = note de service avec en-tête et tampon de catégorie ; résultat = même note tamponnée ; note de trimestre = feuille datée ; scrutin = résultats en barres façon soirée électorale ; presse = coupures de journal ; bilan = une (déjà en place).
+8. **Retours brefs et sobres.** Variations qui apparaissent un instant à côté de la valeur, barre qui glisse, tampon qui se pose. Pas de son, pas de particules, aucune animation nécessaire à la compréhension ; tout est désactivé sous `prefers-reduced-motion`.
+9. **Couleurs de sens stables.** Gain, perte, risque, neutre, et une couleur d’accent par famille d’écran au plus. Les couleurs de partis fictifs servent seulement à les reconnaître (pastille, liseré), jamais à juger.
+
+### 10.5 Système de composants à créer
+
+| Composant | Rôle | Remplace |
+|---|---|---|
+| `ResourceIcon` + table d’identité | Icône, couleur, libellé et format de chaque ressource, groupe et jauge, en un seul catalogue | Libellés textuels dispersés |
+| `EffectChip` / `CostChip` | Pastille d’effet ou de coût avec signe, fourchette, aléa | Phrases d’effets de l’agenda, des choix et des actifs |
+| `StatBar` | Barre bornée avec seuils, palier nommé, variation prévue en fantôme | `Gauge` actuel, enrichi |
+| `ResourceTile` | Chiffre fort, icône, flèche de tendance, flux prévu | Tableau « Situation » |
+| `Avatar` | Médaillon d’initiales coloré par identifiant, liseré de rôle | Noms seuls |
+| `Stamp` / `FileHeader` | Tampon de catégorie (URGENT, CONFIDENTIEL, CAMPAGNE…) et en-tête de note | Titres de modale |
+| `TierBadge` | Palier qualitatif coloré (compétence, implantation, attractivité, militants) | Nombres bruts ou mots isolés |
+| `CalendarDate` | Date mise en forme de calendrier, transition de trimestre | Texte « T1 2000 » |
+| `DeltaFlash` | Variation affichée brièvement près d’une valeur | Rien |
+| `ScoreBars` | Barres de sondage et de résultat de scrutin | Texte de fourchette |
+
+Ces composants lisent uniquement `PlayerView` : aucune information cachée ne devient visible parce qu’elle est dessinée (pas de jauge morale, pas de trait caché, pas de probabilité).
+
+### 10.6 Application par écran (première passe)
+
+- **En-tête :** date-calendrier, ressources en tuiles icône + chiffre + flèche, jauges vitales en barres épaisses avec palier ; fonction principale en badge.
+- **Agenda :** lignes avec icône de catégorie, pastilles de temps, coût et effets ; groupes avec icône et couleur de thème ; plan du trimestre en barre de temps segmentée par activité (couleur de catégorie), au lieu d’un compteur « 0/100 ».
+- **Tableau de bord :** tuiles de ressources, jauges, courbes de tendance conservées ; explications en « ? ».
+- **Décisions :** note de service tamponnée, acteurs en médaillons, choix avec pastilles des ressources touchées (à la *Reigns*), résultat sur la même note (P3-14).
+- **Carrière et scrutins :** échéances en frise, sondage et résultat en barres comparées, mandats en badges.
+- **Entourage et relations :** fiches à médaillon, paliers colorés, traits connus en pastilles, traits inconnus en pastilles grisées « ? ».
+- **Alertes :** trois niveaux visuels (critique, à traiter, information) avec icône propre.
+- **Presse :** coupures avec nom du média typographié, ton en pastille.
+
+### 10.7 Typographie et palette
+
+- Conserver la base crème et bleu institutionnel, mais **élargir la palette** : une couleur par ressource (au moins 8 teintes distinctes, AA sur fond crème), un accent tricolore discret (bleu, blanc, rouge) pour la marque et les grands moments, pas pour les sens gain/perte.
+- **Une police de titrage affirmée**, de type affiche ou presse (serif condensée ou slab), auto-hébergée sous licence libre (OFL) et en un seul fichier, pour titres, date et une de journal ; corps en system-ui inchangé, chiffres tabulaires. Dépendance justifiée par la demande : à confirmer dans la maquette.
+- Rayons, ombres légères pour les objets « posés » (notes, coupures), bordures pour le reste.
+- Aucun logo réel, pas de bloc Marianne ni d’emblème officiel ; un monogramme ou une cocarde propre au jeu.
+
+### 10.8 Hors périmètre V1
+
+Illustrations dessinées, portraits caricaturaux, carte de France interactive, glisser-déposer, animations longues ou décoratives, son, thème sombre. Les portraits restent une piste après la V1 (§2).
+
+### 10.9 Critères de validation
+
+- Sur l’agenda et le tableau de bord, un joueur identifie en moins de cinq secondes son temps restant, ses ressources et ce qui lui coûtera le plus ce trimestre.
+- Une ligne d’action se lit sans lire de phrase : catégorie, temps, coût et effet principal sont repérables aux icônes et aux couleurs.
+- Aucune information nécessaire ne dépend de la seule couleur ou d’une animation ; contrastes AA ; navigation clavier inchangée.
+- Le texte permanent visible sur l’agenda et le tableau de bord diminue nettement (objectif indicatif : moitié moins de mots).
+- Les playtests B1 et B2 jugent l’interface « plus jeu » sans perte de lisibilité.
