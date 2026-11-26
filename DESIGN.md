@@ -74,7 +74,7 @@ Les informations cachées restent cachées dans les données de vue : aucune jau
 | Écran | Contenu principal | Phase |
 |---|---|---|
 | Accueil | Nouvelle carrière, reprendre, importer/exporter si disponible, réglages simples | Prototype |
-| Création | Profil fixe de 25 ans ; puis origine, profession, famille, âge et aperçu du bagage | Prototype puis alpha/V1 |
+| Création | Profil fixe de 25 ans ; puis origine, terrain d’engagement (remplace la profession en V1), territoire, famille et aperçu du bagage ; âge toujours fixe | Prototype puis alpha/V1 |
 | Tableau de bord | Situation, flux par trimestre, santé/stress, popularité, bilan du dernier tour | Prototype |
 | Agenda | Catalogue d’actions, coûts, plan modifiable, prévisions et validation | Prototype |
 | Organisation | Producteurs, achats, charges, date d’activation, missions | Prototype puis alpha |
