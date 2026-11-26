@@ -39,7 +39,6 @@ import {
 	renderTemplate,
 	type ChoiceRecord,
 	type ResourceChange,
-	type StepRecord,
 	type EffectRange,
 	type GameState,
 	type LegalCase,
@@ -884,33 +883,62 @@ export interface OutcomeView {
 	readonly details: readonly string[];
 }
 
-/** Une action jouée au trimestre et ce qu'elle a réellement rapporté (P3-14). */
-export interface NoteActionView {
-	readonly key: string;
-	readonly label: string;
-	/** Thème de l'agenda (icône et couleur), `null` pour un achat ou hors catalogue. */
-	readonly category: string | null;
-	readonly purchase: boolean;
-	/** Occurrences regroupées (« × 2 »). */
-	readonly count: number;
-	/** Effets cumulés réellement appliqués, aléas compris. */
-	readonly chips: readonly ChipView[];
-}
-
-/** Variation nette d'une ressource ou d'une jauge sur le trimestre (tuile de la note). */
+/** Statistique de la note : variation du trimestre et valeur atteinte (P3-14). */
 export interface NoteVariationView {
 	readonly identity: string;
 	readonly label: string;
-	/** « +3 », « −120 € », « 0 ». */
+	/** « +3 », « −120 € », « 0 » ; `null` au premier trimestre (pas de point de départ). */
+	readonly change: string | null;
+	/** Valeur atteinte (« 14 », « 3 800 € »). */
 	readonly value: string;
 	readonly sense: ChipSense;
 }
 
+/** Graphique d'un fait marquant : duel du joueur ou parts d'un scrutin. */
+export type NoteChartView =
+	| {
+			readonly kind: 'duel';
+			readonly playerPercent: number;
+			readonly rival: string;
+	  }
+	| {
+			readonly kind: 'shares';
+			readonly rows: readonly {
+				readonly label: string;
+				readonly percent: number;
+				readonly mine: boolean;
+			}[];
+	  };
+
 /**
- * Note de cabinet du dernier trimestre (P3-14, version graphique) : nouvelle
- * date, variations nettes en tuiles, bilan des actions jouées et retraits du
- * plan ; le reste est au journal. Tirée du journal sauvegardé : rouvrable après
- * une reprise, jamais rejouée.
+ * Fait marquant entre deux trimestres (P3-14) : élection, alternance, mandat,
+ * dirigeant de parti, justice, entourage, événement. Titre court, une phrase,
+ * graphique éventuel ; uniquement des faits publics déjà inscrits au journal.
+ */
+export interface NoteHighlightView {
+	readonly key: string;
+	readonly kind:
+		| 'victory'
+		| 'defeat'
+		| 'ballot'
+		| 'mandate'
+		| 'party'
+		| 'justice'
+		| 'people'
+		| 'event'
+		| 'institution';
+	readonly tone: ChipSense;
+	readonly title: string;
+	readonly text: string;
+	readonly chart: NoteChartView | null;
+	/** Bilan électoral de la carrière, joint au résultat d'une candidature. */
+	readonly record: { readonly won: number; readonly lost: number } | null;
+}
+
+/**
+ * Note de cabinet du dernier trimestre (P3-14, version « suivi de partie ») :
+ * nouvelle date, évolution des statistiques, faits marquants entre les deux
+ * trimestres. Tirée du journal sauvegardé : rouvrable, jamais rejouée.
  */
 export interface QuarterNoteView {
 	readonly key: string;
@@ -918,10 +946,11 @@ export interface QuarterNoteView {
 	readonly dateLabel: string;
 	/** Trimestre écoulé. */
 	readonly endedLabel: string;
-	/** Variations nettes ; `null` au premier trimestre (pas de point de départ). */
-	readonly variations: readonly NoteVariationView[] | null;
-	readonly actions: readonly NoteActionView[];
-	/** Événements et faits du trimestre laissés au journal. */
+	/** Premier trimestre : valeurs atteintes sans variation. */
+	readonly first: boolean;
+	readonly variations: readonly NoteVariationView[];
+	readonly highlights: readonly NoteHighlightView[];
+	/** Autres faits du trimestre laissés au journal. */
 	readonly journalLines: number;
 	/** Activités retirées du plan reconduit (P3-11). */
 	readonly adjustments: readonly string[];
@@ -1841,74 +1870,6 @@ function lowerFirstUpper(text: string): string {
 	return text.charAt(0).toLocaleUpperCase('fr-FR') + text.slice(1);
 }
 
-/**
- * Effets cumulés des occurrences d'une action : variations chiffrées par identité
- * (ressource, jauge, groupe, préparation), faits marquants en pastilles de texte.
- */
-interface StepTotals {
-	readonly resources: Map<ResourceId, number>;
-	readonly gauges: Map<GaugeId, number>;
-	readonly supports: Map<string, number>;
-	preparation: number;
-	readonly marks: Map<string, ChipView>;
-}
-
-function addStep(totals: StepTotals, step: StepRecord, content: Content): void {
-	const add = <K>(map: Map<K, number>, key: K, delta: number): void => {
-		map.set(key, (map.get(key) ?? 0) + delta);
-	};
-	for (const change of step.changes) add(totals.resources, change.resource, change.delta);
-	for (const change of step.gauges) add(totals.gauges, change.gauge, change.delta);
-	for (const change of step.politics) {
-		if (change.kind === 'support') add(totals.supports, change.groupId, change.delta);
-		else if (change.kind === 'preparation') totals.preparation += change.delta;
-		else if (change.kind === 'joined') {
-			const label = `Adhésion ${content.parties[change.partyId]?.acronym ?? ''}`.trim();
-			totals.marks.set(label, textChip(label, 'gain'));
-		} else if (change.kind === 'candidacy')
-			totals.marks.set('candidacy', textChip('Candidature déposée', 'gain'));
-		else if (change.kind === 'fact')
-			totals.marks.set('fact', {
-				identity: 'justice.risk',
-				value: 'Risque',
-				sense: 'risk',
-				variable: false,
-				text: politicsText([change], content)
-			});
-	}
-}
-
-function totalChips(totals: StepTotals, content: Content): ChipView[] {
-	const chips: ChipView[] = [
-		...resourceChips(
-			[...totals.resources]
-				.filter(([, delta]) => delta !== 0)
-				.map(([resource, delta]) => ({ resource, delta }))
-		),
-		...[...totals.gauges]
-			.filter(([, delta]) => delta !== 0)
-			.map(([gauge, delta]) => gaugeChip(gauge, delta)),
-		...[...totals.supports]
-			.filter(([, delta]) => delta !== 0)
-			.map(([groupId, delta]): ChipView => ({
-				identity: groupId,
-				value: formatCompactRange(null, delta, delta),
-				sense: senseOf(delta),
-				variable: false,
-				text: `${content.supportGroups[groupId]?.label ?? groupId} ${formatGaugeDelta(delta)}`
-			}))
-	];
-	if (totals.preparation !== 0)
-		chips.push({
-			identity: 'preparation',
-			value: formatCompactRange(null, totals.preparation, totals.preparation),
-			sense: senseOf(totals.preparation),
-			variable: false,
-			text: `Préparation de campagne ${formatGaugeDelta(totals.preparation)}`
-		});
-	return [...chips, ...totals.marks.values()];
-}
-
 const NOTE_VARIATIONS: readonly {
 	readonly key: keyof QuarterSnapshot;
 	readonly identity: string;
@@ -1929,6 +1890,174 @@ const NOTE_VARIATIONS: readonly {
 	{ key: 'stress', identity: 'player.stress', label: 'Stress', good: -1 }
 ];
 
+/** Faits marquants retenus dans la note ; les autres restent au journal. */
+const MAX_HIGHLIGHTS_IN_NOTE = 5;
+
+/** Phrase d'un résultat de candidature, selon l'écart (variante fixe, pas de hasard). */
+function campaignSentence(won: boolean, percent: number, rival: string): string {
+	const against = rival ? ` face à ${rival}` : '';
+	if (won) {
+		if (percent >= 60)
+			return `Raz-de-marée : ${percent} % des voix${against}. Les militants n’ont même pas eu le temps de s’inquiéter.`;
+		if (percent < 53)
+			return `D’un cheveu : ${percent} %${against}. Le recomptage n’y changera rien, l’écharpe est à vous.`;
+		return `Vous l’emportez avec ${percent} %${against}. La soirée électorale se prolonge tard.`;
+	}
+	if (percent >= 47)
+		return `Défaite d’un souffle : ${percent} %${against}. La notoriété progresse, la fatigue aussi.`;
+	return `Défaite nette : ${percent} %${against}. Les affiches restent sur les murs, les militants rentrent chez eux.`;
+}
+
+function noteHighlights(
+	entry: HistoryEntry,
+	state: GameState,
+	content: Content
+): NoteHighlightView[] {
+	const items: NoteHighlightView[] = [];
+	const record = {
+		won: state.campaigns.filter((campaign) => campaign.status === 'won').length,
+		lost: state.campaigns.filter((campaign) => campaign.status === 'lost').length
+	};
+	const deadlines = entry.deadlines;
+	const ownBallots = new Set<string>();
+	for (const result of deadlines?.campaigns ?? []) {
+		const campaign = state.campaigns.find(
+			(candidate) => candidate.campaignId === result.campaignId
+		);
+		if (campaign) ownBallots.add(campaign.ballotId);
+		const label = electionName(campaign?.electionId ?? '', state, content);
+		const rival = result.opponentId ? state.characters[result.opponentId] : undefined;
+		const rivalName = rival ? displayName(rival) : '';
+		if (result.status === 'disqualified' || result.playerPercent === null) {
+			items.push({
+				key: `campaign:${result.campaignId}`,
+				kind: 'defeat',
+				tone: 'cost',
+				title: `Candidature invalidée — ${label}`,
+				text: `Votre candidature n’a pas été retenue : ${result.reason ?? 'conditions non remplies'}.`,
+				chart: null,
+				record
+			});
+			continue;
+		}
+		const won = result.status === 'won';
+		items.push({
+			key: `campaign:${result.campaignId}`,
+			kind: won ? 'victory' : 'defeat',
+			tone: won ? 'gain' : 'cost',
+			title: `${won ? 'Victoire' : 'Défaite'} — ${label}`,
+			text: campaignSentence(won, result.playerPercent, rivalName),
+			chart: {
+				kind: 'duel',
+				playerPercent: result.playerPercent,
+				rival: rivalName || 'Adversaire'
+			},
+			record
+		});
+	}
+	for (const result of deadlines?.ballots ?? []) {
+		if (ownBallots.has(result.ballotId)) continue;
+		const ballot = state.ballots.find((entry) => entry.ballotId === result.ballotId);
+		const winner = content.parties[result.winnerPartyId]?.name ?? result.winnerPartyId;
+		const alternance = result.governingAfter !== result.governingBefore;
+		const mine = state.player.partyId;
+		items.push({
+			key: `ballot:${result.ballotId}`,
+			kind: 'ballot',
+			tone: alternance ? 'risk' : 'neutral',
+			title: `${alternance ? 'Alternance' : 'Scrutin'} — ${electionName(result.electionId, state, content)}`,
+			text: alternance
+				? `Le ${content.parties[result.governingAfter]?.name ?? result.governingAfter} forme le nouveau gouvernement ; le ${content.parties[result.governingBefore]?.name ?? result.governingBefore} passe dans l’opposition.`
+				: `Le ${winner} arrive en tête.`,
+			chart: ballot?.shares
+				? {
+						kind: 'shares',
+						rows: ballot.shares.slice(0, 5).map((share) => ({
+							label: content.parties[share.partyId]?.acronym ?? share.partyId,
+							percent: share.percent,
+							mine: share.partyId === mine
+						}))
+					}
+				: null,
+			record: null
+		});
+	}
+	for (const change of deadlines?.mandates ?? []) {
+		if (change.kind !== 'mandateEnded') continue;
+		items.push({
+			key: `mandate:${change.instanceId}`,
+			kind: 'mandate',
+			tone: 'neutral',
+			title: `Fin de mandat — ${mandateName(change.mandateId, state, content)}`,
+			text: 'Le mandat arrive à son terme ; le bureau se vide, les cartons se remplissent.',
+			chart: null,
+			record: null
+		});
+	}
+	for (const step of entry.justice?.cases ?? []) {
+		items.push({
+			key: `case:${step.caseId}:${step.kind}`,
+			kind: 'justice',
+			tone: 'risk',
+			title: 'Justice',
+			text: caseStepMessage(step.caseId, step.kind, state, content),
+			chart: null,
+			record: null
+		});
+	}
+	for (const line of worldLines(entry.world, state, content)) {
+		items.push({
+			key: `party:${items.length}`,
+			kind: 'party',
+			tone: 'neutral',
+			title: 'Vie des partis',
+			text: line.text,
+			chart: null,
+			record: null
+		});
+	}
+	for (const line of [
+		...staffLines(entry.staff, state, content),
+		...familyLines(entry.family, state),
+		...characterLines(entry.characters, state)
+	]) {
+		if (line.kind !== 'people' && line.kind !== 'career') continue;
+		items.push({
+			key: `people:${items.length}`,
+			kind: 'people',
+			tone: 'neutral',
+			title: 'Entourage',
+			text: line.text,
+			chart: null,
+			record: null
+		});
+	}
+	if (entry.institutions && entry.institutions.politics.length > 0) {
+		items.push({
+			key: 'institutions',
+			kind: 'institution',
+			tone: 'neutral',
+			title: 'Institutions',
+			text: lowerFirstUpper(politicsText(entry.institutions.politics, content)) + '.',
+			chart: null,
+			record: null
+		});
+	}
+	for (const event of entry.events) {
+		if (event.outcome !== 'applied') continue;
+		items.push({
+			key: `event:${event.instanceId}`,
+			kind: 'event',
+			tone: 'neutral',
+			title: 'Événement',
+			text: `${eventTitle(event.eventId, event.actors, state, content)}.`,
+			chart: null,
+			record: null
+		});
+	}
+	return items;
+}
+
 function buildQuarterNote(
 	state: GameState,
 	content: Content,
@@ -1941,62 +2070,32 @@ function buildQuarterNote(
 	if (!entry) return null;
 	const previous = quarters.at(-2)?.snapshot ?? null;
 	const now = entry.snapshot;
-	const variations = previous
-		? NOTE_VARIATIONS.map(({ key, identity, label, good }): NoteVariationView => {
-				const change = now[key] - previous[key];
-				const resource = RESOURCE_IDS.find((id) => id === key) ?? null;
-				return {
-					identity,
-					label,
-					value: formatCompactRange(resource, change, change),
-					sense: senseOf(change * good)
-				};
-			})
-		: null;
-
-	// Une ligne par action (et cible), occurrences regroupées, effets additionnés.
-	const groups = new Map<string, { step: StepRecord; count: number; totals: StepTotals }>();
-	for (const step of entry.steps) {
-		const key = `${step.kind}:${step.id}:${step.target ?? ''}`;
-		const group = groups.get(key) ?? {
-			step,
-			count: 0,
-			totals: {
-				resources: new Map(),
-				gauges: new Map(),
-				supports: new Map(),
-				preparation: 0,
-				marks: new Map()
-			}
-		};
-		group.count += 1;
-		addStep(group.totals, step, content);
-		groups.set(key, group);
-	}
-	const actions = [...groups.entries()].map(([key, { step, count, totals }]): NoteActionView => {
-		const purchase = step.kind === 'purchase';
-		const base = purchase
-			? `Achat : ${content.upgrades[step.id]?.label ?? step.id}`
-			: (content.actions[step.id]?.label ?? step.id);
+	const variations = NOTE_VARIATIONS.map(({ key, identity, label, good }): NoteVariationView => {
+		const resource = RESOURCE_IDS.find((id) => id === key) ?? null;
+		const value = resource ? formatResource(resource, now[key]) : String(now[key]);
+		if (!previous) return { identity, label, change: null, value, sense: 'neutral' };
+		const change = now[key] - previous[key];
 		return {
-			key,
-			label: step.target ? `${base} : ${targetLabel(step.target, state, content)}` : base,
-			category: purchase ? null : (content.actions[step.id]?.category ?? null),
-			purchase,
-			count,
-			chips: totalChips(totals, content)
+			identity,
+			label,
+			change: formatCompactRange(resource, change, change),
+			value,
+			sense: senseOf(change * good)
 		};
 	});
+	const highlights = noteHighlights(entry, state, content);
 	const journalLines = journalOfQuarter(entry, state, content).filter(
 		(line) => line.kind !== 'step' && line.text !== 'Trimestre calme : rien à signaler.'
 	).length;
+	const shown = highlights.slice(0, MAX_HIGHLIGHTS_IN_NOTE);
 	return {
 		key: `t${entry.turn}`,
 		dateLabel: formatTurn(entry.turn + 1),
 		endedLabel: formatTurn(entry.turn),
+		first: previous === null,
 		variations,
-		actions,
-		journalLines,
+		highlights: shown,
+		journalLines: Math.max(0, journalLines - shown.length),
 		adjustments: adjustments.find((adjustment) => adjustment.turn === state.turn)?.lines ?? []
 	};
 }

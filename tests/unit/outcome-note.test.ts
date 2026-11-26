@@ -2,6 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { GameController } from '../../src/lib/game/app/controller.ts';
 import type { Content, EventChoice } from '../../src/lib/game/content/types.ts';
 import type { KeyValueStorage } from '../../src/lib/game/persistence/index.ts';
+import { projectView } from '../../src/lib/game/app/view-model.ts';
+import {
+	commitTurn,
+	createGame,
+	transition,
+	type Campaign,
+	type DeadlinesRecord,
+	type GameState
+} from '../../src/lib/game/engine/index.ts';
 import { fixtureContent, withEvents } from '../fixtures/content.ts';
 
 /** Résultat des décisions et note de cabinet (P3-14). */
@@ -110,33 +119,24 @@ describe('note de cabinet', () => {
 		const first = snapshot.view?.quarterNote;
 		expect(first?.dateLabel).toBe(snapshot.view?.dateLabel);
 		expect(first?.endedLabel).toBe('T1 2000');
-		// Premier trimestre : pas de point de départ, donc pas de variations ; bilan de l'action.
-		expect(first?.variations).toBeNull();
-		expect(first?.actions).toHaveLength(1);
-		expect(first?.actions[0]).toMatchObject({ label: 'Gain fixe', count: 1, purchase: false });
-		expect(first?.actions[0]?.chips.map((chip) => [chip.identity, chip.sense])).toEqual(
-			expect.arrayContaining([
-				['influence', 'gain'],
-				['politicalBudgetCents', 'cost']
-			])
-		);
+		// Premier trimestre : pas de point de départ, valeurs atteintes sans variation.
+		expect(first?.first).toBe(true);
+		expect(first?.variations).toHaveLength(6);
+		expect(first?.variations.every((tile) => tile.change === null)).toBe(true);
+		expect(first?.highlights.length).toBeLessThanOrEqual(5);
 		game.dismissNote();
 		expect(game.snapshot().note).toBeNull();
 
-		// Deux occurrences : une seule ligne « × 2 », effets additionnés.
 		game.addStep({ kind: 'action', id: 'test.fixed' });
 		game.addStep({ kind: 'action', id: 'test.fixed' });
 		game.commitTurn();
 		snapshot = game.snapshot();
-		const doubled = snapshot.view?.quarterNote?.actions[0];
-		expect(doubled?.count).toBe(2);
-		expect(doubled?.chips.find((chip) => chip.identity === 'influence')?.value).toBe('+4');
 		const second = snapshot.view?.quarterNote;
-		expect(second?.variations?.find((tile) => tile.identity === 'influence')).toMatchObject({
-			value: '+4',
+		expect(second?.first).toBe(false);
+		expect(second?.variations.find((tile) => tile.identity === 'influence')).toMatchObject({
+			change: '+4',
 			sense: 'gain'
 		});
-		expect(second?.variations).toHaveLength(6);
 
 		const resumed = controller(storage);
 		expect(resumed.resume()).toBe(true);
@@ -158,5 +158,60 @@ describe('note de cabinet', () => {
 		game.dismissNote();
 		expect(game.snapshot().note).toBeNull();
 		expect(game.snapshot().acceleration).toBeNull();
+	});
+});
+
+describe('faits marquants de la note', () => {
+	/** Dernier trimestre résolu avec un scrutin préparé pour le joueur. */
+	function withResult(status: 'won' | 'lost', percent: number): GameState {
+		const base = createGame({ seed: 'note-election' }, fixtureContent);
+		const played = transition(base, commitTurn(), fixtureContent);
+		if (!played.ok) throw new Error(played.error.message);
+		const ballot = played.state.ballots[0]!;
+		const campaign: Campaign = {
+			campaignId: 'campaign.1',
+			ballotId: ballot.ballotId,
+			electionId: ballot.electionId,
+			declaredTurn: 0,
+			partyId: null,
+			invested: false,
+			preparation: 10,
+			opponentId: null,
+			status,
+			playerPercent: percent,
+			reason: null
+		};
+		const deadlines: DeadlinesRecord = {
+			mandates: [],
+			ballots: [],
+			people: [],
+			campaigns: [
+				{ campaignId: 'campaign.1', opponentId: null, status, playerPercent: percent, reason: null }
+			]
+		};
+		return {
+			...played.state,
+			campaigns: [campaign],
+			history: played.state.history.map((entry) =>
+				entry.type === 'turn.resolved' ? { ...entry, deadlines } : entry
+			)
+		};
+	}
+
+	it('met en tête une victoire, avec sa phrase, son duel et le bilan électoral', () => {
+		const note = projectView(withResult('won', 54), [], fixtureContent).quarterNote;
+		const fact = note?.highlights[0];
+		expect(fact).toMatchObject({ kind: 'victory', tone: 'gain' });
+		expect(fact?.title).toMatch(/^Victoire — /u);
+		expect(fact?.text).toContain('54 %');
+		expect(fact?.chart).toEqual({ kind: 'duel', playerPercent: 54, rival: 'Adversaire' });
+		expect(fact?.record).toEqual({ won: 1, lost: 0 });
+	});
+
+	it('annonce une défaite serrée sans la confondre avec une victoire', () => {
+		const fact = projectView(withResult('lost', 48), [], fixtureContent).quarterNote?.highlights[0];
+		expect(fact).toMatchObject({ kind: 'defeat', tone: 'cost' });
+		expect(fact?.text).toMatch(/^Défaite d’un souffle : 48 %/u);
+		expect(fact?.record).toEqual({ won: 0, lost: 1 });
 	});
 });
