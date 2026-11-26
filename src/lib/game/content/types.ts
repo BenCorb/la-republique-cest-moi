@@ -82,6 +82,32 @@ export type WorldTemplateVariable = (typeof WORLD_TEMPLATE_VARIABLES)[number];
 export const PROMISE_VARIABLE = 'promise';
 
 /**
+ * Poste d'entourage lié à une instance d'événement de sujet `post` (P3-12) et
+ * titulaire de ce poste s'il est occupé : variables `{post}` et `{incumbent}`.
+ */
+export const POST_VARIABLE = 'post';
+export const INCUMBENT_VARIABLE = 'incumbent';
+
+/**
+ * Capacités métier exigées par les infractions (P3-12) : une infraction liée à
+ * l'exercice d'un pouvoir n'est possible que si le personnage le détient.
+ * - `political_activity` : une activité politique capable de recevoir des fonds
+ *   (adhésion, mandat, campagne, organisation ou entourage) ;
+ * - `local_power` : un pouvoir local sur permis, marchés et subventions (mairie) ;
+ * - `public_office` : une fonction de décision publique (un mandat en cours) ;
+ * - `real_hire` : une embauche effective du bénéficiaire (vérifiée sur l'effet) ;
+ * - `organization_funds` : une organisation dotée de fonds (organisation ou entourage).
+ */
+export const CAPABILITY_IDS = [
+	'political_activity',
+	'local_power',
+	'public_office',
+	'real_hire',
+	'organization_funds'
+] as const;
+export type CapabilityId = (typeof CAPABILITY_IDS)[number];
+
+/**
  * Registre typé des statistiques lisibles par les conditions. Toute nouvelle
  * statistique s'ajoute ici et dans `engine/conditions.ts` (switch exhaustif) :
  * jamais de chemin arbitraire vers l'état.
@@ -165,6 +191,8 @@ export type Condition =
 	| { readonly op: 'ownsUpgrade'; readonly upgrade: string }
 	/** Niveau en vigueur d'un paramètre institutionnel (P3-05). */
 	| { readonly op: 'institution'; readonly parameter: string; readonly level: string }
+	/** Le joueur détient cette capacité métier (P3-12) ; `real_hire` ne s'y évalue pas. */
+	| { readonly op: 'capability'; readonly capability: CapabilityId }
 	/** Soutien d'un groupe comparé à une valeur. */
 	| {
 			readonly op: 'support';
@@ -262,6 +290,16 @@ export type Effect =
 	 */
 	/** Changement de train de vie (P3-02), pris en compte dès ce trimestre. */
 	| { readonly op: 'setLifestyle'; readonly lifestyle: string }
+	/**
+	 * Embauche de l'acteur de ce rôle au poste lié à l'événement (sujet `post`,
+	 * P3-12) : poste vacant, ou, avec `replace`, à la place de son titulaire, renvoyé.
+	 */
+	| { readonly op: 'hireActor'; readonly role: string; readonly replace?: true | undefined }
+	/**
+	 * L'acteur de ce rôle rejoint la présélection du poste lié, s'il est vacant,
+	 * avec ce profil de candidat (P3-12).
+	 */
+	| { readonly op: 'shortlistActor'; readonly role: string; readonly profile: string }
 	| {
 			readonly op: 'recordFact';
 			readonly offense: string;
@@ -635,6 +673,8 @@ export interface OffenseDefinition {
 	/** Nom affiché, par exemple « Financement occulte ». */
 	readonly label: string;
 	readonly description: string;
+	/** Capacité que l'auteur doit détenir pour commettre l'infraction (P3-12). */
+	readonly capability: CapabilityId;
 }
 
 /**
@@ -1476,8 +1516,11 @@ interface EventBase {
 	/**
 	 * `promise` : l'événement traite d'une promesse du registre (dilemme, rappel),
 	 * transmise par le moteur et citée dans les textes par `{promise}` (P3-04).
+	 * `post` : l'événement porte sur un poste d'entourage débloqué, lié à sa
+	 * création (vacant d'abord, dans l'ordre du catalogue ; sinon occupé, avec son
+	 * titulaire), cité par `{post}` et `{incumbent}` (P3-12).
 	 */
-	readonly subject?: 'promise' | undefined;
+	readonly subject?: 'promise' | 'post' | undefined;
 }
 
 /** Événement bloquant : la progression attend un choix du joueur. */

@@ -951,11 +951,7 @@ function describeEffect(range: EffectRange, content: Content): string {
 				? `Famille ${range.value > 0 ? 'apaisée' : 'agacée'}`
 				: 'Vie de famille';
 		case 'staff':
-			return range.change === 'hire'
-				? 'Embauche'
-				: range.change === 'dismiss'
-					? 'Renvoi'
-					: 'Départ d’un collaborateur';
+			return STAFF_CHANGE_LABELS[range.change];
 		case 'release':
 			return 'Départ de l’organisation';
 		case 'preparation':
@@ -1210,6 +1206,16 @@ function joinParts(...parts: string[]): string {
 }
 
 /** Disponibilité d'une étape supplémentaire, évaluée par la prévision du moteur. */
+const STAFF_CHANGE_LABELS: Readonly<
+	Record<Extract<EffectRange, { kind: 'staff' }>['change'], string>
+> = {
+	hire: 'Embauche',
+	replace: 'Embauche à la place du titulaire, renvoyé',
+	shortlist: 'Candidature ajoutée à la présélection',
+	dismiss: 'Renvoi',
+	leave: 'Départ d’un collaborateur'
+};
+
 /** Liste française : « a, b et c ». */
 function joinFrench(items: readonly string[]): string {
 	if (items.length <= 1) return items[0] ?? '';

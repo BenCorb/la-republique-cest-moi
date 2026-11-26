@@ -280,6 +280,18 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 				act('organization.fundraising'),
 				act('personal.freelance'),
 				act('personal.rest')
+			],
+			// Candidat sans étiquette, proche des milieux d'affaires : les faveurs d'un
+			// maire et d'un élu exigent un mandat (P3-12).
+			[
+				CANDIDACY,
+				act('organization.gala'),
+				buy('organization.donor_file'),
+				HIRE,
+				act('campaign.canvass'),
+				act('organization.fundraising'),
+				act('network.meet_officials'),
+				act('personal.freelance')
 			]
 		];
 		const seen = new Set<string>();
@@ -293,9 +305,10 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 				}
 			}
 		});
-		// La révélation d'une affaire de l'entourage (≈ 1 % des carrières simulées)
-		// est couverte par le test qui suit.
-		const targeted = new Set(['justice.entourage_revelation']);
+		// Événements rares, couverts par des tests ciblés : le permis signé par un maire
+		// (P3-12, `tests/unit/capabilities.test.ts`) et la révélation d'une affaire de
+		// l'entourage (≈ 1 % des carrières, test qui suit).
+		const targeted = new Set(['press.donor_investigation', 'justice.entourage_revelation']);
 		expect(content.eventIds.filter((id) => !seen.has(id) && !targeted.has(id))).toEqual([]);
 	});
 

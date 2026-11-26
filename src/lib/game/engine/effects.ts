@@ -17,7 +17,7 @@ import {
 } from '../content/types.ts';
 import { nextInt, type RngState } from './random.ts';
 import type { CareerEffect } from './career.ts';
-import type { StaffEffect } from './staff.ts';
+import type { PostEffect, StaffEffect } from './staff.ts';
 import type { FamilyEffect } from './family.ts';
 import type { PoliticalEffect } from './world.ts';
 import type { PromiseEffect } from './promises.ts';
@@ -46,7 +46,10 @@ export type EffectRange =
 	| { readonly kind: 'mandate'; readonly change: 'grant' | 'end'; readonly mandate: string }
 	| { readonly kind: 'earlyElection'; readonly election: string; readonly delayTurns: number }
 	| { readonly kind: 'candidacy' }
-	| { readonly kind: 'staff'; readonly change: 'hire' | 'dismiss' | 'leave' }
+	| {
+			readonly kind: 'staff';
+			readonly change: 'hire' | 'dismiss' | 'leave' | 'replace' | 'shortlist';
+	  }
 	/** Départ d'un exemplaire de l'organisation ; ses effets propres sont ajoutés par le plan. */
 	| { readonly kind: 'release' }
 	| {
@@ -101,6 +104,8 @@ export type ResolvedEffect =
 	| { readonly kind: 'release'; readonly rng: RngState }
 	/** Fait inscrit au registre par le moteur d'événements (P3-01). */
 	| { readonly kind: 'fact'; readonly effect: FactEffect; readonly rng: RngState }
+	/** Embauche ou présélection d'un acteur au poste lié à l'événement (P3-12). */
+	| { readonly kind: 'post'; readonly effect: PostEffect; readonly rng: RngState }
 	/** Changement de train de vie (P3-02), appliqué au joueur. */
 	| { readonly kind: 'lifestyle'; readonly effect: LifestyleEffect; readonly rng: RngState }
 	/** Promesse du registre, appliquée par `applyPromiseEffect` (P3-04). */
@@ -189,6 +194,10 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'preparation', value: effect.value };
 		case 'recordFact':
 			return { kind: 'fact', offense: effect.offense, severity: effect.severity };
+		case 'hireActor':
+			return { kind: 'staff', change: effect.replace ? 'replace' : 'hire' };
+		case 'shortlistActor':
+			return { kind: 'staff', change: 'shortlist' };
 		case 'setLifestyle':
 			return { kind: 'lifestyle', lifestyle: effect.lifestyle };
 		case 'makePromise':
@@ -254,6 +263,9 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 			return { kind: 'family', effect, rng };
 		case 'recordFact':
 			return { kind: 'fact', effect, rng };
+		case 'hireActor':
+		case 'shortlistActor':
+			return { kind: 'post', effect, rng };
 		case 'setLifestyle':
 			return { kind: 'lifestyle', effect, rng };
 		case 'makePromise':

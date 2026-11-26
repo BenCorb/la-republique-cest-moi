@@ -5,7 +5,7 @@
  * exhaustif, si bien qu'une statistique ajoutée au registre sans lecture ici
  * provoque une erreur de compilation. Aucune lecture n'avance le PRNG.
  */
-import type { Condition, StatId } from '../content/types.ts';
+import type { CapabilityId, Condition, StatId } from '../content/types.ts';
 import { ageAt, quarterOf, yearOf } from './calendar.ts';
 import { activeMandates, cumulatedMandates, holdIssue, isIneligible } from './career.ts';
 import type { GameState } from './state.ts';
@@ -104,6 +104,37 @@ export function readStat(context: ConditionContext, stat: StatId): number {
 	}
 }
 
+/**
+ * Capacité métier exigée par une infraction (P3-12). `real_hire` dépend de
+ * l'embauche du bénéficiaire et ne se lit pas sur l'état : toujours faux ici.
+ */
+export function hasCapability(context: ConditionContext, capability: CapabilityId): boolean {
+	const mandates = activeMandates(context.mandates);
+	const staff = context.staff.some((member) => member.status === 'active');
+	switch (capability) {
+		case 'political_activity':
+			return (
+				context.player.partyId !== null ||
+				mandates.length > 0 ||
+				context.campaigns.some((campaign) => campaign.status === 'running') ||
+				context.upgrades.length > 0 ||
+				staff
+			);
+		case 'local_power':
+			return mandates.some((mandate) => mandate.mandateId === 'mandate.mayor');
+		case 'public_office':
+			return mandates.length > 0;
+		case 'organization_funds':
+			return context.upgrades.length > 0 || staff;
+		case 'real_hire':
+			return false;
+		default: {
+			const unknown: never = capability;
+			throw new Error(`Capacité inconnue : ${String(unknown)}`);
+		}
+	}
+}
+
 export function evaluateCondition(context: ConditionContext, condition: Condition): boolean {
 	switch (condition.op) {
 		case 'all':
@@ -142,6 +173,8 @@ export function evaluateCondition(context: ConditionContext, condition: Conditio
 					? value <= condition.value
 					: value === condition.value;
 		}
+		case 'capability':
+			return hasCapability(context, condition.capability);
 		case 'canHoldMandate':
 			return (
 				!isIneligible(context.player, context.turn) &&

@@ -26,6 +26,7 @@ import {
 	GAUGE_IDS,
 	GAUGE_MAX,
 	RESOURCE_IDS,
+	CAPABILITY_IDS,
 	STAT_IDS,
 	TREASURY_IDS,
 	UPGRADE_FAMILIES,
@@ -113,6 +114,7 @@ export const conditionSchema: z.ZodType<Condition> = z.lazy(() =>
 		z.strictObject({ op: z.literal('lifestyle'), lifestyle: contentId }),
 		z.strictObject({ op: z.literal('ownsUpgrade'), upgrade: contentId }),
 		z.strictObject({ op: z.literal('institution'), parameter: contentId, level: contentId }),
+		z.strictObject({ op: z.literal('capability'), capability: z.enum(CAPABILITY_IDS) }),
 		z.strictObject({
 			op: z.literal('support'),
 			group: contentId,
@@ -205,6 +207,16 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 		value: safeInt.refine((value) => value > 0 && value <= 100, 'préparation de 1 à 100')
 	}),
 	z.strictObject({ op: z.literal('setLifestyle'), lifestyle: contentId }),
+	z.strictObject({
+		op: z.literal('hireActor'),
+		role: z.string().regex(/^[a-z][a-z0-9_]*$/, 'rôle en minuscules'),
+		replace: z.literal(true).optional()
+	}),
+	z.strictObject({
+		op: z.literal('shortlistActor'),
+		role: z.string().regex(/^[a-z][a-z0-9_]*$/, 'rôle en minuscules'),
+		profile: contentId
+	}),
 	z.strictObject({
 		op: z.literal('recordFact'),
 		offense: contentId,
@@ -499,7 +511,7 @@ const eventBaseShape = {
 				{ message: 'attitude minimale supérieure à la maximale', path: ['maxAttitude'] }
 			)
 	),
-	subject: z.literal('promise').optional()
+	subject: z.enum(['promise', 'post']).optional()
 };
 
 export const eventSchema: z.ZodType<EventDefinition> = z
@@ -719,7 +731,8 @@ export const supportCatalogSchema = z.strictObject({
 export const offenseSchema: z.ZodType<OffenseDefinition> = z.strictObject({
 	id: contentId,
 	label: frenchText,
-	description: frenchText
+	description: frenchText,
+	capability: z.enum(CAPABILITY_IDS)
 });
 
 const intRange = z

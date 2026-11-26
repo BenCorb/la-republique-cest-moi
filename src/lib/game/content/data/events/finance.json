@@ -12,9 +12,11 @@
 			"cooldownTurns": 24,
 			"unique": false,
 			"when": {
-				"op": "gte",
-				"stat": "resources.influence",
-				"value": 15
+				"op": "all",
+				"conditions": [
+					{ "op": "gte", "stat": "resources.influence", "value": 15 },
+					{ "op": "capability", "capability": "political_activity" }
+				]
 			},
 			"actors": [
 				{
@@ -111,7 +113,7 @@
 			"id": "finance.donor_favour",
 			"category": "finance",
 			"title": "Un petit service",
-			"text": "{donor} vous rappelle. Un permis de construire « parfaitement banal » attend une signature à la mairie, et vous connaissez du monde. Il ne s’agirait que de passer un coup de fil.",
+			"text": "{donor} vous rappelle. Un permis de construire « parfaitement banal » attend une décision à la mairie, et il compte sur vous pour que les choses aillent vite. Il ne s’agirait que d’un coup de fil.",
 			"blocking": true,
 			"trigger": "followUp",
 			"weight": 0,
@@ -127,9 +129,14 @@
 			"choices": [
 				{
 					"id": "call",
-					"label": "Passer le coup de fil",
+					"label": "Faire accélérer le permis",
 					"hints": ["La générosité continue", "Un dossier qui pourrait intéresser la presse"],
 					"costs": [],
+					"requires": {
+						"op": "capability",
+						"capability": "local_power"
+					},
+					"unavailableReason": "Sans mandat de maire, vous n’avez aucune prise sur ce permis.",
 					"effects": [
 						{
 							"op": "addResource",
@@ -163,6 +170,38 @@
 						"eventId": "press.donor_investigation",
 						"delayTurns": 4
 					}
+				},
+				{
+					"id": "introduce",
+					"label": "Lui présenter les bonnes personnes",
+					"hints": ["Une dette soldée sans rien signer", "Il espérait davantage"],
+					"costs": [],
+					"requires": {
+						"op": "not",
+						"condition": {
+							"op": "capability",
+							"capability": "local_power"
+						}
+					},
+					"unavailableReason": "Maire de la commune, vous ne pouvez pas vous contenter d’une mise en relation.",
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 1
+						},
+						{
+							"op": "addRelation",
+							"role": "donor",
+							"value": 5,
+							"memory": "Vous lui avez présenté les bonnes personnes pour son permis de construire."
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 2
+						}
+					]
 				},
 				{
 					"id": "refuse",
@@ -212,9 +251,11 @@
 			"cooldownTurns": 24,
 			"unique": false,
 			"when": {
-				"op": "gte",
-				"stat": "resources.politicalBudgetCents",
-				"value": 20000
+				"op": "all",
+				"conditions": [
+					{ "op": "gte", "stat": "resources.politicalBudgetCents", "value": 20000 },
+					{ "op": "capability", "capability": "organization_funds" }
+				]
 			},
 			"actors": [],
 			"choices": [
@@ -290,7 +331,8 @@
 				"op": "all",
 				"conditions": [
 					{ "op": "gte", "stat": "resources.influence", "value": 20 },
-					{ "op": "support", "group": "support.business", "cmp": "gte", "value": 30 }
+					{ "op": "support", "group": "support.business", "cmp": "gte", "value": 30 },
+					{ "op": "capability", "capability": "local_power" }
 				]
 			},
 			"actors": [],

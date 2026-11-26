@@ -655,6 +655,10 @@ parties réelles.
   identifiant de personnage figure dans la famille, les relations et l’entourage, produit seulement à
   T+1, et n’est jamais embauché deux fois après reprise d’une sauvegarde.
 
+  **Traité par P3-12 (26 novembre 2026, ARCHITECTURE §8.4 terdecies)** : poste vacant prioritaire
+  dans l’ordre du catalogue, remplacement explicite si tout est occupé, sélection ouverte qui ajoute le
+  proche à la présélection.
+
   **Décision acquise :** accepter le recrutement doit créer un vrai membre de l’entourage sur un poste
   déterminé ; un poste occupé peut être remplacé seulement après un choix explicite. **Décisions
   restant à prendre :** priorité de sélection du poste lorsqu’il y en a plusieurs et maintien ou non
@@ -717,6 +721,10 @@ parties réelles.
   ce contrôle lorsque la condition dépend du contexte. Le moteur devrait au minimum refuser de créer
   un fait dont la capacité obligatoire est absente, afin qu’une future erreur de catalogue ne produise
   pas silencieusement une affaire incohérente.
+
+  **Traité par P3-12 (26 novembre 2026, ARCHITECTURE §8.4 terdecies)** : capacité déclarée par
+  infraction, garde moteur et validation statique ; variante mairie ou mise en relation sans
+  infraction pour le petit service ; pas de trafic d’influence en V1.
 
   **Décision acquise :** une infraction liée à l’exercice d’un pouvoir public ne peut être créée que si
   le personnage détient effectivement le pouvoir correspondant ; l’influence informelle ne suffit

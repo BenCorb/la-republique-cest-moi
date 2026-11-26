@@ -74,6 +74,7 @@
 			"priority": 5,
 			"cooldownTurns": 16,
 			"unique": false,
+			"when": { "op": "capability", "capability": "political_activity" },
 			"actors": [
 				{
 					"role": "treasurer",

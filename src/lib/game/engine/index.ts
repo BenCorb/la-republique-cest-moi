@@ -132,7 +132,9 @@ export {
 } from './family.ts';
 export {
 	activeStaff,
+	applyPostEffect,
 	applyStaffEffect,
+	bindEventPost,
 	dismissIssue,
 	hireIssue,
 	hireReserveCents,
@@ -140,6 +142,7 @@ export {
 	missionIssue,
 	occupantOf,
 	pollingCompetence,
+	postEffectIssue,
 	postUnlocked,
 	resolveStaffFrontier,
 	resolveStaffProduction,
@@ -265,7 +268,7 @@ export {
 	type ProducerForecast,
 	type ProducerStatus
 } from './economy.ts';
-export { evaluateCondition, readStat, type ConditionContext } from './conditions.ts';
+export { evaluateCondition, hasCapability, readStat, type ConditionContext } from './conditions.ts';
 export {
 	applyGauge,
 	clampGauge,
@@ -345,6 +348,7 @@ export {
 	convictionPercent,
 	createFact,
 	currentJudicialRisk,
+	factIssue,
 	dismissalPercent,
 	openCases,
 	resolveJustice,
