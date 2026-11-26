@@ -1,12 +1,15 @@
 <script lang="ts">
 	import {
+		BadgeCheck,
 		BookOpen,
 		Briefcase,
 		Calendar,
 		Flag,
 		Award,
+		Bell,
 		Landmark,
 		LayoutDashboard,
+		MapPin,
 		Newspaper,
 		Users,
 		UsersRound,
@@ -14,7 +17,9 @@
 	} from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
 	import AlertList from '#lib/components/common/AlertList.svelte';
-	import Gauge from '#lib/components/common/Gauge.svelte';
+	import CalendarDate from '#lib/components/common/CalendarDate.svelte';
+	import ResourceTile from '#lib/components/common/ResourceTile.svelte';
+	import StatBar from '#lib/components/common/StatBar.svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 	import SaveBanner from './SaveBanner.svelte';
 	import type { GameTab } from './tabs.ts';
@@ -58,44 +63,77 @@
 
 {#if view}
 	<div class="grid h-dvh grid-rows-[auto_1fr_auto]">
-		<header class="border-b border-line bg-surface px-5 py-3">
-			<div class="flex flex-wrap items-center gap-x-6 gap-y-2">
-				<div class="flex items-center gap-2">
-					<Landmark class="size-5 shrink-0 text-primary" aria-hidden="true" />
-					<h1 class="text-base font-bold tracking-wide text-primary uppercase">
-						La République, c’est moi !
-					</h1>
-				</div>
-				<p class="font-serif text-lg" data-testid="game-date">
-					<span class="font-semibold">{view.dateLabel}</span> · {view.age} ans
-				</p>
-				<p class="text-sm" data-testid="header-territory" title={view.territory.description}>
-					<span class="text-muted">Origine</span>
-					<span class="font-semibold">{view.territory.town}</span>
-					<span class="text-muted">({view.territory.department}, {view.territory.region})</span>
-				</p>
-				<p class="text-sm" data-testid="header-party">
-					<span class="text-muted">Étiquette</span>
-					<span class="font-semibold">{view.world.partyAcronym ?? 'aucune'}</span>
-				</p>
-				<p class="text-sm" data-testid="header-function">
-					<span class="text-muted">Fonction</span>
-					<span class="font-semibold">{view.career.mainFunction}</span>
-				</p>
-				<dl class="flex flex-wrap gap-x-5 gap-y-1 text-sm" aria-label="Ressources">
-					{#each view.resources as resource (resource.id)}
-						<div class="flex items-baseline gap-1.5">
-							<dt class="text-muted">{resource.name}</dt>
-							<dd class="font-semibold tabular-nums" data-testid="resource-{resource.id}">
-								{resource.value}
-							</dd>
+		<header class="relative border-b border-line bg-surface px-5 pt-3.5 pb-3">
+			<div class="tricolor-rule absolute inset-x-0 top-0 h-1" aria-hidden="true"></div>
+			<div class="flex flex-wrap items-center gap-x-5 gap-y-3">
+				<div class="flex items-center gap-3">
+					<CalendarDate label={view.dateLabel} />
+					<div class="flex min-w-0 flex-col gap-1">
+						<h1
+							class="flex items-center gap-1.5 text-xs font-bold tracking-wider text-primary uppercase"
+						>
+							<Landmark class="size-3.5 shrink-0" aria-hidden="true" />
+							La République, c’est moi !
+						</h1>
+						<p class="font-display text-lg leading-tight font-bold" data-testid="game-date">
+							<span class="sr-only">{`${view.dateLabel} · `}</span>{view.age} ans
+						</p>
+						<div class="flex flex-wrap items-center gap-1.5 text-xs">
+							<span
+								class="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-px font-semibold text-surface"
+								data-testid="header-function"
+							>
+								<BadgeCheck class="size-3" aria-hidden="true" />
+								<span class="sr-only">Fonction</span>
+								{view.career.mainFunction}
+							</span>
+							<span
+								class="inline-flex items-center gap-1 rounded-full border border-line bg-canvas px-2 py-px font-semibold"
+								data-testid="header-party"
+							>
+								<Flag class="size-3 text-muted" aria-hidden="true" />
+								<span class="sr-only">Étiquette</span>
+								{view.world.partyAcronym ?? 'aucune'}
+							</span>
+							<span
+								class="inline-flex items-center gap-1 text-muted"
+								data-testid="header-territory"
+								title={view.territory.description}
+							>
+								<MapPin class="size-3" aria-hidden="true" />
+								<span class="sr-only">Origine</span>
+								<span class="font-semibold text-ink">{view.territory.town}</span>
+								<span>({view.territory.department}, {view.territory.region})</span>
+							</span>
 						</div>
+					</div>
+				</div>
+				<div class="flex flex-wrap gap-2" role="group" aria-label="Ressources">
+					{#each view.resources as resource (resource.id)}
+						<ResourceTile {resource} />
 					{/each}
-				</dl>
-				<div class="ml-auto flex gap-5">
-					<Gauge name="Popularité" gauge={view.supports.popularity} compact />
-					<Gauge name="Santé" gauge={view.health} compact />
-					<Gauge name="Stress" gauge={view.stress} compact />
+				</div>
+				<div class="ml-auto grid grid-cols-3 gap-4">
+					<div class="w-40">
+						<StatBar
+							name="Popularité"
+							gauge={view.supports.popularity}
+							identity="popularity"
+							size="compact"
+						/>
+					</div>
+					<div class="w-40">
+						<StatBar name="Santé" gauge={view.health} identity="player.health" size="compact" />
+					</div>
+					<div class="w-40">
+						<StatBar
+							name="Stress"
+							gauge={view.stress}
+							identity="player.stress"
+							forecast={view.phase === 'planning' ? view.plan.stressAfter.value : null}
+							size="compact"
+						/>
+					</div>
 				</div>
 			</div>
 		</header>
@@ -134,7 +172,9 @@
 				class="hidden min-h-0 overflow-y-auto border-l border-line bg-sidebar p-4 min-[1100px]:block"
 				aria-label="Alertes et presse"
 			>
-				<h2 class="section-title">Alertes</h2>
+				<h2 class="section-title flex items-center gap-2">
+					<Bell class="size-4" aria-hidden="true" /> Alertes
+				</h2>
 				<div class="mt-2">
 					<AlertList alerts={view.alerts} />
 				</div>
@@ -144,25 +184,31 @@
 				{#if view.press.length === 0}
 					<p class="mt-2 text-sm text-muted">Pas encore de nouvelles.</p>
 				{:else}
-					<ul class="mt-2 flex flex-col gap-2">
+					<ul class="mt-2 flex flex-col gap-2.5">
 						{#each view.press as item (item.key)}
 							<li
-								class="rounded bg-surface px-3 py-2 text-sm {item.critical
+								class="rounded-sm bg-surface px-3 py-2 text-sm shadow-sm shadow-ink/10 {item.critical
 									? 'border-l-2 border-warning'
 									: ''}"
 								data-testid="press-item"
 							>
-								<span class="block text-xs text-muted">
-									{item.dateLabel} · {item.media}&nbsp;·&nbsp;{#if item.toneLabel}
-										<span class={item.critical ? 'text-warning' : ''}>{item.toneLabel}</span>
-									{:else}
-										Ambiance
-									{/if}
+								<span class="flex items-baseline justify-between gap-2 text-xs">
+									<span class="font-display font-bold tracking-wide text-ink uppercase">
+										{item.media}
+									</span>
+									<span class="shrink-0 text-muted">{item.dateLabel}</span>
 								</span>
-								<span class="font-serif">{item.title}</span>
-								{#if item.effects}
-									<span class="block text-xs text-muted">{item.effects}</span>
-								{/if}
+								<span class="mt-0.5 block font-serif">{item.title}</span>
+								<span class="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+									<span
+										class="rounded-full border px-1.5 {item.critical
+											? 'border-warning text-warning'
+											: 'border-line text-muted'}"
+									>
+										{item.toneLabel ?? 'Ambiance'}
+									</span>
+									{#if item.effects}<span class="text-muted">{item.effects}</span>{/if}
+								</span>
 							</li>
 						{/each}
 					</ul>

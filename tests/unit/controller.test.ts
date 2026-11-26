@@ -145,7 +145,8 @@ describe('plan et trimestres', () => {
 		const game = controller(new MemoryStorage(), alert);
 		game.newCareer();
 		const text = JSON.stringify(game.snapshot().view);
-		expect(text).not.toMatch(/rng|seed|mortality|chance|probab|followUp/i);
+		// « chance » en mot entier : les paliers publics (« Chancelante ») ne sont pas une fuite.
+		expect(text).not.toMatch(/rng|seed|mortality|\bchances?\b|probab|followUp/i);
 	});
 });
 

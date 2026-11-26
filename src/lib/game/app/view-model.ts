@@ -105,6 +105,7 @@ import {
 	formatDelta,
 	formatMoney,
 	formatGaugeDelta,
+	formatCompactRange,
 	formatRange,
 	formatResource,
 	type GaugeDescription
@@ -116,6 +117,28 @@ export interface ResourceView {
 	readonly value: string;
 	/** Variation prévue sur le trimestre (plan, charges et production). */
 	readonly forecast: string;
+	/** Sens de la variation prévue (flèche de la tuile) : hausse, stable, baisse. */
+	readonly trend: -1 | 0 | 1;
+}
+
+/** Sens d'une pastille pour le joueur (P3-26) : gain, coût, risque ou neutre. */
+export type ChipSense = 'gain' | 'cost' | 'risk' | 'neutral';
+
+/**
+ * Pastille de coût ou d'effet (P3-26, DESIGN.md §10.4) : identité visuelle,
+ * valeur compacte et sens, plus la phrase complète pour l'accessibilité et le
+ * détail. Construite à partir des seuls effets certains déjà affichés.
+ */
+export interface ChipView {
+	/** Clé de la table d'identité (ressource, jauge, groupe) ; `null` : pastille de texte. */
+	readonly identity: string | null;
+	/** « +1–3 », « −20 € » ; la phrase complète si `identity` est `null`. */
+	readonly value: string;
+	readonly sense: ChipSense;
+	/** Fourchette : la valeur finale dépend du tirage. */
+	readonly variable: boolean;
+	/** Phrase complète (« Budget politique − 20 € »). */
+	readonly text: string;
 }
 
 export interface PlanStepView {
@@ -124,11 +147,15 @@ export interface PlanStepView {
 	readonly label: string;
 	readonly timeCost: number;
 	readonly details: readonly string[];
+	/** Coûts et effets de l'étape en pastilles (P3-26), dans l'ordre de `details`. */
+	readonly chips: readonly ChipView[];
 	readonly issues: readonly string[];
 	/** Achat : rappel que la production commence au trimestre suivant. */
 	readonly note: string | null;
 	/** Épinglée : répétée chaque trimestre (P3-11) ; un achat ne l'est jamais. */
 	readonly pinned: boolean;
+	/** Thème de l'agenda de l'action (P3-26, couleur de la barre de temps) ; `null` sinon. */
+	readonly category: string | null;
 }
 
 export interface PlanView {
@@ -146,6 +173,8 @@ export interface PlanView {
 	readonly issues: readonly string[];
 	readonly warnings: readonly string[];
 	readonly changes: readonly { readonly name: string; readonly text: string }[];
+	/** Mêmes variations prévues, en pastilles (P3-26). */
+	readonly changeChips: readonly ChipView[];
 	readonly stressAfter: GaugeDescription;
 	readonly healthAfter: { readonly min: number; readonly max: number };
 }
@@ -158,6 +187,12 @@ export interface CatalogItemView {
 	readonly timeCost: number;
 	readonly costs: readonly string[];
 	readonly effects: readonly string[];
+	/** Coûts en pastilles (P3-26), dans l'ordre de `costs`. */
+	readonly costChips: readonly ChipView[];
+	/** Effets en pastilles (P3-26), dans l'ordre de `effects`. */
+	readonly effectChips: readonly ChipView[];
+	/** Thème de l'agenda (catégorie du catalogue), pour l'icône et la couleur. */
+	readonly category: string | null;
 	/** Occurrences déjà dans le plan. */
 	readonly planned: number;
 	readonly addable: boolean;
@@ -900,6 +935,84 @@ function amounts(list: readonly ResourceAmount[], sign: 1 | -1): string[] {
 		(amount) =>
 			`${RESOURCE_NAMES[amount.resource]} ${formatDelta(amount.resource, sign * amount.amount)}`
 	);
+}
+
+function senseOf(direction: number): ChipSense {
+	return direction > 0 ? 'gain' : direction < 0 ? 'cost' : 'neutral';
+}
+
+/** Coûts ou productions en pastilles (P3-26), dans l'ordre d'`amounts`. */
+function amountChips(list: readonly ResourceAmount[], sign: 1 | -1): ChipView[] {
+	return list.map((amount) => {
+		const delta = sign * amount.amount;
+		return {
+			identity: amount.resource,
+			value: formatCompactRange(amount.resource, delta, delta),
+			sense: senseOf(delta),
+			variable: false,
+			text: `${RESOURCE_NAMES[amount.resource]} ${formatDelta(amount.resource, delta)}`
+		};
+	});
+}
+
+/** Pastille de texte (effet qualitatif : adhésion, mandat, promesse…). */
+function textChip(text: string, sense: ChipSense = 'neutral'): ChipView {
+	return { identity: null, value: text, sense, variable: false, text };
+}
+
+/**
+ * Effet en pastille (P3-26) : même source que `describeEffect`, donc rien de plus
+ * que les effets certains déjà annoncés. Une hausse du stress est un coût ;
+ * l'exposition reste neutre (ni bonne ni mauvaise en soi, §8.4 bis).
+ */
+function effectChip(range: EffectRange, content: Content): ChipView {
+	const text = describeEffect(range, content);
+	switch (range.kind) {
+		case 'resource':
+			return {
+				identity: range.resource,
+				value: formatCompactRange(range.resource, range.min, range.max),
+				sense: senseOf(range.min + range.max),
+				variable: range.min !== range.max,
+				text
+			};
+		case 'gauge': {
+			const direction = Math.sign(range.min);
+			const sense =
+				range.gauge === 'player.exposure'
+					? 'neutral'
+					: senseOf(range.gauge === 'player.stress' ? -direction : direction);
+			return {
+				identity: range.gauge,
+				value: formatCompactRange(null, range.min, range.min),
+				sense,
+				variable: false,
+				text
+			};
+		}
+		case 'support':
+			return {
+				identity: range.group,
+				value: formatCompactRange(null, range.value, range.value),
+				sense: senseOf(range.value),
+				variable: false,
+				text
+			};
+		case 'preparation':
+			return {
+				identity: 'preparation',
+				value: formatCompactRange(null, range.value, range.value),
+				sense: 'gain',
+				variable: false,
+				text
+			};
+		case 'fact':
+			return { identity: 'justice.risk', value: 'Risque', sense: 'risk', variable: false, text };
+		case 'media':
+			return textChip(text, range.change === 'interview' ? 'neutral' : senseOf(range.value));
+		default:
+			return textChip(text);
+	}
 }
 
 const PARTY_REFERENCE_LABELS: Readonly<Record<string, string>> = {
@@ -3092,12 +3205,27 @@ export function projectView(
 					)
 				)
 			],
+			chips: [
+				...amountChips(step.costs, -1),
+				...step.effects.map((range) =>
+					effectChip(
+						range.kind === 'affiliation' && range.party === 'target'
+							? { ...range, party: step.target }
+							: range,
+						content
+					)
+				)
+			],
 			issues: step.issues.map((issue) => issue.message),
 			note: upgrade ? 'Actif à partir du trimestre prochain.' : null,
 			pinned: (() => {
 				const source = plan[step.index];
 				return source?.kind === 'action' && source.pinned === true;
-			})()
+			})(),
+			category:
+				(step.kind ?? 'action') === 'action' && step.id
+					? (content.actions[step.id]?.category ?? null)
+					: null
 		};
 	});
 
@@ -3117,6 +3245,9 @@ export function projectView(
 			timeCost: action.timeCost,
 			costs: amounts(action.costs, -1),
 			effects: action.effects.map((effect) => describeEffect(effectRange(effect), content)),
+			costChips: amountChips(action.costs, -1),
+			effectChips: action.effects.map((effect) => effectChip(effectRange(effect), content)),
+			category: action.category ?? null,
 			planned: planned('action', id),
 			...addability(state, plan, { kind: 'action', id }, content)
 		} satisfies CatalogItemView;
@@ -3135,6 +3266,9 @@ export function projectView(
 			costs: amounts(upgrade.price, -1),
 			upkeep: amounts(upgrade.upkeep, -1),
 			effects: amounts(upgrade.production, 1),
+			costChips: amountChips(upgrade.price, -1),
+			effectChips: amountChips(upgrade.production, 1),
+			category: null,
 			owned: state.upgrades.filter((owned) => owned.upgradeId === id).length,
 			maxOwned: upgrade.maxOwned,
 			planned: planned('purchase', id),
@@ -3151,18 +3285,16 @@ export function projectView(
 		.map((id) => {
 			const view = upgradeView(id);
 			const asset = content.upgrades[id]!.asset!;
-			return {
-				...view,
-				effects: [
-					asset.annualYieldPercent > 0
-						? `Revenu : ${asset.annualYieldPercent} % de la valeur par an`
-						: 'Aucun revenu',
-					`Valeur : tendance ${asset.annualGrowthPercent >= 0 ? '+' : ''}${asset.annualGrowthPercent} % par an, aléa ± ${asset.volatilityPercent} % par trimestre`,
-					...(asset.failurePerMille > 0 ? ['Risque de perte totale'] : []),
-					...(asset.stressPerTurn < 0 ? [`Stress ${asset.stressPerTurn} par trimestre`] : []),
-					`Revente : ${asset.salePercent} % de la valeur`
-				]
-			};
+			const effects = [
+				asset.annualYieldPercent > 0
+					? `Revenu : ${asset.annualYieldPercent} % de la valeur par an`
+					: 'Aucun revenu',
+				`Valeur : tendance ${asset.annualGrowthPercent >= 0 ? '+' : ''}${asset.annualGrowthPercent} % par an, aléa ± ${asset.volatilityPercent} % par trimestre`,
+				...(asset.failurePerMille > 0 ? ['Risque de perte totale'] : []),
+				...(asset.stressPerTurn < 0 ? [`Stress ${asset.stressPerTurn} par trimestre`] : []),
+				`Revente : ${asset.salePercent} % de la valeur`
+			];
+			return { ...view, effects, effectChips: effects.map((text) => textChip(text)) };
 		});
 
 	// Organisation seulement : les actifs patrimoniaux ont leur écran (P3-02).
@@ -3271,7 +3403,9 @@ export function projectView(
 			id,
 			name: RESOURCE_NAMES[id],
 			value: formatResource(id, state.resources[id]),
-			forecast: formatRange(id, preview.resourceChanges[id].min, preview.resourceChanges[id].max)
+			forecast: formatRange(id, preview.resourceChanges[id].min, preview.resourceChanges[id].max),
+			trend: Math.sign(preview.resourceChanges[id].min + preview.resourceChanges[id].max) as
+				-1 | 0 | 1
 		})),
 		health,
 		stress,
@@ -3291,6 +3425,17 @@ export function projectView(
 				name: RESOURCE_NAMES[id],
 				text: formatRange(id, preview.resourceChanges[id].min, preview.resourceChanges[id].max)
 			})),
+			changeChips: RESOURCE_IDS.map((id) =>
+				effectChip(
+					{
+						kind: 'resource',
+						resource: id,
+						min: preview.resourceChanges[id].min,
+						max: preview.resourceChanges[id].max
+					},
+					content
+				)
+			),
 			stressAfter: describeStress(preview.wellbeing.stress),
 			healthAfter: preview.wellbeing.health
 		},

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Gauge from '#lib/components/common/Gauge.svelte';
+	import StatBar from '#lib/components/common/StatBar.svelte';
 	import type { SupportsView } from '#lib/game/app/view-model.ts';
 
 	/**
@@ -17,7 +17,7 @@
 <section class="card flex flex-col gap-3 xl:col-span-2" aria-labelledby="soutiens-title">
 	<h2 id="soutiens-title" class="section-title">Soutiens et popularité</h2>
 	<div class="max-w-md">
-		<Gauge name="Popularité" gauge={supports.popularity} />
+		<StatBar name="Popularité" gauge={supports.popularity} identity="popularity" />
 	</div>
 	<div class="grid gap-5 md:grid-cols-2">
 		<div>
@@ -28,7 +28,11 @@
 			<ul class="mt-2 flex flex-col gap-3">
 				{#each supports.electoral as group (group.id)}
 					<li data-testid="support-{group.id}">
-						<Gauge name="{group.label} ({group.share} % de l’électorat)" gauge={group.gauge} />
+						<StatBar
+							name="{group.label} ({group.share} % de l’électorat)"
+							gauge={group.gauge}
+							identity={group.id}
+						/>
 						<p class="mt-0.5 text-xs text-muted">{group.description}</p>
 					</li>
 				{/each}
@@ -42,7 +46,7 @@
 			<ul class="mt-2 flex flex-col gap-3">
 				{#each supports.influence as group (group.id)}
 					<li data-testid="support-{group.id}">
-						<Gauge name={group.label} gauge={group.gauge} />
+						<StatBar name={group.label} gauge={group.gauge} identity={group.id} />
 						<p class="mt-0.5 text-xs text-muted">{group.description}</p>
 					</li>
 				{/each}

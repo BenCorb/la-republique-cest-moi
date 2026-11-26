@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Crown, LogOut, Plus } from '@lucide/svelte';
-	import Gauge from '#lib/components/common/Gauge.svelte';
+	import StatBar from '#lib/components/common/StatBar.svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 	import InstitutionsCard from './InstitutionsCard.svelte';
 
@@ -31,7 +31,7 @@
 			</p>
 			<div class="mt-3 grid gap-4 md:grid-cols-3">
 				{#each world.indicators as indicator (indicator.id)}
-					<Gauge name={indicator.name} gauge={indicator.gauge} />
+					<StatBar name={indicator.name} gauge={indicator.gauge} />
 				{/each}
 			</div>
 		</section>

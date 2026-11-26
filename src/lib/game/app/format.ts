@@ -43,6 +43,24 @@ export function formatGaugeDelta(delta: number): string {
 	return delta > 0 ? `+ ${delta}` : delta < 0 ? `− ${Math.abs(delta)}` : '0';
 }
 
+/**
+ * Variation compacte pour les pastilles (P3-26) : « +3 », « −20 € », « +1–3 »,
+ * « −2 à +3 » si la fourchette change de signe. Le texte complet reste fourni à côté.
+ */
+export function formatCompactRange(resource: ResourceId | null, min: number, max: number): string {
+	const unit = (value: number): string =>
+		resource === null || resource === 'influence' ? formatNumber(value) : formatMoney(value);
+	const signed = (value: number): string =>
+		value > 0 ? `+${unit(value)}` : value < 0 ? `−${unit(-value)}` : unit(0);
+	if (min === max) return signed(min);
+	if (min < 0 && max > 0) return `${signed(min)} à ${signed(max)}`;
+	const sign = min + max > 0 ? '+' : '−';
+	const [low, high] = min + max > 0 ? [min, max] : [-max, -min];
+	if (resource === null || resource === 'influence')
+		return `${sign}${formatNumber(low)}–${formatNumber(high)}`;
+	return `${sign}${formatNumber(Math.round(low / 100))}–${formatMoney(high)}`;
+}
+
 export const RESOURCE_NAMES: { readonly [K in ResourceId]: string } = {
 	influence: 'Influence',
 	politicalBudgetCents: 'Budget politique',
@@ -62,45 +80,100 @@ export interface GaugeDescription {
 	readonly value: number;
 	readonly label: string;
 	readonly tone: GaugeTone;
+	/** Paliers publics de la jauge, du plus bas au plus haut (repères des barres, P3-26). */
+	readonly tiers: readonly GaugeTier[];
 }
+
+/** Palier d'une jauge : seuil d'entrée (inclus), mot et tonalité. */
+export interface GaugeTier {
+	readonly from: number;
+	readonly label: string;
+	readonly tone: GaugeTone;
+}
+
+type TierTable = readonly (readonly [from: number, label: string, tone: GaugeTone])[];
+
+/** Décrit une valeur d'après une table de paliers croissants (le premier part de 0). */
+function describeTiers(value: number, table: TierTable): GaugeDescription {
+	const tiers = table.map(([from, label, tone]) => ({ from, label, tone }));
+	const current = tiers.findLast((tier) => value >= tier.from) ?? tiers[0]!;
+	return { value, label: current.label, tone: current.tone, tiers };
+}
+
+const HEALTH_TIERS: TierTable = [
+	[0, 'Critique', 'danger'],
+	[25, 'Fragile', 'warning'],
+	[50, 'Correcte', 'neutral'],
+	[75, 'Bonne', 'good']
+];
+const STRESS_TIERS: TierTable = [
+	[0, 'Serein', 'good'],
+	[30, 'Tendu', 'neutral'],
+	[50, 'Sous pression', 'warning'],
+	[70, 'Épuisé', 'danger']
+];
+const EXPOSURE_TIERS: TierTable = [
+	[0, 'Discrète', 'neutral'],
+	[15, 'Remarquée', 'neutral'],
+	[35, 'En vue', 'warning'],
+	[60, 'Sous les projecteurs', 'warning']
+];
+const DEFENSE_TIERS: TierTable = [
+	[0, 'Improvisée', 'neutral'],
+	[15, 'Préparée', 'neutral'],
+	[40, 'Solide', 'good'],
+	[70, 'Redoutable', 'good']
+];
+const RISK_TIERS: TierTable = [
+	[0, 'Nul', 'good'],
+	[1, 'Faible', 'neutral'],
+	[20, 'Notable', 'warning'],
+	[45, 'Élevé', 'danger']
+];
+const POPULARITY_TIERS: TierTable = [
+	[0, 'Confidentielle', 'danger'],
+	[20, 'Discrète', 'warning'],
+	[35, 'Honorable', 'neutral'],
+	[50, 'Solide', 'good'],
+	[65, 'Éclatante', 'good']
+];
+const SUPPORT_TIERS: TierTable = [
+	[0, 'Très faible', 'danger'],
+	[10, 'Faible', 'warning'],
+	[25, 'Moyen', 'neutral'],
+	[40, 'Fort', 'good'],
+	[60, 'Très fort', 'good']
+];
+const COMPETENCE_TIERS: TierTable = [
+	[0, 'Très faible', 'danger'],
+	[25, 'Faible', 'warning'],
+	[40, 'Moyenne', 'neutral'],
+	[60, 'Bonne', 'good'],
+	[75, 'Excellente', 'good']
+];
 
 /** Santé : mot descriptif et tonalité ; aucun seuil caché n'est révélé. */
 export function describeHealth(value: number): GaugeDescription {
-	if (value >= 75) return { value, label: 'Bonne', tone: 'good' };
-	if (value >= 50) return { value, label: 'Correcte', tone: 'neutral' };
-	if (value >= 25) return { value, label: 'Fragile', tone: 'warning' };
-	return { value, label: 'Critique', tone: 'danger' };
+	return describeTiers(value, HEALTH_TIERS);
 }
 
 export function describeStress(value: number): GaugeDescription {
-	if (value < 30) return { value, label: 'Serein', tone: 'good' };
-	if (value < 50) return { value, label: 'Tendu', tone: 'neutral' };
-	if (value < 70) return { value, label: 'Sous pression', tone: 'warning' };
-	return { value, label: 'Épuisé', tone: 'danger' };
+	return describeTiers(value, STRESS_TIERS);
 }
 
 /** Exposition médiatique (P3-01) : la visibilité, ni bonne ni mauvaise en soi. */
 export function describeExposure(value: number): GaugeDescription {
-	if (value < 15) return { value, label: 'Discrète', tone: 'neutral' };
-	if (value < 35) return { value, label: 'Remarquée', tone: 'neutral' };
-	if (value < 60) return { value, label: 'En vue', tone: 'warning' };
-	return { value, label: 'Sous les projecteurs', tone: 'warning' };
+	return describeTiers(value, EXPOSURE_TIERS);
 }
 
 /** Préparation de la défense (P3-01). */
 export function describeDefense(value: number): GaugeDescription {
-	if (value < 15) return { value, label: 'Improvisée', tone: 'neutral' };
-	if (value < 40) return { value, label: 'Préparée', tone: 'neutral' };
-	if (value < 70) return { value, label: 'Solide', tone: 'good' };
-	return { value, label: 'Redoutable', tone: 'good' };
+	return describeTiers(value, DEFENSE_TIERS);
 }
 
 /** Risque judiciaire (P3-01) : exposition aux enquêtes, pas culpabilité. */
 export function describeJudicialRisk(value: number): GaugeDescription {
-	if (value === 0) return { value, label: 'Nul', tone: 'good' };
-	if (value < 20) return { value, label: 'Faible', tone: 'neutral' };
-	if (value < 45) return { value, label: 'Notable', tone: 'warning' };
-	return { value, label: 'Élevé', tone: 'danger' };
+	return describeTiers(value, RISK_TIERS);
 }
 
 export const INDICATOR_NAMES: { readonly [K in IndicatorId]: string } = {
@@ -120,38 +193,28 @@ const INDICATOR_LABELS: {
 /** Indicateur national : mot descriptif et tonalité (les chiffres restent publics). */
 export function describeIndicator(indicator: IndicatorId, value: number): GaugeDescription {
 	const labels = INDICATOR_LABELS[indicator];
-	if (value >= 70) return { value, label: labels[4], tone: 'good' };
-	if (value >= 55) return { value, label: labels[3], tone: 'good' };
-	if (value >= 45) return { value, label: labels[2], tone: 'neutral' };
-	if (value >= 30) return { value, label: labels[1], tone: 'warning' };
-	return { value, label: labels[0], tone: 'danger' };
+	return describeTiers(value, [
+		[0, labels[0], 'danger'],
+		[30, labels[1], 'warning'],
+		[45, labels[2], 'neutral'],
+		[55, labels[3], 'good'],
+		[70, labels[4], 'good']
+	]);
 }
 
 /** Popularité : synthèse publique des soutiens électoraux. */
 export function describePopularity(value: number): GaugeDescription {
-	if (value >= 65) return { value, label: 'Éclatante', tone: 'good' };
-	if (value >= 50) return { value, label: 'Solide', tone: 'good' };
-	if (value >= 35) return { value, label: 'Honorable', tone: 'neutral' };
-	if (value >= 20) return { value, label: 'Discrète', tone: 'warning' };
-	return { value, label: 'Confidentielle', tone: 'danger' };
+	return describeTiers(value, POPULARITY_TIERS);
 }
 
 /** Soutien d'un groupe, d'après les sondages publics. */
 export function describeSupport(value: number): GaugeDescription {
-	if (value >= 60) return { value, label: 'Très fort', tone: 'good' };
-	if (value >= 40) return { value, label: 'Fort', tone: 'good' };
-	if (value >= 25) return { value, label: 'Moyen', tone: 'neutral' };
-	if (value >= 10) return { value, label: 'Faible', tone: 'warning' };
-	return { value, label: 'Très faible', tone: 'danger' };
+	return describeTiers(value, SUPPORT_TIERS);
 }
 
 /** Compétence d'un collaborateur ou d'un candidat (visible sur le CV). */
 export function describeCompetence(value: number): GaugeDescription {
-	if (value >= 75) return { value, label: 'Excellente', tone: 'good' };
-	if (value >= 60) return { value, label: 'Bonne', tone: 'good' };
-	if (value >= 40) return { value, label: 'Moyenne', tone: 'neutral' };
-	if (value >= 25) return { value, label: 'Faible', tone: 'warning' };
-	return { value, label: 'Très faible', tone: 'danger' };
+	return describeTiers(value, COMPETENCE_TIERS);
 }
 
 /** Position qualitative d'un parti sur un axe, sans chiffre (GDD §3.2). */
