@@ -1303,6 +1303,50 @@ export const fixtureInstitutions = {
 	}
 };
 
+/** Bilan de test (P3-08) : une nécrologie générique par cause, une spécifique, deux distinctions. */
+export const fixtureEpitaphs = {
+	obituaries: [
+		{
+			id: 'obituary.death',
+			causes: ['natural_causes', 'health_failure'],
+			criteria: [],
+			headline: 'Disparition à {age} ans',
+			text: 'Une carrière de {years} ans.'
+		},
+		{
+			id: 'obituary.office',
+			causes: ['natural_causes', 'health_failure'],
+			criteria: [{ metric: 'mandatesHeld', cmp: 'gte', value: 1 }],
+			headline: 'Hommage à {age} ans',
+			text: 'Plus haute fonction : {office}.'
+		},
+		{
+			id: 'obituary.prison',
+			causes: ['prison'],
+			criteria: [],
+			headline: 'Prison à {age} ans',
+			text: 'Rideau.'
+		}
+	],
+	distinctions: [
+		{
+			id: 'distinction.integrity',
+			label: 'L’Intègre',
+			description: 'Mandat sans fait douteux.',
+			criteria: [
+				{ metric: 'mandatesHeld', cmp: 'gte', value: 1 },
+				{ metric: 'facts', cmp: 'eq', value: 0 }
+			]
+		},
+		{
+			id: 'distinction.private_life',
+			label: 'La Vie à côté',
+			description: 'Aucun mandat.',
+			criteria: [{ metric: 'mandatesHeld', cmp: 'eq', value: 0 }]
+		}
+	]
+};
+
 function load(): Content {
 	const result = validateContent({
 		actions: fixtureActions,
@@ -1320,7 +1364,8 @@ function load(): Content {
 		wealth: fixtureWealth,
 		promises: fixturePromises,
 		media: fixtureMedia,
-		institutions: fixtureInstitutions
+		institutions: fixtureInstitutions,
+		epitaphs: fixtureEpitaphs
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;

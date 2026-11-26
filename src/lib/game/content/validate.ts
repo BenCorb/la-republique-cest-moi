@@ -24,12 +24,14 @@ import {
 	promisesCatalogSchema,
 	mediaCatalogSchema,
 	reformsCatalogSchema,
+	epitaphsCatalogSchema,
 	upgradeCatalogSchema,
 	worldSchema
 } from './schemas.ts';
 import {
 	ARTICLE_TONES,
 	ARTICLE_TOPICS,
+	END_CAUSES,
 	PARTY_REFERENCES,
 	START_YEAR,
 	PROMISE_VARIABLE,
@@ -60,6 +62,7 @@ import {
 	type MediaCatalog,
 	type InstitutionParameter,
 	type ReformsCatalog,
+	type EpitaphsCatalog,
 	type MediaDefinition,
 	type ResourceAmount,
 	type TraitDefinition,
@@ -108,6 +111,8 @@ export interface RawContent {
 	readonly media: unknown;
 	/** Paramètres institutionnels et règles des réformes (`institutions.json`). */
 	readonly institutions: unknown;
+	/** Nécrologies et distinctions du bilan final (`epitaphs.json`). */
+	readonly epitaphs: unknown;
 }
 
 export type ContentValidation =
@@ -1286,6 +1291,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	const promisesCatalog = promisesCatalogSchema.safeParse(raw.promises);
 	const mediaCatalog = mediaCatalogSchema.safeParse(raw.media);
 	const reformsCatalog = reformsCatalogSchema.safeParse(raw.institutions);
+	const epitaphsCatalog = epitaphsCatalogSchema.safeParse(raw.epitaphs);
 	const eventFiles = Object.keys(raw.events)
 		.sort()
 		.map((source) => ({ source, parsed: eventCatalogSchema.safeParse(raw.events[source]) }));
@@ -1312,6 +1318,9 @@ export function validateContent(raw: RawContent): ContentValidation {
 	if (!reformsCatalog.success) {
 		issues.push(...zodIssues('institutions.json', reformsCatalog.error));
 	}
+	if (!epitaphsCatalog.success) {
+		issues.push(...zodIssues('epitaphs.json', epitaphsCatalog.error));
+	}
 	for (const { source, parsed } of eventFiles) {
 		if (!parsed.success) issues.push(...zodIssues(source, parsed.error));
 	}
@@ -1331,6 +1340,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 		!promisesCatalog.success ||
 		!mediaCatalog.success ||
 		!reformsCatalog.success ||
+		!epitaphsCatalog.success ||
 		eventFiles.some(({ parsed }) => !parsed.success)
 	) {
 		return { ok: false, issues };
@@ -1431,6 +1441,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	issues.push(...crossCheckPromises(promisesCatalog.data, refs, knownIds, sourcedEvents));
 	issues.push(...crossCheckMedia(mediaCatalog.data, upgradeList, refs, knownIds));
 	issues.push(...crossCheckReforms(reformsCatalog.data, career.institutions, refs, knownIds));
+	issues.push(...crossCheckEpitaphs(epitaphsCatalog.data, knownIds));
 	issues.push(
 		...crossCheckProfiles(
 			profileData.origins,
@@ -1530,6 +1541,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 				promises: promisesCatalog.data,
 				media: mediaCatalog.data,
 				institutions: reformsCatalog.data,
+				epitaphs: epitaphsCatalog.data,
 				events: Object.fromEntries(eventFiles.map(({ source, parsed }) => [source, parsed.data]))
 			}),
 			balance: balance.data,
@@ -1585,9 +1597,75 @@ export function validateContent(raw: RawContent): ContentValidation {
 			institutionParameters,
 			institutionParameterIds: reformsCatalog.data.parameters.map((parameter) => parameter.id),
 			institutionLevels,
-			reforms: reformsCatalog.data.balance
+			reforms: reformsCatalog.data.balance,
+			obituaries: epitaphsCatalog.data.obituaries,
+			distinctions: epitaphsCatalog.data.distinctions
 		}
 	};
+}
+
+/** Variables permises dans une nécrologie : âge, années de carrière, plus haute fonction. */
+const OBITUARY_VARIABLES: ReadonlySet<string> = new Set(['age', 'years', 'office']);
+
+/**
+ * Bilan final (P3-08) : identifiants uniques, variables permises, une
+ * nécrologie générique (sans critère) pour chaque cause de fin, et
+ * `{office}` seulement dans une nécrologie réservée à qui a exercé un mandat.
+ */
+function crossCheckEpitaphs(catalog: EpitaphsCatalog, knownIds: Set<string>): ContentIssue[] {
+	const source = 'epitaphs.json';
+	const issues: ContentIssue[] = [];
+	const unique = (id: string, path: string): void => {
+		if (knownIds.has(id)) issues.push({ source, path, message: `identifiant en double : ${id}` });
+		knownIds.add(id);
+	};
+	catalog.obituaries.forEach((obituary, index) => {
+		const path = `obituaries[${index}]`;
+		unique(obituary.id, `${path}.id`);
+		for (const key of ['headline', 'text'] as const) {
+			for (const match of obituary[key].matchAll(TEMPLATE_VARIABLE)) {
+				const name = match[1] ?? '';
+				if (!OBITUARY_VARIABLES.has(name)) {
+					issues.push({
+						source,
+						path: `${path}.${key}`,
+						message: `variable non permise : {${name}}`
+					});
+				} else if (
+					name === 'office' &&
+					!obituary.criteria.some(
+						(criterion) =>
+							(criterion.metric === 'mandatesHeld' || criterion.metric === 'highestRank') &&
+							criterion.cmp === 'gte' &&
+							criterion.value >= 1
+					)
+				) {
+					issues.push({
+						source,
+						path: `${path}.${key}`,
+						message: '{office} réservé aux nécrologies exigeant un mandat exercé'
+					});
+				}
+			}
+		}
+	});
+	for (const cause of END_CAUSES) {
+		if (
+			!catalog.obituaries.some(
+				(obituary) => obituary.causes.includes(cause) && obituary.criteria.length === 0
+			)
+		) {
+			issues.push({
+				source,
+				path: 'obituaries',
+				message: `aucune nécrologie générique pour la fin « ${cause} »`
+			});
+		}
+	}
+	catalog.distinctions.forEach((distinction, index) => {
+		unique(distinction.id, `distinctions[${index}].id`);
+	});
+	return issues;
 }
 
 /** Effets permis à l'adoption ou au rejet d'une réforme : certains, sur ressources, jauges et soutiens. */

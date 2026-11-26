@@ -17,6 +17,7 @@ import wealth from './data/wealth.json';
 import promises from './data/promises.json';
 import media from './data/media.json';
 import institutions from './data/institutions.json';
+import epitaphs from './data/epitaphs.json';
 import traits from './data/traits.json';
 import world from './data/world.json';
 import type { Content } from './types.ts';
@@ -48,7 +49,8 @@ export function loadContent(): Content {
 		wealth,
 		promises,
 		media,
-		institutions
+		institutions,
+		epitaphs
 	});
 	if (!result.ok) {
 		const details = result.issues

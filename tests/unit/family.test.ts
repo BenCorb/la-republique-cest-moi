@@ -28,6 +28,7 @@ import {
 	fixturePromises,
 	fixtureMedia,
 	fixtureInstitutions,
+	fixtureEpitaphs,
 	fixtureSupports,
 	fixtureTraits,
 	fixtureUpgrades,
@@ -122,7 +123,8 @@ function load(): Content {
 		wealth: fixtureWealth,
 		promises: fixturePromises,
 		media: fixtureMedia,
-		institutions: fixtureInstitutions
+		institutions: fixtureInstitutions,
+		epitaphs: fixtureEpitaphs
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;

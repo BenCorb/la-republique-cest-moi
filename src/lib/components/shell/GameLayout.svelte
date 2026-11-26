@@ -147,10 +147,10 @@
 								data-testid="press-item"
 							>
 								<span class="block text-xs text-muted">
-									{item.dateLabel} · {item.media}{#if item.toneLabel}
-										· <span class={item.critical ? 'text-warning' : ''}>{item.toneLabel}</span>
+									{item.dateLabel} · {item.media}&nbsp;·&nbsp;{#if item.toneLabel}
+										<span class={item.critical ? 'text-warning' : ''}>{item.toneLabel}</span>
 									{:else}
-										· Ambiance
+										Ambiance
 									{/if}
 								</span>
 								<span class="font-serif">{item.title}</span>

@@ -25,6 +25,8 @@ import {
 	hashSeed,
 	followsPlayer,
 	interviewIssue,
+	distinctionsOf,
+	obituaryOf,
 	ownedMedia,
 	reformIssue,
 	previewPlan,
@@ -39,7 +41,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 14;
+export const SIMULATION_REPORT_VERSION = 15;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -126,6 +128,9 @@ export interface SimulationRun {
 	readonly reformsProposed: number;
 	readonly reformsAdopted: number;
 	readonly governmentReforms: number;
+	/** Bilan (P3-08) : nécrologie retenue et distinctions méritées. */
+	readonly obituary: string | null;
+	readonly distinctions: readonly string[];
 	/** Collaborateurs recrutés et départs (démission, renvoi, débauchage…). */
 	readonly staffHired: number;
 	readonly staffDepartures: number;
@@ -699,6 +704,8 @@ function finalizeRun(
 		reformsAdopted: state.institutions.reforms.filter(
 			(reform) => reform.origin === 'player' && reform.status !== 'rejected'
 		).length,
+		obituary: obituaryOf(state, content)?.id ?? null,
+		distinctions: distinctionsOf(state, content).map((distinction) => distinction.id),
 		governmentReforms: state.institutions.reforms.filter((reform) => reform.origin === 'government')
 			.length,
 		separations: state.history.reduce(
@@ -1104,6 +1111,8 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'reformsProposed',
 		'reformsAdopted',
 		'governmentReforms',
+		'obituary',
+		'distinctions',
 		'staffHired',
 		'staffDepartures',
 		'finalPopularity',
@@ -1165,6 +1174,8 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.reformsProposed,
 		run.reformsAdopted,
 		run.governmentReforms,
+		run.obituary ?? '',
+		run.distinctions.join('|'),
 		run.staffHired,
 		run.staffDepartures,
 		run.finalPopularity,

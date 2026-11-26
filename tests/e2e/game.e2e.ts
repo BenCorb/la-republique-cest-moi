@@ -388,7 +388,15 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 125 ans');
 		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
 
-		await expect(page.getByRole('heading', { name: 'Fin de carrière à 125 ans' })).toBeVisible();
+		// Bilan (P3-08) : nécrologie adaptée à la cause (épuisement), distinctions et moments marquants.
+		await expect(
+			page.getByRole('heading', { name: 'À la tâche jusqu’au bout, à 125 ans' })
+		).toBeVisible();
+		await expect(page.getByTestId('end-dates')).toContainText('125 ans');
+		await expect(page.getByTestId('distinction-distinction.private_life')).toContainText(
+			'La Vie à côté'
+		);
+		await expect(page.getByRole('heading', { name: 'Moments marquants' })).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Trimestre suivant' })).toBeDisabled();
 		await expect(page.getByText('La carrière est terminée.')).toBeVisible();
 

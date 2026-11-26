@@ -12,6 +12,8 @@
 import { z } from 'zod';
 import {
 	ARTICLE_TONES,
+	END_CAUSES,
+	LEGACY_METRICS,
 	ARTICLE_TOPICS,
 	AXIS_IDS,
 	AXIS_MAX,
@@ -53,6 +55,10 @@ import {
 	type PromisesBalance,
 	type PromisesDefinition,
 	type HeadlineDefinition,
+	type DistinctionDefinition,
+	type EpitaphsCatalog,
+	type LegacyCriterion,
+	type ObituaryDefinition,
 	type InstitutionLevel,
 	type InstitutionModifiers,
 	type InstitutionParameter,
@@ -888,6 +894,33 @@ export const reformsBalanceSchema: z.ZodType<ReformsBalance> = z.strictObject({
 export const reformsCatalogSchema: z.ZodType<ReformsCatalog> = z.strictObject({
 	parameters: z.array(institutionParameterSchema).min(1),
 	balance: reformsBalanceSchema
+});
+
+export const legacyCriterionSchema: z.ZodType<LegacyCriterion> = z.strictObject({
+	metric: z.enum(LEGACY_METRICS),
+	cmp: z.enum(COMPARISON_OPS),
+	value: safeInt
+});
+
+export const obituarySchema: z.ZodType<ObituaryDefinition> = z.strictObject({
+	id: contentId,
+	causes: z.array(z.enum(END_CAUSES)).min(1),
+	criteria: z.array(legacyCriterionSchema),
+	headline: frenchText,
+	text: frenchText
+});
+
+export const distinctionSchema: z.ZodType<DistinctionDefinition> = z.strictObject({
+	id: contentId,
+	label: frenchText,
+	description: frenchText,
+	criteria: z.array(legacyCriterionSchema).min(1)
+});
+
+/** Nécrologies et distinctions du bilan final (`epitaphs.json`, P3-08). */
+export const epitaphsCatalogSchema: z.ZodType<EpitaphsCatalog> = z.strictObject({
+	obituaries: z.array(obituarySchema).min(1),
+	distinctions: z.array(distinctionSchema).min(1)
 });
 
 /** Médias, titres de presse et règles du fil de presse (`media.json`, P3-03). */

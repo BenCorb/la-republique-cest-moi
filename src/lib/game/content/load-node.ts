@@ -34,6 +34,7 @@ export function loadContentFromFiles(directory = DEFAULT_CONTENT_DATA_DIR): Cont
 		promises: read('promises.json'),
 		media: read('media.json'),
 		institutions: read('institutions.json'),
+		epitaphs: read('epitaphs.json'),
 		events
 	});
 	if (!result.ok) {

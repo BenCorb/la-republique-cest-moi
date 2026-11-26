@@ -16,6 +16,7 @@ import {
 	fixturePromises,
 	fixtureMedia,
 	fixtureInstitutions,
+	fixtureEpitaphs,
 	fixtureSupports,
 	fixtureTraits,
 	fixtureUpgrades,
@@ -41,7 +42,8 @@ function validate(actions: unknown) {
 		wealth: fixtureWealth,
 		promises: fixturePromises,
 		media: fixtureMedia,
-		institutions: fixtureInstitutions
+		institutions: fixtureInstitutions,
+		epitaphs: fixtureEpitaphs
 	});
 }
 
