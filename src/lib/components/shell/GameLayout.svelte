@@ -69,6 +69,11 @@
 				<p class="font-serif text-lg" data-testid="game-date">
 					<span class="font-semibold">{view.dateLabel}</span> · {view.age} ans
 				</p>
+				<p class="text-sm" data-testid="header-territory" title={view.territory.description}>
+					<span class="text-muted">Origine</span>
+					<span class="font-semibold">{view.territory.town}</span>
+					<span class="text-muted">({view.territory.department}, {view.territory.region})</span>
+				</p>
 				<p class="text-sm" data-testid="header-party">
 					<span class="text-muted">Étiquette</span>
 					<span class="font-semibold">{view.world.partyAcronym ?? 'aucune'}</span>

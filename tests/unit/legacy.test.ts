@@ -143,7 +143,11 @@ describe('bilan de fin de carrière (P3-08)', () => {
 		expect(summary.text).toBe('Plus haute fonction : Siège national.');
 		expect(summary.distinctions.map((entry) => entry.label)).toEqual(['L’Intègre']);
 		expect(summary.moments).toEqual([
-			{ key: 'm0', date: 'T1 2001', text: 'Première prise de fonction : Siège national' }
+			{
+				key: 'm0',
+				date: 'T1 2001',
+				text: 'Première prise de fonction : Siège national (Département de test)'
+			}
 		]);
 		expect(summary.sections.map((section) => section.title)).toEqual([
 			'Parcours',

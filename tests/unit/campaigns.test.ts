@@ -204,9 +204,13 @@ describe('candidature', () => {
 		const journal = projectView(invested.state, [], catalog).journal[0]!.lines.map(
 			(line) => line.text
 		);
-		expect(journal[0]).toMatch(/^Se présenter : Élection locale du T1 2010 — /);
+		// Le scrutin local cite la commune du joueur (P3-16).
+		const town = invested.state.player.territory.homeTown.name;
+		expect(journal[0]).toMatch(
+			new RegExp(`^Se présenter : Élection locale \\(${town}\\) du T1 2010 — `, 'u')
+		);
 		expect(projectView(invested.state, [declare('ballot.2')], catalog).plan.steps[0]?.label).toBe(
-			'Se présenter : Élection nationale du T1 2015'
+			'Se présenter : Élection nationale (Département de test) du T1 2015'
 		);
 		expect(quarterLog(invested).steps[0]?.politics).toEqual([
 			{ kind: 'candidacy', campaignId: 'campaign.1', ballotId: 'ballot.1', invested: true }
@@ -246,7 +250,7 @@ describe('candidature', () => {
 		expect(poll.max).toBeGreaterThan(38);
 		const view = projectView(prepared, [], catalog).career.calendar[0]!;
 		expect(view.campaign?.poll).toEqual(exact);
-		expect(view.stake).toBe('Siège local');
+		expect(view.stake).toBe(`Siège local (${prepared.player.territory.homeTown.name})`);
 	});
 });
 

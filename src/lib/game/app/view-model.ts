@@ -33,6 +33,7 @@ import {
 	describePendingEvent,
 	effectRange,
 	formatTurn,
+	placeOf,
 	previewPlan,
 	renderTemplate,
 	type ChoiceRecord,
@@ -806,9 +807,19 @@ export interface TrendView {
 	readonly description: string;
 }
 
+/** Territoire d'origine (P3-16), affiché dans l'en-tête et au bilan. */
+export interface TerritoryView {
+	readonly town: string;
+	/** « Petite ville ouvrière et rurale ». */
+	readonly description: string;
+	readonly department: string;
+	readonly region: string;
+}
+
 export interface PlayerView {
 	/** Tendances des derniers trimestres (P3-08), vides en début de carrière. */
 	readonly trends: readonly TrendView[];
+	readonly territory: TerritoryView;
 	readonly dateLabel: string;
 	readonly age: number;
 	readonly phase: GameState['phase'];
@@ -1104,7 +1115,7 @@ function deadlineLines(
 	}
 	for (const result of record.ballots) {
 		const ballot = state.ballots.find((entry) => entry.ballotId === result.ballotId);
-		const label = content.elections[result.electionId]?.label ?? result.electionId;
+		const label = electionName(result.electionId, state, content);
 		const winner = content.parties[result.winnerPartyId]?.name ?? result.winnerPartyId;
 		const alternance =
 			result.governingAfter !== result.governingBefore
@@ -1189,6 +1200,48 @@ function joinParts(...parts: string[]): string {
 }
 
 /** Disponibilité d'une étape supplémentaire, évaluée par la prévision du moteur. */
+/** Liste française : « a, b et c ». */
+function joinFrench(items: readonly string[]): string {
+	if (items.length <= 1) return items[0] ?? '';
+	return `${items.slice(0, -1).join(', ')} et ${items.at(-1)!}`;
+}
+
+/** Territoire d'origine : commune, taille et traits, département et région (P3-16). */
+export function buildTerritory(state: GameState, content: Content): TerritoryView {
+	const { territory } = state.player;
+	const size = content.territory.sizes.find((entry) => entry.id === territory.homeTown.sizeId);
+	const traits = territory.homeTown.traitIds.map(
+		(id) => content.territory.traits.find((trait) => trait.id === id)?.label ?? id
+	);
+	const sizeLabel = size?.label ?? territory.homeTown.sizeId;
+	return {
+		town: territory.homeTown.name,
+		description: traits.length > 0 ? `${sizeLabel} ${joinFrench(traits)}` : sizeLabel,
+		department: placeOf('national', territory, content),
+		region: placeOf('regional', territory, content)
+	};
+}
+
+/**
+ * Nom localisé d'un scrutin (P3-16) : la commune pour les municipales, la
+ * région pour les régionales, le département (la circonscription) sinon.
+ */
+function electionName(electionId: string, state: GameState, content: Content): string {
+	const election = content.elections[electionId];
+	if (!election) return electionId;
+	return `${election.label} (${placeOf(election.scope, state.player.territory, content)})`;
+}
+
+/** Nom localisé d'un mandat (P3-16) : selon le scrutin qui y mène ; sans lieu pour un ministère. */
+function mandateName(mandateId: string, state: GameState, content: Content): string {
+	const mandate = content.mandates[mandateId];
+	if (!mandate) return mandateId;
+	const election = mandate.election ? content.elections[mandate.election] : undefined;
+	return election
+		? `${mandate.label} (${placeOf(election.scope, state.player.territory, content)})`
+		: mandate.label;
+}
+
 function addability(state: GameState, plan: readonly PlanStep[], step: PlanStep, content: Content) {
 	if (state.phase !== 'planning')
 		return {
@@ -1258,10 +1311,10 @@ function targetLabel(target: string, state: GameState, content: Content): string
 		if (definition) return definition.ownedLabel ?? definition.label;
 	}
 	const mandate = state.mandates.find((entry) => entry.instanceId === target);
-	if (mandate) return content.mandates[mandate.mandateId]?.label ?? mandate.mandateId;
+	if (mandate) return mandateName(mandate.mandateId, state, content);
 	const ballot = state.ballots.find((entry) => entry.ballotId === target);
 	if (ballot) {
-		const label = content.elections[ballot.electionId]?.label ?? ballot.electionId;
+		const label = electionName(ballot.electionId, state, content);
 		return `${label} du ${formatTurn(ballot.turn)}`;
 	}
 	return target;
@@ -1507,7 +1560,7 @@ function articleSubject(article: Article, state: GameState, content: Content): s
 		}
 		case 'election': {
 			const campaign = state.campaigns.find((entry) => entry.campaignId === id);
-			return campaign ? (content.elections[campaign.electionId]?.label ?? campaign.electionId) : id;
+			return campaign ? electionName(campaign.electionId, state, content) : id;
 		}
 		default:
 			return content.media[id]?.name ?? id;
@@ -1850,7 +1903,7 @@ function buildMoments(state: GameState, content: Content): SummaryView['moments'
 	const top = Math.max(0, ...ranks);
 	const seen = new Set<string>();
 	state.mandates.forEach((mandate, index) => {
-		const label = content.mandates[mandate.mandateId]?.label ?? mandate.mandateId;
+		const label = mandateName(mandate.mandateId, state, content);
 		const first = !seen.has(mandate.mandateId);
 		seen.add(mandate.mandateId);
 		if (!first && ranks[index] !== top) return;
@@ -1863,7 +1916,7 @@ function buildMoments(state: GameState, content: Content): SummaryView['moments'
 	for (const campaign of state.campaigns) {
 		if (campaign.status !== 'lost') continue;
 		const ballot = state.ballots.find((entry) => entry.ballotId === campaign.ballotId);
-		const election = content.elections[campaign.electionId]?.label ?? campaign.electionId;
+		const election = electionName(campaign.electionId, state, content);
 		moments.push({
 			turn: ballot?.turn ?? campaign.declaredTurn,
 			weight: 3,
@@ -2034,6 +2087,13 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 					{
 						label: 'Origine',
 						value: content.origins[state.player.origin]?.label ?? state.player.origin
+					},
+					{
+						label: 'Commune natale',
+						value: (() => {
+							const territory = buildTerritory(state, content);
+							return `${territory.town} (${territory.department}, ${territory.region})`;
+						})()
 					},
 					{
 						label: 'Profession',
@@ -2439,7 +2499,7 @@ function buildPromises(
 }
 
 function buildCareer(state: GameState, plan: readonly PlanStep[], content: Content): CareerView {
-	const label = (mandateId: string): string => content.mandates[mandateId]?.label ?? mandateId;
+	const label = (mandateId: string): string => mandateName(mandateId, state, content);
 	const resignActionId =
 		content.actionIds.find((id) => content.actions[id]?.target === 'mandate') ?? null;
 	const declareActionId =
@@ -2473,7 +2533,7 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 						: null;
 		return {
 			campaignId: campaign.campaignId,
-			label: content.elections[campaign.electionId]?.label ?? campaign.electionId,
+			label: electionName(campaign.electionId, state, content),
 			dateLabel: ballot ? formatTurn(ballot.turn) : '—',
 			declared: `Candidature déclarée au ${formatTurn(campaign.declaredTurn)}`,
 			investiture:
@@ -2605,7 +2665,7 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 			.reverse()
 			.map((ballot) => ({
 				ballotId: ballot.ballotId,
-				label: content.elections[ballot.electionId]?.label ?? ballot.electionId,
+				label: electionName(ballot.electionId, state, content),
 				dateLabel: formatTurn(ballot.turn),
 				winner: content.parties[ballot.winnerPartyId ?? '']?.name ?? '—',
 				shares: sharesText(ballot, content),
@@ -2938,9 +2998,17 @@ export function summarizeSpan(from: GameState, to: GameState, content: Content):
 	};
 }
 
+/** Région proposée à la création (P3-16) : nom et départements, la commune étant tirée. */
+export interface RegionOptionView {
+	readonly id: string;
+	readonly name: string;
+	readonly departments: string;
+}
+
 export function creationOptions(content: Content): {
 	readonly origins: readonly ProfileOptionView[];
 	readonly professions: readonly ProfileOptionView[];
+	readonly regions: readonly RegionOptionView[];
 	readonly defaults: Content['defaultProfile'];
 } {
 	const option = (entry: {
@@ -2957,6 +3025,14 @@ export function creationOptions(content: Content): {
 	return {
 		origins: content.originIds.map((id) => option(content.origins[id]!)),
 		professions: content.professionIds.map((id) => option(content.professions[id]!)),
+		regions: content.regionIds.map((id) => {
+			const region = content.regions[id]!;
+			return {
+				id,
+				name: region.name,
+				departments: region.departments.map((department) => department.name).join(', ')
+			};
+		}),
 		defaults: content.defaultProfile
 	};
 }
@@ -3125,7 +3201,7 @@ export function projectView(
 	for (const ballot of state.ballots) {
 		const left = ballot.turn - state.turn;
 		if (ballot.status !== 'scheduled' || left < 0 || state.phase === 'ended') continue;
-		const label = content.elections[ballot.electionId]?.label ?? ballot.electionId;
+		const label = electionName(ballot.electionId, state, content);
 		const candidate = state.campaigns.some(
 			(campaign) => campaign.status === 'running' && campaign.ballotId === ballot.ballotId
 		);
@@ -3159,6 +3235,7 @@ export function projectView(
 
 	return {
 		trends: buildTrends(state),
+		territory: buildTerritory(state, content),
 		dateLabel: formatTurn(state.end ? state.end.turn : state.turn),
 		age: ageAt(state.player.birthTurn, state.end ? state.end.turn : state.turn),
 		phase: state.phase,

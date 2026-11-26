@@ -9,6 +9,8 @@ import { loadContentFromFiles } from './support/content.ts';
 async function startCareer(page: Page, seed = 'e2e'): Promise<void> {
 	await page.goto(`./?seed=${seed}`);
 	await page.getByRole('button', { name: 'Nouvelle carrière' }).click();
+	// Région d'origine proposée par défaut (P3-16).
+	await expect(page.getByRole('combobox', { name: 'Région' })).toHaveValue('region.normandie');
 	await page.getByRole('button', { name: 'Commencer la carrière' }).click();
 	await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 25 ans');
 }
@@ -66,9 +68,8 @@ test.describe('parcours de jeu', () => {
 
 		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
 		await expect(page.getByTestId('game-date')).toHaveText('T2 2000 · 25 ans');
-		// Influence du profil par défaut (+2) et de la rencontre d'élus (+3).
-		await expect(page.getByTestId('resource-influence')).toHaveText('5');
-		// Gain aléatoire du free-lance : valeur attendue calculée par le même moteur et la même seed.
+		// Gain aléatoire du free-lance et effets du territoire tiré (P3-16) : valeurs
+		// attendues calculées par le même moteur et la même seed.
 		const content = loadContentFromFiles();
 		const expected = transition(
 			createGame({ seed: 'e2e' }, content),
@@ -81,6 +82,15 @@ test.describe('parcours de jeu', () => {
 			content
 		);
 		if (!expected.ok) throw new Error(expected.error.message);
+		// Influence du profil, du territoire et de la rencontre d'élus (+3).
+		await expect(page.getByTestId('resource-influence')).toHaveText(
+			String(expected.state.resources.influence)
+		);
+		// Territoire d'origine : commune tirée, département et région par défaut.
+		await expect(page.getByTestId('header-territory')).toContainText(
+			expected.state.player.territory.homeTown.name
+		);
+		await expect(page.getByTestId('header-territory')).toContainText('Normandie');
 		await expect(page.getByTestId('resource-personalCashCents')).toHaveText(
 			formatResource('personalCashCents', expected.state.resources.personalCashCents)
 		);
@@ -89,6 +99,17 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByRole('heading', { name: 'T1 2000' })).toBeVisible();
 		await expect(page.getByText('Rencontrer des élus locaux — Influence + 3')).toBeVisible();
 		expect(errors).toEqual([]);
+	});
+
+	test('choisit la région d’origine à la création', async ({ page }) => {
+		await page.goto('./?seed=e2e-region');
+		await page.getByRole('button', { name: 'Nouvelle carrière' }).click();
+		await page.getByRole('combobox', { name: 'Région' }).selectOption({ label: 'Bretagne' });
+		await expect(page.getByTestId('region-departments')).toContainText('Finistère');
+		await page.getByRole('button', { name: 'Commencer la carrière' }).click();
+		await expect(page.getByTestId('header-territory')).toContainText('Bretagne');
+		await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
+		await expect(page.getByTestId('territory')).toContainText('Votre terre d’élection');
 	});
 
 	test('affiche le calendrier électoral et la fonction principale', async ({ page }) => {

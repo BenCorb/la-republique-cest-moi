@@ -1285,6 +1285,80 @@ export interface OriginDefinition {
 	readonly inheritanceCents: number;
 }
 
+/** Département réel d'une région (millésime figé du COG Insee, P3-16). */
+export interface DepartmentDefinition {
+	/** Code officiel (`14`, `2A`…). */
+	readonly code: string;
+	readonly name: string;
+	/** Peut accueillir une commune de départ fictive (Paris : non). */
+	readonly startable: boolean;
+}
+
+/** Région métropolitaine réelle, avec ses fragments toponymiques fictifs (P3-16). */
+export interface RegionDefinition {
+	/** Identifiant stable, par exemple `region.normandie`. */
+	readonly id: string;
+	readonly name: string;
+	readonly departments: readonly DepartmentDefinition[];
+	/** Fragments propres à la région : racines inventées, rivières et pays réels. */
+	readonly toponymy: {
+		readonly roots: readonly string[];
+		readonly rivers: readonly string[];
+		readonly pays: readonly string[];
+		/** Modèles propres à la région (Corse), à la place des modèles communs. */
+		readonly patterns?:
+			readonly { readonly pattern: string; readonly weight: number }[] | undefined;
+	};
+}
+
+/** Taille d'une commune de départ (P3-16) : tirage pondéré, effets légers. */
+export interface TownSizeDefinition {
+	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	readonly weight: number;
+	/** Ajouté à la force de l'adversaire aux scrutins locaux (municipales). */
+	readonly rivalStrengthModifier: number;
+	/** Effets de départ (ressources, soutiens, jauges). */
+	readonly effects: readonly Effect[];
+}
+
+/** Trait d'une commune de départ (P3-16), éventuellement modulé par l'origine sociale. */
+export interface TownTraitDefinition {
+	readonly id: string;
+	/** Adjectif accordé au féminin (« ouvrière »), accolé à la taille. */
+	readonly label: string;
+	readonly description: string;
+	/** Traits incompatibles dans une même commune. */
+	readonly excludes: readonly string[];
+	/** Tailles où le trait est possible ; absent : toutes. */
+	readonly sizes?: readonly string[] | undefined;
+	readonly effects: readonly Effect[];
+	/** Effets supplémentaires selon l'origine sociale du joueur. */
+	readonly origins: readonly { readonly origin: string; readonly effects: readonly Effect[] }[];
+}
+
+/**
+ * Générateur de noms de communes fictives (P3-16) : modèles pondérés à
+ * variables (`{root}`, `{river}`, `{pays}` de la région ; `{saint}`,
+ * `{complement}`, `{plural}`, `{standalone}` communs), fragments validés.
+ */
+export interface ToponymyDefinition {
+	readonly patterns: readonly { readonly pattern: string; readonly weight: number }[];
+	readonly saints: readonly string[];
+	readonly complements: readonly string[];
+	readonly plurals: readonly string[];
+	readonly standalone: readonly string[];
+}
+
+export interface TerritoryDefinition {
+	readonly regions: readonly RegionDefinition[];
+	readonly sizes: readonly TownSizeDefinition[];
+	readonly traits: readonly TownTraitDefinition[];
+	readonly traitsPerTown: { readonly min: number; readonly max: number };
+	readonly toponymy: ToponymyDefinition;
+}
+
 /** Profession avant la politique : effets de départ et action propre éventuelle. */
 export interface ProfessionDefinition {
 	/** Identifiant stable, par exemple `profession.lawyer`. */
@@ -1452,7 +1526,15 @@ export interface Content {
 	readonly professions: Readonly<Record<string, ProfessionDefinition>>;
 	readonly professionIds: readonly string[];
 	/** Profil retenu quand la création n'en précise pas (tests, simulateur). */
-	readonly defaultProfile: { readonly origin: string; readonly profession: string };
+	readonly defaultProfile: {
+		readonly origin: string;
+		readonly profession: string;
+		readonly region: string;
+	};
+	/** Territoire d'origine (P3-16) : régions, tailles et traits de commune, toponymie. */
+	readonly territory: TerritoryDefinition;
+	readonly regions: Readonly<Record<string, RegionDefinition>>;
+	readonly regionIds: readonly string[];
 	readonly posts: Readonly<Record<string, PostDefinition>>;
 	readonly postIds: readonly string[];
 	readonly candidateProfiles: readonly CandidateProfileDefinition[];

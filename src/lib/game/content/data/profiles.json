@@ -302,6 +302,963 @@
 	],
 	"defaults": {
 		"origin": "origin.middle_class",
-		"profession": "profession.teacher"
+		"profession": "profession.teacher",
+		"region": "region.normandie"
+	},
+	"territory": {
+		"regions": [
+			{
+				"id": "region.auvergne_rhone_alpes",
+				"name": "Auvergne-Rhône-Alpes",
+				"departments": [
+					{
+						"code": "01",
+						"name": "Ain",
+						"startable": true
+					},
+					{
+						"code": "03",
+						"name": "Allier",
+						"startable": true
+					},
+					{
+						"code": "07",
+						"name": "Ardèche",
+						"startable": true
+					},
+					{
+						"code": "15",
+						"name": "Cantal",
+						"startable": true
+					},
+					{
+						"code": "26",
+						"name": "Drôme",
+						"startable": true
+					},
+					{
+						"code": "38",
+						"name": "Isère",
+						"startable": true
+					},
+					{
+						"code": "42",
+						"name": "Loire",
+						"startable": true
+					},
+					{
+						"code": "43",
+						"name": "Haute-Loire",
+						"startable": true
+					},
+					{
+						"code": "63",
+						"name": "Puy-de-Dôme",
+						"startable": true
+					},
+					{
+						"code": "69",
+						"name": "Rhône",
+						"startable": true
+					},
+					{
+						"code": "73",
+						"name": "Savoie",
+						"startable": true
+					},
+					{
+						"code": "74",
+						"name": "Haute-Savoie",
+						"startable": true
+					}
+				],
+				"toponymy": {
+					"roots": [
+						"Montvérel",
+						"Châtelbrun",
+						"Pierrefage",
+						"Varennoux",
+						"Bellecombe-Haute",
+						"Sauvignat"
+					],
+					"rivers": ["Allier", "Drôme", "Isère", "Loire", "Ardèche"],
+					"pays": ["Forez", "Bugey", "Velay"]
+				}
+			},
+			{
+				"id": "region.bourgogne_franche_comte",
+				"name": "Bourgogne-Franche-Comté",
+				"departments": [
+					{
+						"code": "21",
+						"name": "Côte-d’Or",
+						"startable": true
+					},
+					{
+						"code": "25",
+						"name": "Doubs",
+						"startable": true
+					},
+					{
+						"code": "39",
+						"name": "Jura",
+						"startable": true
+					},
+					{
+						"code": "58",
+						"name": "Nièvre",
+						"startable": true
+					},
+					{
+						"code": "70",
+						"name": "Haute-Saône",
+						"startable": true
+					},
+					{
+						"code": "71",
+						"name": "Saône-et-Loire",
+						"startable": true
+					},
+					{
+						"code": "89",
+						"name": "Yonne",
+						"startable": true
+					},
+					{
+						"code": "90",
+						"name": "Territoire de Belfort",
+						"startable": true
+					}
+				],
+				"toponymy": {
+					"roots": ["Vaurenay", "Montchanot", "Gevrolles", "Chassignet", "Vellerot", "Brévilly"],
+					"rivers": ["Saône", "Doubs", "Yonne", "Ouche", "Loue"],
+					"pays": ["Morvan", "Auxois", "Bresse"]
+				}
+			},
+			{
+				"id": "region.bretagne",
+				"name": "Bretagne",
+				"departments": [
+					{
+						"code": "22",
+						"name": "Côtes-d’Armor",
+						"startable": true
+					},
+					{
+						"code": "29",
+						"name": "Finistère",
+						"startable": true
+					},
+					{
+						"code": "35",
+						"name": "Ille-et-Vilaine",
+						"startable": true
+					},
+					{
+						"code": "56",
+						"name": "Morbihan",
+						"startable": true
+					}
+				],
+				"toponymy": {
+					"roots": ["Ploumarzec", "Kerlévan", "Tréguvel", "Lannévez", "Pleuzennec", "Locmaréven"],
+					"rivers": ["Aulne", "Blavet", "Odet", "Rance", "Élorn"],
+					"pays": ["Léon", "Trégor", "Porhoët"]
+				}
+			},
+			{
+				"id": "region.centre_val_de_loire",
+				"name": "Centre-Val de Loire",
+				"departments": [
+					{
+						"code": "18",
+						"name": "Cher",
+						"startable": true
+					},
+					{
+						"code": "28",
+						"name": "Eure-et-Loir",
+						"startable": true
+					},
+					{
+						"code": "36",
+						"name": "Indre",
+						"startable": true
+					},
+					{
+						"code": "37",
+						"name": "Indre-et-Loire",
+						"startable": true
+					},
+					{
+						"code": "41",
+						"name": "Loir-et-Cher",
+						"startable": true
+					},
+					{
+						"code": "45",
+						"name": "Loiret",
+						"startable": true
+					}
+				],
+				"toponymy": {
+					"roots": [
+						"Vaudrion-le-Haut",
+						"Montrichel",
+						"Chaumerolles",
+						"Saint-Vigor-la-Plaine",
+						"Bléronville",
+						"Ardenay"
+					],
+					"rivers": ["Loire", "Cher", "Indre", "Loir", "Vienne"],
+					"pays": ["Sologne", "Beauce", "Perche"]
+				}
+			},
+			{
+				"id": "region.corse",
+				"name": "Corse",
+				"departments": [
+					{
+						"code": "2A",
+						"name": "Corse-du-Sud",
+						"startable": true
+					},
+					{
+						"code": "2B",
+						"name": "Haute-Corse",
+						"startable": true
+					}
+				],
+				"toponymy": {
+					"roots": [
+						"Santa-Lucciana",
+						"Pietralba-Suprana",
+						"Monticellu",
+						"Vallerinca",
+						"Castellare-di-Rocca",
+						"Olmetu-Vecchju"
+					],
+					"rivers": ["Golo", "Tavignano", "Gravona", "Taravo"],
+					"pays": ["Balagna", "Castagniccia", "Niolu"],
+					"patterns": [
+						{
+							"pattern": "{root}",
+							"weight": 3
+						},
+						{
+							"pattern": "{root}-di-{pays}",
+							"weight": 1
+						}
+					]
+				}
+			},
+			{
+				"id": "region.grand_est",
+				"name": "Grand Est",
+				"departments": [
+					{
+						"code": "08",
+						"name": "Ardennes",
+						"startable": true
+					},
+					{
+						"code": "10",
+						"name": "Aube",
+						"startable": true
+					},
+					{
+						"code": "51",
+						"name": "Marne",
+						"startable": true
+					},
+					{
+						"code": "52",
+						"name": "Haute-Marne",
+						"startable": true
+					},
+					{
+						"code": "54",
+						"name": "Meurthe-et-Moselle",
+						"startable": true
+					},
+					{
+						"code": "55",
+						"name": "Meuse",
+						"startable": true
+					},
+					{
+						"code": "57",
+						"name": "Moselle",
+						"startable": true
+					},
+					{
+						"code": "67",
+						"name": "Bas-Rhin",
+						"startable": true
+					},
+					{
+						"code": "68",
+						"name": "Haut-Rhin",
+						"startable": true
+					},
+					{
+						"code": "88",
+						"name": "Vosges",
+						"startable": true
+					}
+				],
+				"toponymy": {
+					"roots": [
+						"Wendelsheim",
+						"Haguenviller",
+						"Montbreuil",
+						"Sarrebourgeois",
+						"Vaucouleuse",
+						"Kleinbach"
+					],
+					"rivers": ["Meuse", "Moselle", "Marne", "Ill", "Aube"],
+					"pays": ["Argonne", "Champagne", "Saulnois"]
+				}
+			},
+			{
+				"id": "region.hauts_de_france",
+				"name": "Hauts-de-France",
+				"departments": [
+					{
+						"code": "02",
+						"name": "Aisne",
+						"startable": true
+					},
+					{
+						"code": "59",
+						"name": "Nord",
+						"startable": true
+					},
+					{
+						"code": "60",
+						"name": "Oise",
+						"startable": true
+					},
+					{
+						"code": "62",
+						"name": "Pas-de-Calais",
+						"startable": true
+					},
+					{
+						"code": "80",
+						"name": "Somme",
+						"startable": true
+					}
+				],
+				"toponymy": {
+					"roots": [
+						"Wavringhem",
+						"Haubercourt",
+						"Brévincourt",
+						"Méricamps",
+						"Hautmoulin",
+						"Lestrembecque"
+					],
+					"rivers": ["Somme", "Scarpe", "Aa", "Oise", "Lys"],
+					"pays": ["Ternois", "Thiérache", "Vimeu"]
+				}
+			},
+			{
+				"id": "region.ile_de_france",
+				"name": "Île-de-France",
+				"departments": [
+					{
+						"code": "75",
+						"name": "Paris",
+						"startable": false
+					},
+					{
+						"code": "77",
+						"name": "Seine-et-Marne",
+						"startable": true
+					},
+					{
+						"code": "78",
+						"name": "Yvelines",
+						"startable": true
+					},
+					{
+						"code": "91",
+						"name": "Essonne",
+						"startable": true
+					},
+					{
+						"code": "92",
+						"name": "Hauts-de-Seine",
+						"startable": true
+					},
+					{
+						"code": "93",
+						"name": "Seine-Saint-Denis",
+						"startable": true
+					},
+					{
+						"code": "94",
+						"name": "Val-de-Marne",
+						"startable": true
+					},
+					{
+						"code": "95",
+						"name": "Val-d’Oise",
+						"startable": true
+					}
+				],
+				"toponymy": {
+					"roots": [
+						"Montrelay-la-Garenne",
+						"Brévannes-Haut",
+						"Villiers-Saint-Fiacre",
+						"Chantelois",
+						"Courvillers",
+						"Saint-Rémy-des-Halles"
+					],
+					"rivers": ["Seine", "Marne", "Oise", "Essonne", "Yerres"],
+					"pays": ["Hurepoix", "Vexin", "Brie"]
+				}
+			},
+			{
+				"id": "region.normandie",
+				"name": "Normandie",
+				"departments": [
+					{
+						"code": "14",
+						"name": "Calvados",
+						"startable": true
+					},
+					{
+						"code": "27",
+						"name": "Eure",
+						"startable": true
+					},
+					{
+						"code": "50",
+						"name": "Manche",
+						"startable": true
+					},
+					{
+						"code": "61",
+						"name": "Orne",
+						"startable": true
+					},
+					{
+						"code": "76",
+						"name": "Seine-Maritime",
+						"startable": true
+					}
+				],
+				"toponymy": {
+					"roots": [
+						"Bocqueville",
+						"Hautbrenil",
+						"Tourneval",
+						"Crèvecourt",
+						"Bellebec",
+						"Saint-Ouen-la-Bruyère"
+					],
+					"rivers": ["Risle", "Touques", "Orne", "Dives", "Andelle"],
+					"pays": ["Caux", "Bray", "Auge"]
+				}
+			},
+			{
+				"id": "region.nouvelle_aquitaine",
+				"name": "Nouvelle-Aquitaine",
+				"departments": [
+					{
+						"code": "16",
+						"name": "Charente",
+						"startable": true
+					},
+					{
+						"code": "17",
+						"name": "Charente-Maritime",
+						"startable": true
+					},
+					{
+						"code": "19",
+						"name": "Corrèze",
+						"startable": true
+					},
+					{
+						"code": "23",
+						"name": "Creuse",
+						"startable": true
+					},
+					{
+						"code": "24",
+						"name": "Dordogne",
+						"startable": true
+					},
+					{
+						"code": "33",
+						"name": "Gironde",
+						"startable": true
+					},
+					{
+						"code": "40",
+						"name": "Landes",
+						"startable": true
+					},
+					{
+						"code": "47",
+						"name": "Lot-et-Garonne",
+						"startable": true
+					},
+					{
+						"code": "64",
+						"name": "Pyrénées-Atlantiques",
+						"startable": true
+					},
+					{
+						"code": "79",
+						"name": "Deux-Sèvres",
+						"startable": true
+					},
+					{
+						"code": "86",
+						"name": "Vienne",
+						"startable": true
+					},
+					{
+						"code": "87",
+						"name": "Haute-Vienne",
+						"startable": true
+					}
+				],
+				"toponymy": {
+					"roots": [
+						"Sauvignac",
+						"Montbaziol",
+						"Castelbrune",
+						"Peyrolles-d’Aunis",
+						"Lagarde-Haute",
+						"Bergerolles"
+					],
+					"rivers": ["Dordogne", "Charente", "Vézère", "Garonne", "Adour"],
+					"pays": ["Périgord", "Médoc", "Limousin"]
+				}
+			},
+			{
+				"id": "region.occitanie",
+				"name": "Occitanie",
+				"departments": [
+					{
+						"code": "09",
+						"name": "Ariège",
+						"startable": true
+					},
+					{
+						"code": "11",
+						"name": "Aude",
+						"startable": true
+					},
+					{
+						"code": "12",
+						"name": "Aveyron",
+						"startable": true
+					},
+					{
+						"code": "30",
+						"name": "Gard",
+						"startable": true
+					},
+					{
+						"code": "31",
+						"name": "Haute-Garonne",
+						"startable": true
+					},
+					{
+						"code": "32",
+						"name": "Gers",
+						"startable": true
+					},
+					{
+						"code": "34",
+						"name": "Hérault",
+						"startable": true
+					},
+					{
+						"code": "46",
+						"name": "Lot",
+						"startable": true
+					},
+					{
+						"code": "48",
+						"name": "Lozère",
+						"startable": true
+					},
+					{
+						"code": "65",
+						"name": "Hautes-Pyrénées",
+						"startable": true
+					},
+					{
+						"code": "66",
+						"name": "Pyrénées-Orientales",
+						"startable": true
+					},
+					{
+						"code": "81",
+						"name": "Tarn",
+						"startable": true
+					},
+					{
+						"code": "82",
+						"name": "Tarn-et-Garonne",
+						"startable": true
+					}
+				],
+				"toponymy": {
+					"roots": [
+						"Castelnaudel",
+						"Montségrac",
+						"Puylaurac",
+						"Saint-Félix-de-Laurague",
+						"Villefranquet",
+						"Lagrasselle"
+					],
+					"rivers": ["Tarn", "Aude", "Hérault", "Lot", "Garonne"],
+					"pays": ["Lauragais", "Quercy", "Rouergue"]
+				}
+			},
+			{
+				"id": "region.pays_de_la_loire",
+				"name": "Pays de la Loire",
+				"departments": [
+					{
+						"code": "44",
+						"name": "Loire-Atlantique",
+						"startable": true
+					},
+					{
+						"code": "49",
+						"name": "Maine-et-Loire",
+						"startable": true
+					},
+					{
+						"code": "53",
+						"name": "Mayenne",
+						"startable": true
+					},
+					{
+						"code": "72",
+						"name": "Sarthe",
+						"startable": true
+					},
+					{
+						"code": "85",
+						"name": "Vendée",
+						"startable": true
+					}
+				],
+				"toponymy": {
+					"roots": [
+						"Brissonnet-le-Vieux",
+						"Montravault-sur-Lande",
+						"Chantemerle",
+						"La Pommeraie-Basse",
+						"Saint-Hermelin-des-Marais",
+						"Sablonnière"
+					],
+					"rivers": ["Loire", "Mayenne", "Sarthe", "Erdre", "Layon"],
+					"pays": ["Bocage", "Mauges", "Retz"]
+				}
+			},
+			{
+				"id": "region.provence_alpes_cote_d_azur",
+				"name": "Provence-Alpes-Côte d’Azur",
+				"departments": [
+					{
+						"code": "04",
+						"name": "Alpes-de-Haute-Provence",
+						"startable": true
+					},
+					{
+						"code": "05",
+						"name": "Hautes-Alpes",
+						"startable": true
+					},
+					{
+						"code": "06",
+						"name": "Alpes-Maritimes",
+						"startable": true
+					},
+					{
+						"code": "13",
+						"name": "Bouches-du-Rhône",
+						"startable": true
+					},
+					{
+						"code": "83",
+						"name": "Var",
+						"startable": true
+					},
+					{
+						"code": "84",
+						"name": "Vaucluse",
+						"startable": true
+					}
+				],
+				"toponymy": {
+					"roots": [
+						"Roquebelle",
+						"Castellet-Fleuri",
+						"Pierrevaux-le-Haut",
+						"Saint-Maximian",
+						"Lourmeirol",
+						"Bargemolle"
+					],
+					"rivers": ["Durance", "Verdon", "Var", "Argens", "Huveaune"],
+					"pays": ["Luberon", "Ventoux", "Esterel"]
+				}
+			}
+		],
+		"sizes": [
+			{
+				"id": "town_size.village",
+				"label": "Bourg",
+				"description": "Tout le monde se connaît : l’implantation est rapide, les relais nationaux rares.",
+				"weight": 3,
+				"rivalStrengthModifier": -2,
+				"effects": [
+					{
+						"op": "addSupport",
+						"group": "support.working_class",
+						"value": 1
+					}
+				]
+			},
+			{
+				"id": "town_size.small_town",
+				"label": "Petite ville",
+				"description": "Assez grande pour une permanence, assez petite pour être reconnu au marché.",
+				"weight": 4,
+				"rivalStrengthModifier": 0,
+				"effects": []
+			},
+			{
+				"id": "town_size.medium_town",
+				"label": "Ville moyenne",
+				"description": "Plus de presse, de réseaux et d’ambitions concurrentes.",
+				"weight": 2,
+				"rivalStrengthModifier": 2,
+				"effects": [
+					{
+						"op": "addResource",
+						"resource": "influence",
+						"value": 4
+					}
+				]
+			}
+		],
+		"traits": [
+			{
+				"id": "town_trait.working",
+				"label": "ouvrière",
+				"description": "Cités, usines et café du commerce.",
+				"excludes": ["town_trait.bourgeois"],
+				"effects": [
+					{
+						"op": "addSupport",
+						"group": "support.working_class",
+						"value": 3
+					}
+				],
+				"origins": [
+					{
+						"origin": "origin.working_class",
+						"effects": [
+							{
+								"op": "addSupport",
+								"group": "support.working_class",
+								"value": 2
+							}
+						]
+					},
+					{
+						"origin": "origin.upper_class",
+						"effects": [
+							{
+								"op": "addSupport",
+								"group": "support.working_class",
+								"value": -2
+							}
+						]
+					}
+				]
+			},
+			{
+				"id": "town_trait.bourgeois",
+				"label": "bourgeoise",
+				"description": "Belles demeures, notaires et associations de propriétaires.",
+				"excludes": ["town_trait.working"],
+				"effects": [
+					{
+						"op": "addSupport",
+						"group": "support.wealthy",
+						"value": 2
+					},
+					{
+						"op": "addSupport",
+						"group": "support.middle_class",
+						"value": 1
+					}
+				],
+				"origins": [
+					{
+						"origin": "origin.upper_class",
+						"effects": [
+							{
+								"op": "addSupport",
+								"group": "support.wealthy",
+								"value": 2
+							}
+						]
+					},
+					{
+						"origin": "origin.working_class",
+						"effects": [
+							{
+								"op": "addSupport",
+								"group": "support.wealthy",
+								"value": -2
+							}
+						]
+					}
+				]
+			},
+			{
+				"id": "town_trait.rural",
+				"label": "rurale",
+				"description": "Comices, remembrement et routes départementales.",
+				"excludes": ["town_trait.university"],
+				"effects": [
+					{
+						"op": "addSupport",
+						"group": "support.middle_class",
+						"value": 1
+					},
+					{
+						"op": "addSupport",
+						"group": "support.activists",
+						"value": -1
+					}
+				],
+				"origins": []
+			},
+			{
+				"id": "town_trait.tourist",
+				"label": "touristique",
+				"description": "La population triple en août, les commerçants aussi.",
+				"excludes": [],
+				"effects": [
+					{
+						"op": "addSupport",
+						"group": "support.business",
+						"value": 2
+					}
+				],
+				"origins": []
+			},
+			{
+				"id": "town_trait.industrial",
+				"label": "industrielle",
+				"description": "Une zone d’activité, deux plans sociaux, beaucoup de syndicats.",
+				"excludes": [],
+				"effects": [
+					{
+						"op": "addSupport",
+						"group": "support.working_class",
+						"value": 1
+					},
+					{
+						"op": "addSupport",
+						"group": "support.business",
+						"value": 1
+					}
+				],
+				"origins": []
+			},
+			{
+				"id": "town_trait.university",
+				"label": "universitaire",
+				"description": "Une antenne de faculté, des étudiants et des pétitions.",
+				"excludes": ["town_trait.rural"],
+				"sizes": ["town_size.medium_town"],
+				"effects": [
+					{
+						"op": "addSupport",
+						"group": "support.activists",
+						"value": 3
+					}
+				],
+				"origins": []
+			}
+		],
+		"traitsPerTown": {
+			"min": 2,
+			"max": 3
+		},
+		"toponymy": {
+			"patterns": [
+				{
+					"pattern": "{root}",
+					"weight": 3
+				},
+				{
+					"pattern": "{root}-sur-{river}",
+					"weight": 3
+				},
+				{
+					"pattern": "Saint-{saint}-{complement}",
+					"weight": 2
+				},
+				{
+					"pattern": "{root}-en-{pays}",
+					"weight": 1
+				},
+				{
+					"pattern": "{root}-les-{plural}",
+					"weight": 1
+				},
+				{
+					"pattern": "{standalone}",
+					"weight": 1
+				}
+			],
+			"saints": [
+				"Lysandre",
+				"Ermengaud",
+				"Aubéric",
+				"Gondulphe",
+				"Isarn",
+				"Évrard",
+				"Ansbert",
+				"Théodulfe"
+			],
+			"complements": [
+				"des-Bois",
+				"des-Prés",
+				"le-Vieux",
+				"la-Forêt",
+				"des-Vignes",
+				"du-Mont",
+				"les-Fontaines"
+			],
+			"plurals": ["Ormes", "Saules", "Tilleuls", "Noyers", "Peupliers", "Bruyères"],
+			"standalone": [
+				"La Roche-Basse",
+				"Le Mesnil-Doré",
+				"Les Vaux-Rouges",
+				"La Ferté-Moulin",
+				"Le Plessis-Galant",
+				"La Motte-Fleurie"
+			]
+		}
 	}
 }

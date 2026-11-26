@@ -301,6 +301,10 @@ parties réelles.
   officiel géographique de l’Insee pour les régions et départements. Ne pas ajouter immédiatement les
   départementales ni les déménagements avant d’avoir validé l’intérêt du territoire de départ.
 
+  **Traité par P3-16 (26 novembre 2026, ARCHITECTURE §8.4 quindecies)** : 13 régions actuelles,
+  département attribué, commune fictive petite ou moyenne, effets légers ; pas de départementales,
+  de déménagement ni de parachutage en V1.
+
   **Décisions attendues du créateur :** géographie actuelle simplifiée ou géographie de l’an 2000 ;
   métropole seulement ou outre-mer inclus ; département choisi ou attribué ; grandes villes réelles
   exclues au départ ou disponibles en mode difficile ; ajout futur ou non des départementales.

@@ -180,7 +180,11 @@ describe('création du personnage', () => {
 
 	it('propose les options avec leurs effets lisibles', () => {
 		const options = creationOptions(catalog);
-		expect(options.defaults).toEqual({ origin: 'origin.neutral', profession: 'profession.none' });
+		expect(options.defaults).toEqual({
+			origin: 'origin.neutral',
+			profession: 'profession.none',
+			region: 'region.test'
+		});
 		const effects = options.origins.find((option) => option.id === 'origin.heirs')?.effects ?? [];
 		// Les montants utilisent des espaces insécables : comparaison normalisée.
 		expect(effects.map((text) => text.replace(/\s/gu, ' '))).toEqual([

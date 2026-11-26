@@ -39,6 +39,7 @@ import {
 	type FamilyTemplate,
 	type OriginDefinition,
 	type ProfessionDefinition,
+	type TerritoryDefinition,
 	type MissionDefinition,
 	type PostDefinition,
 	type CharactersBalance,
@@ -1052,6 +1053,78 @@ export const originSchema: z.ZodType<OriginDefinition> = z.strictObject({
 	inheritanceCents: nonNegativeInt
 });
 
+/** Fragment toponymique : mot français à majuscule, traits d'union et apostrophes permis. */
+const toponym = z
+	.string()
+	.regex(/^[A-ZÀ-ÖØ-Ý][A-Za-zÀ-ÖØ-öø-ÿ’' -]*[a-zà-öø-ÿ]$/u, 'fragment toponymique mal formé')
+	.max(30);
+
+const territorySchema: z.ZodType<TerritoryDefinition> = z.strictObject({
+	regions: z
+		.array(
+			z.strictObject({
+				id: contentId.refine((value) => value.startsWith('region.'), 'identifiant « region.nom »'),
+				name: frenchText,
+				departments: z
+					.array(
+						z.strictObject({
+							code: z.string().regex(/^(\d{2}|2[AB])$/u, 'code de département'),
+							name: frenchText,
+							startable: z.boolean()
+						})
+					)
+					.min(1),
+				toponymy: z.strictObject({
+					roots: z.array(toponym).min(3),
+					rivers: z.array(toponym).min(1),
+					pays: z.array(toponym),
+					patterns: z
+						.array(z.strictObject({ pattern: z.string().min(1).max(60), weight: positiveInt }))
+						.min(1)
+						.optional()
+				})
+			})
+		)
+		.min(1),
+	sizes: z
+		.array(
+			z.strictObject({
+				id: contentId,
+				label: frenchText,
+				description: frenchText,
+				weight: positiveInt,
+				rivalStrengthModifier: safeInt,
+				effects: z.array(effectSchema)
+			})
+		)
+		.min(1),
+	traits: z
+		.array(
+			z.strictObject({
+				id: contentId,
+				label: frenchText,
+				description: frenchText,
+				excludes: z.array(contentId),
+				sizes: z.array(contentId).optional(),
+				effects: z.array(effectSchema),
+				origins: z.array(z.strictObject({ origin: contentId, effects: z.array(effectSchema) }))
+			})
+		)
+		.min(1),
+	traitsPerTown: z.strictObject({ min: nonNegativeInt, max: nonNegativeInt }),
+	toponymy: z.strictObject({
+		patterns: z
+			.array(z.strictObject({ pattern: z.string().min(1).max(60), weight: positiveInt }))
+			.min(1),
+		saints: z.array(toponym).min(1),
+		complements: z
+			.array(z.string().regex(/^[a-zà-ÿ’']+(-[A-Za-zÀ-ÿ’']+)+$/u, 'complément « des-Bois »'))
+			.min(1),
+		plurals: z.array(toponym).min(1),
+		standalone: z.array(toponym).min(1)
+	})
+});
+
 export const professionSchema: z.ZodType<ProfessionDefinition> = z.strictObject({
 	id: contentId.refine(
 		(value) => value.startsWith('profession.'),
@@ -1065,7 +1138,8 @@ export const professionSchema: z.ZodType<ProfessionDefinition> = z.strictObject(
 export const profileCatalogSchema = z.strictObject({
 	origins: z.array(originSchema).min(1),
 	professions: z.array(professionSchema).min(1),
-	defaults: z.strictObject({ origin: contentId, profession: contentId })
+	defaults: z.strictObject({ origin: contentId, profession: contentId, region: contentId }),
+	territory: territorySchema
 });
 
 export const balanceSchema: z.ZodType<Balance> = z.strictObject({

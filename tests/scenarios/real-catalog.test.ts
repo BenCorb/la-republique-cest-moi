@@ -115,12 +115,14 @@ function career(
 	turns: number,
 	choicePolicy = 0
 ): GameState {
-	// Origines et professions variées d'une carrière à l'autre (P2-08).
+	// Origines, professions et régions variées d'une carrière à l'autre (P2-08, P3-16).
 	let state = createGame(
 		{
 			seed,
 			origin: content.originIds[choicePolicy % content.originIds.length]!,
-			profession: content.professionIds[choicePolicy % content.professionIds.length]!
+			profession: content.professionIds[choicePolicy % content.professionIds.length]!,
+			// Territoires variés (P3-16).
+			region: content.regionIds[choicePolicy % content.regionIds.length]!
 		},
 		content
 	);
@@ -291,6 +293,45 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 				}
 			}
 		});
-		expect(content.eventIds.filter((id) => !seen.has(id))).toEqual([]);
+		// La révélation d'une affaire de l'entourage (≈ 1 % des carrières simulées)
+		// est couverte par le test qui suit.
+		const targeted = new Set(['justice.entourage_revelation']);
+		expect(content.eventIds.filter((id) => !seen.has(id) && !targeted.has(id))).toEqual([]);
+	});
+
+	it('révèle une affaire de l’entourage et en fait un événement', () => {
+		const certain = {
+			...content,
+			justice: { ...content.justice, revealPercentPerSeverity: 100 }
+		};
+		const base = createGame({ seed: 'révélation-entourage' }, certain);
+		const author = Object.values(base.characters).find(
+			(character) => character.status === 'active' && !character.tags.includes('family')
+		)!;
+		let state: GameState = {
+			...base,
+			facts: [
+				{
+					factId: 'fact.1',
+					offenseId: 'offense.illegal_financing',
+					turn: 0,
+					severity: 3,
+					divertedCents: 0,
+					authorId: author.id,
+					accompliceIds: [],
+					eventId: 'entourage.creative_accounting'
+				}
+			]
+		};
+		const seen = new Set<string>();
+		for (let turn = 0; turn < 4 && state.end === null; turn += 1) {
+			const result = transition(state, commitTurn(), certain);
+			if (!result.ok) throw new Error(result.error.message);
+			state = answerEvents(result.state, 0);
+			for (const entry of quarters(state.history)) {
+				for (const event of entry.events) seen.add(event.eventId);
+			}
+		}
+		expect(seen).toContain('justice.entourage_revelation');
 	});
 });

@@ -53,6 +53,12 @@
 				Le budget politique finance l’organisation ; l’argent personnel reste le vôtre. Ils ne se
 				mélangent pas.
 			</p>
+			<p class="mt-3 border-t border-line pt-2 text-sm" data-testid="territory">
+				<span class="text-muted">Votre terre d’élection :</span>
+				<span class="font-semibold">{view.territory.town}</span>, {view.territory.description.toLocaleLowerCase(
+					'fr'
+				)} ({view.territory.department}, {view.territory.region}).
+			</p>
 		</section>
 
 		<section class="card flex flex-col gap-4" aria-labelledby="sante-title">

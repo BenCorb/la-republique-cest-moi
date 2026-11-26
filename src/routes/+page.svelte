@@ -30,7 +30,7 @@
 	let confirmingNewCareer = $state(false);
 	/** Écran de création ouvert, et profil choisi en attente de confirmation éventuelle. */
 	let creating = $state(false);
-	let chosenProfile = $state<{ origin: string; profession: string } | null>(null);
+	let chosenProfile = $state<{ origin: string; profession: string; region: string } | null>(null);
 
 	onMount(() => {
 		const browser = createBrowserSession();
@@ -44,10 +44,10 @@
 		if (session) creating = true;
 	}
 
-	function createCareer(origin: string, profession: string): void {
+	function createCareer(origin: string, profession: string, region: string): void {
 		if (!session) return;
-		chosenProfile = { origin, profession };
-		const result = session.controller.newCareer({ origin, profession });
+		chosenProfile = { origin, profession, region };
+		const result = session.controller.newCareer({ origin, profession, region });
 		if (result === 'needs_confirmation') {
 			confirmingNewCareer = true;
 			return;
@@ -81,6 +81,7 @@
 	<CreationScreen
 		origins={options.origins}
 		professions={options.professions}
+		regions={options.regions}
 		defaults={options.defaults}
 		onStart={createCareer}
 		onCancel={() => (creating = false)}

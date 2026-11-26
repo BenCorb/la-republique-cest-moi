@@ -1,26 +1,30 @@
 <script lang="ts">
 	import { ArrowLeft, Play } from '@lucide/svelte';
-	import type { ProfileOptionView } from '#lib/game/app/view-model.ts';
+	import type { ProfileOptionView, RegionOptionView } from '#lib/game/app/view-model.ts';
 	import GameShell from './GameShell.svelte';
 
 	/**
 	 * Création du personnage (P2-08) : origine et profession, chacune avec ses
-	 * arbitrages de départ. L'âge reste fixé à 25 ans dans l'alpha. Aucun profil
-	 * n'est présenté comme meilleur qu'un autre.
+	 * arbitrages de départ, puis région d'origine (P3-16) : le département et la
+	 * commune, fictive, sont tirés au lancement. L'âge reste fixé à 25 ans. Aucun
+	 * profil n'est présenté comme meilleur qu'un autre.
 	 */
 	interface Props {
 		origins: readonly ProfileOptionView[];
 		professions: readonly ProfileOptionView[];
-		defaults: { readonly origin: string; readonly profession: string };
-		onStart: (origin: string, profession: string) => void;
+		regions: readonly RegionOptionView[];
+		defaults: { readonly origin: string; readonly profession: string; readonly region: string };
+		onStart: (origin: string, profession: string, region: string) => void;
 		onCancel: () => void;
 	}
 
-	let { origins, professions, defaults, onStart, onCancel }: Props = $props();
+	let { origins, professions, regions, defaults, onStart, onCancel }: Props = $props();
 	// Valeurs de départ figées à l'ouverture de l'écran ; le joueur les modifie ensuite.
 	const initial = (() => ({ ...defaults }))();
 	let origin = $state(initial.origin);
 	let profession = $state(initial.profession);
+	let region = $state(initial.region);
+	const regionDetail = $derived(regions.find((entry) => entry.id === region));
 </script>
 
 <GameShell>
@@ -77,11 +81,32 @@
 			</div>
 		</fieldset>
 
+		<fieldset class="card p-6">
+			<legend class="section-title px-1">Région d’origine</legend>
+			<p class="mt-1 text-sm text-muted">
+				Vous grandissez dans une commune de cette région ; son département, son nom et son caractère
+				vous seront révélés au lancement.
+			</p>
+			<label class="mt-3 flex flex-col gap-1 text-sm md:max-w-sm">
+				<span class="font-semibold">Région</span>
+				<select class="rounded border border-line bg-surface px-3 py-2" bind:value={region}>
+					{#each regions as option (option.id)}
+						<option value={option.id}>{option.name}</option>
+					{/each}
+				</select>
+			</label>
+			{#if regionDetail}
+				<p class="mt-2 text-xs text-muted" data-testid="region-departments">
+					Départements : {regionDetail.departments}
+				</p>
+			{/if}
+		</fieldset>
+
 		<div class="flex flex-wrap justify-end gap-3">
 			<button type="button" class="btn-secondary" onclick={onCancel}>
 				<ArrowLeft class="size-4" aria-hidden="true" /> Retour
 			</button>
-			<button type="button" class="btn-primary" onclick={() => onStart(origin, profession)}>
+			<button type="button" class="btn-primary" onclick={() => onStart(origin, profession, region)}>
 				<Play class="size-4" aria-hidden="true" /> Commencer la carrière
 			</button>
 		</div>
