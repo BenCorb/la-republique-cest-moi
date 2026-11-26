@@ -805,8 +805,18 @@ test.describe('plan permanent (P3-13)', () => {
 		await page.mouse.move(5, 600);
 		await expect(next).toHaveText('2/3', { timeout: 25_000 });
 		expect(await feed.innerText()).not.toBe(first);
-		// Survol : pause ; le compteur fait avancer à la main.
+		// Survol : pause sur place, sans retour au début ; le compteur fait avancer à la main.
+		const title = feed.getByTestId('press-title');
+		const progress = (): Promise<number> =>
+			title.evaluate((element) => Number(element.getAnimations()[0]?.currentTime ?? 0));
+		await page.waitForTimeout(1500);
+		const before = await progress();
+		expect(before).toBeGreaterThan(0);
 		await feed.hover();
+		const paused = await progress();
+		expect(paused).toBeGreaterThanOrEqual(before);
+		await page.waitForTimeout(1000);
+		expect(await progress()).toBe(paused);
 		await next.click();
 		await expect(next).toHaveText('3/3');
 		await next.click();

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { ArrowRight, Newspaper } from '@lucide/svelte';
+	import { untrack } from 'svelte';
 	import { prefersReducedMotion } from 'svelte/motion';
 	import { fly } from 'svelte/transition';
 	import type { PressItemView } from '#lib/game/app/view-model.ts';
@@ -65,7 +66,8 @@
 				: [{ transform: 'none' }, { transform: 'none' }],
 			{ duration: total }
 		);
-		if (hovered || focused) animation.pause();
+		// Lu sans dépendance : survoler ne doit pas recréer l'animation (elle repartirait de zéro).
+		if (untrack(() => hovered || focused)) animation.pause();
 		animation.onfinish = () => {
 			if (several) index = (index + 1) % items.length;
 			else cycle += 1;
