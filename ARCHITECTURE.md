@@ -898,6 +898,15 @@ Maquette de l’agenda et du tableau de bord et table d’identité validées pa
 - **Accessibilité** : chaque pastille garde sa phrase complète pour les lecteurs d’écran ; jauges en `role="meter"` avec texte de palier ; aide « ? » par bouton natif ; animations (barre, variation) coupées sous `prefers-reduced-motion`.
 - **Tests** : `tests/unit/visual-identity.test.ts` (couverture de la table sur le catalogue réel, icônes distinctes, paliers, format compact, sens et phrases des pastilles, sens des variations) ; le garde-fou de fuite de `controller.test.ts` cherche désormais « chance » en mot entier (le palier public « Chancelante » n’est pas une fuite) ; E2E : pastilles et barres, contrastes AA du texte visible de l’agenda et du tableau de bord, absence d’animation sous `prefers-reduced-motion`.
 
+### 8.4 septdecies Décisions de P3-13 : plan permanent dans la coque (26 novembre 2026)
+
+Retour PT-P3-09-012 (`PLAYTEST.md`) ; décisions déléguées de ROADMAP §5.2. Présentation seulement : ni l’état, ni les règles, ni le contrôleur ne changent (`RULES_VERSION` reste `0.32.0`).
+
+- **Coque** : `GameLayout` porte le plan pour tous les onglets. Colonne droite (300 px dès 1 100 px) : `PlanNotebook` (sommaire), alertes, un titre de presse et lien vers Actualités. `PlanSheet` : `<dialog>` modal ouvert par `showModal()` (focus contenu, Échap, fond inerte, focus rendu à l’ouvreur), superposé sans changer d’onglet ni de défilement ; il contient `PlanPanel` et la recherche d’activités (catalogue `actionGroups`, comparaison sans casse ni accents). Sous 1 100 px, bouton `plan-compact` au-dessus de `TurnControls`.
+- **Données partagées** : `planSegments` et `TimeBar` (barre segmentée) servent au carnet et au panneau ; toutes les modifications passent par les méthodes existantes du contrôleur (`addStep`, `removeStep`, `moveStep`, `togglePin`, `clearPlan`), qui refusent déjà toute modification pendant l’accélération. L’interface désactive en plus les commandes hors phase de planification.
+- **Écrans** : `PlanPanel` disparaît de l’agenda, de l’organisation et du patrimoine (plus de copie du plan par page).
+- **Tests** : E2E du carnet dans chaque onglet, de l’épinglage et du retrait depuis le carnet, de la feuille (recherche, ajout, Échap) sans perte d’onglet ni de défilement, de l’état étroit à 1 024 px et du verrouillage pendant l’accélération.
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.

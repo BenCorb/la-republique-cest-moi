@@ -659,3 +659,146 @@ test.describe('parcours de jeu', () => {
 		}
 	});
 });
+
+test.describe('plan permanent (P3-13)', () => {
+	test('montre le carnet du trimestre dans chaque onglet et le modifie sur place', async ({
+		page
+	}) => {
+		await startCareer(page, 'e2e-carnet');
+		await page
+			.getByRole('button', { name: 'Ajouter « Rencontrer des élus locaux » au plan' })
+			.click();
+		const notebook = page.getByTestId('plan-notebook');
+		for (const tab of [
+			'Tableau de bord',
+			'Agenda',
+			'Carrière',
+			'Monde politique',
+			'Actualités',
+			'Entourage',
+			'Relations',
+			'Organisation',
+			'Patrimoine',
+			'Journal'
+		]) {
+			await page.getByRole('button', { name: tab, exact: true }).click();
+			await expect(notebook, tab).toBeVisible();
+			await expect(notebook.getByTestId('notebook-step'), tab).toHaveCount(1);
+		}
+		// Épingler puis retirer depuis le carnet, sans passer par l'agenda.
+		await notebook
+			.getByRole('button', {
+				name: 'Épingler « Rencontrer des élus locaux » : répéter chaque trimestre'
+			})
+			.click();
+		await expect(page.getByTestId('plan-repeat')).toHaveText(
+			'1 activité ce trimestre, toutes répétées ensuite'
+		);
+		await notebook.getByRole('button', { name: 'Retirer « Rencontrer des élus locaux »' }).click();
+		await expect(notebook).toContainText('Aucune activité ce trimestre.');
+		await expect(page.getByTestId('time-remaining')).toContainText('100 restants sur 100');
+	});
+
+	test('ouvre le panneau sans perdre l’onglet ni le défilement', async ({ page }) => {
+		await startCareer(page, 'e2e-panneau');
+		await page.getByRole('button', { name: 'Agenda', exact: true }).click();
+		const main = page.locator('#contenu');
+		await main.evaluate((element) => element.scrollTo(0, 300));
+		const before = await main.evaluate((element) => element.scrollTop);
+		expect(before).toBeGreaterThan(0);
+
+		await page.getByRole('button', { name: 'Modifier le plan' }).click();
+		const sheet = page.getByRole('dialog', { name: 'Modifier le plan' });
+		await expect(sheet).toBeVisible();
+		await sheet.getByRole('searchbox', { name: 'Rechercher une activité' }).fill('free lance');
+		await expect(sheet.getByText('Aucune activité ne correspond.')).toBeVisible();
+		await sheet.getByRole('searchbox', { name: 'Rechercher une activité' }).fill('free-lance');
+		await sheet
+			.getByRole('button', { name: 'Ajouter « Accepter des missions en free-lance » au plan' })
+			.click();
+		await expect(sheet.getByRole('list', { name: 'Étapes du plan' })).toContainText(
+			'Accepter des missions en free-lance'
+		);
+		await page.keyboard.press('Escape');
+		await expect(sheet).toBeHidden();
+
+		await expect(page.getByRole('button', { name: 'Agenda', exact: true })).toHaveAttribute(
+			'aria-current',
+			'page'
+		);
+		expect(await main.evaluate((element) => element.scrollTop)).toBe(before);
+		await expect(page.getByTestId('plan-notebook').getByTestId('notebook-step')).toHaveCount(1);
+	});
+
+	test('garde le plan à un clic sous 1 100 px', async ({ page }) => {
+		await page.setViewportSize({ width: 1024, height: 768 });
+		await startCareer(page, 'e2e-etroit');
+		await expect(page.getByTestId('plan-notebook')).toBeHidden();
+		const compact = page.getByTestId('plan-compact');
+		await expect(compact).toContainText('Plan · 0 activité · 0/100');
+		await page
+			.getByRole('button', { name: 'Ajouter « Rencontrer des élus locaux » au plan' })
+			.click();
+		await expect(compact).toContainText('Plan · 1 activité · 20/100');
+		await compact.click();
+		await expect(page.getByRole('dialog', { name: 'Modifier le plan' })).toBeVisible();
+		const overflow = await page.evaluate(
+			() => document.documentElement.scrollWidth - document.documentElement.clientWidth
+		);
+		expect(overflow).toBeLessThanOrEqual(0);
+	});
+
+	test('verrouille le carnet et le panneau pendant l’accélération', async ({ page }) => {
+		await page.addInitScript(() => {
+			const native = window.requestAnimationFrame.bind(window);
+			const held: FrameRequestCallback[] = [];
+			const gate = {
+				hold: false,
+				release(): void {
+					gate.hold = false;
+					for (const callback of held.splice(0)) native(callback);
+				}
+			};
+			Object.assign(window, { __frames: gate });
+			window.requestAnimationFrame = (callback) => {
+				if (!gate.hold) return native(callback);
+				held.push(callback);
+				return 0;
+			};
+		});
+		type Gate = { hold: boolean; release: () => void };
+		await startCareer(page, 'e2e-year');
+		await page
+			.getByRole('button', { name: 'Ajouter « Rencontrer des élus locaux » au plan' })
+			.click();
+		const notebook = page.getByTestId('plan-notebook');
+		await notebook
+			.getByRole('button', {
+				name: 'Épingler « Rencontrer des élus locaux » : répéter chaque trimestre'
+			})
+			.click();
+		await page.evaluate(() => {
+			(window as unknown as { __frames: Gate }).__frames.hold = true;
+		});
+		await page.getByRole('button', { name: 'Jusqu’à une alerte' }).click();
+		await expect(page.getByRole('button', { name: 'Interrompre' })).toBeVisible();
+		await expect(
+			notebook.getByRole('button', { name: 'Retirer « Rencontrer des élus locaux »' })
+		).toBeDisabled();
+		await notebook.getByRole('button', { name: 'Modifier le plan' }).click();
+		const sheet = page.getByRole('dialog', { name: 'Modifier le plan' });
+		await expect(sheet).toContainText('Accélération en cours');
+		await expect(
+			sheet.getByRole('button', { name: 'Ajouter « Accepter des missions en free-lance » au plan' })
+		).toBeDisabled();
+		await sheet.getByRole('button', { name: 'Fermer' }).click();
+		await page.getByRole('button', { name: 'Interrompre' }).click();
+		await page.evaluate(() => {
+			(window as unknown as { __frames: Gate }).__frames.release();
+		});
+		await expect(page.getByRole('button', { name: 'Trimestre suivant' })).toBeEnabled();
+		await expect(
+			notebook.getByRole('button', { name: 'Retirer « Rencontrer des élus locaux »' })
+		).toBeEnabled();
+	});
+});

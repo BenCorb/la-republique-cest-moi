@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Minus, Plus } from '@lucide/svelte';
-	import PlanPanel from '#lib/components/agenda/PlanPanel.svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 
 	/**
@@ -25,7 +24,7 @@
 </script>
 
 {#if view}
-	<div class="grid gap-5 xl:grid-cols-[1fr_minmax(20rem,26rem)]">
+	<div class="grid gap-5">
 		<div class="flex flex-col gap-6">
 			<section aria-labelledby="producers-title">
 				<h2 id="producers-title" class="section-title">Votre organisation</h2>
@@ -138,9 +137,6 @@
 					{/each}
 				</ul>
 			</section>
-		</div>
-		<div class="xl:sticky xl:top-0 xl:self-start">
-			<PlanPanel {session} />
 		</div>
 	</div>
 {/if}
