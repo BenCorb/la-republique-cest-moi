@@ -173,7 +173,7 @@ Alpha : candidature et échéances lisibles, comparaison de candidats sans fuite
 
 ## 10. Direction visuelle V1 — étude (26 novembre 2026)
 
-**Statut :** étude préparatoire de la tâche P3-26 (`ROADMAP.md` §5.2). Elle oriente la maquette à valider par le créateur ; palette, police et composants restent provisoires jusqu’à cette validation.
+**Statut :** étude préparatoire de la tâche P3-26 (`ROADMAP.md` §5.2). **Maquette de l’agenda et du tableau de bord validée par le créateur le 26 novembre 2026** ; identité, police et palette retenues au §10.10. Contrat technique : `ARCHITECTURE.md` §8.4 sexdecies.
 
 **Demande du créateur (26 novembre 2026) :** rendre le jeu plus ludique et moins « tableur », avec davantage d’indications visuelles, en restant dans les icônes, les barres, les pastilles et la mise en page. Pas d’illustrations dessinées ni d’éléments très interactifs en V1.
 
@@ -268,3 +268,28 @@ Illustrations dessinées, portraits caricaturaux, carte de France interactive, g
 - Aucune information nécessaire ne dépend de la seule couleur ou d’une animation ; contrastes AA ; navigation clavier inchangée.
 - Le texte permanent visible sur l’agenda et le tableau de bord diminue nettement (objectif indicatif : moitié moins de mots).
 - Les playtests B1 et B2 jugent l’interface « plus jeu » sans perte de lisibilité.
+
+### 10.10 Identité retenue (décision du créateur, 26 novembre 2026)
+
+Validée sur maquette : police de titrage **Zilla Slab** (700, OFL, auto-hébergée, repli Georgia), couleurs ci-dessous, **mégaphone pour l’influence** (au lieu de la couronne proposée), deux couleurs de famille pour les groupes de soutien, filet tricolore en haut de l’en-tête comme seul accent de marque. Pastilles : l’icône porte la couleur de la ressource, le fond et le chiffre portent le sens (vert gain, rouge coût, ocre risque) ; une baisse de stress est un gain ; un dé signale une fourchette. Plan : barre de temps segmentée par thème, temps des mandats hachuré, prévision de stress et de santé en barre « fantôme » hachurée. Source unique dans le code : `src/lib/components/common/identity.ts` et les tokens de `src/routes/layout.css`.
+
+| Élément | Icône Lucide | Couleur | Contraste (crème / carte) |
+|---|---|---|---|
+| Influence | `megaphone` | `#6D3FA6` violet | 6,3 / 7,1 |
+| Budget politique | `piggy-bank` | `#1D5C96` bleu | 6,1 / 6,8 |
+| Argent personnel | `wallet` | `#7A5B00` ocre | 5,6 / 6,2 |
+| Temps | `hourglass` | `#3D4F63` ardoise | 7,4 / 8,3 |
+| Popularité | `thumbs-up` | `#A3326E` framboise | 5,7 / 6,4 |
+| Santé | `heart-pulse` | `#0F6E66` sarcelle | 5,4 / 6,0 |
+| Stress | `zap` | `#B0450C` orange brûlé | 5,0 / 5,6 |
+| Exposition médiatique | `eye` | `#0B6A85` pétrole | 5,4 / 6,1 |
+| Risque judiciaire | `gavel` | `#6B4A33` brun robe | 7,0 / 7,8 |
+| Défense | `shield` | `#4B5E8A` bleu acier | 5,7 / 6,3 |
+| Préparation de campagne | `clipboard-check` | `#5F6516` olive | 5,5 / 6,2 |
+| Classes populaires, moyennes, électeurs aisés | `hard-hat`, `house`, `gem` | `#33557A` bleu électoral | 6,8 / 7,6 |
+| Militants, appareil du parti, milieux d’affaires | `flag`, `building`, `briefcase-business` | `#6D3FA6` (famille influence) | 6,3 / 7,1 |
+| Gain / coût / risque (sens) | — | `positive` / `danger` / `warning` (inchangés) | ≥ 5,8 sur leurs fonds teintés |
+
+Thèmes de l’agenda, en six familles de couleur (icône blanche dessus ≥ 4,9:1) : terrain (`footprints` militantisme, `clipboard-check` campagne) ; parti et réseau (`vote`, `handshake`) ; médias (`newspaper`) ; argent (`piggy-bank` finances politiques, `briefcase` métier, `coins` patrimoine) ; vie personnelle (`coffee`) ; institutions (`users` organisation, `landmark` mandats) et justice (`scale`). Le militantisme prend `footprints` pour laisser le mégaphone à l’influence.
+
+Appliqué par P3-26 : en-tête aligné sur la grille de la page (retour du créateur, 26 novembre 2026 : supprimer l’impression de blocs dispersés) — une bande d’identité (marque dans la colonne de la navigation, puis fonction, étiquette, origine) et une rangée de cellules de même gabarit (trimestre et âge dans la colonne de la navigation, puis influence, budget, argent, popularité, santé, stress ; chaque cellule : libellé à icône, valeur forte, variation prévue ou barre à paliers), agenda (thèmes à icône, lignes en pastilles, plan à barre segmentée), tableau de bord (tuiles avec courbe, jauges à paliers, soutiens, aide derrière « ? ») et alertes (trois niveaux : urgent en aplat, à traiter encadré, information discrète). Les autres écrans suivent en P3-27 ; les écrans de P3-13 et P3-14 utilisent d’emblée ces composants.

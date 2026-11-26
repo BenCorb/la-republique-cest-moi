@@ -3,9 +3,10 @@
 /*
  * Tokens visuels (DESIGN.md §2). Valeurs indicatives, ajustables après essais de
  * contraste. Tailwind les expose en utilitaires (`bg-canvas`, `text-ink`…) et en
- * variables CSS (`var(--color-canvas)`).
+ * variables CSS (`var(--color-canvas)`). `static` : toutes les variables sont émises,
+ * même sans utilitaire, car les couleurs d'identité s'appliquent aussi par `style:`.
  */
-@theme {
+@theme static {
 	--color-canvas: #f3f0e9;
 	--color-surface: #fffdfa;
 	--color-sidebar: #eae6de;
@@ -17,7 +18,48 @@
 	--color-positive: #286044;
 	--color-warning: #80520d;
 
+	/* Fonds teintés des pastilles (P3-26) : texte de sens ≥ 5,8:1 dessus. */
+	--color-gain-soft: #ecf3ee;
+	--color-gain-line: #c5dacb;
+	--color-cost-soft: #f8ecec;
+	--color-cost-line: #e6c8cb;
+	--color-risk-soft: #f7efe3;
+	--color-risk-line: #e3cfae;
+
+	/*
+	 * Identité des ressources (DESIGN.md §10.10) : une couleur par ressource, jauge et
+	 * famille de groupes, toutes ≥ 4,5:1 sur canvas, surface et sidebar.
+	 */
+	--color-res-influence: #6d3fa6;
+	--color-res-budget: #1d5c96;
+	--color-res-cash: #7a5b00;
+	--color-res-time: #3d4f63;
+	--color-res-popularity: #a3326e;
+	--color-res-health: #0f6e66;
+	--color-res-stress: #b0450c;
+	--color-res-exposure: #0b6a85;
+	--color-res-justice: #6b4a33;
+	--color-res-defense: #4b5e8a;
+	--color-res-preparation: #5f6516;
+	--color-res-electoral: #33557a;
+
+	/* Familles de thèmes de l'agenda (icône blanche dessus ≥ 4,9:1). */
+	--color-cat-field: #2f6b3a;
+	--color-cat-party: #5b3a8c;
+	--color-cat-media: #0b6a85;
+	--color-cat-money: #7a5b00;
+	--color-cat-personal: #0f6e66;
+	--color-cat-institution: #203957;
+	--color-cat-justice: #6b4a33;
+	--color-cat-other: #565e68;
+
+	/* Accent tricolore de marque, jamais pour le sens gain/perte. */
+	--color-tricolor-blue: #203957;
+	--color-tricolor-red: #b8293b;
+
 	--font-serif: Georgia, 'Times New Roman', serif;
+	/* Titrage (P3-26) : Zilla Slab 700, OFL, auto-hébergée (sous-ensemble latin). */
+	--font-display: 'Zilla Slab', Georgia, 'Times New Roman', serif;
 	--font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
@@ -33,7 +75,7 @@
 	h1,
 	h2,
 	h3 {
-		@apply font-serif;
+		@apply font-display;
 	}
 
 	:focus-visible {
@@ -71,7 +113,17 @@
 	}
 
 	.section-title {
-		@apply font-serif text-lg text-primary;
+		@apply font-display text-lg font-bold text-primary;
+	}
+
+	/* Filet tricolore discret, seul accent de marque (DESIGN.md §10.7). */
+	.tricolor-rule {
+		background: linear-gradient(
+			90deg,
+			var(--color-tricolor-blue) 0 33.3%,
+			var(--color-surface) 33.3% 66.6%,
+			var(--color-tricolor-red) 66.6%
+		);
 	}
 }
 
@@ -84,4 +136,13 @@
 		transition-duration: 0.01ms !important;
 		scroll-behavior: auto !important;
 	}
+}
+
+/* Temps réservé par les mandats dans la barre du plan (P3-26) : hachures, pas une couleur seule. */
+.plan-reserved {
+	background: repeating-linear-gradient(
+		135deg,
+		var(--color-muted) 0 2px,
+		var(--color-sidebar) 2px 5px
+	);
 }

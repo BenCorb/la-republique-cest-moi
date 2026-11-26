@@ -563,6 +563,80 @@ test.describe('parcours de jeu', () => {
 		);
 	});
 
+	test('présente ressources, pastilles et alertes au style P3-26, contrastes AA', async ({
+		page
+	}) => {
+		await startCareer(page);
+		// En-tête : tuiles d'identité, date en calendrier, jauges en barres nommées.
+		await expect(page.getByTestId('resource-influence')).toBeVisible();
+		await expect(page.getByRole('meter', { name: 'Stress' }).first()).toBeVisible();
+
+		// Agenda : coûts et effets en pastilles, phrase complète gardée pour l'accessibilité.
+		await page.getByRole('button', { name: 'Agenda', exact: true }).click();
+		const row = page.getByTestId('action-network.meet_officials');
+		await expect(row.locator('[data-sense="gain"]').first()).toBeVisible();
+		await expect(row).toContainText('points de temps');
+		await expect(page.getByRole('meter', { name: 'Temps utilisé' })).toBeVisible();
+
+		// Contrastes AA du texte visible (4,5:1), contrôles désactivés exceptés (WCAG 1.4.3).
+		for (const tab of ['Agenda', 'Tableau de bord']) {
+			await page.getByRole('button', { name: tab, exact: true }).click();
+			const failures = await page.evaluate(() => {
+				const parse = (color: string): number[] =>
+					(color.match(/[\d.]+/g) ?? []).map(Number).concat(1).slice(0, 4);
+				const luminance = ([r, g, b]: number[]): number => {
+					const channel = (value: number): number => {
+						const c = value / 255;
+						return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+					};
+					return 0.2126 * channel(r!) + 0.7152 * channel(g!) + 0.0722 * channel(b!);
+				};
+				const background = (element: Element | null): number[] | null => {
+					for (let node = element; node; node = node.parentElement) {
+						const style = getComputedStyle(node);
+						if (style.backgroundImage !== 'none') return null;
+						const color = parse(style.backgroundColor);
+						if (color[3]! >= 1) return color;
+						if (color[3]! > 0) return null;
+					}
+					return [255, 255, 255, 1];
+				};
+				const issues: string[] = [];
+				const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+				for (let text = walker.nextNode(); text; text = walker.nextNode()) {
+					const element = text.parentElement;
+					if (!element || !text.textContent?.trim()) continue;
+					if (element.closest('.sr-only, [disabled], [aria-hidden="true"] svg')) continue;
+					const rect = element.getBoundingClientRect();
+					if (rect.width === 0 || rect.height === 0) continue;
+					const style = getComputedStyle(element);
+					if (Number(style.opacity) < 1 || style.visibility === 'hidden') continue;
+					const back = background(element);
+					if (!back) continue;
+					const fore = parse(style.color);
+					const [a, b] = [luminance(fore), luminance(back)];
+					const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+					if (ratio < 4.5)
+						issues.push(`${text.textContent.trim().slice(0, 40)} (${ratio.toFixed(2)})`);
+				}
+				return issues;
+			});
+			expect(failures, tab).toEqual([]);
+		}
+	});
+
+	test('coupe les animations sous prefers-reduced-motion', async ({ page }) => {
+		await page.emulateMedia({ reducedMotion: 'reduce' });
+		await startCareer(page);
+		const durations = await page.evaluate(() =>
+			[...document.querySelectorAll('header *')].map((element) => {
+				const style = getComputedStyle(element);
+				return Math.max(parseFloat(style.animationDuration), parseFloat(style.transitionDuration));
+			})
+		);
+		expect(Math.max(...durations)).toBeLessThan(0.01);
+	});
+
 	test('reste lisible sans défilement horizontal en cours de partie', async ({ page }) => {
 		await startCareer(page);
 		for (const tab of [
