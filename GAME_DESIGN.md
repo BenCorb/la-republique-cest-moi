@@ -311,6 +311,8 @@ Le risque judiciaire ne déclenche pas directement une condamnation automatique.
 
 Le joueur peut consacrer du temps et des ressources à sa défense, solliciter son conseiller juridique et prendre des décisions de communication. Les affaires peuvent affecter sa popularité, ses soutiens, sa santé et son éligibilité. Une peine d’inéligibilité ou une démission forcée ne met pas nécessairement fin à la partie ; une condamnation suffisamment grave peut le faire. Les règles de procédure sont fictives et volontairement simplifiées.
 
+**Pouvoir réel exigé (P3-12, 26 novembre 2026) :** une infraction liée à l’exercice d’un pouvoir n’est possible que si le personnage le détient ; l’influence informelle ne suffit pas. Financement occulte : une activité politique (étiquette, mandat, campagne, organisation ou entourage) ; favoritisme : un pouvoir local sur permis, marchés et subventions (la mairie en V1) ; prise illégale d’intérêts : une fonction de décision publique (un mandat) ; emploi fictif : une embauche réelle ; abus de biens sociaux : une organisation dotée de fonds. Sans le pouvoir requis, la tentation prend une autre forme ou n’apparaît pas : le donateur qui demande un « petit service » obtient d’un maire une intervention sur un permis (favoritisme), et d’un non-maire une simple mise en relation, sans infraction, qui solde la dette. Pas de trafic d’influence en V1.
+
 ### 10.2 Institutions modifiables
 
 Lorsqu’il détient les fonctions et soutiens nécessaires, le joueur peut tenter de modifier les règles du monde par des décisions narratives. Paramètres proposés : cumul des mandats, indépendance de la justice, transparence financière, règles électorales, liberté de la presse et pouvoirs des organismes de contrôle.
@@ -344,6 +346,8 @@ Le système doit garantir la cohérence : pas de personnage décédé dans un di
 - Proposer un recrutement ouvert : coût de temps et résultat incertain ; éventuelle amélioration de la confiance.
 
 Un futur événement médiatique peut rappeler la décision si les conditions sont réunies. Ce modèle sert à plusieurs personnages et mandats sans réécrire le moteur.
+
+**Mise en œuvre (P3-12, 26 novembre 2026) :** l’événement porte sur un poste précis de l’entourage, cité dans le texte : le premier poste débloqué et vacant, sinon un poste occupé. Accepter fait du proche un vrai collaborateur (salaire, mission, production à partir du trimestre suivant), inscrit l’emploi fictif et peut attirer la presse. Si le poste est occupé, le seul moyen de recruter le proche est un remplacement explicite du titulaire, renvoyé avec les conséquences habituelles. La sélection ouverte ajoute le proche à la présélection du poste vacant, sans garantie d’embauche.
 
 ## 12. Fin de partie et rejouabilité
 

@@ -53,10 +53,17 @@ function ok(result: TransitionResult, content: Content): TransitionSuccess {
 	return result;
 }
 
-/** Partie arrêtée sur l'offre douteuse, au trimestre 1. */
+/**
+ * Partie arrêtée sur l'offre douteuse, au trimestre 1 : un premier achat donne
+ * au joueur l'activité politique qu'exige un financement occulte (P3-12).
+ */
 function offered(content: Content = shady): GameState {
 	const state = ok(
-		transition(createGame({ seed: 'justice' }, content), commitTurn(), content),
+		transition(
+			createGame({ seed: 'justice' }, content),
+			commitTurn({ steps: [{ kind: 'purchase', id: 'test.donors' }] }),
+			content
+		),
 		content
 	).state;
 	expect(state.events.pending[0]?.eventId).toBe('test.shady_offer');
@@ -293,6 +300,50 @@ describe('validation du contenu', () => {
 			expect(messages).toContain('infraction inconnue : offense.nope');
 			expect(messages).toContain('rôle inconnu de l’événement : ghost');
 		}
+	});
+
+	it('exige la capacité de chaque infraction dans les conditions (P3-12)', () => {
+		const messages = (overrides: Record<string, unknown>): string[] => {
+			const result = validateContent(raw(overrides));
+			return result.ok ? [] : result.issues.map((issue) => issue.message);
+		};
+		const shady = (events: typeof fixtureEvents) =>
+			events['events/test.json'].events.find((event) => event.id === 'test.shady_offer')!;
+
+		const withoutWhen = structuredClone(fixtureEvents);
+		delete (shady(withoutWhen) as { when?: unknown }).when;
+		expect(messages({ events: withoutWhen })).toContain(
+			'offense.test_financing exige la capacité « political_activity » dans la condition de l’événement ou du choix'
+		);
+
+		// Un emploi fictif exige l'embauche réelle d'un protagoniste, dans le même choix et avant.
+		const justice = structuredClone(fixtureJustice);
+		(justice.offenses as unknown[]).push({
+			id: 'offense.test_job',
+			label: 'Emploi de test',
+			description: 'Un emploi de test.',
+			capability: 'real_hire'
+		});
+		const job = structuredClone(fixtureEvents);
+		shady(job).choices![0]!.effects = [
+			{ op: 'recordFact', offense: 'offense.test_job', severity: 1, accomplices: ['cousin'] }
+		] as never;
+		expect(messages({ events: job, justice })).toContain(
+			'offense.test_job exige l’embauche réelle d’un protagoniste (hireActor) avant le fait'
+		);
+
+		// L'embauche d'un acteur et les variables de poste sont réservées au sujet « post ».
+		const hire = structuredClone(fixtureEvents);
+		shady(hire).text = '{cousin} vise le poste « {post} ».';
+		shady(hire).choices![2]!.effects = [{ op: 'hireActor', role: 'cousin' }] as never;
+		(shady(hire) as { when?: unknown }).when = { op: 'capability', capability: 'real_hire' };
+		expect(messages({ events: hire })).toEqual(
+			expect.arrayContaining([
+				'embauche d’un acteur réservée aux événements de sujet « post »',
+				'{post} réservé aux événements de sujet « post »',
+				'l’embauche réelle se vérifie sur l’effet d’embauche, pas en condition'
+			])
+		);
 	});
 
 	it('refuse une gravité hors bornes et un mandat inconnu dans les expositions', () => {

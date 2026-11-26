@@ -15,6 +15,7 @@ import {
 	GAUGE_MIN,
 	INDICATOR_IDS,
 	PROMISE_PROGRESS_MAX,
+	POST_VARIABLE,
 	PROMISE_VARIABLE,
 	RESOURCE_IDS,
 	WORLD_TEMPLATE_VARIABLES,
@@ -794,6 +795,13 @@ export function checkContentReferences(state: GameState, content: Content): stri
 			if (role === PROMISE_VARIABLE) {
 				if (!Object.hasOwn(content.promises, actorId)) {
 					violations.push(`promesse inconnue pour un événement : ${actorId}`);
+				}
+				continue;
+			}
+			// Poste lié à un événement de sujet `post` (P3-12) ; son titulaire est un personnage.
+			if (role === POST_VARIABLE) {
+				if (!Object.hasOwn(content.posts, actorId)) {
+					violations.push(`poste inconnu pour un événement : ${actorId}`);
 				}
 				continue;
 			}

@@ -180,7 +180,8 @@
 						"parameter": "institution.transparency",
 						"level": "transparency.strict"
 					},
-					{ "op": "gte", "stat": "player.mandates", "value": 1 }
+					{ "op": "gte", "stat": "player.mandates", "value": 1 },
+					{ "op": "capability", "capability": "public_office" }
 				]
 			},
 			"actors": [],
