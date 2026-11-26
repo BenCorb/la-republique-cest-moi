@@ -13,20 +13,40 @@ compte, aucune IA au runtime ; les sauvegardes restent dans le navigateur.
 - **Jouer :** <https://bencorb.github.io/la-republique-cest-moi/>
 - **Code source :** <https://github.com/BenCorb/la-republique-cest-moi>
 
-> **État actuel : prototype terminé (phase 1).** Une carrière se joue de bout en bout et le premier
-> playtest humain est validé sur la branche `feat/p1-prototype` ; la PR de phase reste à intégrer et
-> le site publié montre encore la phase 0. L’avancement fait foi dans [ROADMAP.md](ROADMAP.md).
+> **État actuel : V1 en cours de finition (phase 3).** Les phases 0 à 2 (bootstrap, prototype,
+> alpha) sont terminées. En phase 3, la justice, le patrimoine, les promesses, les médias, les
+> réformes institutionnelles, les époques, l’interface et le bilan définitifs sont intégrés à
+> `main` ; l’équilibrage par simulation (P3-09) est fait, il reste à le valider par une partie
+> chronométrée, puis vient la livraison (P3-10). **Le site publié montre encore l’alpha** (avant la
+> phase 3) : il n’est redéployé que sur demande. Pendant le développement, une sauvegarde écrite par
+> d’anciennes règles est refusée, sans être effacée. L’avancement fait foi dans
+> [ROADMAP.md](ROADMAP.md).
 
-## Jouer (prototype)
+## Jouer
 
-Une carrière commence à 25 ans, au premier trimestre 2000. À chaque trimestre : composer le plan
-dans l’**Agenda** (actions), l’**Organisation** (achats) et le **Monde politique** (adhésion à un parti) ; l’onglet **Relations** retrace les personnages rencontrés et ce dont ils se souviennent, l’onglet **Carrière** vos mandats et le calendrier électoral, vérifier la prévision, puis valider avec
-« Trimestre suivant ». Les décisions bloquantes s’affichent dans une fenêtre et doivent être
-tranchées. « Année suivante » répète le plan pendant au plus quatre trimestres ; « Jusqu’à une
-alerte » accélère jusqu’à une décision, une alerte, une fin ou un plan devenu invalide, et peut être
-interrompu entre deux trimestres. La partie est sauvegardée automatiquement dans le navigateur ;
-« Exporter » produit un fichier JSON réimportable depuis l’accueil. Paramètre d’essai :
-`?seed=texte` dans l’adresse impose la seed d’une nouvelle carrière.
+Une carrière commence à 25 ans, au premier trimestre 2000, et dure jusqu’au bilan : mort naturelle,
+mort d’épuisement ou condamnation à la prison ferme. À chaque trimestre, on compose un plan avec le temps
+disponible, on vérifie la prévision, puis on avance.
+
+- **Tableau de bord** : ressources, santé, stress, exposition médiatique et risque judiciaire,
+  tendances des douze derniers trimestres.
+- **Agenda** : actions du trimestre, regroupées par thème ; une action reste épinglée d’un
+  trimestre à l’autre, sauf si on la marque ponctuelle.
+- **Carrière** : mandats, calendrier électoral, candidatures, promesses de campagne et dossiers
+  judiciaires.
+- **Monde politique** : partis, gouvernement, indicateurs nationaux et réformes institutionnelles.
+- **Actualités** : fil de presse des médias fictifs.
+- **Entourage**, **Relations**, **Organisation** et **Patrimoine** : collaborateurs et missions,
+  personnages rencontrés, moyens de l’organisation, actifs personnels et train de vie.
+- **Journal** : historique détaillé de chaque trimestre et de chaque décision.
+
+Trois façons d’avancer : « Trimestre suivant », « Année suivante » (quatre trimestres au plus) et
+« Jusqu’à une alerte », qui s’arrête à la première décision, alerte (échéance électorale, santé,
+entourage, budget, justice), fin de carrière ou plan devenu invalide. Les décisions bloquantes
+s’affichent dans une fenêtre et doivent être tranchées. La partie est sauvegardée automatiquement
+dans le navigateur ; « Exporter » produit un fichier JSON réimportable depuis l’accueil. En fin de
+carrière, le bilan présente la nécrologie, les distinctions et les moments marquants. Paramètre
+d’essai : `?seed=texte` dans l’adresse impose la seed d’une nouvelle carrière.
 
 ## Documents de référence
 
@@ -85,8 +105,11 @@ npm run simulate -- --runs 100 --seed 42 --strategy all --max-turns 400 --format
 npm run simulate -- --runs 100 --seed 42 --strategy all --max-turns 400 --format csv --output rapport.csv
 ```
 
-Les stratégies disponibles sont `prudent`, `ambitious`, `patrimonial`, `mixed`, `random-valid` et
-`all`. Une carrière arrêtée par le plafond technique, une erreur ou une violation d’invariant est
+Les stratégies disponibles sont `prudent` (intègre : elle écarte les choix signalés comme
+risqués), `ambitious`, `patrimonial`, `mixed`, `random-valid` et `all`. Le rapport mesure notamment
+les causes de fin, les mandats, les promesses, les affaires judiciaires, l’entourage, les
+répétitions d’événements et une durée active estimée (modèle provisoire, à calibrer par les
+playtests). Une carrière arrêtée par le plafond technique, une erreur ou une violation d’invariant est
 signalée dans `problemSeeds` et fait échouer la commande.
 
 Vérification complète avant de rendre une tâche :
@@ -151,27 +174,33 @@ Les règles communes sont dans [AGENTS.md](AGENTS.md) (importé par `CLAUDE.md`)
 documents, tâches courtes et testées, conventions Git et procédure de reprise entre assistants. En
 résumé :
 
-- une branche par tâche de la feuille de route : `feat/p1-01-etat-calendrier` ;
+- une branche par tâche de la feuille de route : `feat/p3-09-equilibrage` ;
 - des commits [Conventional Commits](https://www.conventionalcommits.org/fr/) :
   `feat(engine): ajouter le calendrier trimestriel` ;
 - une pull request vers `main`, fusionnée après CI verte ;
-- `ROADMAP.md` mis à jour uniquement lorsque le critère d’une tâche est vérifié.
+- `ROADMAP.md` mis à jour uniquement lorsque le critère d’une tâche est vérifié ;
+- le dépôt ne doit pas vivre dans un dossier synchronisé (iCloud Drive, Dropbox…) : les copies
+  « nom 2.ext » qu’il crée cassent les vérifications (ARCHITECTURE §15.4).
 
 ## Structure
 
 ```text
 src/
-  routes/                 # +layout.svelte, +page.svelte (coque d’accueil), layout.css (tokens)
+  routes/                 # +layout.svelte, +page.svelte (accueil et partie), layout.css (tokens)
   lib/
     game/engine/          # moteur TypeScript pur (sans Svelte, DOM, stockage, réseau, hasard réel)
     game/content/         # types, schémas Zod, validation et catalogues JSON (data/, data/events/)
     game/persistence/     # enveloppe de sauvegarde, migrations, stockage local, export/import
     game/app/             # projection PlayerView, contrôleur, session Svelte, frontière navigateur
-    components/           # écrans : shell, dashboard, agenda, organisation, journal, events, common
+    game/simulation/      # simulateur de carrières par lots (stratégies, rapports JSON/CSV)
+    components/           # un dossier par écran (dashboard, agenda, career, world, news,
+                          # entourage, people, organisation, wealth, journal) ; shell, events, common
 static/                   # fichiers copiés tels quels (favicon.svg, .nojekyll)
 scripts/
   base-path.ts            # normalisation de BASE_PATH (Vite, Playwright, serveur statique)
   validate-content.ts     # npm run content:validate
+  simulate.ts             # npm run simulate
+  benchmark.ts            # npm run benchmark
   serve-static.ts         # npm run serve:static
 .github/workflows/        # CI et déploiement GitHub Pages
 tests/
@@ -181,9 +210,8 @@ tests/
   e2e/                    # Playwright (*.e2e.ts), contre le build statique
 ```
 
-Les autres dossiers prévus par [ARCHITECTURE.md §3](ARCHITECTURE.md) (contenu, persistance,
-contrôleur, scénarios…) sont créés lorsqu’ils deviennent utiles. L’alias `#lib/…` pointe vers
-`src/lib/…` (champ `imports` de `package.json`, convention de SvelteKit 3).
+L’alias `#lib/…` pointe vers `src/lib/…` (champ `imports` de `package.json`, convention de
+SvelteKit 3).
 
 ## Conventions
 
