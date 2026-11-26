@@ -127,12 +127,16 @@ export interface PlanStepView {
 	readonly issues: readonly string[];
 	/** Achat : rappel que la production commence au trimestre suivant. */
 	readonly note: string | null;
-	/** Reconduite au trimestre suivant (P3-08) ; un achat ne l'est jamais. */
+	/** Épinglée : répétée chaque trimestre (P3-11) ; un achat ne l'est jamais. */
 	readonly pinned: boolean;
 }
 
 export interface PlanView {
 	readonly steps: readonly PlanStepView[];
+	/** Étapes épinglées, seules répétées aux trimestres suivants (P3-11). */
+	readonly pinnedCount: number;
+	/** Retraits automatiques du trimestre en cours, avec leur motif (P3-11). */
+	readonly adjustments: readonly string[];
 	readonly timeAvailable: number;
 	/** Temps réservé par les mandats, déjà retiré du temps disponible. */
 	readonly timeReserved: number;
@@ -281,6 +285,12 @@ export interface JournalLine {
 	readonly kind:
 		'step' | 'economy' | 'wellbeing' | 'world' | 'people' | 'career' | 'event' | 'decision' | 'end';
 	readonly text: string;
+}
+
+/** Retraits automatiques du plan au cours d'un trimestre (session, P3-11). */
+export interface PlanAdjustment {
+	readonly turn: number;
+	readonly lines: readonly string[];
 }
 
 export interface JournalTurnView {
@@ -1511,11 +1521,22 @@ function journalOfChoice(entry: ChoiceRecord, state: GameState, content: Content
 	return lines;
 }
 
-function buildJournal(state: GameState, content: Content): JournalTurnView[] {
+function buildJournal(
+	state: GameState,
+	content: Content,
+	adjustments: readonly PlanAdjustment[] = []
+): JournalTurnView[] {
 	const groups = new Map<number, JournalLine[]>();
 	const add = (turn: number, lines: JournalLine[]): void => {
 		groups.set(turn, [...(groups.get(turn) ?? []), ...lines]);
 	};
+	// Les retraits automatiques précèdent la résolution du trimestre qu'ils concernent.
+	for (const adjustment of adjustments) {
+		add(
+			adjustment.turn,
+			adjustment.lines.map((line) => ({ kind: 'step', text: `Plan ajusté : ${line}` }))
+		);
+	}
 	for (const entry of state.history) {
 		if (entry.type === 'turn.resolved') add(entry.turn, journalOfQuarter(entry, state, content));
 		else add(entry.turn, journalOfChoice(entry, state, content));
@@ -3040,7 +3061,8 @@ export function creationOptions(content: Content): {
 export function projectView(
 	state: GameState,
 	plan: readonly PlanStep[],
-	catalog: Content
+	catalog: Content,
+	adjustments: readonly PlanAdjustment[] = []
 ): PlayerView {
 	// Règles en vigueur (P3-05) : sondages, presse et justice affichés selon les institutions.
 	const content = effectiveContent(catalog, state.institutions.parameters);
@@ -3068,7 +3090,7 @@ export function projectView(
 			note: upgrade ? 'Actif à partir du trimestre prochain.' : null,
 			pinned: (() => {
 				const source = plan[step.index];
-				return source?.kind === 'action' && source.once !== true;
+				return source?.kind === 'action' && source.pinned === true;
 			})()
 		};
 	});
@@ -3250,6 +3272,8 @@ export function projectView(
 		justice: buildJustice(state, content),
 		plan: {
 			steps,
+			pinnedCount: steps.filter((step) => step.pinned).length,
+			adjustments: adjustments.find((entry) => entry.turn === state.turn)?.lines ?? [],
 			timeAvailable: preview.timeAvailable,
 			timeReserved: preview.timeReserved,
 			timeUsed: preview.timeUsed,
@@ -3271,7 +3295,7 @@ export function projectView(
 		producers,
 		organisation: buildOrganisation(state, plan, preview, content),
 		decision,
-		journal: buildJournal(state, content),
+		journal: buildJournal(state, content, adjustments),
 		press: buildPress(state, content),
 		news: buildNews(state, content),
 		// Carrière terminée (P3-08) : plus d'alerte de santé ni d'échéance, seulement le bilan.

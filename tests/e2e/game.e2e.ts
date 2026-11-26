@@ -201,7 +201,9 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByRole('button', { name: /^Proposer :/ })).toHaveCount(0);
 	});
 
-	test('épingle le plan, trace les tendances et ouvre les actualités', async ({ page }) => {
+	test('épingle une activité du plan, trace les tendances et ouvre les actualités', async ({
+		page
+	}) => {
 		await startCareer(page, 'e2e-interface');
 		await page
 			.getByRole('button', { name: 'Ajouter « Rencontrer des élus locaux » au plan' })
@@ -209,13 +211,27 @@ test.describe('parcours de jeu', () => {
 		await page
 			.getByRole('button', { name: 'Ajouter « Accepter des missions en free-lance » au plan' })
 			.click();
-		// Épinglées par défaut ; la seconde devient ponctuelle.
+		// Ponctuelles par défaut (P3-11) ; seule la première est épinglée.
+		await expect(page.getByTestId('plan-repeat')).toHaveText(
+			'2 activités ce trimestre, aucune répétée ensuite'
+		);
 		const freelance = page.getByRole('button', {
-			name: 'Reconduire « Accepter des missions en free-lance » chaque trimestre'
+			name: 'Épingler « Accepter des missions en free-lance » : répéter chaque trimestre'
 		});
-		await expect(freelance).toHaveAttribute('aria-pressed', 'true');
-		await freelance.click();
 		await expect(freelance).toHaveAttribute('aria-pressed', 'false');
+		await page
+			.getByRole('button', {
+				name: 'Épingler « Rencontrer des élus locaux » : répéter chaque trimestre'
+			})
+			.click();
+		await expect(
+			page.getByRole('button', {
+				name: '« Rencontrer des élus locaux » épinglée : répétée chaque trimestre'
+			})
+		).toHaveAttribute('aria-pressed', 'true');
+		await expect(page.getByTestId('plan-repeat')).toHaveText(
+			'2 activités ce trimestre, dont 1 répétée ensuite'
+		);
 
 		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
 		await expect(page.getByTestId('game-date')).toHaveText('T2 2000 · 25 ans');
