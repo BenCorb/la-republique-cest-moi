@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.22.0';
+export const RULES_VERSION = '0.23.0';
 
 export {
 	START_YEAR,
@@ -56,6 +56,9 @@ export {
 	type CaseStage,
 	type JusticeRecord,
 	type LegalCase,
+	type PromiseChange,
+	type PromiseRecord,
+	type PromisesRecord,
 	type Sentence,
 	type JournalEntry,
 	type ScheduledEvent,
@@ -262,6 +265,24 @@ export {
 	type WellbeingResolution
 } from './health.ts';
 export { assetsValue, comfortStress, netWorth, revalueAssets } from './wealth.ts';
+export {
+	applyPromiseEffect,
+	expandPromiseEffects,
+	findPledge,
+	isOpenPledge,
+	isPromiseEffect,
+	pledgeCampaign,
+	pledgeInstanceId,
+	pledgeIssue,
+	promiseCounts,
+	promiseIssue,
+	promiseOutcomeEffects,
+	resolvePromises,
+	settlementOutcome,
+	type PromiseEffect,
+	type PromisesParts,
+	type PromisesResolution
+} from './promises.ts';
 export { careerSummary, type CareerSummary, type EndCause } from './selectors.ts';
 export {
 	caseInstanceId,

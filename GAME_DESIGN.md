@@ -247,6 +247,8 @@ Les décisions politiques sont des dilemmes narratifs, pas des simulations déta
 
 Exemple fictif : un candidat promet une réforme fiscale ; une fois élu, ses soutiens économiques s’y opposent. Maintenir, négocier ou renoncer produit des effets distincts selon les groupes concernés. Aucun choix ne doit être universellement favorable. Le registre des promesses conserve leur contenu, leur état (annoncée, tenue, partiellement tenue, abandonnée ou encore en cours) et les circonstances pertinentes. La presse ou les adversaires peuvent les rappeler des années après.
 
+**Hypothèses provisoires de P3-04 (25 novembre 2026, contenu du lot C validé par le créateur) :** huit promesses types prises pendant une campagne (trois au plus), chacune avec des effets sur les groupes concernés à l’annonce et selon son issue. Élu, le joueur a deux ans pour la réaliser (action « Préparer une réforme ») ; un dilemme survient entre-temps : tenir, transiger (au mieux partiellement tenue) ou renoncer. À l’échéance, l’avancement décide : tenue, partiellement tenue ou abandonnée. Battu, la promesse reste annoncée, sans lendemain. Pendant une campagne suivante, l’adversaire ou la presse peut rappeler une promesse abandonnée ou tenue. Chiffres modifiables à l’équilibrage (ARCHITECTURE §8.4 quinquies).
+
 ## 8. Monde politique autonome et époques
 
 ### 8.1 France alternative

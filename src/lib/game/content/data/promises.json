@@ -1,0 +1,241 @@
+{
+	"balance": {
+		"maxPerCampaign": 3,
+		"announcePreparation": 3,
+		"deliveryTurns": 8,
+		"dilemmaDelayTurns": { "min": 2, "max": 4 },
+		"partialProgress": 50,
+		"recallPercent": 25,
+		"maxRecalls": 2,
+		"recallEvents": {
+			"kept": "promise.recall_kept",
+			"abandoned": "promise.recall_broken"
+		}
+	},
+	"promises": [
+		{
+			"id": "promise.tax_cut",
+			"label": "Baisser les impôts",
+			"theme": "Fiscalité",
+			"description": "« Pas un centime de plus, et même quelques-uns de moins. » Les contribuables applaudissent ; les comptables publics blêmissent.",
+			"elections": [
+				"election.municipal",
+				"election.regional",
+				"election.legislative",
+				"election.senatorial"
+			],
+			"dilemmaEvent": "promise.dilemma_budget",
+			"announce": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.wealthy", "value": 3 },
+				{ "op": "addSupport", "group": "support.working_class", "value": -1 }
+			],
+			"kept": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 4 },
+				{ "op": "addSupport", "group": "support.wealthy", "value": 5 },
+				{ "op": "addSupport", "group": "support.business", "value": 3 },
+				{ "op": "addSupport", "group": "support.working_class", "value": -2 }
+			],
+			"partial": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+				{ "op": "addSupport", "group": "support.wealthy", "value": 2 }
+			],
+			"abandoned": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": -5 },
+				{ "op": "addSupport", "group": "support.wealthy", "value": -6 },
+				{ "op": "addSupport", "group": "support.business", "value": -2 }
+			]
+		},
+		{
+			"id": "promise.security",
+			"label": "Remettre des policiers dans la rue",
+			"theme": "Sécurité",
+			"description": "Plus d’uniformes, plus d’éclairage, plus de caméras. Les commerçants approuvent, les budgets grincent.",
+			"elections": [
+				"election.municipal",
+				"election.regional",
+				"election.legislative",
+				"election.senatorial"
+			],
+			"dilemmaEvent": "promise.dilemma_budget",
+			"announce": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.activists", "value": -1 }
+			],
+			"kept": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 4 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 4 },
+				{ "op": "addSupport", "group": "support.activists", "value": -2 }
+			],
+			"partial": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 }
+			],
+			"abandoned": [
+				{ "op": "addSupport", "group": "support.working_class", "value": -5 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": -4 }
+			]
+		},
+		{
+			"id": "promise.ecology",
+			"label": "Engager la transition écologique",
+			"theme": "Écologie",
+			"description": "Pistes cyclables, toits solaires et fin des pesticides au cimetière. Les militants s’enthousiasment, les industriels toussent.",
+			"elections": [
+				"election.municipal",
+				"election.regional",
+				"election.legislative",
+				"election.senatorial"
+			],
+			"dilemmaEvent": "promise.dilemma_lobby",
+			"announce": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.activists", "value": 3 },
+				{ "op": "addSupport", "group": "support.business", "value": -2 }
+			],
+			"kept": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 3 },
+				{ "op": "addSupport", "group": "support.activists", "value": 5 },
+				{ "op": "addSupport", "group": "support.business", "value": -3 }
+			],
+			"partial": [
+				{ "op": "addSupport", "group": "support.activists", "value": 1 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 }
+			],
+			"abandoned": [
+				{ "op": "addSupport", "group": "support.activists", "value": -6 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": -3 },
+				{ "op": "addSupport", "group": "support.business", "value": 1 }
+			]
+		},
+		{
+			"id": "promise.public_services",
+			"label": "Sauver l’hôpital et le bureau de poste",
+			"theme": "Services publics",
+			"description": "Pas une fermeture de guichet, pas un lit en moins. Une promesse qui rassure tout le monde, sauf ceux qui tiennent les comptes.",
+			"elections": [
+				"election.municipal",
+				"election.regional",
+				"election.legislative",
+				"election.senatorial"
+			],
+			"dilemmaEvent": "promise.dilemma_budget",
+			"announce": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 3 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+				{ "op": "addSupport", "group": "support.wealthy", "value": -1 }
+			],
+			"kept": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 5 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.wealthy", "value": -2 }
+			],
+			"partial": [{ "op": "addSupport", "group": "support.working_class", "value": 2 }],
+			"abandoned": [
+				{ "op": "addSupport", "group": "support.working_class", "value": -6 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": -2 }
+			]
+		},
+		{
+			"id": "promise.clean_politics",
+			"label": "Moraliser la vie publique",
+			"theme": "Institutions",
+			"description": "Transparence des comptes, fin des petits arrangements, registre des cadeaux. Les électeurs en rêvent ; vos collègues en font des cauchemars.",
+			"elections": ["election.regional", "election.legislative", "election.senatorial"],
+			"dilemmaEvent": "promise.dilemma_colleagues",
+			"announce": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 3 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+				{ "op": "addSupport", "group": "support.apparatus", "value": -2 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 3 }
+			],
+			"kept": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 5 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 3 },
+				{ "op": "addSupport", "group": "support.apparatus", "value": -4 }
+			],
+			"partial": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+				{ "op": "addSupport", "group": "support.apparatus", "value": -1 }
+			],
+			"abandoned": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": -5 },
+				{ "op": "addSupport", "group": "support.working_class", "value": -3 },
+				{ "op": "addSupport", "group": "support.apparatus", "value": 2 }
+			]
+		},
+		{
+			"id": "promise.housing",
+			"label": "Construire des logements abordables",
+			"theme": "Logement",
+			"description": "Mille logements à loyer modéré, et pas dans le champ derrière la déchetterie. Les promoteurs ont leur propre idée de « modéré ».",
+			"elections": ["election.municipal", "election.regional", "election.legislative"],
+			"dilemmaEvent": "promise.dilemma_lobby",
+			"announce": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 3 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+				{ "op": "addSupport", "group": "support.business", "value": -1 }
+			],
+			"kept": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 5 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.wealthy", "value": -2 }
+			],
+			"partial": [{ "op": "addSupport", "group": "support.working_class", "value": 2 }],
+			"abandoned": [
+				{ "op": "addSupport", "group": "support.working_class", "value": -6 },
+				{ "op": "addSupport", "group": "support.business", "value": 2 }
+			]
+		},
+		{
+			"id": "promise.factory",
+			"label": "Sauver l’usine du bassin",
+			"theme": "Emploi",
+			"description": "« Pas un licenciement tant que je serai là. » Une phrase qui se photographie bien devant une grille d’usine, et qui se rembourse cher.",
+			"elections": ["election.municipal", "election.regional", "election.legislative"],
+			"dilemmaEvent": "promise.dilemma_lobby",
+			"announce": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 4 },
+				{ "op": "addSupport", "group": "support.activists", "value": 1 },
+				{ "op": "addSupport", "group": "support.business", "value": -2 }
+			],
+			"kept": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 6 },
+				{ "op": "addSupport", "group": "support.activists", "value": 2 },
+				{ "op": "addResource", "resource": "influence", "value": 5 }
+			],
+			"partial": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+				{ "op": "addSupport", "group": "support.business", "value": 1 }
+			],
+			"abandoned": [
+				{ "op": "addSupport", "group": "support.working_class", "value": -7 },
+				{ "op": "addSupport", "group": "support.activists", "value": -2 },
+				{ "op": "addStat", "stat": "player.stress", "value": 3 }
+			]
+		},
+		{
+			"id": "promise.train_line",
+			"label": "Rouvrir la ligne de train",
+			"theme": "Transports",
+			"description": "La petite ligne fermée en 1971 rouvrira, gare repeinte et horaires compris. Les riverains du futur chantier ne sont pas encore au courant.",
+			"elections": ["election.municipal", "election.regional", "election.senatorial"],
+			"dilemmaEvent": "promise.dilemma_street",
+			"announce": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 }
+			],
+			"kept": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 3 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 4 },
+				{ "op": "addResource", "resource": "influence", "value": 4 }
+			],
+			"partial": [{ "op": "addSupport", "group": "support.middle_class", "value": 1 }],
+			"abandoned": [
+				{ "op": "addSupport", "group": "support.working_class", "value": -4 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": -4 }
+			]
+		}
+	]
+}

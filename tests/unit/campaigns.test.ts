@@ -28,6 +28,7 @@ import {
 	fixtureProfiles,
 	fixtureJustice,
 	fixtureWealth,
+	fixturePromises,
 	fixtureSupports,
 	fixtureTraits,
 	fixtureUpgrades,
@@ -93,7 +94,8 @@ function load(balance: unknown = fixtureBalance): Content {
 		entourage: fixtureEntourage,
 		profiles: fixtureProfiles,
 		justice: fixtureJustice,
-		wealth: fixtureWealth
+		wealth: fixtureWealth,
+		promises: fixturePromises
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;
@@ -151,7 +153,8 @@ describe('candidature', () => {
 		mandates: state.mandates,
 		ballots: state.ballots,
 		campaigns: state.campaigns,
-		institutions: state.institutions
+		institutions: state.institutions,
+		promises: state.promises
 	});
 
 	it('s’ouvre jusqu’à la clôture, sous conditions d’âge et de mandat', () => {
@@ -408,7 +411,8 @@ describe('remboursement des frais de campagne', () => {
 			entourage: fixtureEntourage,
 			profiles: fixtureProfiles,
 			justice: fixtureJustice,
-			wealth: fixtureWealth
+			wealth: fixtureWealth,
+			promises: fixturePromises
 		});
 		if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 		return result.content;

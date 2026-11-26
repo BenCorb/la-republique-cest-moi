@@ -20,6 +20,7 @@ import type { CareerEffect } from './career.ts';
 import type { StaffEffect } from './staff.ts';
 import type { FamilyEffect } from './family.ts';
 import type { PoliticalEffect } from './world.ts';
+import type { PromiseEffect } from './promises.ts';
 
 export type EffectRange =
 	| {
@@ -55,7 +56,13 @@ export type EffectRange =
 	| { readonly kind: 'preparation'; readonly value: number }
 	/** Fait inscrit au registre : connu du joueur, qui l'a choisi. */
 	| { readonly kind: 'fact'; readonly offense: string; readonly severity: number }
-	| { readonly kind: 'lifestyle'; readonly lifestyle: string };
+	| { readonly kind: 'lifestyle'; readonly lifestyle: string }
+	/** Promesse : engagement, avancement, compromis ou renoncement (P3-04). */
+	| {
+			readonly kind: 'promise';
+			readonly change: 'make' | 'advance' | 'amend' | 'abandon';
+			readonly value: number;
+	  };
 
 export type ResolvedEffect =
 	| {
@@ -85,7 +92,9 @@ export type ResolvedEffect =
 	/** Fait inscrit au registre par le moteur d'événements (P3-01). */
 	| { readonly kind: 'fact'; readonly effect: FactEffect; readonly rng: RngState }
 	/** Changement de train de vie (P3-02), appliqué au joueur. */
-	| { readonly kind: 'lifestyle'; readonly effect: LifestyleEffect; readonly rng: RngState };
+	| { readonly kind: 'lifestyle'; readonly effect: LifestyleEffect; readonly rng: RngState }
+	/** Promesse du registre, appliquée par `applyPromiseEffect` (P3-04). */
+	| { readonly kind: 'promise'; readonly effect: PromiseEffect; readonly rng: RngState };
 
 export type LifestyleEffect = Extract<Effect, { op: 'setLifestyle' }>;
 
@@ -170,6 +179,14 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'fact', offense: effect.offense, severity: effect.severity };
 		case 'setLifestyle':
 			return { kind: 'lifestyle', lifestyle: effect.lifestyle };
+		case 'makePromise':
+			return { kind: 'promise', change: 'make', value: 0 };
+		case 'advancePromise':
+			return { kind: 'promise', change: 'advance', value: effect.value };
+		case 'amendPromise':
+			return { kind: 'promise', change: 'amend', value: 0 };
+		case 'abandonPromise':
+			return { kind: 'promise', change: 'abandon', value: 0 };
 		default: {
 			const unknown: never = effect;
 			throw new Error(`Effet inconnu : ${JSON.stringify(unknown)}`);
@@ -217,6 +234,11 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 			return { kind: 'fact', effect, rng };
 		case 'setLifestyle':
 			return { kind: 'lifestyle', effect, rng };
+		case 'makePromise':
+		case 'advancePromise':
+		case 'amendPromise':
+		case 'abandonPromise':
+			return { kind: 'promise', effect, rng };
 		default: {
 			const unknown: never = effect;
 			throw new Error(`Effet inconnu : ${JSON.stringify(unknown)}`);

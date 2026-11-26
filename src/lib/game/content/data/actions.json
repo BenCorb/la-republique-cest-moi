@@ -407,6 +407,54 @@
 			"target": "ballot"
 		},
 		{
+			"id": "campaign.pledge",
+			"category": "campaign",
+			"label": "Prendre un engagement de campagne",
+			"description": "Une promesse claire, une formule qui tient sur une affiche et un regard droit dans la caméra. Elle vous suivra une fois élu, et même après.",
+			"timeCost": 10,
+			"maxPerTurn": 3,
+			"costs": [],
+			"requires": {
+				"op": "gte",
+				"stat": "player.campaigning",
+				"value": 1
+			},
+			"unavailableReason": "Il faut être en campagne.",
+			"effects": [
+				{
+					"op": "makePromise"
+				}
+			],
+			"target": "promise"
+		},
+		{
+			"id": "mandate.prepare_reform",
+			"category": "mandate",
+			"label": "Préparer une réforme",
+			"description": "Réunions de travail, arbitrages, notes de cinquante pages résumées en trois lignes : de quoi faire avancer une promesse avant son échéance.",
+			"timeCost": 40,
+			"maxPerTurn": 2,
+			"costs": [],
+			"requires": {
+				"op": "gte",
+				"stat": "player.promisesInProgress",
+				"value": 1
+			},
+			"unavailableReason": "Aucune promesse en cours de réalisation.",
+			"effects": [
+				{
+					"op": "advancePromise",
+					"value": 35
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 1
+				}
+			],
+			"target": "pledge"
+		},
+		{
 			"id": "campaign.canvass",
 			"category": "campaign",
 			"label": "Faire du porte-à-porte",

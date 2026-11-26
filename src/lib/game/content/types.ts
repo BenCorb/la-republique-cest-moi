@@ -76,6 +76,12 @@ export const WORLD_TEMPLATE_VARIABLES = [
 export type WorldTemplateVariable = (typeof WORLD_TEMPLATE_VARIABLES)[number];
 
 /**
+ * Variable de texte et acteur réservé des événements de sujet `promise` : la
+ * promesse type concernée (`promise.*`), transmise par le moteur (P3-04).
+ */
+export const PROMISE_VARIABLE = 'promise';
+
+/**
  * Registre typé des statistiques lisibles par les conditions. Toute nouvelle
  * statistique s'ajoute ici et dans `engine/conditions.ts` (switch exhaustif) :
  * jamais de chemin arbitraire vers l'état.
@@ -126,7 +132,13 @@ export const STAT_IDS = [
 	/** Nombre d'actifs patrimoniaux possédés (P3-02). */
 	'player.assets',
 	/** Valeur nette : argent personnel et valeur des actifs, en centimes (P3-02). */
-	'player.netWorthCents'
+	'player.netWorthCents',
+	/** Promesses en cours de réalisation, une fois élu (P3-04). */
+	'player.promisesInProgress',
+	/** Promesses tenues (P3-04). */
+	'player.promisesKept',
+	/** Promesses abandonnées (P3-04). */
+	'player.promisesBroken'
 ] as const;
 export type StatId = (typeof STAT_IDS)[number];
 
@@ -256,7 +268,88 @@ export type Effect =
 			readonly author?: string | undefined;
 			/** Rôles des autres protagonistes (donateur, bénéficiaire…). */
 			readonly accomplices?: readonly string[] | undefined;
-	  };
+	  }
+	/**
+	 * Engagement de campagne sur la promesse choisie dans le plan (`target` :
+	 * définition `promise.*`), rattaché à la campagne en cours (P3-04).
+	 */
+	| { readonly op: 'makePromise' }
+	/**
+	 * Avancement d'une promesse en cours : celle choisie dans le plan (`target` :
+	 * exemplaire `pledge.N`) ou celle dont traite l'événement (P3-04).
+	 */
+	| { readonly op: 'advancePromise'; readonly value: number }
+	/** Compromis : la promesse dont traite l'événement ne sera au mieux que partiellement tenue. */
+	| { readonly op: 'amendPromise' }
+	/** Renoncement : la promesse dont traite l'événement est abandonnée sur-le-champ. */
+	| { readonly op: 'abandonPromise' };
+
+/** États d'une promesse (GDD §7.5). */
+export const PROMISE_STATUSES = [
+	'announced',
+	'in_progress',
+	'kept',
+	'partial',
+	'abandoned'
+] as const;
+export type PromiseStatus = (typeof PROMISE_STATUSES)[number];
+/** Issues d'une promesse, chacune avec ses effets propres. */
+export type PromiseOutcome = Extract<PromiseStatus, 'kept' | 'partial' | 'abandoned'>;
+
+/** Avancement auquel une promesse est entièrement réalisée. */
+export const PROMISE_PROGRESS_MAX = 100;
+
+/**
+ * Promesse type (P3-04) : un engagement de campagne et ses conséquences selon
+ * qu'il est tenu, partiellement tenu ou abandonné. Effets limités aux
+ * ressources, jauges et soutiens ; aucune simulation de politique publique.
+ */
+export interface PromiseDefinition {
+	readonly id: string;
+	/** Intitulé de la promesse, cité dans les textes (`{promise}`). */
+	readonly label: string;
+	/** Thème (fiscalité, sécurité…). */
+	readonly theme: string;
+	readonly description: string;
+	/** Élections où l'engagement peut être pris. */
+	readonly elections: readonly string[];
+	/** Dilemme présenté une fois élu (événement bloquant de sujet `promise`). */
+	readonly dilemmaEvent: string;
+	/** Effets certains de l'annonce. */
+	readonly announce: readonly Effect[];
+	/** Effets à l'issue de la promesse. */
+	readonly kept: readonly Effect[];
+	readonly partial: readonly Effect[];
+	readonly abandoned: readonly Effect[];
+}
+
+/** Règles du registre des promesses ; hypothèses provisoires d'équilibrage. */
+export interface PromisesBalance {
+	/** Nombre maximal d'engagements par campagne. */
+	readonly maxPerCampaign: number;
+	/** Préparation ajoutée à la campagne par chaque engagement. */
+	readonly announcePreparation: number;
+	/** Délai de réalisation après l'élection, en trimestres. */
+	readonly deliveryTurns: number;
+	/** Délai entre l'élection et le dilemme, en trimestres (tiré dans la fourchette). */
+	readonly dilemmaDelayTurns: IntRange;
+	/** Avancement minimal d'une promesse partiellement tenue (en dessous : abandonnée). */
+	readonly partialProgress: number;
+	/** Chance, par trimestre de campagne, qu'une promesse passée soit rappelée, en %. */
+	readonly recallPercent: number;
+	/** Nombre maximal de rappels d'une même promesse. */
+	readonly maxRecalls: number;
+	/** Événements de rappel, par issue (sujet `promise`). */
+	readonly recallEvents: {
+		readonly kept: string;
+		readonly abandoned: string;
+	};
+}
+
+export interface PromisesDefinition {
+	readonly promises: readonly PromiseDefinition[];
+	readonly balance: PromisesBalance;
+}
 
 /** Gravité maximale d'un fait. */
 export const FACT_SEVERITY_MAX = 3;
@@ -382,8 +475,18 @@ export interface ActionDefinition {
 	 * (exemplaire de mandat en cours) ou `ballot` (échéance électorale).
 	 */
 	/** `asset` : un actif patrimonial possédé ; `upgrade` : un autre exemplaire de l'organisation. */
+	/** `promise` : une promesse type à annoncer ; `pledge` : une promesse en cours (P3-04). */
 	readonly target?:
-		'party' | 'mandate' | 'ballot' | 'candidate' | 'staff' | 'upgrade' | 'asset' | undefined;
+		| 'party'
+		| 'mandate'
+		| 'ballot'
+		| 'candidate'
+		| 'staff'
+		| 'upgrade'
+		| 'asset'
+		| 'promise'
+		| 'pledge'
+		| undefined;
 }
 
 /**
@@ -979,6 +1082,11 @@ interface EventBase {
 	readonly unique: boolean;
 	readonly when?: Condition | undefined;
 	readonly actors: readonly ActorSlot[];
+	/**
+	 * `promise` : l'événement traite d'une promesse du registre (dilemme, rappel),
+	 * transmise par le moteur et citée dans les textes par `{promise}` (P3-04).
+	 */
+	readonly subject?: 'promise' | undefined;
 }
 
 /** Événement bloquant : la progression attend un choix du joueur. */
@@ -1050,4 +1158,8 @@ export interface Content {
 	readonly lifestyles: Readonly<Record<string, LifestyleDefinition>>;
 	readonly lifestyleIds: readonly string[];
 	readonly wealth: Omit<WealthDefinition, 'lifestyles'>;
+	/** Promesses types, par identifiant, dans l'ordre du catalogue (P3-04). */
+	readonly promises: Readonly<Record<string, PromiseDefinition>>;
+	readonly promiseIds: readonly string[];
+	readonly promiseRules: PromisesBalance;
 }

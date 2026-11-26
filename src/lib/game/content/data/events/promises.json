@@ -1,0 +1,278 @@
+{
+	"events": [
+		{
+			"id": "promise.dilemma_budget",
+			"category": "career",
+			"subject": "promise",
+			"title": "Les comptes ne sont pas d’accord",
+			"text": "Votre promesse « {promise} » a fait son effet pendant la campagne. Elle en fait un autre sur le budget : le directeur financier vous tend un tableau dont toutes les cases sont rouges, avec une sobriété qui a dû lui coûter.",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 30,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [],
+			"choices": [
+				{
+					"id": "hold",
+					"label": "Tenir la promesse coûte que coûte",
+					"hints": ["La réforme avance nettement", "Vos nerfs en pâtissent"],
+					"costs": [],
+					"effects": [
+						{ "op": "advancePromise", "value": 20 },
+						{ "op": "addStat", "stat": "player.stress", "value": 4 }
+					]
+				},
+				{
+					"id": "stagger",
+					"label": "Étaler la réforme sur plusieurs années",
+					"hints": [
+						"Elle ne sera au mieux que partiellement tenue",
+						"Un calendrier plus raisonnable"
+					],
+					"costs": [],
+					"effects": [
+						{ "op": "amendPromise" },
+						{ "op": "advancePromise", "value": 10 },
+						{ "op": "addStat", "stat": "player.stress", "value": -1 }
+					]
+				},
+				{
+					"id": "drop",
+					"label": "Renoncer : « la conjoncture ne le permet pas »",
+					"hints": ["Soulagement immédiat", "Ceux qui y croyaient s’en souviendront"],
+					"costs": [],
+					"effects": [
+						{ "op": "abandonPromise" },
+						{ "op": "addStat", "stat": "player.stress", "value": -2 }
+					]
+				}
+			]
+		},
+		{
+			"id": "promise.dilemma_lobby",
+			"category": "career",
+			"subject": "promise",
+			"title": "Une délégation très courtoise",
+			"text": "Trois représentants d’intérêts, costumes sobres et cartes de visite épaisses, viennent vous expliquer que votre promesse « {promise} » serait « une catastrophe pour l’emploi local ». Ils ont apporté des chiffres, et des chocolats.",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 30,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [],
+			"choices": [
+				{
+					"id": "resist",
+					"label": "Leur tenir tête",
+					"hints": ["La réforme avance", "Les milieux d’affaires s’en souviendront"],
+					"costs": [],
+					"effects": [
+						{ "op": "advancePromise", "value": 15 },
+						{ "op": "addSupport", "group": "support.business", "value": -4 },
+						{ "op": "addStat", "stat": "player.exposure", "value": 3 }
+					]
+				},
+				{
+					"id": "deal",
+					"label": "Accepter « quelques amendements techniques »",
+					"hints": ["Elle ne sera au mieux que partiellement tenue", "Des amis bien placés"],
+					"costs": [],
+					"effects": [
+						{ "op": "amendPromise" },
+						{ "op": "advancePromise", "value": 15 },
+						{ "op": "addSupport", "group": "support.business", "value": 4 }
+					]
+				},
+				{
+					"id": "bury",
+					"label": "Enterrer discrètement le projet",
+					"hints": [
+						"Les milieux d’affaires apprécient",
+						"Vos électeurs beaucoup moins, le jour où ils l’apprendront"
+					],
+					"costs": [],
+					"effects": [
+						{ "op": "abandonPromise" },
+						{ "op": "addSupport", "group": "support.business", "value": 3 },
+						{ "op": "addResource", "resource": "influence", "value": 3 }
+					]
+				}
+			]
+		},
+		{
+			"id": "promise.dilemma_street",
+			"category": "career",
+			"subject": "promise",
+			"title": "Les riverains sont dans la rue",
+			"text": "Banderoles, casseroles et pétition de quatre mille signatures : le chantier de votre promesse « {promise} » mobilise contre lui ceux qui la réclamaient le plus fort, à condition qu’elle se fasse ailleurs.",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 30,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [],
+			"choices": [
+				{
+					"id": "force",
+					"label": "Passer en force",
+					"hints": ["La réforme avance nettement", "Climat tendu, stress assuré"],
+					"costs": [],
+					"effects": [
+						{ "op": "advancePromise", "value": 20 },
+						{ "op": "addStat", "stat": "player.stress", "value": 5 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": -2 }
+					]
+				},
+				{
+					"id": "consult",
+					"label": "Ouvrir une grande concertation",
+					"hints": ["Elle ne sera au mieux que partiellement tenue", "L’apaisement"],
+					"costs": [],
+					"effects": [
+						{ "op": "amendPromise" },
+						{ "op": "advancePromise", "value": 10 },
+						{ "op": "addStat", "stat": "player.stress", "value": -1 }
+					]
+				},
+				{
+					"id": "withdraw",
+					"label": "Retirer le projet « pour mieux le reprendre »",
+					"hints": ["Fin des casseroles", "Personne n’y croit"],
+					"costs": [],
+					"effects": [
+						{ "op": "abandonPromise" },
+						{ "op": "addStat", "stat": "player.stress", "value": -3 }
+					]
+				}
+			]
+		},
+		{
+			"id": "promise.dilemma_colleagues",
+			"category": "career",
+			"subject": "promise",
+			"title": "Les copains d’abord",
+			"text": "Votre promesse « {promise} » prend forme, et l’ambiance se refroidit dans les couloirs. Des collègues de tous bords vous font savoir, autour d’un café qui n’a rien d’amical, qu’il serait « dommage de scier la branche sur laquelle tout le monde est assis ».",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 30,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [],
+			"choices": [
+				{
+					"id": "hold",
+					"label": "Tenir bon, quitte à se fâcher",
+					"hints": ["La réforme avance nettement", "L’appareil vous le fera payer"],
+					"costs": [],
+					"effects": [
+						{ "op": "advancePromise", "value": 20 },
+						{ "op": "addSupport", "group": "support.apparatus", "value": -4 },
+						{ "op": "addStat", "stat": "player.stress", "value": 3 }
+					]
+				},
+				{
+					"id": "water_down",
+					"label": "Édulcorer le texte en commission",
+					"hints": [
+						"Elle ne sera au mieux que partiellement tenue",
+						"Des collègues reconnaissants"
+					],
+					"costs": [],
+					"effects": [
+						{ "op": "amendPromise" },
+						{ "op": "advancePromise", "value": 10 },
+						{ "op": "addSupport", "group": "support.apparatus", "value": 3 }
+					]
+				},
+				{
+					"id": "forget",
+					"label": "Laisser le texte s’enliser",
+					"hints": ["Le calme revient dans les couloirs", "La presse finira par s’en apercevoir"],
+					"costs": [],
+					"effects": [
+						{ "op": "abandonPromise" },
+						{ "op": "addSupport", "group": "support.apparatus", "value": 3 },
+						{ "op": "addStat", "stat": "player.exposure", "value": 3 }
+					]
+				}
+			]
+		},
+		{
+			"id": "promise.recall_broken",
+			"category": "campaign",
+			"subject": "promise",
+			"title": "« Vous aviez promis… »",
+			"text": "En pleine campagne, {rival} brandit devant les caméras un vieux tract à votre effigie : « {promise} ». Question posée l’air faussement peiné : qu’est-il advenu de cette belle promesse ?",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 20,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [{ "role": "rival", "tags": ["rival"] }],
+			"choices": [
+				{
+					"id": "own_it",
+					"label": "Assumer : « J’ai changé d’avis, c’est aussi ça, gouverner »",
+					"hints": ["La franchise plaît un peu", "Un moment pénible"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.stress", "value": 3 },
+						{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+						{ "op": "addSupport", "group": "support.working_class", "value": -1 }
+					]
+				},
+				{
+					"id": "blame",
+					"label": "Accuser la conjoncture et vos prédécesseurs",
+					"hints": ["Classique, donc peu convaincant", "L’affaire retombe vite"],
+					"costs": [],
+					"effects": [
+						{ "op": "addSupport", "group": "support.middle_class", "value": -2 },
+						{ "op": "addSupport", "group": "support.working_class", "value": -2 }
+					]
+				},
+				{
+					"id": "counter",
+					"label": "Contre-attaquer sur le bilan de {rival}",
+					"hints": ["Une campagne qui se durcit", "Les caméras adorent"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.exposure", "value": 5 },
+						{ "op": "prepareCampaign", "value": 2 },
+						{
+							"op": "addRelation",
+							"role": "rival",
+							"value": -10,
+							"memory": "Vous avez attaqué son bilan en pleine campagne."
+						}
+					]
+				}
+			]
+		},
+		{
+			"id": "promise.recall_kept",
+			"category": "campaign",
+			"subject": "promise",
+			"title": "Promesse tenue, et ça se sait",
+			"text": "Un reportage de la télévision régionale revient sur votre promesse « {promise} » : elle a été tenue, et des habitants le disent face caméra, sans même qu’on les ait choisis.",
+			"blocking": false,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 0,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [],
+			"effects": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+				{ "op": "prepareCampaign", "value": 3 }
+			]
+		}
+	]
+}

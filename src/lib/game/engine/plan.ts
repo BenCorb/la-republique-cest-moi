@@ -55,6 +55,13 @@ import {
 } from './career.ts';
 import { shiftFamily } from './family.ts';
 import {
+	applyPromiseEffect,
+	expandPromiseEffects,
+	isPromiseEffect,
+	pledgeIssue,
+	promiseIssue
+} from './promises.ts';
+import {
 	applyStaffEffect,
 	dismissIssue,
 	hireIssue,
@@ -255,6 +262,10 @@ function applyStateEffects(
 			const outcome = applyStaffEffect(effect, entourage, turn, target, null, content);
 			entourage = outcome.parts;
 			changes.push(...outcome.changes);
+		} else if (isPromiseEffect(effect)) {
+			const outcome = applyPromiseEffect(effect, career, turn, target, content);
+			career = outcome.parts;
+			changes.push(...outcome.changes);
 		} else if (effect.op === 'setLifestyle') {
 			player = { ...player, lifestyle: effect.lifestyle };
 		} else if (effect.op === 'familyAttitude') {
@@ -285,7 +296,8 @@ function careerOf(state: GameState): CareerParts {
 		mandates: state.mandates,
 		ballots: state.ballots,
 		campaigns: state.campaigns,
-		institutions: state.institutions
+		institutions: state.institutions,
+		promises: state.promises
 	};
 }
 
@@ -451,12 +463,36 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 										staff: workingEntourage.staff,
 										institutions: workingCareer.institutions,
 										facts: state.facts,
-										cases: state.cases
+										cases: state.cases,
+										promises: workingCareer.promises
 									},
 									content
 								)
 							: dismissIssue(target, workingEntourage);
 				if (issue) fail('invalid_target', `« ${label} » : ${issue}`);
+			} else if (definition.target === 'promise') {
+				const issue =
+					target === null
+						? 'choisissez une promesse'
+						: promiseIssue(target, workingCareer, content);
+				if (issue) {
+					fail('invalid_target', `« ${label} » : ${issue}.`);
+				} else {
+					// L'engagement porte les effets d'annonce de sa promesse type.
+					actionEffects = expandPromiseEffects(
+						definition.effects,
+						target,
+						workingCareer.promises,
+						content
+					);
+					ranges = actionEffects.map(effectRange);
+				}
+			} else if (definition.target === 'pledge') {
+				const issue =
+					target === null
+						? 'choisissez une promesse en cours'
+						: pledgeIssue(target, workingCareer.promises);
+				if (issue) fail('invalid_target', `« ${label} » : ${issue}.`);
 			} else if (definition.target === 'mandate') {
 				const held = activeMandates(workingCareer.mandates).some(
 					(mandate) => mandate.instanceId === target
@@ -510,7 +546,8 @@ export function previewPlan(state: GameState, plan: TurnPlan, content: Content):
 			institutions: workingCareer.institutions,
 			staff: workingEntourage.staff,
 			facts: state.facts,
-			cases: state.cases
+			cases: state.cases,
+			promises: workingCareer.promises
 		};
 		if (requires && !evaluateCondition(context, requires)) {
 			fail('condition_not_met', unavailableReason ?? `« ${label} » n’est pas disponible.`);
@@ -721,7 +758,12 @@ export function executePlan(
 			if (!definition) throw new Error(`Action non validée : ${step.id}`);
 			timeUsed += definition.timeCost;
 			for (const cost of definition.costs) add(cost.resource, -cost.amount);
-			const expanded = expandRelease(definition.effects, target, upgrades, content);
+			const expanded = expandRelease(
+				expandPromiseEffects(definition.effects, target, career.promises, content),
+				target,
+				upgrades,
+				content
+			);
 			if (expanded.released !== null) {
 				upgrades.splice(
 					upgrades.findIndex((upgrade) => upgrade.instanceId === expanded.released),

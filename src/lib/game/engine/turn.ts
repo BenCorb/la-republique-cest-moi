@@ -14,6 +14,7 @@
  *   3 bis. revenus et stress des mandats ......................... P2-02
  *   3 ter. salaires et missions de l'entourage ................... P2-05
  *   5. échéances : fins de mandat, scrutins, calendrier ........... P2-02
+ *      puis justice, patrimoine et promesses ...................... P3-01, P3-02, P3-04
  *   6. passage à T+1 (une seule fois), journal du trimestre T,
  *      suites dues et tirage des événements ......................... P1-01, P1-05
  *   7. phase `decision` si un choix bloquant attend, sinon `planning`  P1-01, P1-05
@@ -36,6 +37,7 @@ import { resolveWorld } from './world.ts';
 import { resolveSupports } from './supports.ts';
 import { resolveExposure, resolveJustice } from './justice.ts';
 import { comfortStress, revalueAssets } from './wealth.ts';
+import { resolvePromises } from './promises.ts';
 import { resolveStaffFrontier, resolveStaffProduction } from './staff.ts';
 import { resolveFamily } from './family.ts';
 import type {
@@ -169,7 +171,8 @@ function commitTurn(
 					institutions: production.career.institutions,
 					staff: production.entourage.staff,
 					facts: state.facts,
-					cases: state.cases
+					cases: state.cases,
+					promises: production.career.promises
 				},
 				nextTurn,
 				world.rng,
@@ -259,25 +262,41 @@ function commitTurn(
 			? revalueAssets(execution.upgrades, settled.world, resolvedTurn, settled.rng, content)
 			: null;
 
+	// 5 quater. Promesses : élus ou battus, échéances de réalisation, rappels en campagne.
+	const pledges =
+		settled && wealth
+			? resolvePromises(
+					{
+						player: settled.player,
+						resources: settled.resources,
+						world: settled.world,
+						career: settled.career,
+						rng: wealth.rng
+					},
+					resolvedTurn,
+					content
+				)
+			: null;
+
 	// 6. Passage à T+1, puis suites dues et tirage des événements (sauf fin de carrière).
 	const frontier =
-		settled && !justice!.end
+		settled && pledges
 			? resolveEventFrontier(
 					{
 						turn: nextTurn,
-						player: settled.player,
-						resources: settled.resources,
+						player: pledges.parts.player,
+						resources: pledges.parts.resources,
 						upgrades: wealth!.upgrades,
-						rng: wealth!.rng,
+						rng: pledges.parts.rng,
 						nextInstanceNumber: execution.nextInstanceNumber,
 						events: {
 							...state.events,
-							scheduled: [...state.events.scheduled, ...justice!.scheduled]
+							scheduled: [...state.events.scheduled, ...justice!.scheduled, ...pledges.scheduled]
 						},
-						world: settled.world,
+						world: pledges.parts.world,
 						characters: settled.entourage.characters,
 						relationships: settled.entourage.relationships,
-						career: settled.career,
+						career: pledges.parts.career,
 						staff: settled.entourage.staff,
 						shortlists: settled.entourage.shortlists,
 						facts: settled.facts,
@@ -311,6 +330,7 @@ function commitTurn(
 		exposure: exposure?.delta ?? null,
 		justice: justice?.record ?? null,
 		wealth: wealth?.record ?? null,
+		promises: pledges?.record ?? null,
 		events: frontier?.records ?? []
 	};
 
@@ -350,6 +370,7 @@ function commitTurn(
 				frontier?.career.institutions ??
 				settled?.career.institutions ??
 				production.career.institutions,
+			promises: frontier?.career.promises ?? settled?.career.promises ?? production.career.promises,
 			upgrades: wealth?.upgrades ?? execution.upgrades,
 			facts: frontier?.facts ?? state.facts,
 			cases: settled?.cases ?? state.cases,

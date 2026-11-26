@@ -24,6 +24,7 @@ import {
 	describePendingEvent,
 	hashSeed,
 	previewPlan,
+	promiseIssue,
 	transition,
 	validateSeed,
 	type EndCause,
@@ -34,7 +35,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 11;
+export const SIMULATION_REPORT_VERSION = 12;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -106,6 +107,11 @@ export interface SimulationRun {
 	readonly profession: string;
 	readonly children: number;
 	readonly separations: number;
+	/** Promesses prises, tenues, partiellement tenues et abandonnées (P3-04). */
+	readonly promisesMade: number;
+	readonly promisesKept: number;
+	readonly promisesPartial: number;
+	readonly promisesAbandoned: number;
 	/** Collaborateurs recrutés et départs (démission, renvoi, débauchage…). */
 	readonly staffHired: number;
 	readonly staffDepartures: number;
@@ -203,8 +209,8 @@ export interface SimulationReport {
 	readonly rulesVersion: string;
 	readonly contentVersion: string;
 	readonly config: SimulationConfig;
-	/** Systèmes absents du prototype, donc volontairement non simulés. */
-	readonly unavailableMetrics: readonly ['promises'];
+	/** Systèmes absents du prototype, donc volontairement non simulés (aucun depuis P3-04). */
+	readonly unavailableMetrics: readonly string[];
 	readonly aggregate: SimulationAggregate;
 	readonly runs: readonly SimulationRun[];
 }
@@ -272,6 +278,57 @@ function candidacyWish(
 		if (previewPlan(state, { steps: [step] }, content).valid) return [step];
 	}
 	return [];
+}
+
+/**
+ * Promesses par politique (P3-04) : en campagne, chaque politique candidate prend
+ * jusqu'à `PROMISES_PER_CAMPAIGN` engagements, dans un ordre tiré de la seed ;
+ * élue, elle prépare ses réformes sauf l'ambitieuse, qui promet plus qu'elle ne fait.
+ */
+const PROMISES_PER_CAMPAIGN: Readonly<Record<SimulationStrategy, number>> = {
+	prudent: 1,
+	ambitious: 3,
+	patrimonial: 0,
+	mixed: 2,
+	'random-valid': 2
+};
+const PREPARES_REFORMS: ReadonlySet<SimulationStrategy> = new Set([
+	'prudent',
+	'mixed',
+	'random-valid'
+]);
+
+function promiseWish(
+	strategy: SimulationStrategy,
+	state: GameState,
+	seed: string,
+	content: Content
+): PlanStep[] {
+	const steps: PlanStep[] = [];
+	const prepareId = content.actionIds.find((id) => content.actions[id]?.target === 'pledge');
+	if (prepareId && PREPARES_REFORMS.has(strategy)) {
+		for (const pledge of state.promises) {
+			if (pledge.status === 'in_progress' && pledge.progress < 100) {
+				steps.push({ kind: 'action', id: prepareId, target: pledge.pledgeId });
+			}
+		}
+	}
+	const pledgeId = content.actionIds.find((id) => content.actions[id]?.target === 'promise');
+	const running = state.campaigns.filter((campaign) => campaign.status === 'running');
+	const wanted = PROMISES_PER_CAMPAIGN[strategy];
+	if (pledgeId && wanted > 0 && running.length > 0) {
+		const made = state.promises.filter((pledge) =>
+			running.some((campaign) => campaign.campaignId === pledge.campaignId)
+		).length;
+		const order = [...content.promiseIds].sort(
+			(left, right) => hashSeed(`${seed}:promesse:${left}`) - hashSeed(`${seed}:promesse:${right}`)
+		);
+		const available = order.filter((promiseId) => promiseIssue(promiseId, state, content) === null);
+		for (const promiseId of available.slice(0, Math.max(0, wanted - made))) {
+			steps.push({ kind: 'action', id: pledgeId, target: promiseId });
+		}
+	}
+	return steps;
 }
 
 /**
@@ -364,6 +421,7 @@ function wishesFor(
 	const party = [
 		...partyWish(strategy, state, seed, content),
 		...candidacyWish(strategy, state, content),
+		...promiseWish(strategy, state, seed, content),
 		...hireWish(strategy, state, content)
 	];
 	if (strategy === 'random-valid') return [...party, ...randomWishes(seed, state.turn, content)];
@@ -511,6 +569,10 @@ function finalizeRun(
 		origin: state.player.origin,
 		profession: state.player.profession,
 		children: state.player.family.childrenIds.length,
+		promisesMade: state.promises.length,
+		promisesKept: state.promises.filter((pledge) => pledge.status === 'kept').length,
+		promisesPartial: state.promises.filter((pledge) => pledge.status === 'partial').length,
+		promisesAbandoned: state.promises.filter((pledge) => pledge.status === 'abandoned').length,
 		separations: state.history.reduce(
 			(total, entry) =>
 				total +
@@ -848,7 +910,7 @@ export function simulateBatch(config: SimulationConfig, content: Content): Simul
 		rulesVersion: RULES_VERSION,
 		contentVersion: content.version,
 		config,
-		unavailableMetrics: ['promises'],
+		unavailableMetrics: [],
 		aggregate: aggregateRuns(runs),
 		runs
 	};
@@ -902,6 +964,10 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'profession',
 		'children',
 		'separations',
+		'promisesMade',
+		'promisesKept',
+		'promisesPartial',
+		'promisesAbandoned',
 		'staffHired',
 		'staffDepartures',
 		'finalPopularity',
@@ -951,6 +1017,10 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.profession,
 		run.children,
 		run.separations,
+		run.promisesMade,
+		run.promisesKept,
+		run.promisesPartial,
+		run.promisesAbandoned,
 		run.staffHired,
 		run.staffDepartures,
 		run.finalPopularity,

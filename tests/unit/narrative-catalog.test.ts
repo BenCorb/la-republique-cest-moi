@@ -115,7 +115,12 @@ describe('catalogue narratif du prototype', () => {
 			expect(possible.length).toBeGreaterThan(0);
 			for (const actors of possible) {
 				for (const text of texts(event)) {
-					const rendered = renderTemplate(text, actors, content, game.characters);
+					// Un événement de sujet `promise` reçoit sa promesse du moteur.
+					const withPromise =
+						event.subject === 'promise'
+							? { ...actors, promise: content.promiseIds[0] ?? '' }
+							: actors;
+					const rendered = renderTemplate(text, withPromise, content, game.characters);
 					expect(rendered).not.toMatch(/[{}]|undefined|null/);
 					expect(rendered.trim().length).toBeGreaterThan(0);
 				}

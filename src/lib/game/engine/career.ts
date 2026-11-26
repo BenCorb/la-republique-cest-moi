@@ -40,6 +40,7 @@ import type {
 	MandateEndReason,
 	MandateInstance,
 	PoliticalChange,
+	PromiseRecord,
 	WorldState
 } from './state.ts';
 
@@ -243,6 +244,8 @@ export interface CareerParts {
 	readonly ballots: readonly Ballot[];
 	readonly campaigns: readonly Campaign[];
 	readonly institutions: InstitutionsState;
+	/** Registre des promesses, rattachées aux campagnes (P3-04). */
+	readonly promises: readonly PromiseRecord[];
 }
 
 export function runningCampaigns(campaigns: readonly Campaign[]): Campaign[] {

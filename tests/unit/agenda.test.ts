@@ -13,6 +13,7 @@ import {
 	fixtureProfiles,
 	fixtureJustice,
 	fixtureWealth,
+	fixturePromises,
 	fixtureSupports,
 	fixtureTraits,
 	fixtureUpgrades,
@@ -35,7 +36,8 @@ function validate(actions: unknown) {
 		entourage: fixtureEntourage,
 		profiles: fixtureProfiles,
 		justice: fixtureJustice,
-		wealth: fixtureWealth
+		wealth: fixtureWealth,
+		promises: fixturePromises
 	});
 }
 

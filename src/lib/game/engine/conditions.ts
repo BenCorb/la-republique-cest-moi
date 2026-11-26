@@ -25,6 +25,7 @@ export type ConditionContext = Pick<
 	| 'staff'
 	| 'facts'
 	| 'cases'
+	| 'promises'
 >;
 
 export function readStat(context: ConditionContext, stat: StatId): number {
@@ -90,6 +91,12 @@ export function readStat(context: ConditionContext, stat: StatId): number {
 			return context.upgrades.filter((upgrade) => upgrade.valueCents !== null).length;
 		case 'player.netWorthCents':
 			return netWorth(context.resources, context.upgrades);
+		case 'player.promisesInProgress':
+			return context.promises.filter((pledge) => pledge.status === 'in_progress').length;
+		case 'player.promisesKept':
+			return context.promises.filter((pledge) => pledge.status === 'kept').length;
+		case 'player.promisesBroken':
+			return context.promises.filter((pledge) => pledge.status === 'abandoned').length;
 		default: {
 			const unknown: never = stat;
 			throw new Error(`Statistique inconnue : ${String(unknown)}`);

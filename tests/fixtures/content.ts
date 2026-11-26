@@ -710,6 +710,78 @@ export const fixtureEvents = {
 				choices: [{ id: 'ok', label: 'D’accord', hints: [], costs: [], effects: [] }]
 			}
 		]
+	},
+	// Promesses (P3-04) : dilemme et rappels, programmés par le moteur.
+	'events/promises.json': {
+		events: [
+			{
+				id: 'test.promise_dilemma',
+				category: 'career',
+				subject: 'promise',
+				title: 'Dilemme',
+				text: 'Votre promesse « {promise} » coûte cher.',
+				blocking: true,
+				trigger: 'followUp',
+				weight: 0,
+				priority: 30,
+				cooldownTurns: 0,
+				unique: false,
+				actors: [],
+				choices: [
+					{
+						id: 'hold',
+						label: 'Tenir',
+						hints: [],
+						costs: [],
+						effects: [{ op: 'advancePromise', value: 20 }]
+					},
+					{
+						id: 'amend',
+						label: 'Transiger',
+						hints: [],
+						costs: [],
+						effects: [{ op: 'amendPromise' }, { op: 'advancePromise', value: 10 }]
+					},
+					{
+						id: 'drop',
+						label: 'Renoncer',
+						hints: [],
+						costs: [],
+						effects: [{ op: 'abandonPromise' }]
+					}
+				]
+			},
+			{
+				id: 'test.promise_recall_broken',
+				category: 'campaign',
+				subject: 'promise',
+				title: 'Rappel',
+				text: 'On vous rappelle « {promise} ».',
+				blocking: true,
+				trigger: 'followUp',
+				weight: 0,
+				priority: 20,
+				cooldownTurns: 0,
+				unique: false,
+				actors: [],
+				choices: [{ id: 'ok', label: 'Assumer', hints: [], costs: [], effects: [] }]
+			},
+			{
+				id: 'test.promise_recall_kept',
+				category: 'campaign',
+				subject: 'promise',
+				title: 'Promesse tenue',
+				text: '« {promise} » a été tenue.',
+				blocking: false,
+				trigger: 'followUp',
+				weight: 0,
+				priority: 0,
+				cooldownTurns: 0,
+				unique: false,
+				actors: [],
+				effects: [{ op: 'addSupport', group: 'support.workers', value: 2 }]
+			}
+		]
 	}
 };
 
@@ -921,6 +993,61 @@ export const fixtureJustice = {
 };
 
 /** Trains de vie de test : le sobre est gratuit et sans effet (tests existants inchangés). */
+/** Promesses de test (P3-04) : effets lisibles, pas de rappel par défaut. */
+export const fixturePromises = {
+	balance: {
+		maxPerCampaign: 2,
+		announcePreparation: 3,
+		deliveryTurns: 6,
+		dilemmaDelayTurns: { min: 2, max: 2 },
+		partialProgress: 50,
+		recallPercent: 0,
+		maxRecalls: 2,
+		recallEvents: { kept: 'test.promise_recall_kept', abandoned: 'test.promise_recall_broken' }
+	},
+	promises: [
+		{
+			id: 'promise.test_tax',
+			label: 'Baisser les impôts',
+			theme: 'Fiscalité',
+			description: 'Promesse de test.',
+			elections: ['election.local', 'election.national'],
+			dilemmaEvent: 'test.promise_dilemma',
+			announce: [{ op: 'addSupport', group: 'support.owners', value: 2 }],
+			kept: [{ op: 'addSupport', group: 'support.owners', value: 5 }],
+			partial: [{ op: 'addSupport', group: 'support.owners', value: 1 }],
+			abandoned: [
+				{ op: 'addSupport', group: 'support.owners', value: -6 },
+				{ op: 'addResource', resource: 'influence', value: 1 }
+			]
+		},
+		{
+			id: 'promise.test_school',
+			label: 'Rénover l’école',
+			theme: 'Services publics',
+			description: 'Promesse de test.',
+			elections: ['election.local'],
+			dilemmaEvent: 'test.promise_dilemma',
+			announce: [{ op: 'addSupport', group: 'support.workers', value: 2 }],
+			kept: [{ op: 'addSupport', group: 'support.workers', value: 4 }],
+			partial: [],
+			abandoned: [{ op: 'addSupport', group: 'support.workers', value: -4 }]
+		},
+		{
+			id: 'promise.test_national',
+			label: 'Réformer l’État',
+			theme: 'Institutions',
+			description: 'Promesse de test.',
+			elections: ['election.national'],
+			dilemmaEvent: 'test.promise_dilemma',
+			announce: [],
+			kept: [],
+			partial: [],
+			abandoned: []
+		}
+	]
+};
+
 export const fixtureWealth = {
 	lifestyles: [
 		{
@@ -960,7 +1087,8 @@ function load(): Content {
 		entourage: fixtureEntourage,
 		profiles: fixtureProfiles,
 		justice: fixtureJustice,
-		wealth: fixtureWealth
+		wealth: fixtureWealth,
+		promises: fixturePromises
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;
