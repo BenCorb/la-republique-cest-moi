@@ -23,6 +23,8 @@
  */
 import {
 	GAUGE_IDS,
+	INCUMBENT_VARIABLE,
+	POST_VARIABLE,
 	PROMISE_VARIABLE,
 	RESOURCE_IDS,
 	WORLD_TEMPLATE_VARIABLES,
@@ -39,7 +41,7 @@ import type { Turn } from './calendar.ts';
 import type { ChooseEventCommand, CommandError, TransitionResult } from './commands.ts';
 import { evaluateCondition, type ConditionContext } from './conditions.ts';
 import { applyGauge, gaugeKey, resolveEffect } from './effects.ts';
-import { createFact } from './justice.ts';
+import { createFact, factIssue } from './justice.ts';
 import { nextFloat, nextInt, type RngState } from './random.ts';
 import {
 	addRelation,
@@ -54,7 +56,14 @@ import {
 import { applyPoliticalEffect, oppositionPartyId } from './world.ts';
 import { inEras } from './eras.ts';
 import { applyCareerEffect, careerEffectIssue, type CareerParts } from './career.ts';
-import { staffLeavesByEvent } from './staff.ts';
+import {
+	applyPostEffect,
+	bindEventPost,
+	postEffectIssue,
+	staffLeavesByEvent,
+	type PostBinding,
+	type PostEffect
+} from './staff.ts';
 import { applyPromiseEffect, expandPromiseEffects } from './promises.ts';
 import { applyFamilyEffect } from './family.ts';
 import type {
@@ -96,6 +105,8 @@ export function actorName(
 	if (Object.hasOwn(content.cast, id)) return content.cast[id]?.name;
 	// Promesse concernée par un événement de sujet `promise` (P3-04).
 	if (Object.hasOwn(content.promises, id)) return content.promises[id]?.label;
+	// Poste concerné par un événement de sujet `post` (P3-12).
+	if (Object.hasOwn(content.posts, id)) return content.posts[id]?.label;
 	return undefined;
 }
 
@@ -108,7 +119,10 @@ export function renderTemplate(
 ): string {
 	return text.replace(
 		TEMPLATE_VARIABLE,
-		(match, role: string) => actorName(actors[role], content, characters) ?? match
+		(match, role: string) =>
+			actorName(actors[role], content, characters) ??
+			// Poste vacant (P3-12) : le choix de remplacement reste lisible, et indisponible.
+			(role === INCUMBENT_VARIABLE ? 'le titulaire' : match)
 	);
 }
 
@@ -198,6 +212,18 @@ interface EffectOutcome extends EffectParts {
 	readonly people: readonly PeopleChange[];
 }
 
+/** Parties de l'état lues par les conditions mais jamais modifiées par un effet automatique. */
+type FixedContext = Pick<ConditionContext, 'upgrades' | 'cases'>;
+
+/** Poste lié à l'instance (sujet `post`) et acteur visé par un effet de poste (P3-12). */
+function postBinding(effect: PostEffect, actors: Readonly<Record<string, string>>): PostBinding {
+	return {
+		postId: actors[POST_VARIABLE] ?? null,
+		incumbentId: actors[INCUMBENT_VARIABLE] ?? null,
+		actorId: actors[effect.role] ?? null
+	};
+}
+
 function applyAutomaticEffects(
 	effects: readonly Effect[],
 	costs: readonly ResourceAmount[],
@@ -205,11 +231,25 @@ function applyAutomaticEffects(
 	actors: Readonly<Record<string, string>>,
 	eventId: string,
 	turn: Turn,
+	fixed: FixedContext,
 	content: Content
 ): EffectOutcome {
 	const current: Record<ResourceId, number> = { ...parts.resources };
-	let { player, world, characters, relationships, career, staff, facts, rng } = parts;
-	const { shortlists } = parts;
+	let { player, world, characters, relationships, career, staff, shortlists, facts, rng } = parts;
+	const context = (): ConditionContext => ({
+		turn,
+		player,
+		resources: current,
+		upgrades: fixed.upgrades,
+		world,
+		mandates: career.mandates,
+		campaigns: career.campaigns,
+		institutions: career.institutions,
+		staff,
+		facts,
+		cases: fixed.cases,
+		promises: career.promises
+	});
 	const politics: PoliticalChange[] = [];
 	const people: PeopleChange[] = [];
 	const deltas = new Map<ResourceId, number>();
@@ -289,9 +329,22 @@ function applyAutomaticEffects(
 		} else if (resolved.kind === 'lifestyle') {
 			player = { ...player, lifestyle: resolved.effect.lifestyle };
 		} else if (resolved.kind === 'fact') {
+			// Garde du registre (P3-12) : sans la capacité exigée, aucun fait n'est inscrit.
+			if (factIssue(resolved.effect, context(), actors, content) !== null) continue;
 			const fact = createFact(resolved.effect, facts, actors, eventId, turn);
 			facts = [...facts, fact];
 			politics.push({ kind: 'fact', factId: fact.factId, offenseId: fact.offenseId });
+		} else if (resolved.kind === 'post') {
+			const outcome = applyPostEffect(
+				resolved.effect,
+				postBinding(resolved.effect, actors),
+				{ staff, shortlists, characters, relationships },
+				turn,
+				context(),
+				content
+			);
+			({ staff, shortlists, characters, relationships } = outcome.parts);
+			politics.push(...outcome.changes);
 		} else if (resolved.kind === 'promise') {
 			const outcome = applyPromiseEffect(resolved.effect, career, turn, promiseTarget, content);
 			career = outcome.parts;
@@ -465,9 +518,9 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		relationships,
 		career,
 		staff,
+		shortlists,
 		facts
 	} = input;
-	const { shortlists } = input;
 	const pool = (): CastPool => ({ characters, relationships });
 	const turn = input.turn;
 	const pending: EventInstance[] = [...input.events.pending];
@@ -491,6 +544,28 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 		cases: input.cases,
 		promises: career.promises
 	});
+
+	/**
+	 * Poste d'un événement de sujet `post` (P3-12) : hérité d'une origine qui en
+	 * traitait, sinon lié à la création ; `null` si aucun poste n'est débloqué.
+	 */
+	const postVariables = (
+		definition: EventDefinition,
+		inherited: Readonly<Record<string, string>>
+	): Record<string, string> | null => {
+		if (definition.subject !== 'post') return {};
+		const kept = inherited[POST_VARIABLE];
+		if (kept !== undefined) {
+			const incumbent = inherited[INCUMBENT_VARIABLE];
+			return { [POST_VARIABLE]: kept, ...(incumbent ? { [INCUMBENT_VARIABLE]: incumbent } : {}) };
+		}
+		const binding = bindEventPost(staff, context(), content);
+		if (!binding) return null;
+		return {
+			[POST_VARIABLE]: binding.postId,
+			...(binding.incumbentId ? { [INCUMBENT_VARIABLE]: binding.incumbentId } : {})
+		};
+	};
 
 	const create = (definition: EventDefinition, actors: Record<string, string>): void => {
 		const instance: EventInstance = {
@@ -544,9 +619,21 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 			actors,
 			definition.id,
 			turn,
+			{ upgrades: input.upgrades, cases: input.cases },
 			content
 		);
-		({ resources, player, rng, world, characters, relationships, career, staff, facts } = outcome);
+		({
+			resources,
+			player,
+			rng,
+			world,
+			characters,
+			relationships,
+			career,
+			staff,
+			shortlists,
+			facts
+		} = outcome);
 		records.push({
 			eventId: definition.id,
 			instanceId: instance.instanceId,
@@ -598,10 +685,16 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 			cancel(entry, 'Aucun acteur disponible pour cette suite.');
 			continue;
 		}
+		const post = postVariables(definition, entry.actors);
+		if (!post) {
+			cancel(entry, 'Aucun poste d’entourage n’est concerné.');
+			continue;
+		}
 		rng = resolved.rng;
 		create(definition, {
 			...resolved.actors,
 			...bound,
+			...post,
 			...(definition.subject === 'promise' && promise !== undefined
 				? { [PROMISE_VARIABLE]: promise }
 				: {})
@@ -634,6 +727,7 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 			if (!inEras(definition.eras, turn, content)) return [];
 			if (!inWindow(definition, turn) || !conditionHolds(definition, context())) return [];
 			if (!actorsAvailable(definition, pool())) return [];
+			if (postVariables(definition, {}) === null) return [];
 			return [definition];
 		});
 		// Chaque occurrence passée réduit le poids (P3-07) ; sans pénalité, le poids du catalogue.
@@ -659,10 +753,11 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 
 		const resolved = resolveActors(chosen, {}, rng, pool());
 		const bound = bindWorldVariables(chosen, {}, player, world, content);
-		if (!resolved || !bound) continue;
+		const post = postVariables(chosen, {});
+		if (!resolved || !bound || !post) continue;
 		rng = resolved.rng;
 		drawnThisTurn.add(chosen.id);
-		create(chosen, { ...resolved.actors, ...bound });
+		create(chosen, { ...resolved.actors, ...bound, ...post });
 	}
 
 	// File des événements bloquants : priorité décroissante, puis ordre de création.
@@ -707,7 +802,8 @@ export interface ChoiceAvailability {
 export function choiceAvailability(
 	choice: EventChoice,
 	state: GameState,
-	content?: Content
+	content?: Content,
+	actors: Readonly<Record<string, string>> = {}
 ): ChoiceAvailability {
 	if (choice.requires && !evaluateCondition(state, choice.requires)) {
 		return {
@@ -730,6 +826,26 @@ export function choiceAvailability(
 	for (const effect of choice.effects) {
 		const issue = careerEffectIssue(effect, career, content ?? null, state.player, state.turn);
 		if (issue) return { available: false, reason: issue };
+	}
+	if (!content) return { available: true, reason: null };
+	// Postes et registre (P3-12), dans l'ordre des effets : une embauche du même
+	// choix rend possible l'emploi fictif qui la suit.
+	let entourage = {
+		staff: state.staff,
+		shortlists: state.shortlists,
+		characters: state.characters,
+		relationships: state.relationships
+	};
+	for (const effect of choice.effects) {
+		if (effect.op === 'hireActor' || effect.op === 'shortlistActor') {
+			const binding = postBinding(effect, actors);
+			const issue = postEffectIssue(effect, binding, entourage, state, content);
+			if (issue) return { available: false, reason: issue };
+			entourage = applyPostEffect(effect, binding, entourage, state.turn, state, content).parts;
+		} else if (effect.op === 'recordFact') {
+			const issue = factIssue(effect, { ...state, staff: entourage.staff }, actors, content);
+			if (issue) return { available: false, reason: issue };
+		}
 	}
 	return { available: true, reason: null };
 }
@@ -763,7 +879,7 @@ export function chooseEvent(
 	}
 	const choice = definition.choices.find((candidate) => candidate.id === command.choiceId);
 	if (!choice) return reject(state, 'unknown_choice', 'Ce choix n’existe pas pour cet événement.');
-	const availability = choiceAvailability(choice, state, content);
+	const availability = choiceAvailability(choice, state, content, instance.actors);
 	if (!availability.available) {
 		return reject(state, 'choice_unavailable', availability.reason ?? 'Choix indisponible.');
 	}
@@ -792,6 +908,7 @@ export function chooseEvent(
 		instance.actors,
 		instance.eventId,
 		state.turn,
+		{ upgrades: state.upgrades, cases: state.cases },
 		content
 	);
 	// Rencontre : chaque acteur encore actif peut laisser voir un trait caché.
@@ -878,6 +995,7 @@ export function chooseEvent(
 			institutions: outcome.career.institutions,
 			promises: outcome.career.promises,
 			staff: outcome.staff,
+			shortlists: outcome.shortlists,
 			facts: outcome.facts,
 			rng: outcome.rng,
 			phase: deathCause ? 'ended' : remaining.length > 0 ? 'decision' : 'planning',
@@ -948,7 +1066,7 @@ export function describePendingEvent(state: GameState, content: Content): Pendin
 			label: render(choice.label),
 			hints: choice.hints.map(render),
 			costs: choice.costs,
-			...choiceAvailability(choice, state, content)
+			...choiceAvailability(choice, state, content, instance.actors)
 		})),
 		remaining: state.events.pending.length - 1
 	};

@@ -278,6 +278,18 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 				act('organization.fundraising'),
 				act('personal.freelance'),
 				act('personal.rest')
+			],
+			// Candidat sans étiquette, proche des milieux d'affaires : les faveurs d'un
+			// maire et d'un élu exigent un mandat (P3-12).
+			[
+				CANDIDACY,
+				act('organization.gala'),
+				buy('organization.donor_file'),
+				HIRE,
+				act('campaign.canvass'),
+				act('organization.fundraising'),
+				act('network.meet_officials'),
+				act('personal.freelance')
 			]
 		];
 		const seen = new Set<string>();
@@ -291,6 +303,9 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 				}
 			}
 		});
-		expect(content.eventIds.filter((id) => !seen.has(id))).toEqual([]);
+		// Le permis signé par un maire (P3-12) est trop rare pour ces stratégies :
+		// la chaîne jusqu'à l'enquête est couverte par `tests/unit/capabilities.test.ts`.
+		const targeted = new Set(['press.donor_investigation']);
+		expect(content.eventIds.filter((id) => !seen.has(id) && !targeted.has(id))).toEqual([]);
 	});
 });

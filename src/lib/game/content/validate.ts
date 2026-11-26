@@ -35,11 +35,14 @@ import {
 	PARTY_REFERENCES,
 	START_YEAR,
 	PROMISE_VARIABLE,
+	POST_VARIABLE,
+	INCUMBENT_VARIABLE,
 	TREASURY_IDS,
 	WORLD_TEMPLATE_VARIABLES,
 	type ActionDefinition,
 	type Balance,
 	type CastMember,
+	type CapabilityId,
 	type Condition,
 	type Content,
 	type Effect,
@@ -311,7 +314,10 @@ interface Refs {
 	readonly groups: ReadonlySet<string>;
 	readonly origins: ReadonlySet<string>;
 	readonly professions: ReadonlySet<string>;
-	readonly offenses: ReadonlySet<string>;
+	/** Infractions et capacité exigée de leur auteur (P3-12). */
+	readonly offenses: ReadonlyMap<string, CapabilityId>;
+	/** Profils de candidats de l'entourage. */
+	readonly candidateProfiles: ReadonlySet<string>;
 	readonly lifestyles: ReadonlySet<string>;
 	readonly media: ReadonlySet<string>;
 	readonly upgrades: ReadonlySet<string>;
@@ -404,6 +410,16 @@ function conditionIssues(
 							message: `groupe de soutien inconnu : ${condition.group}`
 						}
 					];
+		case 'capability':
+			return condition.capability === 'real_hire'
+				? [
+						{
+							source,
+							path: `${path}.capability`,
+							message: 'l’embauche réelle se vérifie sur l’effet d’embauche, pas en condition'
+						}
+					]
+				: [];
 		case 'holdsMandate':
 		case 'canHoldMandate':
 			return refs.mandates.has(condition.mandate)
@@ -427,7 +443,9 @@ function effectIssues(
 	path: string,
 	roles: ReadonlySet<string> | null = null,
 	/** Événement de sujet `promise` : il agit sur la promesse que le moteur lui transmet. */
-	promiseSubject = false
+	promiseSubject = false,
+	/** Événement de sujet `post` : il agit sur le poste lié à sa création (P3-12). */
+	postSubject = false
 ): ContentIssue[] {
 	const issues: ContentIssue[] = [];
 	effects.forEach((effect, index) => {
@@ -646,6 +664,31 @@ function effectIssues(
 					});
 				}
 				break;
+			case 'hireActor':
+			case 'shortlistActor':
+				if (roles === null || !postSubject) {
+					issues.push({
+						source,
+						path: at,
+						message: 'embauche d’un acteur réservée aux événements de sujet « post »'
+					});
+					break;
+				}
+				if (!roles.has(effect.role)) {
+					issues.push({
+						source,
+						path: at,
+						message: `rôle inconnu de l’événement : ${effect.role}`
+					});
+				}
+				if (effect.op === 'shortlistActor' && !refs.candidateProfiles.has(effect.profile)) {
+					issues.push({
+						source,
+						path: `${at}.profile`,
+						message: `profil de candidat inconnu : ${effect.profile}`
+					});
+				}
+				break;
 			case 'recordFact': {
 				if (!refs.offenses.has(effect.offense)) {
 					issues.push({
@@ -700,6 +743,60 @@ export function requiresAffiliation(condition: Condition | undefined): boolean {
 		default:
 			return false;
 	}
+}
+
+/** Conditions imposées en conjonction (directement ou dans un `all`), sans `any` ni `not`. */
+function requiredCapabilities(condition: Condition | undefined): CapabilityId[] {
+	if (!condition) return [];
+	if (condition.op === 'capability') return [condition.capability];
+	if (condition.op === 'all') return condition.conditions.flatMap(requiredCapabilities);
+	return [];
+}
+
+/**
+ * Garde statique du registre (P3-12) : chaque fait exige la capacité de son
+ * infraction dans la condition de l'événement ou du choix ; un emploi fictif
+ * exige une embauche antérieure, dans le même choix, de l'un de ses protagonistes.
+ */
+function capabilityIssues(
+	effects: readonly Effect[],
+	conditions: readonly (Condition | undefined)[],
+	refs: Refs,
+	source: string,
+	path: string
+): ContentIssue[] {
+	const issues: ContentIssue[] = [];
+	const imposed = new Set(conditions.flatMap(requiredCapabilities));
+	effects.forEach((effect, index) => {
+		if (effect.op !== 'recordFact') return;
+		const capability = refs.offenses.get(effect.offense);
+		if (capability === undefined) return;
+		if (capability === 'real_hire') {
+			const cited = [
+				...(effect.author === undefined ? [] : [effect.author]),
+				...(effect.accomplices ?? [])
+			];
+			const hired = effects
+				.slice(0, index)
+				.some((earlier) => earlier.op === 'hireActor' && cited.includes(earlier.role));
+			if (!hired) {
+				issues.push({
+					source,
+					path: `${path}[${index}]`,
+					message: `${effect.offense} exige l’embauche réelle d’un protagoniste (hireActor) avant le fait`
+				});
+			}
+			return;
+		}
+		if (!imposed.has(capability)) {
+			issues.push({
+				source,
+				path: `${path}[${index}]`,
+				message: `${effect.offense} exige la capacité « ${capability} » dans la condition de l’événement ou du choix`
+			});
+		}
+	});
+	return issues;
 }
 
 function crossCheckPolitics(
@@ -760,6 +857,7 @@ function crossCheckPolitics(
 		issues.push(...conditionIssues(event.when, refs, source, `${path}.when`));
 		const roles = new Set(event.actors.map((slot) => slot.role));
 		const subject = event.subject === 'promise';
+		const post = event.subject === 'post';
 		if (event.blocking) {
 			event.choices.forEach((choice, choiceIndex) => {
 				const choicePath = `${path}.choices[${choiceIndex}]`;
@@ -772,13 +870,26 @@ function crossCheckPolitics(
 						source,
 						`${choicePath}.effects`,
 						roles,
-						subject
+						subject,
+						post
+					)
+				);
+				issues.push(
+					...capabilityIssues(
+						choice.effects,
+						[event.when, choice.requires],
+						refs,
+						source,
+						`${choicePath}.effects`
 					)
 				);
 			});
 		} else {
 			issues.push(
-				...effectIssues(event.effects, refs, null, source, `${path}.effects`, roles, subject)
+				...effectIssues(event.effects, refs, null, source, `${path}.effects`, roles, subject, post)
+			);
+			issues.push(
+				...capabilityIssues(event.effects, [event.when], refs, source, `${path}.effects`)
 			);
 		}
 	}
@@ -1101,6 +1212,13 @@ function crossCheckEvents(
 					message: `rôle réservé à la promesse concernée : ${slot.role}`
 				});
 			}
+			if (slot.role === POST_VARIABLE || slot.role === INCUMBENT_VARIABLE) {
+				issues.push({
+					source,
+					path: `${path}.actors[${slotIndex}].role`,
+					message: `rôle réservé au poste concerné : ${slot.role}`
+				});
+			}
 			if (roles.has(slot.role)) {
 				issues.push({
 					source,
@@ -1166,6 +1284,16 @@ function crossCheckEvents(
 							source,
 							path: textPath,
 							message: `{${role}} exige une condition imposant l’adhésion du joueur`
+						});
+					}
+					continue;
+				}
+				if (role === POST_VARIABLE || role === INCUMBENT_VARIABLE) {
+					if (event.subject !== 'post') {
+						issues.push({
+							source,
+							path: textPath,
+							message: `{${role}} réservé aux événements de sujet « post »`
 						});
 					}
 					continue;
@@ -1424,7 +1552,10 @@ export function validateContent(raw: RawContent): ContentValidation {
 		parties: new Set(world.data.parties.map((party) => party.id)),
 		mandates: new Set(career.mandates.map((mandate) => mandate.id)),
 		elections: new Set(career.elections.map((election) => election.id)),
-		offenses: new Set(justiceCatalog.data.offenses.map((offense) => offense.id)),
+		offenses: new Map(
+			justiceCatalog.data.offenses.map((offense) => [offense.id, offense.capability])
+		),
+		candidateProfiles: new Set(entourageCatalog.data.profiles.map((profile) => profile.id)),
 		lifestyles: new Set(wealthCatalog.data.lifestyles.map((lifestyle) => lifestyle.id)),
 		media: new Set(mediaCatalog.data.media.map((media) => media.id)),
 		upgrades: new Set(upgradeList.map((upgrade) => upgrade.id)),

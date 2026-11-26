@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.29.0';
+export const RULES_VERSION = '0.30.0';
 
 export {
 	START_YEAR,
@@ -122,7 +122,9 @@ export {
 } from './family.ts';
 export {
 	activeStaff,
+	applyPostEffect,
 	applyStaffEffect,
+	bindEventPost,
 	dismissIssue,
 	hireIssue,
 	hireReserveCents,
@@ -130,6 +132,7 @@ export {
 	missionIssue,
 	occupantOf,
 	pollingCompetence,
+	postEffectIssue,
 	postUnlocked,
 	resolveStaffFrontier,
 	resolveStaffProduction,
@@ -253,7 +256,7 @@ export {
 	type ProducerForecast,
 	type ProducerStatus
 } from './economy.ts';
-export { evaluateCondition, readStat, type ConditionContext } from './conditions.ts';
+export { evaluateCondition, hasCapability, readStat, type ConditionContext } from './conditions.ts';
 export {
 	applyGauge,
 	clampGauge,
@@ -333,6 +336,7 @@ export {
 	convictionPercent,
 	createFact,
 	currentJudicialRisk,
+	factIssue,
 	dismissalPercent,
 	openCases,
 	resolveJustice,
