@@ -3367,9 +3367,12 @@ export function projectView(
 		);
 		const filingLeft = ballot.filingClosesTurn - state.turn;
 		// Les candidatures ferment avant le scrutin : l'alerte suit la plus proche des deux échéances.
+		// Niveaux (retour du créateur, P3-13) : « à traiter » seulement quand il faut agir ce
+		// trimestre — dernier dépôt de candidature, ou scrutin où vous êtes candidat en fin de
+		// trimestre ; le reste du calendrier reste une information.
 		if (!candidate && filingLeft >= 0 && filingLeft <= lead) {
 			alerts.push({
-				level: 'info',
+				level: filingLeft === 0 ? 'warning' : 'info',
 				text:
 					filingLeft === 0
 						? `${label} : dernier trimestre pour déposer une candidature.`
@@ -3379,7 +3382,7 @@ export function projectView(
 		}
 		if (left > lead) continue;
 		alerts.push({
-			level: 'info',
+			level: candidate && left === 0 ? 'warning' : 'info',
 			text:
 				left === 0
 					? `${label} à la fin de ce trimestre.`

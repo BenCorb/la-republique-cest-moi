@@ -184,6 +184,15 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByRole('banner').getByTestId('press-item')).toContainText(
 			'Le Courrier du Bocage'
 		);
+		// Titre trop long pour sa place : il défile, sauf sous prefers-reduced-motion.
+		const ticker = page.getByRole('banner').getByTestId('press-item').locator('.ticker-text');
+		const overflows = await ticker.evaluate(
+			(element) => element.scrollWidth > (element.parentElement?.clientWidth ?? 0)
+		);
+		if (overflows) {
+			await expect(ticker).toHaveClass(/is-scrolling/);
+			await expect(ticker).not.toHaveCSS('animation-name', 'none');
+		}
 		await page.getByRole('banner').getByTestId('press-item').click();
 		await expect(page.getByRole('heading', { name: 'Actualités' })).toBeVisible();
 	});

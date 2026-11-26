@@ -24,6 +24,7 @@
 	import HeaderStat from './HeaderStat.svelte';
 	import PlanNotebook from './PlanNotebook.svelte';
 	import PlanSheet from './PlanSheet.svelte';
+	import PressTicker from './PressTicker.svelte';
 	import type { GameTab } from './tabs.ts';
 	import TurnControls from './TurnControls.svelte';
 
@@ -128,7 +129,9 @@
 							>
 								{headline.media}
 							</span>
-							<span class="truncate font-serif">{headline.title}</span>
+							<span class="flex min-w-0 flex-1 font-serif">
+								<PressTicker text={headline.title} />
+							</span>
 							<span class="sr-only">— lire les actualités</span>
 							<ArrowRight class="size-3.5 shrink-0 text-primary" aria-hidden="true" />
 						</button>
