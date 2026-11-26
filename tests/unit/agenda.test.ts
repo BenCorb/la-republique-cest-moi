@@ -73,12 +73,17 @@ describe('agenda regroupé par thème', () => {
 		expect(activism.outOfReach.map((action) => action.id)).toEqual(['activism.public_meeting']);
 		expect(activism.outOfReach[0]?.outOfReach).toBe(true);
 		expect(activism.outOfReach[0]?.reason).toContain('10 points d’influence');
-		// Les actions d'autres professions sont hors de portée (profil par défaut : enseignement).
+		// Les actions d'autres terrains sont hors de portée (profil par défaut : vie associative).
 		const work = view.actionGroups.find((group) => group.id === 'work')!;
 		expect(work.actions.map((action) => action.id)).toEqual([
 			'personal.freelance',
-			'profession.evening_classes'
+			'engagement.association.coordination',
+			'engagement.association.drive'
 		]);
+		expect(work.outOfReach.map((action) => action.id)).toContain('engagement.union.office');
+		expect(work.outOfReach.find((action) => action.id === 'engagement.union.office')?.reason).toBe(
+			'Réservé à qui vient du syndicalisme.'
+		);
 	});
 
 	it('garde visible, grisée, une action seulement bloquée ce trimestre', () => {

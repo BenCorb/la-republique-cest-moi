@@ -250,7 +250,7 @@ describe('instrumentation du contenu (P3-15)', () => {
 			content
 		);
 		const { aggregate } = report;
-		expect(report.reportVersion).toBe(18);
+		expect(report.reportVersion).toBe(19);
 		expect(aggregate.repeatedEvents.max).toBeGreaterThanOrEqual(0);
 		expect(aggregate.headlines.length).toBeGreaterThan(0);
 		const categories = aggregate.coverage.categories;

@@ -24,7 +24,7 @@ const context: ConditionContext = {
 		supports: {},
 		popularity: 0,
 		origin: 'origin.neutral',
-		profession: 'profession.none',
+		engagement: 'engagement.none',
 		territory: {
 			regionId: 'region.test',
 			departmentCode: '14',
