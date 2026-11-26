@@ -17,11 +17,9 @@
 	} from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
 	import AlertList from '#lib/components/common/AlertList.svelte';
-	import CalendarDate from '#lib/components/common/CalendarDate.svelte';
-	import ResourceTile from '#lib/components/common/ResourceTile.svelte';
-	import StatBar from '#lib/components/common/StatBar.svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 	import SaveBanner from './SaveBanner.svelte';
+	import HeaderStat from './HeaderStat.svelte';
 	import type { GameTab } from './tabs.ts';
 	import TurnControls from './TurnControls.svelte';
 
@@ -63,78 +61,93 @@
 
 {#if view}
 	<div class="grid h-dvh grid-rows-[auto_1fr_auto]">
-		<header class="relative border-b border-line bg-surface px-5 pt-3.5 pb-3">
-			<div class="tricolor-rule absolute inset-x-0 top-0 h-1" aria-hidden="true"></div>
-			<div class="flex flex-wrap items-center gap-x-5 gap-y-3">
-				<div class="flex items-center gap-3">
-					<CalendarDate label={view.dateLabel} />
-					<div class="flex min-w-0 flex-col gap-1">
-						<h1
-							class="flex items-center gap-1.5 text-xs font-bold tracking-wider text-primary uppercase"
+		<header class="border-b border-line bg-surface">
+			<div class="tricolor-rule h-1" aria-hidden="true"></div>
+			<!-- Bande d'identité : marque alignée sur la navigation, puis le personnage. -->
+			<div class="grid h-9 grid-cols-[200px_minmax(0,1fr)] items-center border-b border-line">
+				<h1
+					class="flex items-center gap-1.5 px-5 text-[11px] font-bold tracking-wider whitespace-nowrap text-primary uppercase"
+				>
+					<Landmark class="size-3.5 shrink-0" aria-hidden="true" />
+					La République, c’est moi !
+				</h1>
+				<div class="flex min-w-0 items-center gap-4 px-4 text-sm">
+					<span
+						class="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-2 py-px text-xs font-semibold text-surface"
+						data-testid="header-function"
+					>
+						<BadgeCheck class="size-3" aria-hidden="true" />
+						<span class="sr-only">Fonction</span>
+						{view.career.mainFunction}
+					</span>
+					<span class="inline-flex shrink-0 items-center gap-1.5" data-testid="header-party">
+						<Flag class="size-3.5 text-muted" aria-hidden="true" />
+						<span class="text-muted">Étiquette</span>
+						<span class="font-semibold">{view.world.partyAcronym ?? 'aucune'}</span>
+					</span>
+					<span
+						class="inline-flex min-w-0 items-center gap-1.5"
+						data-testid="header-territory"
+						title={view.territory.description}
+					>
+						<MapPin class="size-3.5 shrink-0 text-muted" aria-hidden="true" />
+						<span class="sr-only">Origine</span>
+						<span class="truncate">
+							<span class="font-semibold">{view.territory.town}</span>
+							<span class="text-muted">
+								({view.territory.department}, {view.territory.region})
+							</span>
+						</span>
+					</span>
+				</div>
+			</div>
+			<!-- Bande des indicateurs : date dans la colonne de la navigation, puis six cellules égales. -->
+			<div class="grid grid-cols-[200px_minmax(0,1fr)]">
+				<div class="flex flex-col justify-center gap-1 border-r border-line px-5 py-2.5">
+					<p class="text-[11px] font-bold tracking-wider text-muted uppercase" aria-hidden="true">
+						Trimestre
+					</p>
+					<p data-testid="game-date" class="leading-none">
+						<span class="block font-display text-xl font-bold">{view.dateLabel}</span><span
+							class="sr-only"
 						>
-							<Landmark class="size-3.5 shrink-0" aria-hidden="true" />
-							La République, c’est moi !
-						</h1>
-						<p class="font-display text-lg leading-tight font-bold" data-testid="game-date">
-							<span class="sr-only">{`${view.dateLabel} · `}</span>{view.age} ans
-						</p>
-						<div class="flex flex-wrap items-center gap-1.5 text-xs">
-							<span
-								class="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-px font-semibold text-surface"
-								data-testid="header-function"
-							>
-								<BadgeCheck class="size-3" aria-hidden="true" />
-								<span class="sr-only">Fonction</span>
-								{view.career.mainFunction}
-							</span>
-							<span
-								class="inline-flex items-center gap-1 rounded-full border border-line bg-canvas px-2 py-px font-semibold"
-								data-testid="header-party"
-							>
-								<Flag class="size-3 text-muted" aria-hidden="true" />
-								<span class="sr-only">Étiquette</span>
-								{view.world.partyAcronym ?? 'aucune'}
-							</span>
-							<span
-								class="inline-flex items-center gap-1 text-muted"
-								data-testid="header-territory"
-								title={view.territory.description}
-							>
-								<MapPin class="size-3" aria-hidden="true" />
-								<span class="sr-only">Origine</span>
-								<span class="font-semibold text-ink">{view.territory.town}</span>
-								<span>({view.territory.department}, {view.territory.region})</span>
-							</span>
-						</div>
-					</div>
+							&nbsp;·&nbsp;
+						</span><span class="mt-1 block text-xs text-muted">{view.age} ans</span>
+					</p>
 				</div>
-				<div class="flex flex-wrap gap-2" role="group" aria-label="Ressources">
+				<dl
+					class="grid grid-cols-6 divide-x divide-line max-[1100px]:grid-cols-3"
+					aria-label="Ressources et jauges"
+				>
 					{#each view.resources as resource (resource.id)}
-						<ResourceTile {resource} />
+						<HeaderStat
+							identity={resource.id}
+							label={resource.name}
+							value={resource.value}
+							forecast={{ text: resource.forecast, trend: resource.trend }}
+							testId="resource-{resource.id}"
+						/>
 					{/each}
-				</div>
-				<div class="ml-auto grid grid-cols-3 gap-4">
-					<div class="w-40">
-						<StatBar
-							name="Popularité"
-							gauge={view.supports.popularity}
-							identity="popularity"
-							size="compact"
-						/>
-					</div>
-					<div class="w-40">
-						<StatBar name="Santé" gauge={view.health} identity="player.health" size="compact" />
-					</div>
-					<div class="w-40">
-						<StatBar
-							name="Stress"
-							gauge={view.stress}
-							identity="player.stress"
-							forecast={view.phase === 'planning' ? view.plan.stressAfter.value : null}
-							size="compact"
-						/>
-					</div>
-				</div>
+					<HeaderStat
+						identity="popularity"
+						label="Popularité"
+						value={String(view.supports.popularity.value)}
+						gauge={view.supports.popularity}
+					/>
+					<HeaderStat
+						identity="player.health"
+						label="Santé"
+						value={String(view.health.value)}
+						gauge={view.health}
+					/>
+					<HeaderStat
+						identity="player.stress"
+						label="Stress"
+						value={String(view.stress.value)}
+						gauge={view.stress}
+						gaugeForecast={view.phase === 'planning' ? view.plan.stressAfter.value : null}
+					/>
+				</dl>
 			</div>
 		</header>
 

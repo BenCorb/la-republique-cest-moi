@@ -568,7 +568,7 @@ test.describe('parcours de jeu', () => {
 	}) => {
 		await startCareer(page);
 		// En-tête : tuiles d'identité, date en calendrier, jauges en barres nommées.
-		await expect(page.getByRole('group', { name: 'Ressources' })).toBeVisible();
+		await expect(page.getByTestId('resource-influence')).toBeVisible();
 		await expect(page.getByRole('meter', { name: 'Stress' }).first()).toBeVisible();
 
 		// Agenda : coûts et effets en pastilles, phrase complète gardée pour l'accessibilité.
