@@ -255,6 +255,15 @@ const turnEntry = z.strictObject({
 			politics: z.array(politicalChange)
 		})
 		.nullable(),
+	snapshot: z.strictObject({
+		influence: int,
+		politicalBudgetCents: int,
+		personalCashCents: int,
+		popularity: int,
+		health: int,
+		stress: int,
+		exposure: int
+	}),
 	justice: z
 		.strictObject({
 			cases: z.array(

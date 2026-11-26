@@ -40,6 +40,7 @@
 		{ id: 'agenda', label: 'Agenda', icon: Calendar },
 		{ id: 'career', label: 'Carrière', icon: Award },
 		{ id: 'world', label: 'Monde politique', icon: Flag },
+		{ id: 'news', label: 'Actualités', icon: Newspaper },
 		{ id: 'entourage', label: 'Entourage', icon: UsersRound },
 		{ id: 'relations', label: 'Relations', icon: Users },
 		{ id: 'organisation', label: 'Organisation', icon: Briefcase },

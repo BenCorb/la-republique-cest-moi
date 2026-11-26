@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.27.0';
+export const RULES_VERSION = '0.28.0';
 
 export {
 	START_YEAR,
@@ -63,6 +63,7 @@ export {
 	type MediaState,
 	type PressRecord,
 	type InstitutionsRecord,
+	type QuarterSnapshot,
 	type ReformRecord,
 	type Sentence,
 	type JournalEntry,

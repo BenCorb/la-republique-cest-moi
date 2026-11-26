@@ -78,7 +78,14 @@ describe('scénario : passage du temps', () => {
 				promises: { changes: [], gauges: [], politics: [] },
 				press: { articles: [], relations: [] },
 				institutions: { changes: [], gauges: [], politics: [] },
-				events: []
+				events: [],
+				snapshot: {
+					...result.state.resources,
+					popularity: result.state.player.popularity,
+					health: result.state.player.health,
+					stress: result.state.player.stress,
+					exposure: result.state.player.exposure
+				}
 			}
 		]);
 		expect(result.state.history).toEqual(result.log);

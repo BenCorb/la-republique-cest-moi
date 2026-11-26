@@ -180,6 +180,39 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByRole('button', { name: /^Proposer :/ })).toHaveCount(0);
 	});
 
+	test('épingle le plan, trace les tendances et ouvre les actualités', async ({ page }) => {
+		await startCareer(page, 'e2e-interface');
+		await page
+			.getByRole('button', { name: 'Ajouter « Rencontrer des élus locaux » au plan' })
+			.click();
+		await page
+			.getByRole('button', { name: 'Ajouter « Accepter des missions en free-lance » au plan' })
+			.click();
+		// Épinglées par défaut ; la seconde devient ponctuelle.
+		const freelance = page.getByRole('button', {
+			name: 'Reconduire « Accepter des missions en free-lance » chaque trimestre'
+		});
+		await expect(freelance).toHaveAttribute('aria-pressed', 'true');
+		await freelance.click();
+		await expect(freelance).toHaveAttribute('aria-pressed', 'false');
+
+		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await expect(page.getByTestId('game-date')).toHaveText('T2 2000 · 25 ans');
+		await settleDecisions(page);
+		await expect(page.getByTestId('time-used')).toHaveText('20/100');
+		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await expect(page.getByTestId('game-date')).toHaveText('T3 2000 · 25 ans');
+		await settleDecisions(page);
+
+		await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
+		await expect(page.getByRole('heading', { name: 'Tendances' })).toBeVisible();
+		await expect(page.getByTestId('trend-influence')).toBeVisible();
+
+		await page.getByRole('button', { name: 'Actualités', exact: true }).click();
+		await expect(page.getByRole('heading', { name: 'Actualités' })).toBeVisible();
+		await expect(page.getByText('Seulement les articles vous concernant')).toBeVisible();
+	});
+
 	test('adhère à un parti depuis le monde politique', async ({ page }) => {
 		await startCareer(page, 'e2e-parti');
 		await expect(page.getByTestId('header-party')).toHaveText('Étiquette aucune');

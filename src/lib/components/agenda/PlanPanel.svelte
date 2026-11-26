@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowDown, ArrowUp, X } from '@lucide/svelte';
+	import { ArrowDown, ArrowUp, Pin, PinOff, X } from '@lucide/svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 
 	/**
@@ -21,8 +21,9 @@
 	<section class="card" aria-labelledby="plan-title">
 		<h2 id="plan-title" class="section-title">Plan du trimestre</h2>
 		<p class="mt-1 text-xs text-muted">
-			Le plan est reconduit d’un trimestre à l’autre ; achats et démarches ponctuelles (recrutement,
-			candidature…) n’ont lieu qu’une fois.
+			Les actions épinglées sont reconduites d’un trimestre à l’autre ; désépinglez celles à ne
+			faire qu’une fois. Achats et démarches sans objet ensuite (recrutement, candidature…) ne sont
+			jamais reconduits.
 		</p>
 
 		<div class="mt-3">
@@ -83,6 +84,25 @@
 								{/each}
 							</div>
 							<div class="flex gap-1">
+								{#if step.kind === 'action'}
+									<button
+										type="button"
+										class="btn-secondary btn-small {step.pinned ? 'text-primary' : 'text-muted'}"
+										aria-label="Reconduire « {step.label} » chaque trimestre"
+										aria-pressed={step.pinned}
+										title={step.pinned
+											? 'Épinglée : reconduite au trimestre suivant'
+											: 'Ponctuelle : retirée après ce trimestre'}
+										disabled={accelerating}
+										onclick={() => session.controller.togglePin(step.index)}
+									>
+										{#if step.pinned}
+											<Pin class="size-3.5" aria-hidden="true" />
+										{:else}
+											<PinOff class="size-3.5" aria-hidden="true" />
+										{/if}
+									</button>
+								{/if}
 								<button
 									type="button"
 									class="btn-secondary btn-small"

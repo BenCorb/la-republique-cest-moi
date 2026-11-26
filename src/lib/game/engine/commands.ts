@@ -7,13 +7,19 @@
 import type { PlanIssue } from './plan.ts';
 import type { GameState, JournalEntry } from './state.ts';
 
-/** Étape d'un plan trimestriel : une action ou l'achat d'une amélioration. */
+/**
+ * Étape d'un plan trimestriel : une action ou l'achat d'une amélioration. Une
+ * action est reconduite au trimestre suivant (épinglée) sauf si elle est
+ * marquée ponctuelle (`once`, P3-08) ; un achat est toujours ponctuel.
+ */
 export type PlanStep =
 	| {
 			readonly kind: 'action';
 			readonly id: string;
 			/** Cible d'une action ciblée (identifiant de parti), absente sinon. */
 			readonly target?: string;
+			/** Étape ponctuelle : retirée du plan après le trimestre. */
+			readonly once?: true;
 	  }
 	| { readonly kind: 'purchase'; readonly id: string };
 

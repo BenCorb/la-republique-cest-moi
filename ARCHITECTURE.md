@@ -796,6 +796,14 @@ P3-08 est livrée en deux pull requests (décision du créateur, 26 novembre 202
 - **Simulation** (rapport v15 : nécrologie retenue, distinctions). Mesure, 300 carrières (seed `p3-08`), aucune erreur ni violation : 3,2 distinctions par carrière en moyenne, 13 carrières sans distinction ; 11 nécrologies différentes retenues. Aucune prison ferme dans ce lot : les trois nécrologies de prison ne sont couvertes que par les tests. « Le Carnet d’adresses » (3 alliés) reste rare (5 carrières sur 300).
 - **Versions et tests** : `RULES_VERSION = '0.27.0'`, format d’état inchangé ; `tests/unit/legacy.test.ts` (mesures, nécrologie sans tirage, une de journal, élision, validation, catalogue réel épicène) ; E2E du bilan (nécrologie d’épuisement, distinction, moments marquants).
 
+### 8.4 decies Décisions de P3-08, second volet : interface (26 novembre 2026)
+
+- **Épinglage du plan** (décision du créateur, 26 novembre 2026) : une action du plan peut porter `once: true` (`PlanStep`, ponctuelle). `carryOverPlan` la retire après le trimestre, comme un achat ou une étape devenue sans objet : la règle vaut à l’identique pour le trimestre manuel et l’accélération. Sans marqueur, une action est épinglée (comportement antérieur inchangé). Le marqueur n’est accepté que sur une action ; le contrôleur le bascule (`togglePin`), le plan affiche une épingle (`aria-pressed`). Le brouillon de plan reste hors sauvegarde.
+- **Instantané de fin de trimestre** : `HistoryEntry.snapshot` (ressources, popularité, santé, stress, exposition) ; la carte « Tendances » du tableau de bord en tire une courbe SVG par série sur les douze derniers trimestres, avec valeur actuelle, variation et description accessible ; la couleur dit seulement si la variation est favorable.
+- **Écran « Actualités »** (onglet entre Monde politique et Entourage) : articles des vingt derniers trimestres groupés par trimestre, filtre « Seulement les articles vous concernant », information critique signalée par libellé et bordure.
+- **Fin de carrière** : les alertes (santé, échéances) disparaissent au profit d’un renvoi au bilan.
+- **Versions et tests** : `RULES_VERSION = '0.28.0'` (instantané dans le journal), format d’état toujours en version 1 (alpha jetable) ; `tests/unit/interface.test.ts` (épinglage au tour et en accélération, marqueur refusé sur un achat, contrôleur, tendances, alertes de fin, actualités) ; E2E de l’épinglage, des tendances et des actualités. Vérification visuelle sur captures (tableau de bord, actualités, bilan).
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.
@@ -803,7 +811,7 @@ Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défa
 ### 15.1 Règles provisoires à confirmer
 
 - **Format de sauvegarde.** `STATE_SCHEMA_VERSION = 1` et `SAVE_VERSION = 1`. Toute modification de `GameState` doit mettre à jour `persistence/state-schema.ts` (la compilation l’impose). **Décision du créateur (25 novembre 2026) : l’alpha publiée est jetable.** Pendant l’alpha et la phase 3, le format reste en version 1 et une sauvegarde écrite par d’autres règles devenue illisible est refusée explicitement (`outdated_rules`, §8.3 decies), jamais réparée ni effacée ; l’accueil prévient les joueurs. Les migrations testées (`SAVE_VERSION` incrémentée à chaque changement de format) commenceront avec la première version publiée dont les parties doivent survivre aux mises à jour (au plus tard la V1, P3-10).
-- **Version des règles.** `RULES_VERSION = '0.27.0'` (bilan de fin de carrière, §8.4 nonies), incrémentée à chaque changement de règle ; elle n’est qu’informative à la lecture d’une sauvegarde.
+- **Version des règles.** `RULES_VERSION = '0.28.0'` (interface définitive, §8.4 decies), incrémentée à chaque changement de règle ; elle n’est qu’informative à la lecture d’une sauvegarde.
 - **Paramètre `?seed=`.** Réservé aux essais et à la reproduction ; à masquer ou documenter auprès des joueurs avant diffusion large.
 
 ### 15.2 Limites fonctionnelles connues (alpha)
@@ -816,7 +824,7 @@ Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défa
 - Personnages : les dirigeants de parti figurent dans les textes (`{player_party_leader}`…) mais ne sont pas acteurs d’événements ni candidats contre le joueur ; les adversaires de scrutin sont des rivaux nommés (P2-06). Pas de présidentielle ni de cohabitation (le gouvernement suit les législatives) ; un seul adversaire principal par scrutin, sans second tour.
 - Accueil : pas de réglages, seed non affichée (DESIGN §4.1). Bilan de fin de carrière avec nécrologies et distinctions depuis P3-08 (§8.4 nonies). Pas de message `<noscript>` : sans JavaScript, la page reste sur « Ouverture du cabinet… ».
 - « Accueil » abandonne le brouillon de plan non validé sans confirmation (permis par §10, mais perceptible). L’accueil ne se rafraîchit pas si un autre onglet modifie la sauvegarde pendant qu’il est affiché (le blocage ne s’applique qu’en partie).
-- Plan reconduit de la même façon après un trimestre manuel ou accéléré depuis P2-09 (§5.2 ter). La finition V1 doit encore réduire la densité de texte, privilégier l’aide contextuelle et rendre l’accès à l’agenda plus direct (P3-08).
+- Plan reconduit de la même façon après un trimestre manuel ou accéléré depuis P2-09 (§5.2 ter), avec épinglage par étape depuis P3-08 (§8.4 decies). Densité de texte et aide contextuelle restent à juger au playtest (P3-09).
 - Mise en page vérifiée à 1280 × 720 et 1440 × 900 ; repli sous 1 100 px et zoom à 125 % non testés automatiquement. Accessibilité vérifiée par tests clavier et rôles ARIA, sans audit automatisé (axe) ni lecteur d’écran.
 
 ### 15.3 Dette technique

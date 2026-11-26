@@ -90,6 +90,15 @@ describe('contrôle des invariants', () => {
 						promises: null,
 						press: null,
 						institutions: null,
+						snapshot: {
+							influence: 0,
+							politicalBudgetCents: 0,
+							personalCashCents: 0,
+							popularity: 0,
+							health: 100,
+							stress: 0,
+							exposure: 0
+						},
 						events: []
 					},
 					{
@@ -115,6 +124,15 @@ describe('contrôle des invariants', () => {
 						promises: null,
 						press: null,
 						institutions: null,
+						snapshot: {
+							influence: 0,
+							politicalBudgetCents: 0,
+							personalCashCents: 0,
+							popularity: 0,
+							health: 100,
+							stress: 0,
+							exposure: 0
+						},
 						events: []
 					}
 				]

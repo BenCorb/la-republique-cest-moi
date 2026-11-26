@@ -8,7 +8,8 @@
  *   - le brouillon de plan n'appartient qu'à l'interface ; il n'est jamais
  *     présenté comme validé et peut être perdu au rechargement ; après un
  *     trimestre, manuel ou accéléré, il est reporté selon la règle du moteur
- *     (`carryOverPlan` : achats et cibles sans objet retirés) ;
+ *     (`carryOverPlan` : achats, étapes ponctuelles et cibles sans objet
+ *     retirés ; les actions sont épinglées par défaut, P3-08) ;
  *   - chaque transition réussie est sauvegardée aussitôt (nouvelle partie, tour,
  *     choix, fin) ; tant que la sauvegarde a échoué, aucune transition suivante
  *     n'est permise, sauf si le joueur choisit explicitement de continuer sans
@@ -312,6 +313,21 @@ export class GameController {
 		const next = [...this.plan];
 		[next[index], next[target]] = [next[target]!, next[index]!];
 		this.plan = next;
+		this.changed();
+	}
+
+	/** Épingle (reconduit) ou rend ponctuelle une action du plan (P3-08) ; un achat reste ponctuel. */
+	togglePin(index: number): void {
+		if (this.acceleration?.running) return;
+		const step = this.plan[index];
+		if (!step || step.kind !== 'action') return;
+		const pinned: PlanStep =
+			step.target === undefined
+				? { kind: 'action', id: step.id }
+				: { kind: 'action', id: step.id, target: step.target };
+		this.plan = this.plan.map((entry, position) =>
+			position === index ? (step.once ? pinned : { ...pinned, once: true }) : entry
+		);
 		this.changed();
 	}
 

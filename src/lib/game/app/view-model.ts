@@ -64,6 +64,7 @@ import {
 	effectiveContent,
 	evaluateCondition,
 	type CareerParts,
+	type QuarterSnapshot,
 	followsPlayer,
 	ownedMedia,
 	type StaffLeaveReason,
@@ -125,6 +126,8 @@ export interface PlanStepView {
 	readonly issues: readonly string[];
 	/** Achat : rappel que la production commence au trimestre suivant. */
 	readonly note: string | null;
+	/** Reconduite au trimestre suivant (P3-08) ; un achat ne l'est jamais. */
+	readonly pinned: boolean;
 }
 
 export interface PlanView {
@@ -785,7 +788,27 @@ function buildJustice(state: GameState, content: Content): JusticeView {
 	};
 }
 
+/**
+ * Tendance d'une ressource ou d'une jauge sur les derniers trimestres (P3-08) :
+ * valeurs en fin de trimestre, de la plus ancienne à l'actuelle.
+ */
+export interface TrendView {
+	readonly id: string;
+	readonly label: string;
+	readonly points: readonly number[];
+	/** Valeur actuelle, formatée. */
+	readonly current: string;
+	/** Variation sur la période, formatée (« + 12 », « − 3 400 € »), `null` si nulle. */
+	readonly change: string | null;
+	/** Sens de la variation pour le joueur : favorable, défavorable ou neutre. */
+	readonly mood: 'good' | 'bad' | 'neutral';
+	/** Résumé accessible : période, départ et arrivée. */
+	readonly description: string;
+}
+
 export interface PlayerView {
+	/** Tendances des derniers trimestres (P3-08), vides en début de carrière. */
+	readonly trends: readonly TrendView[];
 	readonly dateLabel: string;
 	readonly age: number;
 	readonly phase: GameState['phase'];
@@ -807,6 +830,12 @@ export interface PlayerView {
 	readonly journal: readonly JournalTurnView[];
 	/** Fil de presse : articles des derniers trimestres, du plus récent au plus ancien. */
 	readonly press: readonly PressItemView[];
+	/** Écran Actualités (P3-08) : articles regroupés par trimestre, du plus récent au plus ancien. */
+	readonly news: readonly {
+		readonly key: string;
+		readonly label: string;
+		readonly items: readonly PressItemView[];
+	}[];
 	readonly alerts: readonly Alert[];
 	readonly summary: SummaryView | null;
 	readonly world: WorldView;
@@ -1533,6 +1562,35 @@ function buildPress(state: GameState, content: Content): PlayerView['press'] {
 	return items.reverse().slice(0, 8);
 }
 
+/** Trimestres couverts par l'écran Actualités ; les plus anciens restent au journal. */
+const NEWS_QUARTERS = 20;
+
+function buildNews(state: GameState, content: Content): PlayerView['news'] {
+	const groups: { key: string; label: string; items: PressItemView[] }[] = [];
+	for (const entry of state.history) {
+		if (entry.type !== 'turn.resolved' || !entry.press || entry.press.articles.length === 0)
+			continue;
+		groups.push({
+			key: `t${entry.turn}`,
+			label: formatTurn(entry.turn + 1),
+			items: entry.press.articles.map((article, index) => {
+				const aboutPlayer = article.topic !== 'ambient';
+				return {
+					key: `t${entry.turn}-a${index}`,
+					dateLabel: formatTurn(entry.turn + 1),
+					media: content.media[article.mediaId]?.name ?? article.mediaId,
+					title: articleTitle(article, state, content),
+					aboutPlayer,
+					toneLabel: aboutPlayer ? (TONE_LABELS[article.tone] ?? null) : null,
+					critical: aboutPlayer && article.tone === 'critical',
+					effects: articleEffects(article, content)
+				};
+			})
+		});
+	}
+	return groups.reverse().slice(0, NEWS_QUARTERS);
+}
+
 function audienceLabel(audience: number): string {
 	return audience >= 50
 		? 'Forte audience'
@@ -1729,6 +1787,53 @@ function buildOrganisation(
 function promisesSummary(counts: ReturnType<typeof careerSummary>['promises']): string {
 	if (counts.made === 0) return 'Aucun engagement pris';
 	return `${counts.made} engagement(s) : ${counts.kept} tenue(s), ${counts.partial} partiellement, ${counts.abandoned} abandonnée(s)`;
+}
+
+/** Trimestres affichés dans les tendances du tableau de bord. */
+const TREND_QUARTERS = 12;
+
+const TREND_SERIES: readonly {
+	readonly id: keyof QuarterSnapshot;
+	readonly label: string;
+	readonly rising: 'good' | 'bad';
+}[] = [
+	{ id: 'influence', label: 'Influence', rising: 'good' },
+	{ id: 'politicalBudgetCents', label: 'Budget politique', rising: 'good' },
+	{ id: 'personalCashCents', label: 'Argent personnel', rising: 'good' },
+	{ id: 'popularity', label: 'Popularité', rising: 'good' },
+	{ id: 'health', label: 'Santé', rising: 'good' },
+	{ id: 'stress', label: 'Stress', rising: 'bad' }
+];
+
+function formatTrendValue(id: keyof QuarterSnapshot, value: number): string {
+	return id === 'politicalBudgetCents' || id === 'personalCashCents'
+		? formatMoney(value)
+		: String(value);
+}
+
+/** Tendances : instantanés des derniers trimestres, puis la situation actuelle. */
+function buildTrends(state: GameState): TrendView[] {
+	const quarters = state.history
+		.filter((entry): entry is HistoryEntry => entry.type === 'turn.resolved')
+		.slice(-TREND_QUARTERS);
+	if (quarters.length < 2) return [];
+	const first = quarters[0]!.turn;
+	return TREND_SERIES.map(({ id, label, rising }) => {
+		const points = quarters.map((entry) => entry.snapshot[id]);
+		const start = points[0]!;
+		const end = points[points.length - 1]!;
+		const delta = end - start;
+		const sign = delta > 0 ? '+ ' : '− ';
+		return {
+			id,
+			label,
+			points,
+			current: formatTrendValue(id, end),
+			change: delta === 0 ? null : `${sign}${formatTrendValue(id, Math.abs(delta))}`,
+			mood: delta === 0 ? 'neutral' : delta > 0 === (rising === 'good') ? 'good' : 'bad',
+			description: `${label} depuis le ${formatTurn(first)} : de ${formatTrendValue(id, start)} à ${formatTrendValue(id, end)}`
+		};
+	});
 }
 
 /** Nombre de moments marquants retenus au bilan. */
@@ -2884,7 +2989,11 @@ export function projectView(
 				)
 			],
 			issues: step.issues.map((issue) => issue.message),
-			note: upgrade ? 'Actif à partir du trimestre prochain.' : null
+			note: upgrade ? 'Actif à partir du trimestre prochain.' : null,
+			pinned: (() => {
+				const source = plan[step.index];
+				return source?.kind === 'action' && source.once !== true;
+			})()
 		};
 	});
 
@@ -3049,6 +3158,7 @@ export function projectView(
 	}
 
 	return {
+		trends: buildTrends(state),
 		dateLabel: formatTurn(state.end ? state.end.turn : state.turn),
 		age: ageAt(state.player.birthTurn, state.end ? state.end.turn : state.turn),
 		phase: state.phase,
@@ -3086,7 +3196,11 @@ export function projectView(
 		decision,
 		journal: buildJournal(state, content),
 		press: buildPress(state, content),
-		alerts,
+		news: buildNews(state, content),
+		// Carrière terminée (P3-08) : plus d'alerte de santé ni d'échéance, seulement le bilan.
+		alerts: state.end
+			? [{ level: 'info', text: 'Carrière terminée : le bilan est présenté au centre de l’écran.' }]
+			: alerts,
 		summary: buildSummary(state, content),
 		world: buildWorld(state, plan, content),
 		people: buildPeople(state, content),
