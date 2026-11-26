@@ -132,6 +132,7 @@
 		"competenceReference": 60,
 		"hireAttitude": 10,
 		"unpaidAttitude": -5,
+		"hireReserveQuarters": 2,
 		"dismissAttitude": -20,
 		"resignAttitude": -30,
 		"preciseAdviceCompetence": 70,

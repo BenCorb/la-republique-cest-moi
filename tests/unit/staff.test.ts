@@ -8,6 +8,7 @@ import {
 	commitTurn,
 	createGame,
 	describePendingEvent,
+	hireReserveCents,
 	modulatedDelta,
 	previewPlan,
 	transition,
@@ -214,7 +215,33 @@ describe('embauche et production', () => {
 				...state,
 				resources: { ...state.resources, politicalBudgetCents: 0 }
 			})
-		).toContain('Budget politique insuffisant pour le premier salaire.');
+		).toContain('Budget politique insuffisant : il faut 10 € pour couvrir 1 trimestre');
+	});
+
+	it('exige une réserve de plusieurs trimestres de salaires, entourage en poste compris (P3-09)', () => {
+		const reserved: Content = {
+			...catalog,
+			balance: {
+				...catalog.balance,
+				entourage: { ...catalog.balance.entourage, hireReserveQuarters: 3 }
+			}
+		};
+		const state = opened('réserve', reserved);
+		const candidate = state.shortlists['post.aide']![0]!.characterId;
+		const withBudget = (cents: number): GameState => ({
+			...state,
+			resources: { ...state.resources, politicalBudgetCents: cents }
+		});
+		const preview = (cents: number) =>
+			previewPlan(withBudget(cents), { steps: [hire(candidate)] }, reserved);
+		expect(preview(2_999).issues[0]?.message).toContain(
+			'Budget politique insuffisant : il faut 30 € pour couvrir 3 trimestres de salaires de l’entourage.'
+		);
+		expect(preview(3_000).valid).toBe(true);
+		const hired = commit(withBudget(3_000), [hire(candidate)], reserved).state;
+		// Un salarié en poste (10 €) plus un nouveau venu (10 €), trois trimestres.
+		expect(hireReserveCents(hired.staff, 1_000, reserved)).toBe(6_000);
+		expect(hireReserveCents([], 1_000, reserved)).toBe(3_000);
 	});
 
 	it('suspend la mission et entame la loyauté d’un collaborateur impayé, jusqu’à la démission', () => {

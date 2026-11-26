@@ -110,6 +110,28 @@ export function pollingCompetence(
 	return best;
 }
 
+/** Montant en euros entiers, espace fine insécable entre les milliers (« 3 000 € »). */
+function euros(cents: number): string {
+	const whole = String(Math.ceil(cents / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f');
+	return `${whole} €`;
+}
+
+/**
+ * Réserve exigée pour recruter : `hireReserveQuarters` trimestres de la masse
+ * salariale de l'entourage en poste, augmentée du salaire du nouveau venu.
+ */
+export function hireReserveCents(
+	staff: readonly StaffMember[],
+	salaryCents: number,
+	content: Content
+): number {
+	const payroll = activeStaff(staff).reduce(
+		(total, member) => total + (content.posts[member.postId]?.salaryCents ?? 0),
+		0
+	);
+	return (payroll + salaryCents) * content.balance.entourage.hireReserveQuarters;
+}
+
 /** Raison pour laquelle ce candidat ne peut être embauché, ou `null`. */
 export function hireIssue(
 	candidateId: string,
@@ -127,9 +149,14 @@ export function hireIssue(
 	if (context && !postUnlocked(postId, context, content)) {
 		return post.unavailableReason ?? `Le poste « ${post.label} » n’est pas accessible.`;
 	}
-	// On ne recrute pas sans pouvoir payer le premier salaire.
-	if (context && context.resources.politicalBudgetCents < post.salaryCents) {
-		return 'Budget politique insuffisant pour le premier salaire.';
+	// On ne recrute pas sans réserve : les salaires de toute l'équipe, nouveau venu
+	// compris, doivent être couverts plusieurs trimestres (P3-09).
+	if (context) {
+		const reserve = hireReserveCents(parts.staff, post.salaryCents, content);
+		if (context.resources.politicalBudgetCents < reserve) {
+			const quarters = content.balance.entourage.hireReserveQuarters;
+			return `Budget politique insuffisant : il faut ${euros(reserve)} pour couvrir ${quarters} trimestre${quarters > 1 ? 's' : ''} de salaires de l’entourage.`;
+		}
 	}
 	if (parts.characters[candidateId]?.status !== 'active')
 		return 'Ce candidat n’est plus disponible.';

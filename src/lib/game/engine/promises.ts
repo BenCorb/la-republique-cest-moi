@@ -301,7 +301,8 @@ export interface PromisesResolution {
 /**
  * Promesses à la fin du trimestre `turn`, après les scrutins, dans un ordre fixe :
  *   1. promesses des campagnes jugées : en cours après une victoire (échéance de
- *      réalisation et dilemme programmés), sans lendemain sinon ;
+ *      réalisation et dilemme programmés, sauf dilemme au plafond de son
+ *      événement), sans lendemain sinon ;
  *   2. promesses en cours arrivées à échéance : issue selon l'avancement, et ses
  *      effets ;
  *   3. rappel éventuel d'une promesse passée pendant une campagne en cours
@@ -312,7 +313,8 @@ export function resolvePromises(
 	parts: PromisesParts,
 	turn: Turn,
 	content: Content,
-	occurrences: Readonly<Record<string, { readonly count: number }>> = {}
+	occurrences: Readonly<Record<string, { readonly count: number }>> = {},
+	queued: readonly ScheduledEvent[] = []
 ): PromisesResolution {
 	const rules = content.promiseRules;
 	let { player, world, rng } = parts;
@@ -357,6 +359,17 @@ export function resolvePromises(
 		}
 	};
 
+	// Répétition contrôlée (P3-07, P3-09) : un dilemme ou un rappel ne dépasse pas le
+	// plafond déclaré de son événement, occurrences passées et suites déjà programmées comprises.
+	const belowCap = (eventId: string): boolean => {
+		const cap = content.events[eventId]?.maxOccurrences;
+		if (cap === undefined) return true;
+		const pendingCount = [...queued, ...scheduled].filter(
+			(entry) => entry.eventId === eventId
+		).length;
+		return (occurrences[eventId]?.count ?? 0) + pendingCount < cap;
+	};
+
 	// 1. Campagnes jugées.
 	promises.forEach((pledge, index) => {
 		if (pledge.status !== 'announced' || pledge.closedTurn !== null) return;
@@ -372,7 +385,7 @@ export function resolvePromises(
 		promises[index] = { ...pledge, status: 'in_progress', dueTurn: turn + rules.deliveryTurns };
 		note(pledge, 'started');
 		const dilemma = content.promises[pledge.promiseId]?.dilemmaEvent;
-		if (dilemma) {
+		if (dilemma && belowCap(dilemma)) {
 			scheduled.push({
 				eventId: dilemma,
 				dueTurn: turn + delay.value,
@@ -397,13 +410,6 @@ export function resolvePromises(
 	const campaign = runningCampaigns(career.campaigns)
 		.filter((entry) => entry.declaredTurn < turn)
 		.sort((left, right) => ballotTurn(left) - ballotTurn(right))[0];
-	// Répétition contrôlée : un rappel ne dépasse pas le plafond de son événement (déjà programmés compris).
-	const recallAvailable = (eventId: string): boolean => {
-		const cap = content.events[eventId]?.maxOccurrences;
-		if (cap === undefined) return true;
-		const scheduledCount = scheduled.filter((entry) => entry.eventId === eventId).length;
-		return (occurrences[eventId]?.count ?? 0) + scheduledCount < cap;
-	};
 	if (campaign && rules.recallPercent > 0 && rules.maxRecalls > 0) {
 		const index = promises.findIndex(
 			(pledge) =>
@@ -411,9 +417,7 @@ export function resolvePromises(
 				pledge.campaignId !== campaign.campaignId &&
 				pledge.recalls < rules.maxRecalls &&
 				(pledge.lastRecalledTurn === null || pledge.lastRecalledTurn < campaign.declaredTurn) &&
-				recallAvailable(
-					pledge.status === 'kept' ? rules.recallEvents.kept : rules.recallEvents.abandoned
-				)
+				belowCap(pledge.status === 'kept' ? rules.recallEvents.kept : rules.recallEvents.abandoned)
 		);
 		const pledge = index >= 0 ? promises[index] : undefined;
 		if (pledge) {

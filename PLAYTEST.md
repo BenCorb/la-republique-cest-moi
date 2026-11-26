@@ -186,3 +186,40 @@ Ordre proposé : une pull request par correction (mairie, budget, agenda), chacu
 publiée, puis reprise du playtest sur ces points avant P3-01. Restent à mesurer pendant la fin
 du playtest : durée active, rythme des arrêts d’accélération, vie de famille, besoin
 d’épinglage.
+
+## P3-09 — Équilibrage : chronométrage de la V1
+
+**Statut : à réaliser.** Le premier volet de P3-09 (ARCHITECTURE §8.4 undecies) a corrigé par
+simulation les anomalies connues (budget des élus, recrutements impayables, dilemmes répétés,
+stratégie intègre défaillante). Il reste à confronter ces réglages et le modèle de durée à des
+parties réelles.
+
+### Protocole
+
+1. Jouer au moins deux carrières complètes jusqu’au bilan, avec deux styles différents : l’une
+   intègre et prudente, l’autre ambitieuse ou opportuniste. Seeds suggérées : `?seed=p3-09-a` et
+   `?seed=p3-09-b`.
+2. Chronométrer le temps actif (hors pauses) et compter, même approximativement, les décisions
+   et les arrêts d’accélération. Noter les arrêts jugés sans intérêt (candidatures reçues sans
+   intention de recruter, échéances de scrutins jamais visés…).
+3. Relever au bilan : âge, cause de fin, sommet de carrière, promesses tenues, affaires.
+4. Noter si le budget politique manque ou s’accumule sans usage, et si la réserve de
+   recrutement (deux trimestres de salaires) est comprise depuis son motif de refus.
+5. Exporter la sauvegarde d’une anomalie, avec la date de jeu concernée.
+
+### Points à observer
+
+| Sujet         | Question                                                     | Mesure CPU de référence (P3-09, 500 carrières)                         |
+| ------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| Durée         | La carrière tient-elle en 45–60 minutes actives ?            | Modèle provisoire : 43 à 93 min en médiane selon la stratégie          |
+| Interruptions | Quels arrêts d’accélération sont inutiles ?                  | 29 à 92 arrêts d’alerte et 35 à 60 décisions par carrière (médianes)   |
+| Intégrité     | Une carrière honnête est-elle viable et intéressante ?       | Stratégie intègre : 0 fait, ministère dans 33 % des carrières          |
+| Budget        | Le budget politique manque-t-il ou déborde-t-il ?            | Médiane finale : 1 100 à 19 500 €, sauf la prudente (137 000 €)        |
+| Santé         | Les alertes de santé suffisent-elles à éviter l’épuisement ? | Stratégie ambitieuse : 92 % de morts d’épuisement vers 46 ans          |
+| Répétition    | Un dilemme ou un événement revient-il trop souvent ?         | 6 occurrences au plus par dilemme ; 11 révélations judiciaires au plus |
+
+### Résultats
+
+_À compléter après la session : testeur, seeds, durée chronométrée, nombre de décisions et
+d’arrêts, âge et cause de fin, irritants classés (bloquant, gênant, mineur) et décisions. Les
+chronométrages servent à recalibrer `ACTIVE_TIME_MODEL` (simulation)._

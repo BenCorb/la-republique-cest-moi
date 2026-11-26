@@ -281,7 +281,8 @@ function commitTurn(
 					},
 					resolvedTurn,
 					content,
-					state.events.occurrences
+					state.events.occurrences,
+					state.events.scheduled
 				)
 			: null;
 

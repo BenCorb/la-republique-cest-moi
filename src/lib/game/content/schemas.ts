@@ -963,6 +963,7 @@ export const entourageBalanceSchema: z.ZodType<EntourageBalance> = z
 		competenceReference: positiveInt,
 		hireAttitude: safeInt,
 		unpaidAttitude: safeInt,
+		hireReserveQuarters: positiveInt.refine((value) => value <= 8, 'au plus 8 trimestres'),
 		dismissAttitude: safeInt,
 		resignAttitude: safeInt.refine((value) => value >= -100 && value <= 0, 'seuil de -100 à 0'),
 		preciseAdviceCompetence: gaugeValue,

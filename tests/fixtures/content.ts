@@ -84,6 +84,7 @@ export const fixtureBalance = {
 		competenceReference: 50,
 		hireAttitude: 10,
 		unpaidAttitude: -5,
+		hireReserveQuarters: 1,
 		dismissAttitude: -20,
 		resignAttitude: -30,
 		preciseAdviceCompetence: 70,

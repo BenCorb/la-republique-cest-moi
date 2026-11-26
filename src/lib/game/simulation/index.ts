@@ -26,6 +26,7 @@ import {
 	followsPlayer,
 	interviewIssue,
 	distinctionsOf,
+	divertedFunds,
 	obituaryOf,
 	ownedMedia,
 	reformIssue,
@@ -41,7 +42,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 15;
+export const SIMULATION_REPORT_VERSION = 16;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -134,6 +135,15 @@ export interface SimulationRun {
 	/** Collaborateurs recrutés et départs (démission, renvoi, débauchage…). */
 	readonly staffHired: number;
 	readonly staffDepartures: number;
+	/** Justice (P3-01) : faits inscrits dont le joueur est auteur ou complice, dossiers le visant, condamnations. */
+	readonly facts: number;
+	readonly playerCases: number;
+	readonly convictions: number;
+	readonly divertedFundsCents: number;
+	/** Démissions de mandat (garde-fou d'épuisement des politiques prudente et mixte). */
+	readonly resignations: number;
+	/** Durée active estimée en minutes (modèle provisoire `ACTIVE_TIME_MODEL`, à calibrer au playtest). */
+	readonly estimatedActiveMinutes: number;
 	readonly maxRivalEncounters: number;
 	/** Popularité en fin de carrière et la plus haute atteinte. */
 	readonly finalPopularity: number;
@@ -171,6 +181,16 @@ export interface StrategySummary {
 	readonly upgradesOwned: Distribution;
 	readonly quartersAffiliated: Distribution;
 	readonly resources: { readonly [K in ResourceId]: Distribution };
+	readonly estimatedActiveMinutes: Distribution;
+	readonly staffHired: Distribution;
+	readonly staffDepartures: Distribution;
+	readonly promisesMade: Distribution;
+	readonly promisesKept: Distribution;
+	readonly facts: Distribution;
+	readonly convictions: Distribution;
+	readonly resignations: Distribution;
+	readonly mandatesHeld: Distribution;
+	readonly highestMandates: Readonly<Record<string, number>>;
 }
 
 export interface AggregateEventFrequency extends EventFrequency {
@@ -209,6 +229,7 @@ export interface SimulationAggregate {
 	readonly campaignsWon: Distribution;
 	readonly maxRivalEncounters: Distribution;
 	readonly staffHired: Distribution;
+	readonly estimatedActiveMinutes: Distribution;
 	readonly finalPopularity: Distribution;
 	readonly peakPopularity: Distribution;
 	/** Plus haute fonction atteinte, `none` pour les carrières sans mandat. */
@@ -454,6 +475,31 @@ function hireWish(strategy: SimulationStrategy, state: GameState, content: Conte
 	return [];
 }
 
+/** Stress à partir duquel les politiques prudente et mixte lâchent un mandat (P3-09). */
+export const BURNOUT_STRESS = 70;
+const RESIGNS_WHEN_EXHAUSTED: ReadonlySet<SimulationStrategy> = new Set(['prudent', 'mixed']);
+
+/**
+ * Garde-fou d'épuisement : au-delà de `BURNOUT_STRESS`, avec au moins deux
+ * mandats, la politique démissionne du mandat de plus bas rang dont aucun autre
+ * ne dépend (le siège de conseiller d'un maire reste donc acquis). Sans lui, le
+ * cumul consomme tout le temps et le repos ne trouve plus de place.
+ */
+function resignWish(strategy: SimulationStrategy, state: GameState, content: Content): PlanStep[] {
+	if (!RESIGNS_WHEN_EXHAUSTED.has(strategy) || state.player.stress < BURNOUT_STRESS) return [];
+	const resignId = content.actionIds.find((id) => content.actions[id]?.target === 'mandate');
+	const active = state.mandates.filter((mandate) => mandate.status === 'active');
+	if (!resignId || active.length < 2) return [];
+	const required = new Set(
+		active.flatMap((mandate) => state.institutions.prerequisites[mandate.mandateId] ?? [])
+	);
+	const rank = (mandateId: string): number => content.mandates[mandateId]?.rank ?? 0;
+	const pick = active
+		.filter((mandate) => !required.has(mandate.mandateId))
+		.sort((left, right) => rank(left.mandateId) - rank(right.mandateId))[0];
+	return pick ? [{ kind: 'action', id: resignId, target: pick.instanceId }] : [];
+}
+
 const STRATEGY_WISHES: Readonly<
 	Record<Exclude<SimulationStrategy, 'random-valid'>, readonly PlanStep[]>
 > = {
@@ -542,6 +588,7 @@ function wishesFor(
 	content: Content
 ): readonly PlanStep[] {
 	const party = [
+		...resignWish(strategy, state, content),
 		...partyWish(strategy, state, seed, content),
 		...candidacyWish(strategy, state, content),
 		...promiseWish(strategy, state, seed, content),
@@ -595,7 +642,37 @@ function visibleCost(choice: EventChoiceView): number {
 	return choice.costs.reduce((total, cost) => total + cost.amount, 0);
 }
 
-/** Politique de choix fondée uniquement sur la vue publique de la décision. */
+/**
+ * Indices publics qui signalent un risque judiciaire ou médiatique (P3-09) :
+ * le joueur prudent les lit comme un avertissement. Le simulateur ne voit que
+ * ces textes, jamais les effets ; `tests/unit/simulation.test.ts` vérifie que
+ * chaque choix du catalogue qui inscrit un fait porte l'un d'eux.
+ */
+export const RISK_HINT_FRAGMENTS = [
+	'coûter cher',
+	'dossier qui pourrait',
+	'laisse des traces',
+	'mensonge',
+	'mieux vaut que personne',
+	'ont parfois de la mémoire',
+	'promesse embarrassante',
+	'vigilance médiatique'
+] as const;
+
+export function isRiskyChoice(choice: Pick<EventChoiceView, 'hints'>): boolean {
+	return choice.hints.some((hint) => {
+		const text = hint.toLocaleLowerCase('fr');
+		return RISK_HINT_FRAGMENTS.some((fragment) => text.includes(fragment));
+	});
+}
+
+/**
+ * Politique de choix fondée uniquement sur la vue publique de la décision.
+ * Prudente : écarte les choix dont un indice signale un risque, puis le moins
+ * cher ; patrimoniale : le moins cher. À coût égal, l'ordre du catalogue
+ * départage (et non l'ordre alphabétique des identifiants, qui faisait
+ * renoncer la prudente à toutes ses promesses : « drop » avant « hold »).
+ */
 export function chooseSimulationDecision(
 	view: PendingEventView,
 	strategy: SimulationStrategy,
@@ -605,13 +682,49 @@ export function chooseSimulationDecision(
 	const available = view.choices.filter((choice) => choice.available);
 	if (available.length === 0) return null;
 	if (strategy === 'prudent' || strategy === 'patrimonial') {
-		return [...available].sort(
-			(left, right) => visibleCost(left) - visibleCost(right) || left.id.localeCompare(right.id)
-		)[0]!;
+		const safe = strategy === 'prudent' ? available.filter((choice) => !isRiskyChoice(choice)) : [];
+		const pool = safe.length > 0 ? safe : available;
+		return pool.reduce((best, choice) => (visibleCost(choice) < visibleCost(best) ? choice : best));
 	}
 	if (strategy === 'ambitious') return available[available.length - 1]!;
 	if (strategy === 'mixed') return available[(turn + view.remaining) % available.length]!;
 	return available[hashSeed(`${seed}:${view.instanceId}`) % available.length]!;
+}
+
+/**
+ * Modèle provisoire de durée active (P3-09), en secondes, à calibrer avec les
+ * chronométrages de `PLAYTEST.md` : lecture et choix d'une décision, reprise du
+ * plan à chaque épisode d'alerte (l'accélération s'arrête), coup d'œil à
+ * chaque trimestre avancé.
+ */
+export const ACTIVE_TIME_MODEL = {
+	decisionSeconds: 30,
+	alertSeconds: 40,
+	quarterSeconds: 3
+} as const;
+
+export function estimateActiveMinutes(
+	quarters: number,
+	decisions: number,
+	alertEpisodes: number
+): number {
+	const seconds =
+		decisions * ACTIVE_TIME_MODEL.decisionSeconds +
+		alertEpisodes * ACTIVE_TIME_MODEL.alertSeconds +
+		quarters * ACTIVE_TIME_MODEL.quarterSeconds;
+	return Math.round(seconds / 60);
+}
+
+function justiceCounts(
+	state: GameState
+): Pick<SimulationRun, 'facts' | 'playerCases' | 'convictions' | 'divertedFundsCents'> {
+	const cases = state.cases.filter((legalCase) => legalCase.defendantId === null);
+	return {
+		facts: state.facts.length,
+		playerCases: cases.length,
+		convictions: cases.filter((legalCase) => legalCase.outcome === 'convicted').length,
+		divertedFundsCents: divertedFunds(state.facts)
+	};
 }
 
 function eventFrequencies(state: GameState): EventFrequency[] {
@@ -718,6 +831,9 @@ function finalizeRun(
 		),
 		staffHired: state.staff.length,
 		staffDepartures: state.staff.filter((member) => member.status === 'left').length,
+		...justiceCounts(state),
+		resignations: state.mandates.filter((mandate) => mandate.endReason === 'resigned').length,
+		estimatedActiveMinutes: estimateActiveMinutes(summary.quartersPlayed, decisions, alertEpisodes),
 		maxRivalEncounters: Math.max(
 			0,
 			...Object.values(
@@ -913,8 +1029,28 @@ function strategySummary(
 			influence: resources('influence'),
 			politicalBudgetCents: resources('politicalBudgetCents'),
 			personalCashCents: resources('personalCashCents')
-		}
+		},
+		estimatedActiveMinutes: distribution(selected.map((run) => run.estimatedActiveMinutes)),
+		staffHired: distribution(selected.map((run) => run.staffHired)),
+		staffDepartures: distribution(selected.map((run) => run.staffDepartures)),
+		promisesMade: distribution(selected.map((run) => run.promisesMade)),
+		promisesKept: distribution(selected.map((run) => run.promisesKept)),
+		facts: distribution(selected.map((run) => run.facts)),
+		convictions: distribution(selected.map((run) => run.convictions)),
+		resignations: distribution(selected.map((run) => run.resignations)),
+		mandatesHeld: distribution(selected.map((run) => run.mandatesHeld)),
+		highestMandates: countBy(selected, (run) => run.highestMandate ?? 'none')
 	};
+}
+
+function countBy(
+	runs: readonly SimulationRun[],
+	key: (run: SimulationRun) => string
+): Record<string, number> {
+	return runs.reduce<Record<string, number>>((totals, run) => {
+		totals[key(run)] = (totals[key(run)] ?? 0) + 1;
+		return totals;
+	}, {});
 }
 
 function aggregateEvents(runs: readonly SimulationRun[]): AggregateEventFrequency[] {
@@ -968,18 +1104,11 @@ function aggregateRuns(runs: readonly SimulationRun[]): SimulationAggregate {
 		campaignsWon: distribution(runs.map((run) => run.campaignsWon)),
 		maxRivalEncounters: distribution(runs.map((run) => run.maxRivalEncounters)),
 		staffHired: distribution(runs.map((run) => run.staffHired)),
+		estimatedActiveMinutes: distribution(runs.map((run) => run.estimatedActiveMinutes)),
 		finalPopularity: distribution(runs.map((run) => run.finalPopularity)),
 		peakPopularity: distribution(runs.map((run) => run.peakPopularity)),
-		highestMandates: runs.reduce<Record<string, number>>((totals, run) => {
-			const key = run.highestMandate ?? 'none';
-			totals[key] = (totals[key] ?? 0) + 1;
-			return totals;
-		}, {}),
-		finalParties: runs.reduce<Record<string, number>>((totals, run) => {
-			const key = run.finalParty ?? 'none';
-			totals[key] = (totals[key] ?? 0) + 1;
-			return totals;
-		}, {}),
+		highestMandates: countBy(runs, (run) => run.highestMandate ?? 'none'),
+		finalParties: countBy(runs, (run) => run.finalParty ?? 'none'),
 		indicatorExtremes: Object.fromEntries(
 			INDICATOR_IDS.map((id) => [
 				id,
@@ -1115,6 +1244,12 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'distinctions',
 		'staffHired',
 		'staffDepartures',
+		'facts',
+		'playerCases',
+		'convictions',
+		'divertedFundsCents',
+		'resignations',
+		'estimatedActiveMinutes',
 		'finalPopularity',
 		'peakPopularity',
 		'indicatorRanges',
@@ -1178,6 +1313,12 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.distinctions.join('|'),
 		run.staffHired,
 		run.staffDepartures,
+		run.facts,
+		run.playerCases,
+		run.convictions,
+		run.divertedFundsCents,
+		run.resignations,
+		run.estimatedActiveMinutes,
 		run.finalPopularity,
 		run.peakPopularity,
 		JSON.stringify(run.indicatorRanges),
