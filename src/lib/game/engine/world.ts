@@ -16,6 +16,8 @@ import {
 	GAUGE_MAX,
 	GAUGE_MIN,
 	INDICATOR_IDS,
+	MEDIA_RELATION_MAX,
+	MEDIA_RELATION_MIN,
 	type Content,
 	type Effect,
 	type IndicatorId
@@ -92,7 +94,13 @@ export function createWorld(rng: RngState, turn: Turn, content: Content): WorldC
 		world: {
 			indicators: { ...content.balance.world.startingIndicators },
 			parties,
-			governingPartyId: content.world.startingGoverningParty
+			governingPartyId: content.world.startingGoverningParty,
+			media: Object.fromEntries(
+				content.mediaIds.map((mediaId) => [
+					mediaId,
+					{ relation: content.media[mediaId]?.baseRelation ?? 0, interviewTurn: null }
+				])
+			)
 		},
 		characters,
 		rng: currentRng
@@ -240,7 +248,16 @@ export function resolveWorld(
 
 export type PoliticalEffect = Extract<
 	Effect,
-	{ op: 'addIndicator' | 'addPartyStrength' | 'joinParty' | 'leaveParty' | 'addSupport' }
+	{
+		op:
+			| 'addIndicator'
+			| 'addPartyStrength'
+			| 'joinParty'
+			| 'leaveParty'
+			| 'addSupport'
+			| 'addMediaRelation'
+			| 'giveInterview';
+	}
 >;
 
 export function isPoliticalEffect(effect: Effect): effect is PoliticalEffect {
@@ -249,7 +266,9 @@ export function isPoliticalEffect(effect: Effect): effect is PoliticalEffect {
 		effect.op === 'addPartyStrength' ||
 		effect.op === 'joinParty' ||
 		effect.op === 'leaveParty' ||
-		effect.op === 'addSupport'
+		effect.op === 'addSupport' ||
+		effect.op === 'addMediaRelation' ||
+		effect.op === 'giveInterview'
 	);
 }
 
@@ -343,6 +362,27 @@ export function applyPoliticalEffect(
 				),
 				world,
 				changes: [{ kind: 'support', groupId: effect.group, delta: next - value }]
+			};
+		}
+		case 'addMediaRelation': {
+			const mediaId = effect.media === 'target' ? target : effect.media;
+			const media = mediaId === null ? undefined : world.media[mediaId];
+			if (mediaId === null || !media) throw new Error(`Média inconnu : ${String(mediaId)}`);
+			const next = clamp(media.relation + effect.value, MEDIA_RELATION_MIN, MEDIA_RELATION_MAX);
+			if (next === media.relation) return { player, world, changes: [] };
+			return {
+				player,
+				world: { ...world, media: { ...world.media, [mediaId]: { ...media, relation: next } } },
+				changes: [{ kind: 'mediaRelation', mediaId, delta: next - media.relation }]
+			};
+		}
+		case 'giveInterview': {
+			const media = target === null ? undefined : world.media[target];
+			if (target === null || !media) throw new Error(`Média inconnu : ${String(target)}`);
+			return {
+				player,
+				world: { ...world, media: { ...world.media, [target]: { ...media, interviewTurn: turn } } },
+				changes: [{ kind: 'interview', mediaId: target }]
 			};
 		}
 		default: {

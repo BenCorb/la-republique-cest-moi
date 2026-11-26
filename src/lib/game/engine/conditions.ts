@@ -126,6 +126,8 @@ export function evaluateCondition(context: ConditionContext, condition: Conditio
 			return context.player.profession === condition.profession;
 		case 'lifestyle':
 			return context.player.lifestyle === condition.lifestyle;
+		case 'ownsUpgrade':
+			return context.upgrades.some((upgrade) => upgrade.upgradeId === condition.upgrade);
 		case 'holdsMandate':
 			return activeMandates(context.mandates).some(
 				(mandate) => mandate.mandateId === condition.mandate

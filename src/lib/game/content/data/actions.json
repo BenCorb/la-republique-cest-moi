@@ -4,6 +4,7 @@
 		{ "id": "party", "label": "Parti" },
 		{ "id": "campaign", "label": "Campagne" },
 		{ "id": "network", "label": "Réseau et influence" },
+		{ "id": "media", "label": "Médias" },
 		{ "id": "political_finance", "label": "Finances politiques" },
 		{ "id": "work", "label": "Métier et revenus" },
 		{ "id": "personal", "label": "Vie personnelle" },
@@ -426,6 +427,32 @@
 				}
 			],
 			"target": "promise"
+		},
+		{
+			"id": "media.interview",
+			"category": "media",
+			"label": "Accorder une interview",
+			"description": "Un entretien « sans tabou » relu trois fois par votre entourage. Un média bienveillant vous met en valeur ; un média hostile vous attend au tournant, et l’article paraît à la fin du trimestre.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"effects": [
+				{ "op": "giveInterview" },
+				{ "op": "addMediaRelation", "media": "target", "value": 4 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 3 }
+			],
+			"target": "media"
+		},
+		{
+			"id": "media.lunch",
+			"category": "media",
+			"label": "Déjeuner avec une rédaction",
+			"description": "Une table discrète, un vin correct et des confidences « off » qui ne le resteront pas toutes. On ne vous doit rien, mais on vous connaît mieux.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 30000 }],
+			"effects": [{ "op": "addMediaRelation", "media": "target", "value": 8 }],
+			"target": "media"
 		},
 		{
 			"id": "mandate.prepare_reform",

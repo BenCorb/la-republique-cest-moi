@@ -140,9 +140,23 @@
 				{:else}
 					<ul class="mt-2 flex flex-col gap-2">
 						{#each view.press as item (item.key)}
-							<li class="rounded bg-surface px-3 py-2 text-sm">
-								<span class="block text-xs text-muted">{item.dateLabel}</span>
+							<li
+								class="rounded bg-surface px-3 py-2 text-sm {item.critical
+									? 'border-l-2 border-warning'
+									: ''}"
+								data-testid="press-item"
+							>
+								<span class="block text-xs text-muted">
+									{item.dateLabel} · {item.media}{#if item.toneLabel}
+										· <span class={item.critical ? 'text-warning' : ''}>{item.toneLabel}</span>
+									{:else}
+										· Ambiance
+									{/if}
+								</span>
 								<span class="font-serif">{item.title}</span>
+								{#if item.effects}
+									<span class="block text-xs text-muted">{item.effects}</span>
+								{/if}
 							</li>
 						{/each}
 					</ul>

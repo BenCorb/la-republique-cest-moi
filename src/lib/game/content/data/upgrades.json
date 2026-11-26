@@ -181,6 +181,29 @@
 				"salePercent": 88,
 				"stressPerTurn": -1
 			}
+		},
+		{
+			"id": "wealth.local_media",
+			"family": "personal",
+			"ownedLabel": "Le Courrier du Bocage",
+			"label": "Racheter le Courrier du Bocage",
+			"description": "Le quotidien du département et sa radio, Radio Bocage FM, en mal de repreneur. Les annonces légales rapportent un peu ; la rédaction, elle, a des principes et une mémoire.",
+			"treasury": "personalCashCents",
+			"timeCost": 15,
+			"maxOwned": 1,
+			"price": [{ "resource": "personalCashCents", "amount": 25000000 }],
+			"upkeep": [{ "resource": "personalCashCents", "amount": 200000 }],
+			"production": [],
+			"asset": {
+				"annualYieldPercent": 4,
+				"annualGrowthPercent": 0,
+				"volatilityPercent": 6,
+				"economySensitivityPercent": 2,
+				"failurePerMille": 3,
+				"salePercent": 80,
+				"stressPerTurn": 1,
+				"media": "media.bocage"
+			}
 		}
 	]
 }

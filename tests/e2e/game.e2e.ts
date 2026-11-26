@@ -141,6 +141,30 @@ test.describe('parcours de jeu', () => {
 		);
 	});
 
+	test('accorde une interview et la retrouve dans le fil de presse', async ({ page }) => {
+		await startCareer(page, 'e2e-medias');
+		await page.getByRole('button', { name: 'Carrière', exact: true }).click();
+		const bocage = page.getByTestId('media-media.bocage');
+		await expect(bocage).toContainText('Le Courrier du Bocage');
+		await expect(bocage).toContainText('Presse régionale');
+		await expect(page.getByTestId('media-media.horizon')).toContainText('Ne vous suit pas encore');
+		await expect(
+			page.getByRole('button', { name: 'Accorder une interview : L’Horizon' })
+		).toBeDisabled();
+
+		// Interview au média régional : prévue au plan, publiée à la fin du trimestre.
+		await page
+			.getByRole('button', { name: 'Accorder une interview : Le Courrier du Bocage' })
+			.click();
+		await expect(bocage).toContainText('Accorder une interview : prévu ce trimestre.');
+		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await settleDecisions(page);
+		const press = page.getByRole('complementary', { name: 'Alertes et presse' });
+		await expect(
+			press.getByTestId('press-item').filter({ hasText: 'Le Courrier du Bocage' }).first()
+		).toBeVisible();
+	});
+
 	test('adhère à un parti depuis le monde politique', async ({ page }) => {
 		await startCareer(page, 'e2e-parti');
 		await expect(page.getByTestId('header-party')).toHaveText('Étiquette aucune');
@@ -217,7 +241,8 @@ test.describe('parcours de jeu', () => {
 	test('s’arrête avant une échéance, résume la période, puis accélère une année', async ({
 		page
 	}) => {
-		await startCareer(page, 'e2e-year');
+		// Seed sans décision bloquante sur les sept premiers trimestres (catalogue P3-03).
+		await startCareer(page, 'e2e-year-3');
 		await page.getByRole('button', { name: 'Année suivante' }).click();
 
 		// Les législatives sont accessibles : le temps s'arrête avant la clôture des candidatures.

@@ -31,6 +31,7 @@ import {
 	fixtureJustice,
 	fixtureWealth,
 	fixturePromises,
+	fixtureMedia,
 	fixtureCareer,
 	fixtureSupports,
 	fixtureTraits,
@@ -115,7 +116,8 @@ function load(): Content {
 		profiles: fixtureProfiles,
 		justice: fixtureJustice,
 		wealth: fixtureWealth,
-		promises: fixturePromises
+		promises: fixturePromises,
+		media: fixtureMedia
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;

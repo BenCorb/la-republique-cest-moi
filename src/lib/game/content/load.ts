@@ -15,6 +15,7 @@ import profiles from './data/profiles.json';
 import justice from './data/justice.json';
 import wealth from './data/wealth.json';
 import promises from './data/promises.json';
+import media from './data/media.json';
 import traits from './data/traits.json';
 import world from './data/world.json';
 import type { Content } from './types.ts';
@@ -44,7 +45,8 @@ export function loadContent(): Content {
 		profiles,
 		justice,
 		wealth,
-		promises
+		promises,
+		media
 	});
 	if (!result.ok) {
 		const details = result.issues

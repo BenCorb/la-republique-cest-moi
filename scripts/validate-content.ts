@@ -28,7 +28,8 @@ export const REQUIRED_CATALOGS = [
 	'profiles.json',
 	'justice.json',
 	'wealth.json',
-	'promises.json'
+	'promises.json',
+	'media.json'
 ] as const;
 
 /** Répertoire des catalogues d'événements, relatif au répertoire de données. */
@@ -113,6 +114,7 @@ export function validateGameContent(dir: string): ContentReport {
 		justice: read('justice.json'),
 		wealth: read('wealth.json'),
 		promises: read('promises.json'),
+		media: read('media.json'),
 		events
 	});
 	if (result.ok) return report;

@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.23.0';
+export const RULES_VERSION = '0.24.0';
 
 export {
 	START_YEAR,
@@ -59,6 +59,9 @@ export {
 	type PromiseChange,
 	type PromiseRecord,
 	type PromisesRecord,
+	type Article,
+	type MediaState,
+	type PressRecord,
 	type Sentence,
 	type JournalEntry,
 	type ScheduledEvent,
@@ -283,6 +286,19 @@ export {
 	type PromisesParts,
 	type PromisesResolution
 } from './promises.ts';
+export {
+	articleEffect,
+	articleTone,
+	followsPlayer,
+	headlineCandidates,
+	interviewIssue,
+	mediaIssue,
+	ownedMedia,
+	resolvePress,
+	type PressInputs,
+	type PressParts,
+	type PressResolution
+} from './press.ts';
 export { careerSummary, type CareerSummary, type EndCause } from './selectors.ts';
 export {
 	caseInstanceId,

@@ -3,6 +3,7 @@
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 	import SupportsCard from './SupportsCard.svelte';
 	import PromisesCard from './PromisesCard.svelte';
+	import MediaCard from './MediaCard.svelte';
 
 	/**
 	 * Carrière (P2-02) : mandats en cours et leur coût en temps, règles du cumul,
@@ -123,6 +124,8 @@
 		</section>
 
 		<PromisesCard {session} promises={career.promises} {accelerating} />
+
+		<MediaCard {session} media={career.media} {accelerating} />
 
 		<section class="card flex flex-col gap-3" aria-labelledby="calendrier-title">
 			<h2 id="calendrier-title" class="section-title flex items-center gap-2">

@@ -220,6 +220,7 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 	it('atteint chaque événement du catalogue au fil de carrières simulées', () => {
 		const strategies: PlanStep[][] = [
 			[
+				buy('wealth.local_media'),
 				act('network.meet_officials'),
 				act('organization.fundraising'),
 				act('personal.freelance'),
@@ -247,6 +248,7 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 				CANDIDACY,
 				REFORM,
 				PROMISE,
+				buy('wealth.local_media'),
 				HIRE,
 				act('campaign.canvass'),
 				act('party.section_meeting'),

@@ -33,6 +33,7 @@ import {
 	fixtureJustice,
 	fixtureWealth,
 	fixturePromises,
+	fixtureMedia,
 	fixtureProfiles,
 	fixtureSupports,
 	fixtureTraits,
@@ -96,6 +97,7 @@ function raw(overrides: Record<string, unknown> = {}) {
 		justice: fixtureJustice,
 		wealth: fixtureWealth,
 		promises: fixturePromises,
+		media: fixtureMedia,
 		...overrides
 	};
 }

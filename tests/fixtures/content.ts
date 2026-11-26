@@ -1073,6 +1073,154 @@ export const fixtureWealth = {
 	unpaidLifestyleStress: 6
 };
 
+/**
+ * Médias de test (P3-03) : un seul média local, des titres génériques et des
+ * effets nuls, sans nouvelle d'ambiance ni tirage : les tests existants
+ * gardent leur PRNG et leurs soutiens. Les tests de presse utilisent `withPress`.
+ */
+export const fixtureMedia = {
+	media: [
+		{
+			id: 'media.local',
+			name: 'La Feuille locale',
+			kind: 'regional',
+			line: 'Presse locale',
+			description: 'Le journal du coin.',
+			scope: 'local',
+			audience: 50,
+			baseRelation: 0,
+			groups: ['support.workers'],
+			coverage: { justice: 1, promise: 1, election: 1, lifestyle: 1, ownership: 1 },
+			amplifyPercent: 100
+		}
+	],
+	headlines: [
+		{
+			id: 'headline.justice_critical',
+			topic: 'justice',
+			tone: 'critical',
+			text: 'Titre justice critical : {subject}'
+		},
+		{
+			id: 'headline.justice_neutral',
+			topic: 'justice',
+			tone: 'neutral',
+			text: 'Titre justice neutral : {subject}'
+		},
+		{
+			id: 'headline.justice_favorable',
+			topic: 'justice',
+			tone: 'favorable',
+			text: 'Titre justice favorable : {subject}'
+		},
+		{
+			id: 'headline.promise_critical',
+			topic: 'promise',
+			tone: 'critical',
+			text: 'Titre promise critical : {subject}'
+		},
+		{
+			id: 'headline.promise_neutral',
+			topic: 'promise',
+			tone: 'neutral',
+			text: 'Titre promise neutral : {subject}'
+		},
+		{
+			id: 'headline.promise_favorable',
+			topic: 'promise',
+			tone: 'favorable',
+			text: 'Titre promise favorable : {subject}'
+		},
+		{
+			id: 'headline.election_critical',
+			topic: 'election',
+			tone: 'critical',
+			text: 'Titre election critical : {subject}'
+		},
+		{
+			id: 'headline.election_neutral',
+			topic: 'election',
+			tone: 'neutral',
+			text: 'Titre election neutral : {subject}'
+		},
+		{
+			id: 'headline.election_favorable',
+			topic: 'election',
+			tone: 'favorable',
+			text: 'Titre election favorable : {subject}'
+		},
+		{
+			id: 'headline.lifestyle_critical',
+			topic: 'lifestyle',
+			tone: 'critical',
+			text: 'Titre lifestyle critical : {subject}'
+		},
+		{
+			id: 'headline.lifestyle_neutral',
+			topic: 'lifestyle',
+			tone: 'neutral',
+			text: 'Titre lifestyle neutral : {subject}'
+		},
+		{
+			id: 'headline.lifestyle_favorable',
+			topic: 'lifestyle',
+			tone: 'favorable',
+			text: 'Titre lifestyle favorable : {subject}'
+		},
+		{
+			id: 'headline.interview_critical',
+			topic: 'interview',
+			tone: 'critical',
+			text: 'Titre interview critical : {subject}'
+		},
+		{
+			id: 'headline.interview_neutral',
+			topic: 'interview',
+			tone: 'neutral',
+			text: 'Titre interview neutral : {subject}'
+		},
+		{
+			id: 'headline.interview_favorable',
+			topic: 'interview',
+			tone: 'favorable',
+			text: 'Titre interview favorable : {subject}'
+		},
+		{
+			id: 'headline.ownership_critical',
+			topic: 'ownership',
+			tone: 'critical',
+			text: 'Titre ownership critical : {subject}'
+		},
+		{
+			id: 'headline.ownership_neutral',
+			topic: 'ownership',
+			tone: 'neutral',
+			text: 'Titre ownership neutral : {subject}'
+		},
+		{
+			id: 'headline.ownership_favorable',
+			topic: 'ownership',
+			tone: 'favorable',
+			text: 'Titre ownership favorable : {subject}'
+		},
+		{ id: 'headline.ambient', topic: 'ambient', tone: 'neutral', text: 'Nouvelle d’ambiance' }
+	],
+	balance: {
+		maxArticlesPerTurn: 3,
+		nationalExposure: 30,
+		toneThreshold: 30,
+		toneEffects: { critical: 0, neutral: 0, favorable: 0 },
+		maxEffect: 5,
+		criticalExposure: 0,
+		ownedEffectPercent: 50,
+		relationDriftPercent: 10,
+		lifestylePercent: 0,
+		lifestyleLevel: 2,
+		ambientPercent: 0,
+		interviewCooldownTurns: 4
+	}
+};
+
 function load(): Content {
 	const result = validateContent({
 		actions: fixtureActions,
@@ -1088,7 +1236,8 @@ function load(): Content {
 		profiles: fixtureProfiles,
 		justice: fixtureJustice,
 		wealth: fixtureWealth,
-		promises: fixturePromises
+		promises: fixturePromises,
+		media: fixtureMedia
 	});
 	if (!result.ok) throw new Error(JSON.stringify(result.issues, null, 2));
 	return result.content;

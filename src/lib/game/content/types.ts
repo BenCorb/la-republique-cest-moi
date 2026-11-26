@@ -161,6 +161,8 @@ export type Condition =
 	| { readonly op: 'profession'; readonly profession: string }
 	/** Train de vie en cours du joueur (P3-02). */
 	| { readonly op: 'lifestyle'; readonly lifestyle: string }
+	/** Le joueur possède au moins un exemplaire de cette amélioration (P3-03). */
+	| { readonly op: 'ownsUpgrade'; readonly upgrade: string }
 	/** Soutien d'un groupe comparé à une valeur. */
 	| {
 			readonly op: 'support';
@@ -282,7 +284,14 @@ export type Effect =
 	/** Compromis : la promesse dont traite l'événement ne sera au mieux que partiellement tenue. */
 	| { readonly op: 'amendPromise' }
 	/** Renoncement : la promesse dont traite l'événement est abandonnée sur-le-champ. */
-	| { readonly op: 'abandonPromise' };
+	| { readonly op: 'abandonPromise' }
+	/**
+	 * Relation d'un média envers le joueur (P3-03) : média du catalogue, ou
+	 * `target` pour le média choisi dans le plan.
+	 */
+	| { readonly op: 'addMediaRelation'; readonly media: string; readonly value: number }
+	/** Interview accordée au média choisi dans le plan (`target`) : article à la frontière. */
+	| { readonly op: 'giveInterview' };
 
 /** États d'une promesse (GDD §7.5). */
 export const PROMISE_STATUSES = [
@@ -349,6 +358,117 @@ export interface PromisesBalance {
 export interface PromisesDefinition {
 	readonly promises: readonly PromiseDefinition[];
 	readonly balance: PromisesBalance;
+}
+
+/** Bornes de la relation d'un média envers le joueur (P3-03). */
+export const MEDIA_RELATION_MIN = -100;
+export const MEDIA_RELATION_MAX = 100;
+
+/** Familles de médias du catalogue (GDD §9.1, lot D). */
+export const MEDIA_KINDS = [
+	'reference',
+	'popular',
+	'news_channel',
+	'satirical',
+	'regional'
+] as const;
+export type MediaKind = (typeof MEDIA_KINDS)[number];
+
+/**
+ * Sujets d'article (P3-03) : un dossier judiciaire, une promesse arrivée à son
+ * issue, un scrutin, le train de vie, une interview, le rachat d'un média, ou
+ * une nouvelle d'ambiance sans rapport avec le joueur.
+ */
+export const ARTICLE_TOPICS = [
+	'justice',
+	'promise',
+	'election',
+	'lifestyle',
+	'interview',
+	'ownership',
+	'ambient'
+] as const;
+export type ArticleTopic = (typeof ARTICLE_TOPICS)[number];
+
+/** Tonalité d'un article envers le joueur. */
+export const ARTICLE_TONES = ['critical', 'neutral', 'favorable'] as const;
+export type ArticleTone = (typeof ARTICLE_TONES)[number];
+
+/**
+ * Média fictif (P3-03, GDD §9.1) : ligne éditoriale, audience, groupes qui le
+ * lisent et goût pour chaque sujet. Un média national ne s'intéresse au joueur
+ * qu'au-delà d'un seuil d'exposition (sauf affaires judiciaires et rachat).
+ */
+export interface MediaDefinition {
+	readonly id: string;
+	readonly name: string;
+	readonly kind: MediaKind;
+	/** Ligne éditoriale, en quelques mots. */
+	readonly line: string;
+	readonly description: string;
+	readonly scope: 'national' | 'local';
+	/** Audience, de 1 à 100 : pondère le choix du média et l'effet de ses articles. */
+	readonly audience: number;
+	/** Relation de départ et de référence envers le joueur. */
+	readonly baseRelation: number;
+	/** Groupes de soutien touchés par ses articles. */
+	readonly groups: readonly string[];
+	/** Goût pour chaque sujet (0 : jamais), hors interview et ambiance. */
+	readonly coverage: Readonly<Record<Exclude<ArticleTopic, 'interview' | 'ambient'>, number>>;
+	/** Amplification de l'effet de ses articles, en % (100 : neutre). */
+	readonly amplifyPercent: number;
+}
+
+/**
+ * Titre de presse (P3-03) : gabarit par sujet et tonalité, éventuellement
+ * réservé à des familles de médias ou à certains sujets précis (étape d'un
+ * dossier, issue d'une promesse…). Variables : `{subject}` (dossier, promesse, scrutin ou média selon le sujet) et `{media}` ; le joueur n’est jamais nommé (aucun nom de personnage joueur en V1).
+ */
+export interface HeadlineDefinition {
+	readonly id: string;
+	readonly topic: ArticleTopic;
+	readonly tone: ArticleTone;
+	readonly text: string;
+	/** Familles de médias autorisées ; absent : toutes. */
+	readonly kinds?: readonly MediaKind[] | undefined;
+	/** Précisions du sujet (`revealed`, `kept`, `won`…) ; absent : toutes. */
+	readonly details?: readonly string[] | undefined;
+	/** Première année de parution possible (nouvelles d'ambiance datées). */
+	readonly fromYear?: number | undefined;
+}
+
+/** Règles du fil de presse ; hypothèses provisoires d'équilibrage. */
+export interface PressBalance {
+	/** Nombre maximal d'articles consacrés au joueur par trimestre. */
+	readonly maxArticlesPerTurn: number;
+	/** Exposition à partir de laquelle les médias nationaux suivent le joueur. */
+	readonly nationalExposure: number;
+	/** Relation au-delà de laquelle un média adoucit sa tonalité (et en deçà de l'opposé, la durcit). */
+	readonly toneThreshold: number;
+	/** Effet de base d'un article sur chaque groupe touché, par tonalité. */
+	readonly toneEffects: Readonly<Record<ArticleTone, number>>;
+	/** Effet maximal d'un article sur un groupe, en valeur absolue. */
+	readonly maxEffect: number;
+	/** Exposition ajoutée par un article critique. */
+	readonly criticalExposure: number;
+	/** Effet des articles d'un média possédé par le joueur, en % (crédibilité réduite). */
+	readonly ownedEffectPercent: number;
+	/** Retour de la relation vers sa référence, en % de l'écart, chaque trimestre. */
+	readonly relationDriftPercent: number;
+	/** Chance, par trimestre de train de vie fastueux, d'un article sur le train de vie, en %. */
+	readonly lifestylePercent: number;
+	/** Rang de train de vie à partir duquel la presse s'y intéresse. */
+	readonly lifestyleLevel: number;
+	/** Chance, par trimestre, d'une nouvelle d'ambiance, en %. */
+	readonly ambientPercent: number;
+	/** Délai minimal entre deux interviews au même média, en trimestres. */
+	readonly interviewCooldownTurns: number;
+}
+
+export interface MediaCatalog {
+	readonly media: readonly MediaDefinition[];
+	readonly headlines: readonly HeadlineDefinition[];
+	readonly balance: PressBalance;
 }
 
 /** Gravité maximale d'un fait. */
@@ -476,6 +596,7 @@ export interface ActionDefinition {
 	 */
 	/** `asset` : un actif patrimonial possédé ; `upgrade` : un autre exemplaire de l'organisation. */
 	/** `promise` : une promesse type à annoncer ; `pledge` : une promesse en cours (P3-04). */
+	/** `media` : un média du catalogue (P3-03). */
 	readonly target?:
 		| 'party'
 		| 'mandate'
@@ -486,6 +607,7 @@ export interface ActionDefinition {
 		| 'asset'
 		| 'promise'
 		| 'pledge'
+		| 'media'
 		| undefined;
 }
 
@@ -540,6 +662,8 @@ export interface AssetDefinition {
 	readonly salePercent: number;
 	/** Variation de stress par trimestre actif (confort ; négatif : apaise). */
 	readonly stressPerTurn: number;
+	/** Média du catalogue détenu par cet actif (P3-03) : sa couverture devient bienveillante. */
+	readonly media?: string | undefined;
 }
 
 /** Train de vie du joueur (P3-02) : dépense personnelle de chaque trimestre. */
@@ -1162,4 +1286,9 @@ export interface Content {
 	readonly promises: Readonly<Record<string, PromiseDefinition>>;
 	readonly promiseIds: readonly string[];
 	readonly promiseRules: PromisesBalance;
+	/** Médias du catalogue, par identifiant, dans l'ordre du catalogue (P3-03). */
+	readonly media: Readonly<Record<string, MediaDefinition>>;
+	readonly mediaIds: readonly string[];
+	readonly headlines: readonly HeadlineDefinition[];
+	readonly press: PressBalance;
 }

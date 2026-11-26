@@ -23,6 +23,9 @@ import {
 	createGame,
 	describePendingEvent,
 	hashSeed,
+	followsPlayer,
+	interviewIssue,
+	ownedMedia,
 	previewPlan,
 	promiseIssue,
 	transition,
@@ -35,7 +38,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 12;
+export const SIMULATION_REPORT_VERSION = 13;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -112,6 +115,12 @@ export interface SimulationRun {
 	readonly promisesKept: number;
 	readonly promisesPartial: number;
 	readonly promisesAbandoned: number;
+	/** Articles consacrés au joueur, dont critiques et favorables ; interviews ; média racheté (P3-03). */
+	readonly articles: number;
+	readonly criticalArticles: number;
+	readonly favorableArticles: number;
+	readonly interviews: number;
+	readonly mediaOwned: number;
 	/** Collaborateurs recrutés et départs (démission, renvoi, débauchage…). */
 	readonly staffHired: number;
 	readonly staffDepartures: number;
@@ -332,6 +341,51 @@ function promiseWish(
 }
 
 /**
+ * Médias par politique (P3-03) : l'ambitieuse accorde une interview chaque
+ * trimestre au média le mieux disposé qui la suit et l'accepte (sinon, elle
+ * déjeune avec le mieux disposé) ; la mixte déjeune une fois l'an avec le moins bien disposé ;
+ * l'aléatoire tente une interview chez un média tiré au sort.
+ */
+function mediaWish(
+	strategy: SimulationStrategy,
+	state: GameState,
+	seed: string,
+	content: Content
+): PlanStep[] {
+	const interviewId = content.actionIds.find((id) =>
+		content.actions[id]?.effects.some((effect) => effect.op === 'giveInterview')
+	);
+	const lunchId = content.actionIds.find(
+		(id) =>
+			content.actions[id]?.target === 'media' &&
+			!content.actions[id]?.effects.some((effect) => effect.op === 'giveInterview')
+	);
+	const followed = content.mediaIds.filter((mediaId) => {
+		const definition = content.media[mediaId];
+		return definition !== undefined && followsPlayer(definition, state.player.exposure, content);
+	});
+	const relation = (mediaId: string): number => state.world.media[mediaId]?.relation ?? 0;
+	const byRelation = [...followed].sort((left, right) => relation(right) - relation(left));
+	const open = (mediaId: string): boolean =>
+		interviewIssue(state.world, mediaId, state.turn, content) === null;
+	if (strategy === 'ambitious' && byRelation[0]) {
+		const best = byRelation.find((mediaId) => open(mediaId) && relation(mediaId) >= 0);
+		if (best && interviewId) return [{ kind: 'action', id: interviewId, target: best }];
+		if (lunchId) return [{ kind: 'action', id: lunchId, target: byRelation[0] }];
+	}
+	if (strategy === 'mixed' && lunchId && state.turn % 4 === 0) {
+		const worst = byRelation[byRelation.length - 1];
+		if (worst) return [{ kind: 'action', id: lunchId, target: worst }];
+	}
+	const available = followed.filter(open);
+	if (strategy === 'random-valid' && interviewId && available.length > 0) {
+		const pick = available[hashSeed(`${seed}:${state.turn}:media`) % available.length]!;
+		return [{ kind: 'action', id: interviewId, target: pick }];
+	}
+	return [];
+}
+
+/**
  * Recrutement par politique : sauf la prudente, chaque politique recrute le
  * candidat de meilleure compétence visible (CV) d'un poste ouvert.
  */
@@ -381,6 +435,7 @@ const STRATEGY_WISHES: Readonly<
 		purchase('wealth.city_flat'),
 		purchase('wealth.sme_shares'),
 		purchase('wealth.country_house'),
+		purchase('wealth.local_media'),
 		action('lifestyle.adopt_comfortable'),
 		purchase('network.think_tank'),
 		purchase('organization.donor_file'),
@@ -412,6 +467,27 @@ function randomWishes(seed: string, turn: number, content: Content): PlanStep[] 
 	});
 }
 
+function pressCounts(
+	state: GameState,
+	content: Content
+): Pick<
+	SimulationRun,
+	'articles' | 'criticalArticles' | 'favorableArticles' | 'interviews' | 'mediaOwned'
+> {
+	const articles = state.history.flatMap((entry) =>
+		entry.type === 'turn.resolved'
+			? (entry.press?.articles ?? []).filter((article) => article.topic !== 'ambient')
+			: []
+	);
+	return {
+		articles: articles.length,
+		criticalArticles: articles.filter((article) => article.tone === 'critical').length,
+		favorableArticles: articles.filter((article) => article.tone === 'favorable').length,
+		interviews: articles.filter((article) => article.topic === 'interview').length,
+		mediaOwned: ownedMedia(state.upgrades, content).size
+	};
+}
+
 function wishesFor(
 	strategy: SimulationStrategy,
 	state: GameState,
@@ -422,6 +498,7 @@ function wishesFor(
 		...partyWish(strategy, state, seed, content),
 		...candidacyWish(strategy, state, content),
 		...promiseWish(strategy, state, seed, content),
+		...mediaWish(strategy, state, seed, content),
 		...hireWish(strategy, state, content)
 	];
 	if (strategy === 'random-valid') return [...party, ...randomWishes(seed, state.turn, content)];
@@ -573,6 +650,7 @@ function finalizeRun(
 		promisesKept: state.promises.filter((pledge) => pledge.status === 'kept').length,
 		promisesPartial: state.promises.filter((pledge) => pledge.status === 'partial').length,
 		promisesAbandoned: state.promises.filter((pledge) => pledge.status === 'abandoned').length,
+		...pressCounts(state, content),
 		separations: state.history.reduce(
 			(total, entry) =>
 				total +
@@ -968,6 +1046,11 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'promisesKept',
 		'promisesPartial',
 		'promisesAbandoned',
+		'articles',
+		'criticalArticles',
+		'favorableArticles',
+		'interviews',
+		'mediaOwned',
 		'staffHired',
 		'staffDepartures',
 		'finalPopularity',
@@ -1021,6 +1104,11 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.promisesKept,
 		run.promisesPartial,
 		run.promisesAbandoned,
+		run.articles,
+		run.criticalArticles,
+		run.favorableArticles,
+		run.interviews,
+		run.mediaOwned,
 		run.staffHired,
 		run.staffDepartures,
 		run.finalPopularity,
