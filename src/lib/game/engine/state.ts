@@ -496,7 +496,16 @@ export type PoliticalChange =
  * compromis, issue (`kept`, `partial`, `abandoned`) ou rappelée en campagne.
  */
 export type PromiseChange =
-	'made' | 'started' | 'lapsed' | 'amended' | 'kept' | 'partial' | 'abandoned' | 'recalled';
+	| 'made'
+	| 'started'
+	/** Élu sans le mandat qui donne le levier de la promesse (P3-22). */
+	| 'limited'
+	| 'lapsed'
+	| 'amended'
+	| 'kept'
+	| 'partial'
+	| 'abandoned'
+	| 'recalled';
 
 /**
  * Promesse du registre (P3-04, GDD §7.5) : un engagement pris pendant une
@@ -520,6 +529,11 @@ export interface PromiseRecord {
 	readonly progress: number;
 	/** Compromis accepté : la promesse ne sera au mieux que partiellement tenue. */
 	readonly amended: boolean;
+	/**
+	 * Levier institutionnel obtenu à l'élection (P3-22) : sans lui, la promesse
+	 * ne sera au mieux que partiellement tenue. `false` tant qu'elle est annoncée.
+	 */
+	readonly leverHeld: boolean;
 	/** Trimestre à la fin duquel l'issue est constatée (en cours seulement), sinon `null`. */
 	readonly dueTurn: Turn | null;
 	/** Trimestre de l'issue, ou de la défaite pour une promesse sans lendemain. */

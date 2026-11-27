@@ -255,7 +255,12 @@
 			"cooldownTurns": 0,
 			"unique": false,
 			"maxOccurrences": 4,
-			"actors": [{ "role": "rival", "tags": ["rival"] }],
+			"actors": [
+				{
+					"role": "rival",
+					"tags": ["rival"]
+				}
+			],
 			"choices": [
 				{
 					"id": "own_it",
@@ -323,6 +328,74 @@
 				{ "op": "addSupport", "group": "support.working_class", "value": 1 },
 				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
 				{ "op": "prepareCampaign", "value": 3 }
+			]
+		},
+		{
+			"id": "promise.recall_broken_elsewhere",
+			"category": "campaign",
+			"subject": "promise",
+			"title": "Une vieille promesse refait surface",
+			"text": "{rival} a retrouvé, dans les archives d’un autre mandat, votre engagement « {promise} », jamais tenu. Ce n’était pas le même scrutin, mais l’argument fait mouche : « Comment le croire cette fois-ci ? »",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 20,
+			"cooldownTurns": 0,
+			"unique": false,
+			"maxOccurrences": 4,
+			"actors": [
+				{
+					"role": "rival",
+					"tags": ["rival"]
+				}
+			],
+			"choices": [
+				{
+					"id": "other_job",
+					"label": "« Ce n’était pas le même mandat, ni les mêmes moyens »",
+					"outcome": [
+						"Vous expliquez que ce mandat-là n’en donnait pas les moyens. C’est vrai, c’est technique, et cela ne tient pas dans un titre ; l’affaire retombe sans vraiment s’éteindre."
+					],
+					"hints": ["Un argument exact, mais peu vendeur", "L’affaire retombe vite"],
+					"costs": [],
+					"effects": [
+						{ "op": "addSupport", "group": "support.middle_class", "value": -1 },
+						{ "op": "addStat", "stat": "player.stress", "value": 1 }
+					]
+				},
+				{
+					"id": "apologize",
+					"label": "Reconnaître l’échec et promettre d’en tirer les leçons",
+					"outcome": [
+						"« J’ai échoué sur ce point, et j’en ai tiré les leçons. » La phrase surprend ; {rival} n’avait pas préparé de réplique à des excuses."
+					],
+					"hints": ["Un aveu qui coûte un peu", "Une campagne qui reprend son cours"],
+					"costs": [],
+					"effects": [
+						{ "op": "addStat", "stat": "player.stress", "value": 2 },
+						{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+						{ "op": "prepareCampaign", "value": 1 }
+					]
+				}
+			]
+		},
+		{
+			"id": "promise.recall_kept_elsewhere",
+			"category": "campaign",
+			"subject": "promise",
+			"title": "Un engagement d’hier cité en exemple",
+			"text": "Dans un portrait de campagne, la presse rappelle que vous aviez promis « {promise} » lors d’un autre scrutin, et que vous l’avez tenu. Ce n’est pas le sujet de cette élection, mais cela pose une réputation.",
+			"blocking": false,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 0,
+			"cooldownTurns": 0,
+			"unique": false,
+			"maxOccurrences": 4,
+			"actors": [],
+			"effects": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+				{ "op": "prepareCampaign", "value": 2 }
 			]
 		}
 	]

@@ -82,6 +82,7 @@ const politicalChange = z.discriminatedUnion('kind', [
 		change: z.enum([
 			'made',
 			'started',
+			'limited',
 			'lapsed',
 			'amended',
 			'kept',
@@ -565,6 +566,7 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 			status: z.enum(PROMISE_STATUSES),
 			progress: int,
 			amended: z.boolean(),
+			leverHeld: z.boolean(),
 			dueTurn: int.nullable(),
 			closedTurn: int.nullable(),
 			recalls: int,

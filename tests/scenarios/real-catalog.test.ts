@@ -9,6 +9,7 @@ import {
 	describePendingEvent,
 	createGame,
 	formatTurn,
+	pledgeTarget,
 	previewPlan,
 	transition,
 	type GameState,
@@ -65,13 +66,17 @@ function choosePlan(state: GameState, wishes: readonly PlanStep[]): TurnPlan {
 		}
 		if (step === PROMISE) {
 			// Une promesse différente selon le trimestre, pour parcourir tout le catalogue.
+			// La cible nomme la campagne destinataire (P3-22) : chaque candidature en cours.
 			const ids = content.promiseIds;
 			const order = ids.map((_id, index) => ids[(index + state.turn) % ids.length]!);
-			const pick = order.find(
-				(id) =>
+			const targets = state.campaigns
+				.filter((campaign) => campaign.status === 'running')
+				.flatMap((campaign) => order.map((id) => pledgeTarget(campaign.campaignId, id)));
+			const pick = targets.find(
+				(target) =>
 					previewPlan(
 						state,
-						{ steps: [{ kind: 'action', id: 'campaign.pledge', target: id }] },
+						{ steps: [{ kind: 'action', id: 'campaign.pledge', target }] },
 						content
 					).valid
 			);

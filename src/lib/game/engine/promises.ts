@@ -2,9 +2,14 @@
  * Promesses et gouvernement (P3-04, GDD §7.5, ARCHITECTURE.md §8.4).
  *
  * - Pendant une campagne, le joueur prend des engagements (`makePromise`) sur
- *   des promesses types du catalogue : chacun est inscrit au registre, rattaché
- *   à la campagne en cours, et ses effets d'annonce s'appliquent aussitôt.
- * - Élu, la promesse passe « en cours » avec une échéance de réalisation ; un
+ *   des promesses types du catalogue, chacune propre à une élection (P3-22) :
+ *   la cible nomme explicitement la campagne destinataire
+ *   (`campaign.N/promise.x`) ; l'engagement est inscrit au registre et ses
+ *   effets d'annonce s'appliquent aussitôt.
+ * - Élu, la promesse passe « en cours » avec une échéance de réalisation, à
+ *   condition d'avoir obtenu le mandat qui en donne le levier ; sans lui (élu
+ *   conseiller sans la mairie), elle ne sera au mieux que partiellement tenue
+ *   (P3-22). Un
  *   dilemme (événement bloquant de sujet `promise`) est programmé entre-temps :
  *   tenir, transiger (`amendPromise`) ou renoncer (`abandonPromise`). L'action
  *   « Préparer une réforme » (`advancePromise`) la fait avancer.
@@ -12,7 +17,9 @@
  *   ou abandonnée, chacune avec ses effets sur les groupes concernés. Battu, le
  *   candidat garde une promesse annoncée mais sans lendemain.
  * - Pendant une campagne suivante, une promesse tenue ou abandonnée peut être
- *   rappelée par la presse ou l'adversaire (événement différé).
+ *   rappelée par la presse ou l'adversaire (événement différé) : d'abord celles
+ *   de même échelle que la nouvelle candidature, avec un événement plus mordant
+ *   que pour une promesse d'une autre échelle (P3-22).
  *
  * Aucune simulation de politique publique : des soutiens, des ressources, du
  * stress et des événements. Valeurs provisoires de `promises.json`.
@@ -84,40 +91,67 @@ export function findPledge(
 	);
 }
 
-/**
- * Campagne à laquelle un engagement sur cette promesse type serait rattaché :
- * la campagne en cours à l'échéance la plus proche dont l'élection l'admet.
- */
-export function pledgeCampaign(
-	promiseId: string,
-	career: CareerParts,
-	content: Content
-): Campaign | null {
-	const definition = content.promises[promiseId];
-	if (!definition) return null;
-	const ballotTurn = (campaign: Campaign): number =>
-		career.ballots.find((ballot) => ballot.ballotId === campaign.ballotId)?.turn ?? Infinity;
+/** Séparateur de la cible d'un engagement : `campaign.N/promise.x` (P3-22). */
+const PLEDGE_TARGET_SEPARATOR = '/';
+
+/** Cible d'un engagement : la campagne destinataire, choisie explicitement, et la promesse type. */
+export function pledgeTarget(campaignId: string, promiseId: string): string {
+	return `${campaignId}${PLEDGE_TARGET_SEPARATOR}${promiseId}`;
+}
+
+export function parsePledgeTarget(
+	target: string
+): { readonly campaignId: string; readonly promiseId: string } | null {
+	const parts = target.split(PLEDGE_TARGET_SEPARATOR);
+	if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+	return { campaignId: parts[0], promiseId: parts[1] };
+}
+
+/** Campagne destinataire d'un engagement : celle que nomme la cible, si elle est en cours. */
+export function pledgeCampaign(target: string, career: CareerParts): Campaign | null {
+	const parsed = parsePledgeTarget(target);
+	if (!parsed) return null;
 	return (
-		runningCampaigns(career.campaigns)
-			.filter((campaign) => definition.elections.includes(campaign.electionId))
-			.sort((left, right) => ballotTurn(left) - ballotTurn(right))[0] ?? null
+		runningCampaigns(career.campaigns).find(
+			(campaign) => campaign.campaignId === parsed.campaignId
+		) ?? null
 	);
 }
 
-/** Raison pour laquelle le joueur ne peut pas prendre cet engagement, ou `null`. */
-export function promiseIssue(
-	promiseId: string,
-	career: CareerParts,
-	content: Content
-): string | null {
-	const definition = Object.hasOwn(content.promises, promiseId)
-		? content.promises[promiseId]
-		: undefined;
-	if (!definition) return 'choisissez une promesse du catalogue';
+/** Échelle de l'élection d'une campagne (`local`, `regional`, `national`), ou `null`. */
+function campaignScope(campaignId: string, career: CareerParts, content: Content): string | null {
+	const campaign = career.campaigns.find((entry) => entry.campaignId === campaignId);
+	return (campaign && content.elections[campaign.electionId]?.scope) ?? null;
+}
+
+/** Mandat en cours donnant le levier de cette promesse type (P3-22). */
+export function holdsLever(promiseId: string, career: CareerParts, content: Content): boolean {
+	const lever = content.promises[promiseId]?.lever ?? [];
+	return career.mandates.some(
+		(mandate) => mandate.status === 'active' && lever.includes(mandate.mandateId)
+	);
+}
+
+/**
+ * Raison pour laquelle le joueur ne peut pas prendre cet engagement, ou `null`.
+ * `target` : `campaign.N/promise.x`, la campagne destinataire et la promesse type.
+ */
+export function promiseIssue(target: string, career: CareerParts, content: Content): string | null {
+	const parsed = parsePledgeTarget(target);
+	const definition =
+		parsed && Object.hasOwn(content.promises, parsed.promiseId)
+			? content.promises[parsed.promiseId]
+			: undefined;
+	if (!parsed || !definition) return 'choisissez une promesse du catalogue';
 	if (runningCampaigns(career.campaigns).length === 0) return 'il faut être candidat';
-	const campaign = pledgeCampaign(promiseId, career, content);
-	if (!campaign) return 'cet engagement ne concerne pas l’élection que vous briguez';
-	if (career.promises.some((pledge) => pledge.promiseId === promiseId && isOpenPledge(pledge))) {
+	const campaign = pledgeCampaign(target, career);
+	if (!campaign) return 'choisissez une candidature en cours';
+	if (definition.election !== campaign.electionId) {
+		return 'cet engagement ne concerne pas l’élection que vous briguez';
+	}
+	if (
+		career.promises.some((pledge) => pledge.promiseId === parsed.promiseId && isOpenPledge(pledge))
+	) {
 		return 'vous avez déjà pris cet engagement';
 	}
 	const count = career.promises.filter(
@@ -152,8 +186,10 @@ export function expandPromiseEffects(
 	for (const effect of effects) {
 		expanded.push(effect);
 		if (target === null) continue;
-		if (effect.op === 'makePromise' && Object.hasOwn(content.promises, target)) {
-			expanded.push(...(content.promises[target]?.announce ?? []));
+		const promiseId =
+			effect.op === 'makePromise' ? parsePledgeTarget(target)?.promiseId : undefined;
+		if (promiseId !== undefined && Object.hasOwn(content.promises, promiseId)) {
+			expanded.push(...(content.promises[promiseId]?.announce ?? []));
 		} else if (effect.op === 'abandonPromise') {
 			const pledge = findPledge(promises, target);
 			if (pledge?.status === 'in_progress') {
@@ -172,17 +208,23 @@ export function promiseOutcomeEffects(
 	return content.promises[promiseId]?.[outcome] ?? [];
 }
 
-/** Issue constatée à l'échéance : tenue, partiellement tenue (ou amendée) ou abandonnée. */
+/**
+ * Issue constatée à l'échéance : tenue, partiellement tenue (amendée, ou sans
+ * le levier institutionnel, P3-22) ou abandonnée.
+ */
 export function settlementOutcome(pledge: PromiseRecord, content: Content): PromiseOutcome {
-	if (pledge.progress >= PROMISE_PROGRESS_MAX && !pledge.amended) return 'kept';
+	if (pledge.progress >= PROMISE_PROGRESS_MAX && !pledge.amended && pledge.leverHeld) {
+		return 'kept';
+	}
 	// Un compromis plafonne l'issue ; sans travail suffisant, la promesse est enterrée.
 	return pledge.progress >= content.promiseRules.partialProgress ? 'partial' : 'abandoned';
 }
 
 /**
- * Applique un effet de promesse. `target` : définition (`makePromise`, et pour
- * un événement la promesse type concernée) ou exemplaire (`advancePromise`
- * ciblé). Un effet sans promesse ouverte correspondante n'a aucun effet.
+ * Applique un effet de promesse. `target` : campagne et promesse type
+ * (`makePromise`), promesse type concernée (événement) ou exemplaire
+ * (`advancePromise` ciblé). Un effet sans promesse ouverte correspondante n'a
+ * aucun effet.
  */
 export function applyPromiseEffect(
 	effect: PromiseEffect,
@@ -194,15 +236,17 @@ export function applyPromiseEffect(
 	const unchanged = { parts: career, changes: [] };
 	if (effect.op === 'makePromise') {
 		if (target === null || promiseIssue(target, career, content)) return unchanged;
-		const campaign = pledgeCampaign(target, career, content)!;
+		const campaign = pledgeCampaign(target, career)!;
+		const promiseId = parsePledgeTarget(target)!.promiseId;
 		const pledge: PromiseRecord = {
 			pledgeId: pledgeInstanceId(career.promises.length + 1),
-			promiseId: target,
+			promiseId,
 			campaignId: campaign.campaignId,
 			announcedTurn: turn,
 			status: 'announced',
 			progress: 0,
 			amended: false,
+			leverHeld: false,
 			dueTurn: null,
 			closedTurn: null,
 			recalls: 0,
@@ -220,7 +264,7 @@ export function applyPromiseEffect(
 				)
 			},
 			changes: [
-				{ kind: 'promise', pledgeId: pledge.pledgeId, promiseId: target, change: 'made' },
+				{ kind: 'promise', pledgeId: pledge.pledgeId, promiseId, change: 'made' },
 				...(preparation > 0 ? [{ kind: 'preparation' as const, delta: preparation }] : [])
 			]
 		};
@@ -302,12 +346,15 @@ export interface PromisesResolution {
  * Promesses à la fin du trimestre `turn`, après les scrutins, dans un ordre fixe :
  *   1. promesses des campagnes jugées : en cours après une victoire (échéance de
  *      réalisation et dilemme programmés, sauf dilemme au plafond de son
- *      événement), sans lendemain sinon ;
+ *      événement ; levier vérifié parmi les mandats en cours, à défaut la
+ *      promesse est limitée), sans lendemain sinon ;
  *   2. promesses en cours arrivées à échéance : issue selon l'avancement, et ses
  *      effets ;
  *   3. rappel éventuel d'une promesse passée pendant une campagne en cours
  *      (au plus un par trimestre, et plus du tout quand l'événement de rappel
- *      a atteint son plafond d'occurrences, P3-07).
+ *      a atteint son plafond d'occurrences, P3-07) : d'abord une promesse de
+ *      même échelle que cette campagne, rappelée par l'événement de son issue,
+ *      sinon une promesse d'une autre échelle et son événement « ailleurs ».
  */
 export function resolvePromises(
 	parts: PromisesParts,
@@ -382,8 +429,16 @@ export function resolvePromises(
 		}
 		const delay = nextInt(rng, rules.dilemmaDelayTurns.min, rules.dilemmaDelayTurns.max);
 		rng = delay.rng;
-		promises[index] = { ...pledge, status: 'in_progress', dueTurn: turn + rules.deliveryTurns };
+		// Levier vérifié (P3-22) : les mandats issus du scrutin sont déjà attribués.
+		const leverHeld = holdsLever(pledge.promiseId, career, content);
+		promises[index] = {
+			...pledge,
+			status: 'in_progress',
+			leverHeld,
+			dueTurn: turn + rules.deliveryTurns
+		};
 		note(pledge, 'started');
+		if (!leverHeld) note(pledge, 'limited');
 		const dilemma = content.promises[pledge.promiseId]?.dilemmaEvent;
 		if (dilemma && belowCap(dilemma)) {
 			scheduled.push({
@@ -411,14 +466,25 @@ export function resolvePromises(
 		.filter((entry) => entry.declaredTurn < turn)
 		.sort((left, right) => ballotTurn(left) - ballotTurn(right))[0];
 	if (campaign && rules.recallPercent > 0 && rules.maxRecalls > 0) {
-		const index = promises.findIndex(
-			(pledge) =>
-				(pledge.status === 'kept' || pledge.status === 'abandoned') &&
-				pledge.campaignId !== campaign.campaignId &&
-				pledge.recalls < rules.maxRecalls &&
-				(pledge.lastRecalledTurn === null || pledge.lastRecalledTurn < campaign.declaredTurn) &&
-				belowCap(pledge.status === 'kept' ? rules.recallEvents.kept : rules.recallEvents.abandoned)
+		const scope = content.elections[campaign.electionId]?.scope ?? null;
+		const recallEvent = (pledge: PromiseRecord): string => {
+			const here = campaignScope(pledge.campaignId, career, content) === scope;
+			if (pledge.status === 'kept') {
+				return here ? rules.recallEvents.kept : rules.recallEvents.keptElsewhere;
+			}
+			return here ? rules.recallEvents.abandoned : rules.recallEvents.abandonedElsewhere;
+		};
+		const recallable = (pledge: PromiseRecord): boolean =>
+			(pledge.status === 'kept' || pledge.status === 'abandoned') &&
+			pledge.campaignId !== campaign.campaignId &&
+			pledge.recalls < rules.maxRecalls &&
+			(pledge.lastRecalledTurn === null || pledge.lastRecalledTurn < campaign.declaredTurn) &&
+			belowCap(recallEvent(pledge));
+		// Une promesse de même échelle que la candidature passe d'abord (P3-22).
+		const sameScope = promises.findIndex(
+			(pledge) => recallable(pledge) && campaignScope(pledge.campaignId, career, content) === scope
 		);
+		const index = sameScope >= 0 ? sameScope : promises.findIndex(recallable);
 		const pledge = index >= 0 ? promises[index] : undefined;
 		if (pledge) {
 			const roll = nextFloat(rng);
@@ -427,8 +493,7 @@ export function resolvePromises(
 				promises[index] = { ...pledge, recalls: pledge.recalls + 1, lastRecalledTurn: turn };
 				note(pledge, 'recalled');
 				scheduled.push({
-					eventId:
-						pledge.status === 'kept' ? rules.recallEvents.kept : rules.recallEvents.abandoned,
+					eventId: recallEvent(pledge),
 					dueTurn: turn + 1,
 					sourceInstanceId: pledge.pledgeId,
 					actors: {
