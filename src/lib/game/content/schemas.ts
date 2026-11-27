@@ -11,6 +11,7 @@
  */
 import { z } from 'zod';
 import {
+	HIRE_OFFERS,
 	ARTICLE_TONES,
 	REGIONAL_ANCHOR,
 	END_CAUSES,
@@ -76,6 +77,7 @@ import {
 	type SupportsBalance,
 	type ActivistsBalance,
 	type Balance,
+	type RecruitmentBalance,
 	type Condition,
 	type CastMember,
 	type Effect,
@@ -194,7 +196,8 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 		mandate: z.union([contentId, z.literal('target')])
 	}),
 	z.strictObject({ op: z.literal('declareCandidacy') }),
-	z.strictObject({ op: z.literal('hireStaff') }),
+	z.strictObject({ op: z.literal('hireStaff'), offer: z.enum(HIRE_OFFERS).optional() }),
+	z.strictObject({ op: z.literal('courtCandidate') }),
 	z.strictObject({ op: z.literal('familyJoins'), relation: z.enum(['partner', 'child']) }),
 	z.strictObject({ op: z.literal('separate') }),
 	z.strictObject({ op: z.literal('familyAttitude'), value: nonZeroGaugeDelta }),
@@ -998,6 +1001,62 @@ export const campaignsBalanceSchema: z.ZodType<CampaignsBalance> = z.strictObjec
 	opponentMaxAge: positiveInt
 });
 
+const hireOfferSchema = z.strictObject({
+	salaryPercent: positiveInt.refine((value) => value <= 300, 'au plus 300 %'),
+	interest: safeInt.refine((value) => Math.abs(value) <= 50, 'de -50 à 50'),
+	attitude: safeInt.refine((value) => Math.abs(value) <= 50, 'de -50 à 50'),
+	bonusPercent: nonNegativeInt.refine((value) => value <= 400, 'au plus 400 %')
+});
+
+const recruitmentBalanceSchema: z.ZodType<RecruitmentBalance> = z
+	.strictObject({
+		salaryCurve: z.array(z.strictObject({ competence: gaugeValue, percent: positiveInt })).min(2),
+		salaryRoundingCents: positiveInt,
+		offers: z.strictObject({
+			low: hireOfferSchema,
+			standard: hireOfferSchema,
+			generous: hireOfferSchema
+		}),
+		influenceMax: nonNegativeInt,
+		influencePerRoot: nonNegativeInt,
+		popularityMax: nonNegativeInt,
+		mandateRankForMax: positiveInt,
+		mandateMax: nonNegativeInt,
+		apparatusMax: nonNegativeInt,
+		coveredQuartersForMax: positiveInt,
+		payrollMax: nonNegativeInt,
+		demandPercent: nonNegativeInt,
+		baseAcceptPercent: gaugeValue,
+		acceptPerPoint: nonNegativeInt,
+		minAcceptPercent: gaugeValue,
+		maxAcceptPercent: gaugeValue,
+		interviewInterest: nonNegativeInt,
+		maxInterviews: nonNegativeInt,
+		refusalAttitude: safeInt.refine((value) => Math.abs(value) <= 100, 'de -100 à 100')
+	})
+	.refine(
+		(balance) =>
+			balance.salaryCurve.every(
+				(point, index) =>
+					index === 0 || point.competence > balance.salaryCurve[index - 1]!.competence
+			),
+		{ message: 'courbe de salaire par compétence strictement croissante', path: ['salaryCurve'] }
+	)
+	.refine(
+		(balance) =>
+			balance.influenceMax +
+				balance.popularityMax +
+				balance.mandateMax +
+				balance.apparatusMax +
+				balance.payrollMax <=
+			100,
+		{ message: 'l’attractivité ne dépasse pas 100', path: ['payrollMax'] }
+	)
+	.refine((balance) => balance.minAcceptPercent <= balance.maxAcceptPercent, {
+		message: 'bornes d’acceptation inversées',
+		path: ['maxAcceptPercent']
+	});
+
 export const entourageBalanceSchema: z.ZodType<EntourageBalance> = z
 	.strictObject({
 		candidatesPerPost: positiveInt.refine((value) => value <= 6, 'au plus 6 candidats'),
@@ -1009,7 +1068,8 @@ export const entourageBalanceSchema: z.ZodType<EntourageBalance> = z
 		resignAttitude: safeInt.refine((value) => value >= -100 && value <= 0, 'seuil de -100 à 0'),
 		preciseAdviceCompetence: gaugeValue,
 		fairAdviceCompetence: gaugeValue,
-		poorAdviceErrorChance: probability
+		poorAdviceErrorChance: probability,
+		recruitment: recruitmentBalanceSchema
 	})
 	.refine((balance) => balance.fairAdviceCompetence <= balance.preciseAdviceCompetence, {
 		message: 'le seuil du conseil indicatif dépasse celui du conseil précis',
@@ -1048,7 +1108,9 @@ const candidateProfileSchema: z.ZodType<CandidateProfileDefinition> = z
 		label: frenchText,
 		minCompetence: gaugeValue,
 		maxCompetence: gaugeValue,
-		traits: z.array(contentId)
+		traits: z.array(contentId),
+		minAttractiveness: gaugeValue,
+		rareWeight: nonNegativeInt
 	})
 	.refine((profile) => profile.minCompetence <= profile.maxCompetence, {
 		message: 'compétence minimale supérieure à la maximale',

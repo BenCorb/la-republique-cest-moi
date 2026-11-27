@@ -298,7 +298,9 @@ describe('événement rare du catalogue (P3-15)', () => {
 					missionId: content.posts['post.chief_of_staff']!.missions[0]!.id,
 					status: 'active',
 					leftTurn: null,
-					leaveReason: null
+					leaveReason: null,
+					salaryCents: 150_000,
+					bonusDueCents: 0
 				}
 			]
 		};

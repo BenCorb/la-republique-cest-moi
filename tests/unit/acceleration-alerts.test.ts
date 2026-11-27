@@ -177,7 +177,9 @@ describe('alertes d’entourage et de budget', () => {
 					missionId: 'mission.aide.budget',
 					status: 'active',
 					leftTurn: null,
-					leaveReason: null
+					leaveReason: null,
+					salaryCents: 150_000,
+					bonusDueCents: 0
 				}
 			]
 		};

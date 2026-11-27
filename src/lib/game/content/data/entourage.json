@@ -215,25 +215,40 @@
 	],
 	"profiles": [
 		{
-			"id": "profile.expert",
-			"label": "Parcours solide, franc-parler assumé",
-			"minCompetence": 65,
-			"maxCompetence": 90,
-			"traits": ["trait.bluntness"]
+			"id": "profile.junior",
+			"label": "Jeune diplômé, motivé, tout à apprendre",
+			"minCompetence": 10,
+			"maxCompetence": 35,
+			"traits": [],
+			"minAttractiveness": 0,
+			"rareWeight": 10
 		},
 		{
 			"id": "profile.connected",
 			"label": "Peu d’expérience, mais un carnet d’adresses familial",
 			"minCompetence": 15,
 			"maxCompetence": 40,
-			"traits": ["trait.network"]
+			"traits": ["trait.network"],
+			"minAttractiveness": 0,
+			"rareWeight": 10
 		},
 		{
 			"id": "profile.rising",
 			"label": "Brillant et pressé de monter",
-			"minCompetence": 60,
-			"maxCompetence": 85,
-			"traits": ["trait.ambition"]
+			"minCompetence": 55,
+			"maxCompetence": 80,
+			"traits": ["trait.ambition"],
+			"minAttractiveness": 35,
+			"rareWeight": 3
+		},
+		{
+			"id": "profile.expert",
+			"label": "Parcours solide, franc-parler assumé",
+			"minCompetence": 65,
+			"maxCompetence": 90,
+			"traits": ["trait.bluntness"],
+			"minAttractiveness": 55,
+			"rareWeight": 1
 		}
 	]
 }

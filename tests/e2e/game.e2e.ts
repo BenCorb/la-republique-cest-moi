@@ -198,6 +198,11 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByTestId('post-post.chief_of_staff')).toContainText(
 			'Il faut au moins 15 points d’influence'
 		);
+		// Recrutement (P3-20) : attractivité en mots et masse salariale convenue.
+		await expect(page.getByTestId('attractiveness')).toHaveText('Structure émergente');
+		await expect(page.getByTestId('recruitment-summary')).toContainText('Influence');
+		await expect(page.getByTestId('payroll')).toContainText('par trimestre');
+		await expect(page.getByTestId('post-post.chief_of_staff')).toContainText('Référence :');
 	});
 
 	test('présente le quotidien de la région d’origine et lui seul (P3-18)', async ({ page }) => {

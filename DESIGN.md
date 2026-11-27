@@ -79,7 +79,7 @@ Les informations cachées restent cachées dans les données de vue : aucune jau
 | Agenda | Catalogue d’actions, coûts, plan modifiable, prévisions et validation | Prototype |
 | Organisation | Base militante (effectif, palier, capacité d’accueil, effets du palier, P3-19), producteurs, achats, charges, date d’activation, missions | Prototype puis alpha |
 | Carrière | Mandats, affiliations, échéances, candidatures, campagne et promesses | Alpha puis V1 |
-| Entourage | Postes, candidats, profils connus, relations, conseils, famille | Alpha |
+| Entourage | Attractivité et masse salariale (P3-20), postes (salaire de référence, salaire convenu du titulaire), candidats (profil, traits connus, salaire demandé, entretien, trois offres avec intérêt estimé en mots), relations, conseils, famille | Alpha |
 | Patrimoine | Argent personnel, actifs, confort, revenus et charges | V1 |
 | Actualités | Fil de presse, contexte national, historique des événements | Prototype puis alpha/V1 |
 | Justice / institutions | Dossiers, échéances, réformes possibles selon le mandat | V1 |

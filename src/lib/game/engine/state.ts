@@ -282,12 +282,18 @@ export interface StaffMember {
 	readonly status: 'active' | 'left';
 	readonly leftTurn: Turn | null;
 	readonly leaveReason: StaffLeaveReason | null;
+	/** Salaire convenu par trimestre (P3-20), en centimes de budget politique. */
+	readonly salaryCents: number;
+	/** Prime d'arrivée restant due, payée avec le premier salaire (P3-20). */
+	readonly bonusDueCents: number;
 }
 
 /** Candidat présélectionné pour un poste vacant, avec le profil qui l'a fait proposer. */
 export interface ShortlistEntry {
 	readonly characterId: string;
 	readonly profileId: string;
+	/** Entretiens approfondis déjà menés (P3-20). */
+	readonly interviews: number;
 }
 
 /** Production d'un collaborateur au trimestre résolu. */
@@ -373,6 +379,10 @@ export type PoliticalChange =
 	  }
 	| { readonly kind: 'preparation'; readonly delta: number }
 	| { readonly kind: 'hired'; readonly characterId: string; readonly postId: string }
+	/** Candidat qui décline l'offre (P3-20) : il quitte la présélection. */
+	| { readonly kind: 'hireRefused'; readonly characterId: string; readonly postId: string }
+	/** Entretien approfondi avec un candidat (P3-20). */
+	| { readonly kind: 'interviewed'; readonly characterId: string; readonly postId: string }
 	| {
 			readonly kind: 'familyJoined';
 			readonly characterId: string;

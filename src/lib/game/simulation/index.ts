@@ -24,6 +24,7 @@ import {
 	describePendingEvent,
 	hashSeed,
 	followsPlayer,
+	payrollCents,
 	activistTier,
 	pressAudience,
 	interviewIssue,
@@ -155,6 +156,10 @@ export interface SimulationRun {
 	/** Collaborateurs recrutés et départs (démission, renvoi, débauchage…). */
 	readonly staffHired: number;
 	readonly staffDepartures: number;
+	/** Recrutement (P3-20) : offres déclinées, masse salariale finale, compétence moyenne de l'équipe. */
+	readonly hiresRefused: number;
+	readonly payrollFinalCents: number;
+	readonly teamCompetence: number;
 	/** Justice (P3-01) : faits inscrits dont le joueur est auteur ou complice, dossiers le visant, condamnations. */
 	readonly facts: number;
 	readonly playerCases: number;
@@ -503,7 +508,12 @@ function reformWish(
  * candidat de meilleure compétence visible (CV) d'un poste ouvert.
  */
 function hireWish(strategy: SimulationStrategy, state: GameState, content: Content): PlanStep[] {
-	const hireId = content.actionIds.find((id) => content.actions[id]?.target === 'candidate');
+	// Offre standard (P3-20) : le salaire demandé, sans entretien ni prime.
+	const hireId = content.actionIds.find((id) =>
+		content.actions[id]?.effects.some(
+			(effect) => effect.op === 'hireStaff' && (effect.offer ?? 'standard') === 'standard'
+		)
+	);
 	if (!hireId || strategy === 'prudent') return [];
 	const candidates = Object.values(state.shortlists)
 		.flat()
@@ -518,6 +528,35 @@ function hireWish(strategy: SimulationStrategy, state: GameState, content: Conte
 		if (previewPlan(state, { steps: [step] }, content).valid) return [step];
 	}
 	return [];
+}
+
+function recruitmentCounts(
+	state: GameState
+): Pick<SimulationRun, 'hiresRefused' | 'payrollFinalCents' | 'teamCompetence'> {
+	const active = state.staff.filter((member) => member.status === 'active');
+	return {
+		hiresRefused: state.history.reduce(
+			(total, entry) =>
+				entry.type === 'turn.resolved'
+					? total +
+						entry.steps.reduce(
+							(sum, step) =>
+								sum + step.politics.filter((change) => change.kind === 'hireRefused').length,
+							0
+						)
+					: total,
+			0
+		),
+		payrollFinalCents: payrollCents(state.staff),
+		teamCompetence: active.length
+			? Math.round(
+					active.reduce(
+						(total, member) => total + (state.characters[member.characterId]?.competence ?? 0),
+						0
+					) / active.length
+				)
+			: 0
+	};
 }
 
 /** Stress à partir duquel les politiques prudente et mixte lâchent un mandat (P3-09). */
@@ -916,6 +955,7 @@ function finalizeRun(
 		),
 		staffHired: state.staff.length,
 		staffDepartures: state.staff.filter((member) => member.status === 'left').length,
+		...recruitmentCounts(state),
 		...justiceCounts(state),
 		resignations: state.mandates.filter((mandate) => mandate.endReason === 'resigned').length,
 		estimatedActiveMinutes: estimateActiveMinutes(summary.quartersPlayed, decisions, alertEpisodes),
@@ -1391,6 +1431,9 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'distinctions',
 		'staffHired',
 		'staffDepartures',
+		'hiresRefused',
+		'payrollFinalCents',
+		'teamCompetence',
 		'facts',
 		'playerCases',
 		'convictions',
@@ -1467,6 +1510,9 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.distinctions.join('|'),
 		run.staffHired,
 		run.staffDepartures,
+		run.hiresRefused,
+		run.payrollFinalCents,
+		run.teamCompetence,
 		run.facts,
 		run.playerCases,
 		run.convictions,

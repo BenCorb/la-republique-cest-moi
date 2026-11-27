@@ -1,11 +1,13 @@
 <script lang="ts">
-	import { Lock, UserMinus, UserPlus } from '@lucide/svelte';
+	import { Coffee, Lock, UserMinus, UserPlus } from '@lucide/svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 
 	/**
-	 * Entourage (P2-05) : postes clés, titulaires et missions persistantes,
-	 * candidats présélectionnés (CV : compétence et traits connus). Embauche et
-	 * renvoi s'ajoutent au plan ; le changement de mission est immédiat.
+	 * Entourage (P2-05, P3-20) : attractivité de la carrière et masse salariale,
+	 * postes clés, titulaires (salaire convenu) et missions persistantes, candidats
+	 * présélectionnés (compétence, traits connus, salaire demandé), entretien
+	 * approfondi et trois offres avec l'intérêt estimé du candidat. Offres et
+	 * renvoi s'ajoutent au plan ; le candidat ne répond qu'en fin de trimestre.
 	 */
 	interface Props {
 		session: GameSession;
@@ -26,9 +28,32 @@
 
 {#if entourage}
 	<div class="flex flex-col gap-5">
+		<section
+			class="card flex flex-wrap items-start justify-between gap-4"
+			data-testid="recruitment-summary"
+		>
+			<div>
+				<h2 class="section-title">Attractivité de votre équipe</h2>
+				<p class="mt-1 font-display text-xl font-bold text-primary" data-testid="attractiveness">
+					{entourage.attractiveness.label}
+				</p>
+				<p class="text-xs text-muted">{entourage.attractiveness.factors.join(' · ')}</p>
+			</div>
+			<div class="text-right">
+				<h2 class="section-title">Masse salariale</h2>
+				<p class="mt-1 font-semibold tabular-nums" data-testid="payroll">
+					{entourage.payroll.total}
+				</p>
+				{#if entourage.payroll.covered}
+					<p class="text-xs text-muted">{entourage.payroll.covered}</p>
+				{/if}
+			</div>
+		</section>
 		<p class="text-sm text-muted">
-			Un collaborateur embauché travaille à partir du trimestre suivant ; son salaire est prélevé
-			sur le budget politique, et un salaire impayé suspend sa mission et entame sa loyauté.
+			Un collaborateur embauché travaille à partir du trimestre suivant ; son salaire convenu est
+			prélevé sur le budget politique, et un salaire impayé suspend sa mission et entame sa loyauté.
+			Un candidat peut décliner votre offre : il répond en fin de trimestre, selon l’attractivité de
+			votre équipe, l’offre et vos entretiens. Une prime n’est versée que s’il accepte.
 			{#if entourage.timeBonus > 0}
 				Ce trimestre, votre entourage vous rend {entourage.timeBonus} points de temps.
 			{/if}
@@ -56,7 +81,7 @@
 							<p class="text-xs text-muted">
 								{occupant.since}{occupant.producing
 									? ''
-									: ' · au travail dès le trimestre prochain'}
+									: ' · au travail dès le trimestre prochain'} · {occupant.salary}
 							</p>
 							<p class="text-sm">
 								Compétence : <span class="font-medium">{occupant.competence.label}</span>
@@ -140,30 +165,73 @@
 											? ` · ${candidate.unknownTraits} trait${candidate.unknownTraits > 1 ? 's' : ''} inconnu${candidate.unknownTraits > 1 ? 's' : ''}`
 											: ''}
 									</p>
-									<div class="mt-2 flex flex-wrap items-center justify-end gap-2">
-										{#if candidate.planned}
-											<span class="text-xs text-muted">Recrutement prévu ce trimestre.</span>
-										{:else}
-											{#if candidate.reason}
-												<span class="text-xs text-warning">{candidate.reason}</span>
-											{/if}
+									<p class="mt-1 text-xs">Salaire demandé : {candidate.asked}</p>
+									{#if entourage.interviewActionId}
+										<div class="mt-2 flex flex-wrap items-center justify-between gap-2">
+											<span class="text-xs text-muted">
+												{candidate.interviews > 0
+													? `${candidate.interviews} entretien${candidate.interviews > 1 ? 's' : ''} approfondi${candidate.interviews > 1 ? 's' : ''} mené${candidate.interviews > 1 ? 's' : ''}`
+													: 'Pas encore reçu en entretien approfondi'}{candidate.interviewPlanned
+													? ' · entretien prévu ce trimestre'
+													: ''}
+											</span>
 											<button
 												type="button"
 												class="btn-secondary btn-small"
-												disabled={!candidate.hireable || accelerating}
-												aria-label="Prévoir le recrutement de {candidate.name}"
+												disabled={!candidate.interviewable || accelerating}
+												title={candidate.interviewReason ?? undefined}
+												aria-label="Prévoir un entretien approfondi avec {candidate.name}"
 												onclick={() =>
-													entourage.hireActionId &&
+													entourage.interviewActionId &&
 													session.controller.addStep({
 														kind: 'action',
-														id: entourage.hireActionId,
+														id: entourage.interviewActionId,
 														target: candidate.characterId
 													})}
 											>
-												<UserPlus class="size-3.5" aria-hidden="true" /> Recruter
+												<Coffee class="size-3.5" aria-hidden="true" /> Entretien
 											</button>
-										{/if}
-									</div>
+										</div>
+									{/if}
+									<ul class="mt-2 grid gap-1.5" aria-label="Offres possibles à {candidate.name}">
+										{#each candidate.offers as offer (offer.actionId)}
+											<li
+												class="flex flex-wrap items-center justify-between gap-2 rounded border border-line bg-surface px-2 py-1.5"
+												data-testid="offer-{offer.offer}"
+											>
+												<span class="min-w-0">
+													<span class="font-medium">{offer.label}</span>
+													<span class="text-xs text-muted">
+														· {offer.salary}{offer.bonus ? ` · ${offer.bonus}` : ''}
+													</span>
+													<span class="block text-xs font-semibold {toneClass[offer.interestTone]}">
+														Intérêt estimé : {offer.interest.toLowerCase()}
+													</span>
+													{#if offer.reason && !offer.planned}
+														<span class="block text-xs text-warning">{offer.reason}</span>
+													{/if}
+												</span>
+												{#if offer.planned}
+													<span class="text-xs text-muted">Offre prévue ce trimestre.</span>
+												{:else if !candidate.planned}
+													<button
+														type="button"
+														class="btn-secondary btn-small"
+														disabled={!offer.addable || accelerating}
+														aria-label="{offer.label} à {candidate.name}"
+														onclick={() =>
+															session.controller.addStep({
+																kind: 'action',
+																id: offer.actionId,
+																target: candidate.characterId
+															})}
+													>
+														<UserPlus class="size-3.5" aria-hidden="true" /> Proposer
+													</button>
+												{/if}
+											</li>
+										{/each}
+									</ul>
 								</li>
 							{/each}
 						</ul>

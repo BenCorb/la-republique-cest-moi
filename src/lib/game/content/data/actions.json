@@ -613,18 +613,47 @@
 			]
 		},
 		{
+			"id": "staff.interview",
+			"category": "organisation",
+			"label": "Mener un entretien approfondi",
+			"description": "Un déjeuner, une visite de la permanence et deux heures à vanter un « projet ambitieux ». Le candidat repart mieux disposé, ou du moins mieux nourri.",
+			"timeCost": 15,
+			"maxPerTurn": 2,
+			"costs": [],
+			"effects": [{ "op": "courtCandidate" }],
+			"target": "candidate"
+		},
+		{
+			"id": "staff.hire_low",
+			"category": "organisation",
+			"label": "Proposer une offre réduite",
+			"description": "Vingt pour cent de moins que ses prétentions, au nom de « l’engagement ». Le candidat peut trouver l’argument un peu court.",
+			"timeCost": 10,
+			"maxPerTurn": 2,
+			"costs": [],
+			"effects": [{ "op": "hireStaff", "offer": "low" }],
+			"target": "candidate"
+		},
+		{
 			"id": "staff.hire",
 			"category": "organisation",
-			"label": "Recruter un collaborateur",
+			"label": "Proposer le salaire demandé",
 			"description": "Un entretien, une poignée de main et une promesse de « missions passionnantes ». Le salaire, lui, est bien réel.",
 			"timeCost": 10,
 			"maxPerTurn": 2,
 			"costs": [],
-			"effects": [
-				{
-					"op": "hireStaff"
-				}
-			],
+			"effects": [{ "op": "hireStaff", "offer": "standard" }],
+			"target": "candidate"
+		},
+		{
+			"id": "staff.hire_generous",
+			"category": "organisation",
+			"label": "Proposer une offre généreuse",
+			"description": "Un quart de plus que ses prétentions et une prime d’arrivée, versée seulement s’il accepte. L’argent ne fait pas tout, mais il aide à se décider.",
+			"timeCost": 10,
+			"maxPerTurn": 2,
+			"costs": [],
+			"effects": [{ "op": "hireStaff", "offer": "generous" }],
 			"target": "candidate"
 		},
 		{

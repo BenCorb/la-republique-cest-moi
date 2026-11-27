@@ -220,10 +220,11 @@ function deadlineAlerts(state: GameState, content: Content): AccelerationAlert[]
 }
 
 /** Salaires de l'entourage que le budget politique ne couvre plus. */
-function payrollAlert(state: GameState, content: Content): AccelerationAlert[] {
+function payrollAlert(state: GameState): AccelerationAlert[] {
+	// Salaires convenus et primes encore dues (P3-20).
 	const payroll = state.staff
 		.filter((member) => member.status === 'active')
-		.reduce((sum, member) => sum + (content.posts[member.postId]?.salaryCents ?? 0), 0);
+		.reduce((sum, member) => sum + member.salaryCents + member.bonusDueCents, 0);
 	if (payroll === 0 || state.resources.politicalBudgetCents >= payroll) return [];
 	return [
 		{
@@ -260,7 +261,7 @@ export function accelerationAlerts(
 			message: 'Santé critique : une intervention est recommandée.'
 		});
 	}
-	alerts.push(...payrollAlert(state, content));
+	alerts.push(...payrollAlert(state));
 	alerts.push(...quarterAlerts(state, content));
 	alerts.push(...deadlineAlerts(state, content));
 	return alerts;

@@ -953,6 +953,20 @@ Retour PT-P3-09-014 ; décisions déléguées de ROADMAP §5.2 ; valeurs au GDD 
 - **Versions** : `RULES_VERSION = '0.35.0'` (0.33.0 et 0.34.0 réservés à P3-17 et P3-18).
 - **Tests** : `tests/unit/activists.test.ts` (paliers, capacité, croissance plafonnée et stable, base hostile, local, recrues, cotisations et frais, bonus de terrain prévu et appliqué, mobilisation, catalogue, projection, journal et note) ; scénarios adaptés ; E2E du panneau et du bonus annoncé.
 
+### 8.4 duovicies Décisions de P3-20 : recrutement I — salaire, attractivité, acceptation (26 novembre 2026)
+
+Retours PT-P3-09-005 et 006 ; décisions déléguées de ROADMAP §5.2 ; valeurs au GDD §6.2.
+
+- **État** : `StaffMember.salaryCents` (salaire convenu) et `bonusDueCents` (prime due, payée avec le premier salaire puis remise à zéro) ; `ShortlistEntry.interviews`. Changements politiques `hireRefused` et `interviewed`.
+- **Moteur** (`engine/recruitment.ts`) : `askedSalaryCents` (courbe `salaryCurve` interpolée, arrondie à `salaryRoundingCents`), `offeredSalaryCents`, `offerBonusCents`, `payrollCents` ; `attractivenessFactors` / `attractiveness` (influence √, popularité, rang du mandat principal, appui de `apparatusGroup`, trimestres couverts par le budget avec un salaire de référence moyen en plus, chacun plafonné, somme ≤ 100, validée) ; `acceptancePercent` (attractivité + intérêt de l'offre + entretiens − `demandPercent` de la compétence, bornée) ; `acceptanceRoll` = empreinte `hashSeed(seed:recrutement:tour:candidat) % 100` — reproductible, sans décaler le PRNG.
+- **Plan** : `hireStaff.offer` (`low`, `standard`, `generous`) et effet `courtCandidate` (actions `staff.hire_low`, `staff.hire`, `staff.hire_generous`, `staff.interview`, cible `candidate`). La prévision valide la réserve (`hireReserveCents` sur les salaires convenus, offre et prime comprises) et suppose l'accord ; seule l'exécution passe une `HiringDecision` (seed, attractivité du moment) à `applyStaffEffect`, qui accepte ou refuse. Refus : candidat retiré de la présélection, étiquette `candidate` retirée, attitude `refusalAttitude`, aucun salaire ni prime ; le temps de l'action est consommé.
+- **Paie** : `resolveStaffProduction` prélève `salaryCents + bonusDueCents` ; alerte d'accélération `payroll_at_risk` sur les mêmes montants. Embauche par événement (P3-12) au salaire demandé, sans prime.
+- **Vivier** : `CandidateProfileDefinition.minAttractiveness` et `rareWeight` ; tirage pondéré d'un profil par place (poids 10 si l'attractivité suffit, sinon poids de rareté). Nouveau profil `profile.junior`.
+- **Interface** : résumé « Attractivité de votre équipe » (mot et facteurs) et masse salariale avec trimestres couverts ; salaire de référence du poste, salaire convenu du titulaire ; pour chaque candidat, salaire demandé, entretiens, trois offres (salaire, prime, intérêt estimé en mots, sans pourcentage). Journal du refus et de l'entretien.
+- **Simulation** : rapport v19 (`hiresRefused`, `payrollFinalCents`, `teamCompetence`) ; les politiques font l'offre standard. Lot indicatif (150 carrières, seed `p320`) : embauches identiques à `main`, 0,2 à 0,6 refus par carrière, masse salariale finale de 670 € à 4 700 € par trimestre selon la stratégie, compétence moyenne de 23 à 45 ; victoires comparables.
+- **Versions** : `RULES_VERSION = '0.36.0'` (0.33.0 à 0.35.0 réservés à P3-17, P3-18 et P3-19).
+- **Tests** : `tests/unit/recruitment.test.ts` (courbe, offres, attractivité, vivier gradué, refus sans prime ni rejeu, accord et paie avec prime, réserve, entretiens, projection sans chiffre) ; fixtures à acceptation certaine ; E2E du résumé.
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.
