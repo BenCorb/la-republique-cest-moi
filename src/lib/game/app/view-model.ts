@@ -2348,6 +2348,30 @@ function noteHighlights(
 			details: []
 		});
 	}
+	// Recrutement tenté au trimestre (PT-B1-005) : acceptation ou refus du candidat.
+	for (const change of entry.steps.flatMap((step) => step.politics)) {
+		if (change.kind !== 'hired' && change.kind !== 'hireRefused') continue;
+		const character = state.characters[change.characterId];
+		const name = character ? displayName(character) : 'Le candidat';
+		const post = content.posts[change.postId]?.label ?? change.postId;
+		const member = state.staff.find(
+			(entry) => entry.characterId === change.characterId && entry.postId === change.postId
+		);
+		items.push({
+			key: `recruitment:${change.characterId}`,
+			kind: 'people',
+			tone: change.kind === 'hired' ? 'gain' : 'cost',
+			title: change.kind === 'hired' ? 'Recrutement conclu' : 'Offre déclinée',
+			text:
+				change.kind === 'hired'
+					? `${name} accepte le poste « ${post} »${member ? ` pour ${formatResource('politicalBudgetCents', member.salaryCents)} par trimestre` : ''} et se met au travail dès ce trimestre.`
+					: `${name} décline le poste « ${post} » et quitte la présélection. Aucune prime n’a été versée ; le poste reste à pourvoir.`,
+			chart: null,
+			record: null,
+			chips: [],
+			details: []
+		});
+	}
 	for (const line of worldLines(entry.world, state, content)) {
 		items.push({
 			key: `party:${items.length}`,
