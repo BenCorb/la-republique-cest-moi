@@ -228,6 +228,7 @@ describe('délai thématique (P3-15)', () => {
 				{
 					turn,
 					upgrades: [],
+					mandates: [],
 					campaigns: [],
 					ballots: [],
 					cases: [],

@@ -577,23 +577,54 @@ export function partyPollShare(
 }
 
 /**
+ * Mobilisation d'une campagne, de 0 à 100 % : militants personnels et, en cas
+ * d'investiture, la part de la machine du parti, rapportés au besoin du scrutin.
+ */
+export function mobilizationPercent(
+	campaign: Campaign,
+	activists: number,
+	content: Content
+): number {
+	const need = content.elections[campaign.electionId]?.mobilizationNeed ?? 0;
+	if (need <= 0) return 100;
+	const machine = campaign.invested
+		? Math.floor((need * content.balance.activists.partyMachinePercent) / 100)
+		: 0;
+	return Math.min(100, Math.floor(((activists + machine) * 100) / need));
+}
+
+/** Pénalité de score d'une mobilisation incomplète (0 à `mobilizationWeight`). */
+export function mobilizationPenalty(
+	campaign: Campaign,
+	activists: number,
+	content: Content
+): number {
+	const missing = 100 - mobilizationPercent(campaign, activists, content);
+	return Math.round((missing * content.balance.activists.mobilizationWeight) / 100);
+}
+
+/**
  * Score du joueur avant aléa : popularité, part du parti s'il est investi,
- * préparation plafonnée et prime du sortant. Les poids sont des pourcentages.
+ * préparation plafonnée et prime du sortant, moins la pénalité de mobilisation
+ * (P3-19). Les poids sont des pourcentages.
  */
 export function campaignScore(
 	campaign: Campaign,
 	popularity: number,
+	activists: number,
 	partyPercent: number,
 	incumbent: boolean,
 	content: Content
 ): number {
 	const balance = content.balance.campaigns;
-	return Math.round(
-		(popularity * balance.popularityWeightPercent +
-			(campaign.invested ? partyPercent * balance.partyWeightPercent : 0) +
-			Math.min(campaign.preparation, balance.preparationCap) * balance.preparationWeightPercent) /
-			100 +
-			(incumbent ? balance.incumbentBonus : 0)
+	return (
+		Math.round(
+			(popularity * balance.popularityWeightPercent +
+				(campaign.invested ? partyPercent * balance.partyWeightPercent : 0) +
+				Math.min(campaign.preparation, balance.preparationCap) * balance.preparationWeightPercent) /
+				100 +
+				(incumbent ? balance.incumbentBonus : 0)
+		) - mobilizationPenalty(campaign, activists, content)
 	);
 }
 
@@ -762,6 +793,7 @@ export function campaignPoll(
 	const score = campaignScore(
 		campaign,
 		player.popularity,
+		player.activists,
 		partyPollShare(campaign.partyId, world, content),
 		incumbent,
 		content
@@ -992,6 +1024,7 @@ export function resolveDeadlines(
 				let score = campaignScore(
 					campaign,
 					player.popularity,
+					player.activists,
 					partyPercent,
 					outgoing.has(definition.grants),
 					content

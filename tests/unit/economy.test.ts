@@ -50,6 +50,7 @@ function game(
 			promises: null,
 			press: null,
 			institutions: null,
+			activists: null,
 			snapshot: {
 				influence: 0,
 				politicalBudgetCents: 0,
@@ -57,7 +58,8 @@ function game(
 				popularity: 0,
 				health: 100,
 				stress: 0,
-				exposure: 0
+				exposure: 0,
+				activists: 0
 			},
 			events: []
 		})),

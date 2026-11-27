@@ -132,11 +132,46 @@ export const fixtureBalance = {
 		hostileAttitude: -15,
 		partnerStress: 1,
 		partnerAgeSpread: 5
+	},
+	/**
+	 * Base militante de test (P3-19) : neutre par défaut (aucune cotisation, aucun
+	 * frais, aucune pénalité de mobilisation) ; `tests/unit/activists.test.ts`
+	 * fixe ses propres valeurs.
+	 */
+	activists: {
+		start: 0,
+		baseCapacity: 15,
+		partyCapacity: 40,
+		mandateCapacityPerRank: 4,
+		reachInfluenceFactor: 2,
+		reachExposureDivisor: 5,
+		campaignReach: 10,
+		attractionThreshold: 0,
+		attractionPercentPerPoint: 4,
+		baseAttritionPercent: 4,
+		discontentThreshold: 10,
+		discontentDivisor: 2,
+		overCapacityAttritionPercent: 10,
+		recruitsPerVoteTenths: 3,
+		duesCents: 0,
+		partyMachinePercent: 40,
+		mobilizationWeight: 0,
+		tiers: [
+			{
+				id: 'tier.isolated',
+				label: 'Quelques fidèles',
+				min: 0,
+				fieldMultiplier: 0,
+				upkeepCents: 0
+			},
+			{ id: 'tier.core', label: 'Noyau', min: 5, fieldMultiplier: 1, upkeepCents: 0 },
+			{ id: 'tier.committee', label: 'Comité', min: 25, fieldMultiplier: 2, upkeepCents: 0 }
+		]
 	}
 };
 
 /**
- * Profils de test : par défaut, une origine et une profession sans effet ni
+ * Profils de test : par défaut, une origine et un terrain d’engagement sans effet ni
  * famille (les autres tests restent indépendants de la création) ; une origine
  * avec famille et héritage pour les tests de famille.
  */
@@ -166,24 +201,24 @@ export const fixtureProfiles = {
 			inheritanceCents: 1_000_000
 		}
 	],
-	professions: [
+	engagements: [
 		{
-			id: 'profession.none',
+			id: 'engagement.none',
 			label: 'Aucune',
-			description: 'Profession de test sans effet.',
+			description: 'Terrain de test sans effet.',
 			effects: []
 		},
 		{
-			id: 'profession.press',
+			id: 'engagement.press',
 			label: 'Presse',
-			description: 'Profession de test.',
+			description: 'Terrain de test.',
 			effects: [
 				{ op: 'addResource', resource: 'influence', value: 6 },
 				{ op: 'addStat', stat: 'player.stress', value: 2 }
 			]
 		}
 	],
-	defaults: { origin: 'origin.neutral', profession: 'profession.none', region: 'region.test' },
+	defaults: { origin: 'origin.neutral', engagement: 'engagement.none', region: 'region.test' },
 	// Territoire neutre (P3-16) : aucun effet, si bien que les tests existants n'en dépendent pas.
 	territory: {
 		regions: [
@@ -378,7 +413,8 @@ export const fixtureCareer = {
 			grants: 'mandate.councillor',
 			bonusGrant: { mandate: 'mandate.mayor', minPercent: 60 },
 			requiresAnyMandate: [],
-			rivalStrength: 30
+			rivalStrength: 30,
+			mobilizationNeed: 0
 		},
 		{
 			id: 'election.national',
@@ -391,7 +427,8 @@ export const fixtureCareer = {
 			minAge: 30,
 			grants: 'mandate.deputy',
 			requiresAnyMandate: ['mandate.councillor'],
-			rivalStrength: 40
+			rivalStrength: 40,
+			mobilizationNeed: 0
 		}
 	],
 	mandates: [
@@ -1195,7 +1232,7 @@ export const fixtureWealth = {
 };
 
 /**
- * Médias de test (P3-03) : un seul média local, des titres génériques et des
+ * Médias de test (P3-03) : un quotidien par région de test (P3-18), des titres génériques et des
  * effets nuls, sans nouvelle d'ambiance ni tirage : les tests existants
  * gardent leur PRNG et leurs soutiens. Les tests de presse utilisent `withPress`.
  */
@@ -1207,7 +1244,22 @@ export const fixtureMedia = {
 			kind: 'regional',
 			line: 'Presse locale',
 			description: 'Le journal du coin.',
-			scope: 'local',
+			scope: 'regional',
+			region: 'region.test',
+			audience: 50,
+			baseRelation: 0,
+			groups: ['support.workers'],
+			coverage: { justice: 1, promise: 1, election: 1, lifestyle: 1, ownership: 1 },
+			amplifyPercent: 100
+		},
+		{
+			id: 'media.other',
+			name: 'Le Journal d’ailleurs',
+			kind: 'regional',
+			line: 'Presse d’une autre région',
+			description: 'Le journal d’une région voisine.',
+			scope: 'regional',
+			region: 'region.other',
 			audience: 50,
 			baseRelation: 0,
 			groups: ['support.workers'],
@@ -1329,6 +1381,8 @@ export const fixtureMedia = {
 	balance: {
 		maxArticlesPerTurn: 3,
 		nationalExposure: 30,
+		nationalMandateRank: 40,
+		regionalNationalPercent: 50,
 		toneThreshold: 30,
 		toneEffects: { critical: 0, neutral: 0, favorable: 0 },
 		maxEffect: 5,

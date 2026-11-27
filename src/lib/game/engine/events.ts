@@ -27,6 +27,7 @@ import {
 	POST_VARIABLE,
 	PROMISE_VARIABLE,
 	RESOURCE_IDS,
+	REGIONAL_ANCHOR,
 	WORLD_TEMPLATE_VARIABLES,
 	type Content,
 	type Effect,
@@ -42,6 +43,7 @@ import type { ChooseEventCommand, CommandError, TransitionResult } from './comma
 import { evaluateCondition, type ConditionContext } from './conditions.ts';
 import { applyGauge, gaugeKey, resolveEffect } from './effects.ts';
 import { createFact, factIssue } from './justice.ts';
+import { resolveMediaRef } from './territory.ts';
 import { nextFloat, nextInt, type RngState } from './random.ts';
 import {
 	addRelation,
@@ -107,6 +109,8 @@ export function actorName(
 	if (Object.hasOwn(content.promises, id)) return content.promises[id]?.label;
 	// Poste concerné par un événement de sujet `post` (P3-12).
 	if (Object.hasOwn(content.posts, id)) return content.posts[id]?.label;
+	// Quotidien régional du joueur (P3-18).
+	if (Object.hasOwn(content.media, id)) return content.media[id]?.name;
 	return undefined;
 }
 
@@ -161,6 +165,10 @@ function bindWorldVariables(
 		const kept = inherited[variable];
 		if (kept !== undefined) {
 			bound[variable] = kept;
+			continue;
+		}
+		if (variable === 'regional_media') {
+			bound[variable] = resolveMediaRef(REGIONAL_ANCHOR, player.territory.regionId, content);
 			continue;
 		}
 		let partyId: string | null;

@@ -38,7 +38,7 @@ class MemoryStorage implements KeyValueStorage {
 const act = (id: string): PlanStep => ({ kind: 'action', id });
 const buy = (id: string): PlanStep => ({ kind: 'purchase', id });
 const wishes = [
-	buy('organization.volunteer'),
+	buy('organization.local_office'),
 	act('organization.fundraising'),
 	act('network.meet_officials'),
 	act('activism.leaflets'),

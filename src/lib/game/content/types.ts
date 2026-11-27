@@ -71,7 +71,9 @@ export const WORLD_TEMPLATE_VARIABLES = [
 	'opposition_party',
 	'opposition_leader',
 	'player_party',
-	'player_party_leader'
+	'player_party_leader',
+	/** Quotidien de la région du joueur (P3-18). */
+	'regional_media'
 ] as const;
 export type WorldTemplateVariable = (typeof WORLD_TEMPLATE_VARIABLES)[number];
 
@@ -149,6 +151,8 @@ export const STAT_IDS = [
 	'player.children',
 	/** Exposition médiatique, de 0 à 100 (P3-01). */
 	'player.exposure',
+	/** Base militante active, en nombre de personnes (P3-19). */
+	'player.activists',
 	/** Nombre de faits du registre impliquant le joueur, comme auteur ou complice (P3-01). */
 	'player.facts',
 	/** Dossiers judiciaires en cours visant le joueur (P3-01). */
@@ -182,9 +186,9 @@ export type Condition =
 	| { readonly op: 'holdsMandate'; readonly mandate: string }
 	/** Le joueur pourrait recevoir ce mandat sans en quitter aucun (cumul et incompatibilités). */
 	| { readonly op: 'canHoldMandate'; readonly mandate: string }
-	/** Origine ou profession du joueur (P2-08). */
+	/** Origine ou engagement du joueur (P2-08). */
 	| { readonly op: 'origin'; readonly origin: string }
-	| { readonly op: 'profession'; readonly profession: string }
+	| { readonly op: 'engagement'; readonly engagement: string }
 	/** Train de vie en cours du joueur (P3-02). */
 	| { readonly op: 'lifestyle'; readonly lifestyle: string }
 	/** Le joueur possède au moins un exemplaire de cette amélioration (P3-03). */
@@ -591,9 +595,17 @@ export const ARTICLE_TONES = ['critical', 'neutral', 'favorable'] as const;
 export type ArticleTone = (typeof ARTICLE_TONES)[number];
 
 /**
+ * Rôle stable du quotidien de la région du joueur (P3-18) : utilisable à la
+ * place d'un identifiant de média dans `addMediaRelation` et `asset.media`.
+ */
+export const REGIONAL_ANCHOR = 'regional_anchor';
+
+/**
  * Média fictif (P3-03, GDD §9.1) : ligne éditoriale, audience, groupes qui le
  * lisent et goût pour chaque sujet. Un média national ne s'intéresse au joueur
- * qu'au-delà d'un seuil d'exposition (sauf affaires judiciaires et rachat).
+ * qu'à partir d'une portée nationale ou d'un seuil d'exposition (sauf affaires
+ * judiciaires et rachat) ; un quotidien régional (P3-18) ne suit que les
+ * personnages de sa région.
  */
 export interface MediaDefinition {
 	readonly id: string;
@@ -602,7 +614,9 @@ export interface MediaDefinition {
 	/** Ligne éditoriale, en quelques mots. */
 	readonly line: string;
 	readonly description: string;
-	readonly scope: 'national' | 'local';
+	readonly scope: 'national' | 'regional';
+	/** Région couverte, pour un quotidien régional (un seul par région). */
+	readonly region?: string | undefined;
 	/** Audience, de 1 à 100 : pondère le choix du média et l'effet de ses articles. */
 	readonly audience: number;
 	/** Relation de départ et de référence envers le joueur. */
@@ -639,6 +653,10 @@ export interface PressBalance {
 	readonly maxArticlesPerTurn: number;
 	/** Exposition à partir de laquelle les médias nationaux suivent le joueur. */
 	readonly nationalExposure: number;
+	/** Rang de mandat à partir duquel la presse nationale suit le joueur (P3-18). */
+	readonly nationalMandateRank: number;
+	/** Poids du quotidien régional dans une carrière de portée nationale, en % (P3-18). */
+	readonly regionalNationalPercent: number;
 	/** Relation au-delà de laquelle un média adoucit sa tonalité (et en deçà de l'opposé, la durcit). */
 	readonly toneThreshold: number;
 	/** Effet de base d'un article sur chaque groupe touché, par tonalité. */
@@ -797,6 +815,11 @@ export interface ActionDefinition {
 	readonly fromEra?: string | undefined;
 	readonly effects: readonly Effect[];
 	/**
+	 * Action de terrain (P3-19) : effet unitaire ajouté une fois par cran du
+	 * palier militant atteint (bonus annoncé dans la prévision, aucun tirage).
+	 */
+	readonly fieldwork?: FieldworkBonus | undefined;
+	/**
 	 * Cible à choisir dans le plan : `party` (identifiant de parti), `mandate`
 	 * (exemplaire de mandat en cours) ou `ballot` (échéance électorale).
 	 */
@@ -853,6 +876,11 @@ export interface UpgradeDefinition {
 	 * revenu proportionnel à cette valeur et se revend au lieu d'être abandonné.
 	 */
 	readonly asset?: AssetDefinition | undefined;
+	/**
+	 * Accueil des militants (P3-19) : capacité ajoutée par exemplaire actif et
+	 * départs trimestriels évités, en points de pourcentage.
+	 */
+	readonly activists?: { readonly capacity: number; readonly retentionPercent: number } | undefined;
 }
 
 /** Règles d'un actif patrimonial ; hypothèses provisoires d'équilibrage. */
@@ -1012,6 +1040,69 @@ export interface Balance {
 	readonly campaigns: CampaignsBalance;
 	readonly entourage: EntourageBalance;
 	readonly family: FamilyBalance;
+	readonly activists: ActivistsBalance;
+}
+
+/** Bonus de terrain d'une action (P3-19) : ressource ou préparation de campagne. */
+export type FieldworkBonus =
+	| { readonly op: 'addResource'; readonly resource: ResourceId; readonly value: number }
+	| { readonly op: 'prepareCampaign'; readonly value: number };
+
+/** Palier de la base militante (P3-19), du noyau à l'organisation nationale. */
+export interface ActivistTierDefinition {
+	readonly id: string;
+	readonly label: string;
+	/** Effectif minimal du palier. */
+	readonly min: number;
+	/** Nombre de fois que le bonus de terrain d'une action s'ajoute. */
+	readonly fieldMultiplier: number;
+	/** Frais logistiques (locaux, impressions, déplacements), en centimes par trimestre. */
+	readonly upkeepCents: number;
+}
+
+/**
+ * Base militante organique (P3-19, PT-P3-09-014 ; hypothèses de tuning). Chaque
+ * trimestre, la notoriété fait connaître le joueur, le soutien militant décide
+ * qui reste ; la capacité d'accueil plafonne la croissance, l'attrition et le
+ * mécontentement font partir.
+ */
+export interface ActivistsBalance {
+	/** Effectif au départ (amis, collègues, premiers sympathisants). */
+	readonly start: number;
+	/** Capacité d'accueil sans local ni parti. */
+	readonly baseCapacity: number;
+	/** Capacité ajoutée par l'adhésion à un parti (relais de la section). */
+	readonly partyCapacity: number;
+	/** Capacité ajoutée par point de rang de chaque mandat en cours. */
+	readonly mandateCapacityPerRank: number;
+	/** Audience : √influence × ce facteur… */
+	readonly reachInfluenceFactor: number;
+	/** … plus l'exposition divisée par cette valeur… */
+	readonly reachExposureDivisor: number;
+	/** … plus ce bonus par campagne en cours. */
+	readonly campaignReach: number;
+	/** Soutien militant en deçà duquel personne ne s'engage. */
+	readonly attractionThreshold: number;
+	/** Taux d'engagement de l'audience par point de soutien au-delà du seuil, en %. */
+	readonly attractionPercentPerPoint: number;
+	/** Départs naturels par trimestre, en % de l'effectif. */
+	readonly baseAttritionPercent: number;
+	/** Soutien militant en deçà duquel la base se démobilise davantage. */
+	readonly discontentThreshold: number;
+	/** Départs supplémentaires : un point de % par tranche de cette taille sous le seuil. */
+	readonly discontentDivisor: number;
+	/** Départs supplémentaires au-delà de la capacité d'accueil, en %. */
+	readonly overCapacityAttritionPercent: number;
+	/** Recrues après un scrutin disputé : tant de personnes par point de % des voix, en dixièmes. */
+	readonly recruitsPerVoteTenths: number;
+	/** Cotisations reversées par militant et par trimestre, en centimes (budget politique). */
+	readonly duesCents: number;
+	/** Part du besoin de mobilisation couverte par la machine du parti en cas d'investiture, en %. */
+	readonly partyMachinePercent: number;
+	/** Pénalité de score maximale d'une campagne sans aucune mobilisation. */
+	readonly mobilizationWeight: number;
+	/** Paliers, par effectif minimal croissant (le premier commence à 0). */
+	readonly tiers: readonly ActivistTierDefinition[];
 }
 
 /** Paramètres des scrutins et du gouvernement (hypothèses de tuning, P2-02). */
@@ -1248,6 +1339,11 @@ export interface ElectionDefinition {
 	 * versé après le scrutin à partir de `refundMinPercent` des voix ; absent : aucun.
 	 */
 	readonly campaignRefundCents?: number | undefined;
+	/**
+	 * Besoin de mobilisation (P3-19) : militants nécessaires pour couvrir le
+	 * territoire du scrutin ; en deçà, le score baisse (jamais l'éligibilité).
+	 */
+	readonly mobilizationNeed: number;
 }
 
 /**
@@ -1468,9 +1564,9 @@ export interface TerritoryDefinition {
 	readonly toponymy: ToponymyDefinition;
 }
 
-/** Profession avant la politique : effets de départ et action propre éventuelle. */
-export interface ProfessionDefinition {
-	/** Identifiant stable, par exemple `profession.lawyer`. */
+/** Terrain d’engagement (P3-17) : ce qui a mené à la politique ; effets de départ, actions propres. */
+export interface EngagementDefinition {
+	/** Identifiant stable, par exemple `engagement.union`. */
 	readonly id: string;
 	readonly label: string;
 	readonly description: string;
@@ -1642,12 +1738,12 @@ export interface Content {
 	readonly institutions: InstitutionsDefinition;
 	readonly origins: Readonly<Record<string, OriginDefinition>>;
 	readonly originIds: readonly string[];
-	readonly professions: Readonly<Record<string, ProfessionDefinition>>;
-	readonly professionIds: readonly string[];
+	readonly engagements: Readonly<Record<string, EngagementDefinition>>;
+	readonly engagementIds: readonly string[];
 	/** Profil retenu quand la création n'en précise pas (tests, simulateur). */
 	readonly defaultProfile: {
 		readonly origin: string;
-		readonly profession: string;
+		readonly engagement: string;
 		readonly region: string;
 	};
 	/** Territoire d'origine (P3-16) : régions, tailles et traits de commune, toponymie. */

@@ -26,7 +26,8 @@ const worldBindings: Record<string, string> = {
 	opposition_party: someParty,
 	opposition_leader: game.world.parties[someParty]!.leaderId,
 	player_party: someParty,
-	player_party_leader: game.world.parties[someParty]!.leaderId
+	player_party_leader: game.world.parties[someParty]!.leaderId,
+	regional_media: content.mediaIds.find((id) => content.media[id]?.scope === 'regional')!
 };
 
 /** Toutes les distributions possibles d'un événement (produit des candidats par rôle). */

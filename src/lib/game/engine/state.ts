@@ -71,12 +71,14 @@ export interface PlayerState {
 	readonly supports: Readonly<Record<string, number>>;
 	/** Popularité : synthèse pondérée des soutiens électoraux, toujours recalculée. */
 	readonly popularity: number;
-	/** Origine sociale et profession choisies à la création (P2-08). */
+	/** Origine sociale et engagement choisies à la création (P2-08). */
 	readonly origin: string;
-	readonly profession: string;
+	readonly engagement: string;
 	/** Territoire d'origine : région choisie, département et commune tirés (P3-16). */
 	readonly territory: TerritoryState;
 	readonly family: FamilyState;
+	/** Base militante active, en nombre de personnes (P3-19). */
+	readonly activists: number;
 }
 
 /** Liens familiaux du joueur : identifiants de personnages (P2-08). */
@@ -788,6 +790,8 @@ export interface HistoryEntry {
 	readonly press: PressRecord | null;
 	/** Réformes institutionnelles, `null` si la carrière s'est terminée avant. */
 	readonly institutions: InstitutionsRecord | null;
+	/** Base militante (arrivées, départs, cotisations), `null` si la carrière s'est terminée avant. */
+	readonly activists: ActivistsRecord | null;
 	/** Événements créés (ou suites annulées) au passage à T+1. */
 	readonly events: readonly EventRecord[];
 	/** Situation à l'issue du trimestre, pour les tendances du tableau de bord (P3-08). */
@@ -800,6 +804,27 @@ export interface QuarterSnapshot extends Resources {
 	readonly health: number;
 	readonly stress: number;
 	readonly exposure: number;
+	/** Base militante (P3-19). */
+	readonly activists: number;
+}
+
+/** Évolution de la base militante à la frontière (P3-19). */
+export interface ActivistsRecord {
+	/** Sympathisants qui s'engagent (notoriété × soutien militant, dans la capacité d'accueil). */
+	readonly arrivals: number;
+	/** Recrues après un scrutin disputé. */
+	readonly recruits: number;
+	/** Départs (usure, mécontentement, manque de place). */
+	readonly departures: number;
+	/** Effectif après la frontière. */
+	readonly total: number;
+	readonly capacity: number;
+	/** Palier avant et après (identifiants du catalogue). */
+	readonly tierBefore: string;
+	readonly tierAfter: string;
+	/** Cotisations reçues et frais logistiques payés (budget politique), en centimes. */
+	readonly duesCents: number;
+	readonly upkeepCents: number;
 }
 
 /** Choix appliqué pour un événement bloquant, exactement une fois. */
@@ -878,21 +903,21 @@ export interface NewGameConfig {
 	 * frontière ; les tests et le simulateur la fournissent.
 	 */
 	readonly seed: string;
-	/** Origine et profession choisies (P2-08) ; à défaut, le profil par défaut du catalogue. */
+	/** Origine et engagement choisies (P2-08) ; à défaut, le profil par défaut du catalogue. */
 	readonly origin?: string;
-	readonly profession?: string;
+	readonly engagement?: string;
 	/** Région d'origine (P3-16) ; à défaut, celle du profil par défaut. */
 	readonly region?: string;
 }
 
 export function createGame(config: NewGameConfig, content: Content): GameState {
 	const originId = config.origin ?? content.defaultProfile.origin;
-	const professionId = config.profession ?? content.defaultProfile.profession;
+	const engagementId = config.engagement ?? content.defaultProfile.engagement;
 	const regionId = config.region ?? content.defaultProfile.region;
 	const origin = content.origins[originId];
-	const profession = content.professions[professionId];
+	const engagement = content.engagements[engagementId];
 	if (!origin) throw new Error(`Origine inconnue : ${originId}`);
-	if (!profession) throw new Error(`Profession inconnue : ${professionId}`);
+	if (!engagement) throw new Error(`Terrain d’engagement inconnu : ${engagementId}`);
 	// Territoire tiré sur un PRNG dérivé : aucun autre tirage n'en est décalé.
 	const territory = createTerritory(config.seed, regionId, content);
 
@@ -900,12 +925,13 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 	const world = createWorld(createRng(config.seed), START_TURN, content);
 	const cast = createCast(world.characters, world.rng, START_TURN, content);
 
-	// Profil : effets de l'origine puis de la profession, dans cet ordre.
+	// Profil : effets de l'origine puis de le terrain d’engagement, dans cet ordre.
 	let player: PlayerState = {
 		birthTurn: START_TURN - PROTOTYPE_STARTING_AGE * TURNS_PER_YEAR,
 		health: content.balance.wellbeing.startingHealth,
 		stress: content.balance.wellbeing.startingStress,
 		exposure: content.justice.baseExposure,
+		activists: content.balance.activists.start,
 		defense: 0,
 		ineligibleUntil: null,
 		lifestyle: content.wealth.defaultLifestyle,
@@ -914,14 +940,14 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		supports: startingSupports(content),
 		popularity: computePopularity(startingSupports(content), content),
 		origin: originId,
-		profession: professionId,
+		engagement: engagementId,
 		territory,
 		family: EMPTY_FAMILY
 	};
 	const resources: Record<ResourceId, number> = { ...content.balance.startingResources };
 	for (const effect of [
 		...origin.effects,
-		...profession.effects,
+		...engagement.effects,
 		...territoryEffects(territory, originId, content)
 	]) {
 		if (effect.op === 'addResource') {

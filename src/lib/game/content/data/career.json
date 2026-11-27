@@ -16,7 +16,8 @@
 			},
 			"requiresAnyMandate": [],
 			"rivalStrength": 30,
-			"campaignRefundCents": 80000
+			"campaignRefundCents": 80000,
+			"mobilizationNeed": 10
 		},
 		{
 			"id": "election.senatorial",
@@ -34,7 +35,8 @@
 				"mandate.regional_councillor"
 			],
 			"rivalStrength": 36,
-			"campaignRefundCents": 50000
+			"campaignRefundCents": 50000,
+			"mobilizationNeed": 5
 		},
 		{
 			"id": "election.legislative",
@@ -48,7 +50,8 @@
 			"grants": "mandate.deputy",
 			"requiresAnyMandate": [],
 			"rivalStrength": 40,
-			"campaignRefundCents": 150000
+			"campaignRefundCents": 150000,
+			"mobilizationNeed": 60
 		},
 		{
 			"id": "election.regional",
@@ -62,7 +65,8 @@
 			"grants": "mandate.regional_councillor",
 			"requiresAnyMandate": [],
 			"rivalStrength": 33,
-			"campaignRefundCents": 100000
+			"campaignRefundCents": 100000,
+			"mobilizationNeed": 250
 		}
 	],
 	"mandates": [

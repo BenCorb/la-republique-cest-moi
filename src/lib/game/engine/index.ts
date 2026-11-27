@@ -106,7 +106,8 @@ export {
 	type PartyState,
 	type PoliticalChange,
 	type WorldRecord,
-	type WorldState
+	type WorldState,
+	type ActivistsRecord
 } from './state.ts';
 export {
 	acceptancePercent,
@@ -120,11 +121,22 @@ export {
 	type AttractivenessFactors
 } from './recruitment.ts';
 export {
+	activistCapacity,
+	activistTier,
+	fieldworkEffects,
+	nextActivistTier,
+	resolveActivists,
+	type ActivistsInputs,
+	type ActivistsResolution
+} from './activists.ts';
+export {
 	createTerritory,
 	departmentOf,
 	generateTownName,
 	localRivalModifier,
 	placeOf,
+	regionalMedia,
+	resolveMediaRef,
 	territoryEffects,
 	type HomeTown,
 	type TerritoryState
@@ -188,6 +200,8 @@ export {
 	campaignPoll,
 	campaignRefund,
 	campaignScore,
+	mobilizationPenalty,
+	mobilizationPercent,
 	candidacyIssue,
 	careerEffectIssue,
 	opponentStrength,
@@ -359,7 +373,9 @@ export {
 	interviewIssue,
 	mediaIssue,
 	ownedMedia,
+	pressAudience,
 	resolvePress,
+	type PressAudience,
 	type HeadlinePool,
 	type PressInputs,
 	type PressParts,

@@ -13,8 +13,8 @@
 			"unique": false,
 			"when": {
 				"op": "gte",
-				"stat": "upgrades.owned",
-				"value": 2
+				"stat": "player.activists",
+				"value": 25
 			},
 			"actors": [
 				{

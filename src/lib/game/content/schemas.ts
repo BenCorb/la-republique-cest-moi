@@ -13,6 +13,7 @@ import { z } from 'zod';
 import {
 	HIRE_OFFERS,
 	ARTICLE_TONES,
+	REGIONAL_ANCHOR,
 	END_CAUSES,
 	LEGACY_METRICS,
 	ARTICLE_TOPICS,
@@ -40,7 +41,7 @@ import {
 	type FamilyBalance,
 	type FamilyTemplate,
 	type OriginDefinition,
-	type ProfessionDefinition,
+	type EngagementDefinition,
 	type TerritoryDefinition,
 	type MissionDefinition,
 	type PostDefinition,
@@ -74,6 +75,7 @@ import {
 	type MandateDefinition,
 	type SupportGroupDefinition,
 	type SupportsBalance,
+	type ActivistsBalance,
 	type Balance,
 	type RecruitmentBalance,
 	type Condition,
@@ -112,7 +114,7 @@ export const conditionSchema: z.ZodType<Condition> = z.lazy(() =>
 		z.strictObject({ op: z.literal('holdsMandate'), mandate: contentId }),
 		z.strictObject({ op: z.literal('canHoldMandate'), mandate: contentId }),
 		z.strictObject({ op: z.literal('origin'), origin: contentId }),
-		z.strictObject({ op: z.literal('profession'), profession: contentId }),
+		z.strictObject({ op: z.literal('engagement'), engagement: contentId }),
 		z.strictObject({ op: z.literal('lifestyle'), lifestyle: contentId }),
 		z.strictObject({ op: z.literal('ownsUpgrade'), upgrade: contentId }),
 		z.strictObject({ op: z.literal('institution'), parameter: contentId, level: contentId }),
@@ -248,7 +250,7 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 	z.strictObject({ op: z.literal('abandonPromise') }),
 	z.strictObject({
 		op: z.literal('addMediaRelation'),
-		media: z.union([contentId, z.literal('target')]),
+		media: z.union([contentId, z.literal('target'), z.literal(REGIONAL_ANCHOR)]),
 		value: safeInt.refine(
 			(value) => value !== 0 && Math.abs(value) <= MEDIA_RELATION_MAX,
 			'variation non nulle de -100 à 100'
@@ -263,6 +265,11 @@ export const resourceAmountSchema: z.ZodType<ResourceAmount> = z.strictObject({
 	amount: positiveInt
 });
 
+const fieldworkSchema = z.discriminatedUnion('op', [
+	z.strictObject({ op: z.literal('addResource'), resource: resourceId, value: positiveInt }),
+	z.strictObject({ op: z.literal('prepareCampaign'), value: positiveInt })
+]);
+
 export const actionSchema: z.ZodType<ActionDefinition> = z
 	.strictObject({
 		id: contentId,
@@ -274,6 +281,7 @@ export const actionSchema: z.ZodType<ActionDefinition> = z
 		requires: conditionSchema.optional(),
 		unavailableReason: frenchText.optional(),
 		effects: z.array(effectSchema).min(1),
+		fieldwork: fieldworkSchema.optional(),
 		target: z
 			.enum([
 				'party',
@@ -326,7 +334,7 @@ export const assetSchema: z.ZodType<AssetDefinition> = z.strictObject({
 	failurePerMille: safeInt.refine((value) => value >= 0 && value <= 1000, 'de 0 à 1000'),
 	salePercent: smallPercent.refine((value) => value >= 0, 'part positive ou nulle'),
 	stressPerTurn: smallPercent,
-	media: contentId.optional()
+	media: z.union([contentId, z.literal(REGIONAL_ANCHOR)]).optional()
 });
 
 export const lifestyleSchema: z.ZodType<LifestyleDefinition> = z.strictObject({
@@ -363,17 +371,30 @@ export const upgradeSchema: z.ZodType<UpgradeDefinition> = z
 		ownedLabel: frenchText.optional(),
 		fromEra: contentId.optional(),
 		releaseEffects: z.array(effectSchema).optional(),
-		asset: assetSchema.optional()
+		asset: assetSchema.optional(),
+		activists: z
+			.strictObject({
+				capacity: nonNegativeInt,
+				retentionPercent: safeInt.refine((value) => value >= 0 && value <= 100, 'de 0 à 100 %')
+			})
+			.optional()
 	})
 	.refine(
 		(upgrade) => (upgrade.requires === undefined) === (upgrade.unavailableReason === undefined),
 		{ message: '« requires » et « unavailableReason » vont ensemble', path: ['unavailableReason'] }
 	)
-	// Un actif rapporte selon sa valeur ; les autres améliorations produisent toujours quelque chose.
-	.refine((upgrade) => upgrade.asset !== undefined || upgrade.production.length > 0, {
-		message: 'production attendue (sauf pour un actif)',
-		path: ['production']
-	});
+	// Un actif rapporte selon sa valeur, un local accueille des militants (P3-19) ; les
+	// autres améliorations produisent toujours quelque chose.
+	.refine(
+		(upgrade) =>
+			upgrade.asset !== undefined ||
+			upgrade.activists !== undefined ||
+			upgrade.production.length > 0,
+		{
+			message: 'production attendue (sauf pour un actif ou un local militant)',
+			path: ['production']
+		}
+	);
 
 export const upgradeCatalogSchema = z.strictObject({
 	upgrades: z.array(upgradeSchema)
@@ -666,7 +687,8 @@ export const electionSchema: z.ZodType<ElectionDefinition> = z
 		bonusGrant: z.strictObject({ mandate: contentId, minPercent: gaugeValue }).optional(),
 		requiresAnyMandate: z.array(contentId),
 		rivalStrength: gaugeValue,
-		campaignRefundCents: nonNegativeInt.optional()
+		campaignRefundCents: nonNegativeInt.optional(),
+		mobilizationNeed: nonNegativeInt
 	})
 	.refine((election) => election.filingLeadTurns < election.cycleTurns, {
 		message: 'la clôture des candidatures doit précéder le scrutin dans le cycle',
@@ -821,7 +843,8 @@ export const mediaSchema: z.ZodType<MediaDefinition> = z.strictObject({
 	kind: z.enum(MEDIA_KINDS),
 	line: frenchText,
 	description: frenchText,
-	scope: z.enum(['national', 'local']),
+	scope: z.enum(['national', 'regional']),
+	region: contentId.optional(),
 	audience: safeInt.refine((value) => value >= 1 && value <= 100, 'audience de 1 à 100'),
 	baseRelation: smallPercent,
 	groups: z.array(contentId).min(1),
@@ -853,6 +876,8 @@ const toneEffect = safeInt.refine((value) => Math.abs(value) <= 20, 'effet de -2
 export const pressBalanceSchema: z.ZodType<PressBalance> = z.strictObject({
 	maxArticlesPerTurn: positiveInt,
 	nationalExposure: safeInt.refine((value) => value >= 0 && value <= 100, 'de 0 à 100'),
+	nationalMandateRank: positiveInt,
+	regionalNationalPercent: percent,
 	toneThreshold: safeInt.refine((value) => value >= 1 && value <= 100, 'de 1 à 100'),
 	toneEffects: z.strictObject({ critical: toneEffect, neutral: toneEffect, favorable: toneEffect }),
 	maxEffect: positiveInt,
@@ -1202,10 +1227,10 @@ const territorySchema: z.ZodType<TerritoryDefinition> = z.strictObject({
 	})
 });
 
-export const professionSchema: z.ZodType<ProfessionDefinition> = z.strictObject({
+export const engagementSchema: z.ZodType<EngagementDefinition> = z.strictObject({
 	id: contentId.refine(
-		(value) => value.startsWith('profession.'),
-		'identifiant « profession.nom »'
+		(value) => value.startsWith('engagement.'),
+		'identifiant « engagement.nom »'
 	),
 	label: frenchText,
 	description: frenchText,
@@ -1214,10 +1239,48 @@ export const professionSchema: z.ZodType<ProfessionDefinition> = z.strictObject(
 
 export const profileCatalogSchema = z.strictObject({
 	origins: z.array(originSchema).min(1),
-	professions: z.array(professionSchema).min(1),
-	defaults: z.strictObject({ origin: contentId, profession: contentId, region: contentId }),
+	engagements: z.array(engagementSchema).min(1),
+	defaults: z.strictObject({ origin: contentId, engagement: contentId, region: contentId }),
 	territory: territorySchema
 });
+
+export const activistsBalanceSchema: z.ZodType<ActivistsBalance> = z
+	.strictObject({
+		start: nonNegativeInt,
+		baseCapacity: nonNegativeInt,
+		partyCapacity: nonNegativeInt,
+		mandateCapacityPerRank: nonNegativeInt,
+		reachInfluenceFactor: nonNegativeInt,
+		reachExposureDivisor: positiveInt,
+		campaignReach: nonNegativeInt,
+		attractionThreshold: percent,
+		attractionPercentPerPoint: nonNegativeInt,
+		baseAttritionPercent: percent,
+		discontentThreshold: percent,
+		discontentDivisor: positiveInt,
+		overCapacityAttritionPercent: percent,
+		recruitsPerVoteTenths: nonNegativeInt,
+		duesCents: nonNegativeInt,
+		partyMachinePercent: percent,
+		mobilizationWeight: nonNegativeInt,
+		tiers: z
+			.array(
+				z.strictObject({
+					id: contentId,
+					label: frenchText,
+					min: nonNegativeInt,
+					fieldMultiplier: nonNegativeInt,
+					upkeepCents: nonNegativeInt
+				})
+			)
+			.min(1)
+	})
+	.refine(
+		(balance) =>
+			balance.tiers[0]?.min === 0 &&
+			balance.tiers.every((tier, index) => index === 0 || tier.min > balance.tiers[index - 1]!.min),
+		{ message: 'paliers par effectif strictement croissant, le premier à 0' }
+	);
 
 export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	timeBudgetPerTurn: positiveInt,
@@ -1234,5 +1297,6 @@ export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	supports: supportsBalanceSchema,
 	campaigns: campaignsBalanceSchema,
 	entourage: entourageBalanceSchema,
-	family: familyBalanceSchema
+	family: familyBalanceSchema,
+	activists: activistsBalanceSchema
 });

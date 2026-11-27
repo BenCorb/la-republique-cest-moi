@@ -4,7 +4,7 @@
 			"id": "epoch.fax_misfire",
 			"category": "press",
 			"title": "Le fax de trop",
-			"text": "Votre note de stratégie, « strictement confidentielle », vient de partir par fax au Courrier du Bocage au lieu de la fédération. Le numéro ne différait que d’un chiffre, et le rédacteur en chef vous remercie pour cette lecture passionnante.",
+			"text": "Votre note de stratégie, « strictement confidentielle », vient de partir par fax à {regional_media} au lieu de la fédération. Le numéro ne différait que d’un chiffre, et le rédacteur en chef vous remercie pour cette lecture passionnante.",
 			"blocking": true,
 			"trigger": "random",
 			"weight": 3,
@@ -20,7 +20,7 @@
 					"hints": ["Un peu de crédit dépensé", "Une soirée au téléphone"],
 					"costs": [],
 					"effects": [
-						{ "op": "addMediaRelation", "media": "media.bocage", "value": -3 },
+						{ "op": "addMediaRelation", "media": "regional_anchor", "value": -3 },
 						{ "op": "addStat", "stat": "player.stress", "value": 2 }
 					]
 				},
@@ -40,7 +40,7 @@
 					"hints": ["Personne n’y croit", "La rédaction se vexe"],
 					"costs": [],
 					"effects": [
-						{ "op": "addMediaRelation", "media": "media.bocage", "value": -6 },
+						{ "op": "addMediaRelation", "media": "regional_anchor", "value": -6 },
 						{ "op": "addStat", "stat": "player.stress", "value": 1 }
 					]
 				}

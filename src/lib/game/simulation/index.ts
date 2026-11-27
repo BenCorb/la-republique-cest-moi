@@ -25,6 +25,8 @@ import {
 	hashSeed,
 	followsPlayer,
 	payrollCents,
+	activistTier,
+	pressAudience,
 	interviewIssue,
 	distinctionsOf,
 	divertedFunds,
@@ -126,7 +128,7 @@ export interface SimulationRun {
 	/** Territoire d'origine (P3-16) : région et taille de la commune. */
 	readonly region: string;
 	readonly townSize: string;
-	readonly profession: string;
+	readonly engagement: string;
 	readonly children: number;
 	readonly separations: number;
 	/** Promesses prises, tenues, partiellement tenues et abandonnées (P3-04). */
@@ -140,6 +142,10 @@ export interface SimulationRun {
 	readonly favorableArticles: number;
 	readonly interviews: number;
 	readonly mediaOwned: number;
+	/** Base militante en fin de carrière et au plus haut, palier le plus haut atteint (P3-19). */
+	readonly activistsFinal: number;
+	readonly activistsPeak: number;
+	readonly activistTierPeak: string;
 	/** Réformes proposées et adoptées par le joueur, réformes du gouvernement seul (P3-05). */
 	readonly reformsProposed: number;
 	readonly reformsAdopted: number;
@@ -434,9 +440,10 @@ function mediaWish(
 			content.actions[id]?.target === 'media' &&
 			!content.actions[id]?.effects.some((effect) => effect.op === 'giveInterview')
 	);
+	const audience = pressAudience(state.player, state.mandates, state.campaigns, content);
 	const followed = content.mediaIds.filter((mediaId) => {
 		const definition = content.media[mediaId];
-		return definition !== undefined && followsPlayer(definition, state.player.exposure, content);
+		return definition !== undefined && followsPlayer(definition, audience, content);
 	});
 	const relation = (mediaId: string): number => state.world.media[mediaId]?.relation ?? 0;
 	const byRelation = [...followed].sort((left, right) => relation(right) - relation(left));
@@ -597,7 +604,9 @@ const STRATEGY_WISHES: Readonly<
 		action('network.meet_officials'),
 		action('personal.donate'),
 		action('activism.leaflets'),
-		action('activism.leaflets')
+		action('activism.leaflets'),
+		purchase('organization.local_office'),
+		purchase('organization.federation')
 	],
 	// Le patrimonial investit (P3-02), puis s'offre du confort quand il en a les moyens.
 	patrimonial: [
@@ -611,7 +620,6 @@ const STRATEGY_WISHES: Readonly<
 		purchase('organization.donor_file'),
 		purchase('organization.local_office'),
 		purchase('communication.press_officer'),
-		purchase('organization.volunteer'),
 		action('personal.freelance'),
 		action('organization.gala'),
 		action('organization.fundraising'),
@@ -620,7 +628,7 @@ const STRATEGY_WISHES: Readonly<
 	mixed: [
 		action('personal.rest'),
 		purchase('organization.donor_file'),
-		purchase('organization.volunteer'),
+		purchase('organization.local_office'),
 		action('network.meet_officials'),
 		action('organization.gala'),
 		action('organization.fundraising'),
@@ -654,7 +662,23 @@ function pressCounts(
 		criticalArticles: articles.filter((article) => article.tone === 'critical').length,
 		favorableArticles: articles.filter((article) => article.tone === 'favorable').length,
 		interviews: articles.filter((article) => article.topic === 'interview').length,
-		mediaOwned: ownedMedia(state.upgrades, content).size
+		mediaOwned: ownedMedia(state.upgrades, state.player.territory.regionId, content).size
+	};
+}
+
+function activistCounts(
+	state: GameState,
+	content: Content
+): Pick<SimulationRun, 'activistsFinal' | 'activistsPeak' | 'activistTierPeak'> {
+	const peak = state.history.reduce(
+		(best, entry) =>
+			entry.type === 'turn.resolved' ? Math.max(best, entry.snapshot.activists) : best,
+		state.player.activists
+	);
+	return {
+		activistsFinal: state.player.activists,
+		activistsPeak: peak,
+		activistTierPeak: activistTier(peak, content).id
 	};
 }
 
@@ -904,13 +928,14 @@ function finalizeRun(
 		origin: state.player.origin,
 		region: state.player.territory.regionId,
 		townSize: state.player.territory.homeTown.sizeId,
-		profession: state.player.profession,
+		engagement: state.player.engagement,
 		children: state.player.family.childrenIds.length,
 		promisesMade: state.promises.length,
 		promisesKept: state.promises.filter((pledge) => pledge.status === 'kept').length,
 		promisesPartial: state.promises.filter((pledge) => pledge.status === 'partial').length,
 		promisesAbandoned: state.promises.filter((pledge) => pledge.status === 'abandoned').length,
 		...pressCounts(state, content),
+		...activistCounts(state, content),
 		reformsProposed: state.institutions.reforms.filter((reform) => reform.origin === 'player')
 			.length,
 		reformsAdopted: state.institutions.reforms.filter(
@@ -1003,13 +1028,13 @@ export function simulateCareer(
 	if (!Number.isSafeInteger(maxTurns) || maxTurns < 1) {
 		throw new RangeError(`Plafond de tours invalide : ${maxTurns}`);
 	}
-	// Origine et profession tirées de la seed du lot (P2-08), sans toucher au PRNG de la partie.
+	// Origine et engagement tirées de la seed du lot (P2-08), sans toucher au PRNG de la partie.
 	let state = createGame(
 		{
 			seed,
 			origin: content.originIds[hashSeed(`${seed}:origine`) % content.originIds.length]!,
-			profession:
-				content.professionIds[hashSeed(`${seed}:profession`) % content.professionIds.length]!,
+			engagement:
+				content.engagementIds[hashSeed(`${seed}:engagement`) % content.engagementIds.length]!,
 			region: content.regionIds[hashSeed(`${seed}:region`) % content.regionIds.length]!
 		},
 		content
@@ -1384,7 +1409,7 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'origin',
 		'region',
 		'townSize',
-		'profession',
+		'engagement',
 		'children',
 		'separations',
 		'promisesMade',
@@ -1396,6 +1421,9 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'favorableArticles',
 		'interviews',
 		'mediaOwned',
+		'activistsFinal',
+		'activistsPeak',
+		'activistTierPeak',
 		'reformsProposed',
 		'reformsAdopted',
 		'governmentReforms',
@@ -1460,7 +1488,7 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.origin,
 		run.region,
 		run.townSize,
-		run.profession,
+		run.engagement,
 		run.children,
 		run.separations,
 		run.promisesMade,
@@ -1472,6 +1500,9 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.favorableArticles,
 		run.interviews,
 		run.mediaOwned,
+		run.activistsFinal,
+		run.activistsPeak,
+		run.activistTierPeak,
 		run.reformsProposed,
 		run.reformsAdopted,
 		run.governmentReforms,
