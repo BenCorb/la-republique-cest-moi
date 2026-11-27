@@ -67,6 +67,8 @@ export type EffectRange =
 			readonly value: number;
 	  }
 	| { readonly kind: 'preparation'; readonly value: number }
+	/** Avance personnelle à la campagne choisie (P3-23). */
+	| { readonly kind: 'advance'; readonly valueCents: number }
 	/** Fait inscrit au registre : connu du joueur, qui l'a choisi. */
 	| { readonly kind: 'fact'; readonly offense: string; readonly severity: number }
 	| { readonly kind: 'lifestyle'; readonly lifestyle: string }
@@ -212,6 +214,8 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'family', change: 'attitude', value: effect.value };
 		case 'prepareCampaign':
 			return { kind: 'preparation', value: effect.value };
+		case 'advanceCampaign':
+			return { kind: 'advance', valueCents: effect.valueCents };
 		case 'recordFact':
 			return { kind: 'fact', offense: effect.offense, severity: effect.severity };
 		case 'hireActor':
@@ -269,6 +273,7 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 		case 'callEarlyElection':
 		case 'declareCandidacy':
 		case 'prepareCampaign':
+		case 'advanceCampaign':
 			return { kind: 'career', effect, rng };
 		case 'hireStaff':
 		case 'dismissStaff':

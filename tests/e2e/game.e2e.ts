@@ -384,6 +384,25 @@ test.describe('parcours de jeu', () => {
 		);
 	});
 
+	test('propose les trois formats du don sur une seule ligne d’agenda (P3-23)', async ({
+		page
+	}) => {
+		await startCareer(page, 'e2e-echelle');
+		await page.getByRole('button', { name: 'Agenda', exact: true }).click();
+		const row = page.getByTestId('action-personal.donate');
+		await expect(row).toContainText('Verser un don à son organisation');
+		await expect(row).toContainText('Plafond annuel');
+		await expect(page.getByTestId('action-personal.donate_sustained')).toHaveCount(0);
+		await expect(page.getByTestId('format-personal.donate_major')).toBeDisabled();
+		await expect(row).toContainText('Majeur : Il faut une section implantée');
+		await page.getByTestId('format-personal.donate').click();
+		await expect(page.getByTestId('plan-notebook')).toContainText(
+			'Verser un don modeste à son organisation'
+		);
+		// Un seul format par trimestre.
+		await expect(page.getByTestId('format-personal.donate')).toBeDisabled();
+	});
+
 	test('refuse explicitement une sauvegarde d’une ancienne version, sans l’effacer', async ({
 		page
 	}) => {

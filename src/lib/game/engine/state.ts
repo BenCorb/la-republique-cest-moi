@@ -259,6 +259,11 @@ export interface Campaign {
 	/** Préparation accumulée (actions de campagne et temps écoulé). */
 	readonly preparation: number;
 	/**
+	 * Avance personnelle versée à cette campagne (P3-23), en centimes : rendue
+	 * à l'argent personnel après le scrutin si le score le permet, perdue sinon.
+	 */
+	readonly advanceCents: number;
+	/**
 	 * Adversaire principal nommé (P2-06), attribué à la frontière qui suit la
 	 * déclaration et remplacé s'il quitte la vie publique avant le scrutin.
 	 */
@@ -423,6 +428,8 @@ export type PoliticalChange =
 			readonly invested: boolean;
 	  }
 	| { readonly kind: 'preparation'; readonly delta: number }
+	/** Avance personnelle versée à une campagne (P3-23). */
+	| { readonly kind: 'campaignAdvance'; readonly campaignId: string; readonly cents: number }
 	| { readonly kind: 'hired'; readonly characterId: string; readonly postId: string }
 	/** Candidat qui décline l'offre (P3-20) : il quitte la présélection. */
 	| { readonly kind: 'hireRefused'; readonly characterId: string; readonly postId: string }
@@ -659,6 +666,8 @@ export interface DeadlinesRecord {
 		readonly status: Exclude<CampaignStatus, 'running'>;
 		readonly playerPercent: number | null;
 		readonly reason: string | null;
+		/** Avance personnelle de la campagne et sort (P3-23), `null` sans avance. */
+		readonly advance: { readonly cents: number; readonly repaid: boolean } | null;
 	}[];
 }
 

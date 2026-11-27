@@ -35,9 +35,13 @@
 		else expanded.add(id);
 	}
 
-	/** Retire la dernière occurrence de l'action dans le plan. */
-	function removeOne(id: string): void {
-		const index = plan.findLastIndex((step) => step.kind === 'action' && step.id === id);
+	/**
+	 * Retire la dernière occurrence de l'action dans le plan ; pour une famille à
+	 * l'échelle (P3-23), celle de l'un quelconque de ses formats.
+	 */
+	function removeOne(action: CatalogItemView): void {
+		const ids = new Set(action.formats?.map((format) => format.id) ?? [action.id]);
+		const index = plan.findLastIndex((step) => step.kind === 'action' && ids.has(step.id));
 		if (index >= 0) session.controller.removeStep(index);
 	}
 
@@ -87,6 +91,47 @@
 			{#if open}
 				<p class="mt-1 text-sm text-muted">{action.description}</p>
 			{/if}
+			{#if action.formats}
+				<ul
+					class="mt-1 flex flex-wrap gap-1"
+					aria-label="Formats de « {action.label} »"
+					data-testid="formats-{action.id}"
+				>
+					{#each action.formats as format (format.id)}
+						<li>
+							<button
+								type="button"
+								class="flex items-center gap-1 rounded border px-2 py-0.5 text-xs {format.planned >
+								0
+									? 'border-primary bg-sidebar font-semibold'
+									: 'border-line'} {format.addable ? '' : 'text-muted'}"
+								disabled={!reachable || !format.addable || accelerating}
+								title={format.reason ?? format.label}
+								aria-label="Ajouter le format {format.format.toLowerCase()} : {format.label}"
+								aria-describedby={format.reason ? `reason-${format.id}` : undefined}
+								data-testid="format-{format.id}"
+								onclick={() => session.controller.addStep({ kind: 'action', id: format.id })}
+							>
+								{#if !format.addable && format.outOfReach}
+									<Lock class="size-3 shrink-0" aria-hidden="true" />
+								{/if}
+								{format.format}
+								{#each format.costChips as chip, index (index)}
+									<EffectChip {chip} />
+								{/each}
+							</button>
+						</li>
+					{/each}
+				</ul>
+				{#each action.formats.filter((format) => format.reason && format.outOfReach) as format (format.id)}
+					<p class="mt-0.5 text-xs text-muted" id="reason-{format.id}">
+						{format.format} : {format.reason}
+					</p>
+				{/each}
+				{#if action.familyNote}
+					<p class="mt-0.5 text-xs text-muted">{action.familyNote}</p>
+				{/if}
+			{/if}
 			{#if action.fieldBonus}
 				<p class="mt-0.5 text-xs text-primary" data-testid="field-bonus-{action.id}">
 					{action.fieldBonus}
@@ -107,7 +152,7 @@
 						class="btn-secondary btn-small"
 						disabled={accelerating}
 						aria-label="Retirer une occurrence de « {action.label} » du plan"
-						onclick={() => removeOne(action.id)}
+						onclick={() => removeOne(action)}
 					>
 						<Minus class="size-3.5" aria-hidden="true" />
 					</button>
@@ -118,16 +163,18 @@
 						{action.planned}
 					</span>
 				{/if}
-				<button
-					type="button"
-					class="btn-secondary btn-small"
-					disabled={!action.addable || accelerating}
-					aria-label="Ajouter « {action.label} » au plan"
-					aria-describedby={action.reason ? `reason-${action.id}` : undefined}
-					onclick={() => session.controller.addStep({ kind: 'action', id: action.id })}
-				>
-					<Plus class="size-3.5" aria-hidden="true" />
-				</button>
+				{#if !action.formats}
+					<button
+						type="button"
+						class="btn-secondary btn-small"
+						disabled={!action.addable || accelerating}
+						aria-label="Ajouter « {action.label} » au plan"
+						aria-describedby={action.reason ? `reason-${action.id}` : undefined}
+						onclick={() => session.controller.addStep({ kind: 'action', id: action.id })}
+					>
+						<Plus class="size-3.5" aria-hidden="true" />
+					</button>
+				{/if}
 			</div>
 		{/if}
 	</li>

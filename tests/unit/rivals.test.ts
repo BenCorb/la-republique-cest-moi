@@ -180,6 +180,7 @@ describe('force et relation de l’adversaire', () => {
 		partyId: null,
 		invested: false,
 		preparation: 0,
+		advanceCents: 0,
 		opponentId: 'test.rival',
 		status: 'running',
 		playerPercent: null,

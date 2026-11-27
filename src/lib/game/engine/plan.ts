@@ -51,8 +51,10 @@ import { applyPoliticalEffect, isPoliticalEffect } from './world.ts';
 import { interviewIssue, mediaIssue, pressAudience } from './press.ts';
 import { eraReached } from './eras.ts';
 import { applyReformEffect, effectiveContent, isReformEffect, reformIssue } from './reforms.ts';
+import { cappedCost, familySpentThisYear, formatAmount } from './scale.ts';
 import {
 	activeMandates,
+	advanceIssue,
 	applyCareerEffect,
 	candidacyIssue,
 	isCareerEffect,
@@ -90,7 +92,9 @@ export type PlanIssueCode =
 	| 'owned_limit'
 	| 'condition_not_met'
 	| 'time_exceeded'
-	| 'insufficient_resource';
+	| 'insufficient_resource'
+	/** Plafond annuel d'une famille d'actions à l'échelle atteint (P3-23). */
+	| 'annual_cap';
 
 export interface PlanIssue {
 	/** Position de l'étape dans le plan, ou `null` pour un problème global. */
@@ -421,6 +425,9 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 	const upgrades: OwnedUpgrade[] = [...state.upgrades];
 	let nextInstanceNumber = state.nextInstanceNumber;
 	const actionCounts = new Map<string, number>();
+	// Familles à l'échelle (P3-23) : un format par trimestre, plafond annuel partagé.
+	const familyCounts = new Map<string, number>();
+	const familySpent = new Map<string, number>();
 	let timeUsed = 0;
 
 	(items as readonly unknown[]).forEach((item, index) => {
@@ -497,6 +504,10 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 				if (target === null || !Object.hasOwn(content.parties, target)) {
 					fail('invalid_target', `« ${label} » : choisissez un parti existant.`);
 				}
+			} else if (definition.target === 'campaign') {
+				const issue =
+					target === null ? 'choisissez une candidature' : advanceIssue(target, workingCareer);
+				if (issue) fail('invalid_target', `« ${label} » : ${issue}.`);
 			} else if (definition.target === 'ballot') {
 				const issue =
 					target === null
@@ -614,6 +625,29 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 					'repeat_limit',
 					`« ${label} » ne peut être planifiée que ${definition.maxPerTurn} fois par trimestre.`
 				);
+			}
+			const familyId = definition.scale?.family;
+			const family = familyId ? content.actionFamilies[familyId] : undefined;
+			if (familyId && family) {
+				const count = (familyCounts.get(familyId) ?? 0) + 1;
+				familyCounts.set(familyId, count);
+				if (count > 1 && occurrence === 1) {
+					fail('repeat_limit', `« ${family.label} » : un seul format par trimestre.`);
+				}
+				if (family.annualCap) {
+					const spent =
+						familySpent.get(familyId) ??
+						familySpentThisYear(familyId, state.history, state.turn, content);
+					const cost = cappedCost(definition, content);
+					if (spent + cost > family.annualCap.amount) {
+						fail(
+							'annual_cap',
+							`« ${family.label} » : plafond annuel de ${formatAmount(family.annualCap)} atteint (${formatAmount({ resource: family.annualCap.resource, amount: spent })} déjà engagés cette année).`
+						);
+					} else {
+						familySpent.set(familyId, spent + cost);
+					}
+				}
 			}
 		} else {
 			const definition = definitionOf(content.upgrades, step.id);

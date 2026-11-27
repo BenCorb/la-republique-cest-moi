@@ -176,6 +176,7 @@ describe('faits marquants de la note', () => {
 			partyId: null,
 			invested: false,
 			preparation: 10,
+			advanceCents: 0,
 			opponentId: null,
 			status,
 			playerPercent: percent,
@@ -186,7 +187,14 @@ describe('faits marquants de la note', () => {
 			ballots: [],
 			people: [],
 			campaigns: [
-				{ campaignId: 'campaign.1', opponentId: null, status, playerPercent: percent, reason: null }
+				{
+					campaignId: 'campaign.1',
+					opponentId: null,
+					status,
+					playerPercent: percent,
+					reason: null,
+					advance: null
+				}
 			]
 		};
 		return {

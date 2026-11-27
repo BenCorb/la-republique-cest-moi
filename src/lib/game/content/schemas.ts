@@ -11,6 +11,7 @@
  */
 import { z } from 'zod';
 import {
+	ACTION_FORMATS,
 	HIRE_OFFERS,
 	ARTICLE_TONES,
 	REGIONAL_ANCHOR,
@@ -223,6 +224,7 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 		op: z.literal('prepareCampaign'),
 		value: safeInt.refine((value) => value > 0 && value <= 100, 'préparation de 1 à 100')
 	}),
+	z.strictObject({ op: z.literal('advanceCampaign'), valueCents: positiveInt }),
 	z.strictObject({ op: z.literal('setLifestyle'), lifestyle: contentId }),
 	z.strictObject({
 		op: z.literal('hireActor'),
@@ -294,6 +296,7 @@ export const actionSchema: z.ZodType<ActionDefinition> = z
 		unavailableReason: frenchText.optional(),
 		effects: z.array(effectSchema).min(1),
 		fieldwork: fieldworkSchema.optional(),
+		scale: z.strictObject({ family: contentId, format: z.enum(ACTION_FORMATS) }).optional(),
 		target: z
 			.enum([
 				'party',
@@ -307,7 +310,8 @@ export const actionSchema: z.ZodType<ActionDefinition> = z
 				'pledge',
 				'media',
 				'reform',
-				'search'
+				'search',
+				'campaign'
 			])
 			.optional(),
 		fromEra: contentId.optional(),
@@ -331,6 +335,17 @@ export const actionCatalogSchema = z.strictObject({
 			z.strictObject({
 				id: z.string().regex(/^[a-z][a-z0-9_]*$/, 'identifiant en minuscules (a-z, 0-9, _)'),
 				label: frenchText
+			})
+		)
+		.optional(),
+	/** Familles d'actions à l'échelle (P3-23), dans l'ordre du catalogue. */
+	families: z
+		.array(
+			z.strictObject({
+				id: contentId,
+				label: frenchText,
+				description: frenchText,
+				annualCap: resourceAmountSchema.optional()
 			})
 		)
 		.optional(),
@@ -1008,6 +1023,7 @@ export const campaignsBalanceSchema: z.ZodType<CampaignsBalance> = z.strictObjec
 	defeatInfluence: nonNegativeInt,
 	defeatStress: nonNegativeInt,
 	refundMinPercent: gaugeValue,
+	advanceRepayMinPercent: gaugeValue,
 	rivalExperienceBonus: nonNegativeInt,
 	rivalExperienceCap: nonNegativeInt,
 	rivalryAttitude: safeInt.refine((value) => Math.abs(value) <= 100, 'variation de -100 à 100'),

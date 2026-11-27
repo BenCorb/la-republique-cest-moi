@@ -110,6 +110,7 @@ function campaign(overrides: Partial<Campaign> = {}): Campaign {
 		partyId: null,
 		invested: false,
 		preparation: 10,
+		advanceCents: 0,
 		opponentId: null,
 		status: 'running',
 		playerPercent: null,
@@ -235,7 +236,14 @@ describe('croissance et attrition', () => {
 			ballots: [],
 			people: [],
 			campaigns: [
-				{ campaignId: 'campaign.1', opponentId: null, status, playerPercent: percent, reason: null }
+				{
+					campaignId: 'campaign.1',
+					opponentId: null,
+					status,
+					playerPercent: percent,
+					reason: null,
+					advance: null
+				}
 			]
 		});
 		const lost = resolveActivists(

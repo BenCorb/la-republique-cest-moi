@@ -515,6 +515,7 @@ describe('presse régionale (P3-18)', () => {
 		partyId: null,
 		invested: false,
 		preparation: 0,
+		advanceCents: 0,
 		opponentId: null,
 		status: 'running',
 		playerPercent: null,

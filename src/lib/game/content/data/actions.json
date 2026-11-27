@@ -1,17 +1,69 @@
 {
 	"categories": [
-		{ "id": "activism", "label": "Militantisme" },
-		{ "id": "party", "label": "Parti" },
-		{ "id": "campaign", "label": "Campagne" },
-		{ "id": "network", "label": "Réseau et influence" },
-		{ "id": "media", "label": "Médias" },
-		{ "id": "political_finance", "label": "Finances politiques" },
-		{ "id": "work", "label": "Métier et revenus" },
-		{ "id": "personal", "label": "Vie personnelle" },
-		{ "id": "organisation", "label": "Organisation et entourage" },
-		{ "id": "mandate", "label": "Mandats" },
-		{ "id": "justice", "label": "Justice" },
-		{ "id": "wealth", "label": "Patrimoine et train de vie" }
+		{
+			"id": "activism",
+			"label": "Militantisme"
+		},
+		{
+			"id": "party",
+			"label": "Parti"
+		},
+		{
+			"id": "campaign",
+			"label": "Campagne"
+		},
+		{
+			"id": "network",
+			"label": "Réseau et influence"
+		},
+		{
+			"id": "media",
+			"label": "Médias"
+		},
+		{
+			"id": "political_finance",
+			"label": "Finances politiques"
+		},
+		{
+			"id": "work",
+			"label": "Métier et revenus"
+		},
+		{
+			"id": "personal",
+			"label": "Vie personnelle"
+		},
+		{
+			"id": "organisation",
+			"label": "Organisation et entourage"
+		},
+		{
+			"id": "mandate",
+			"label": "Mandats"
+		},
+		{
+			"id": "justice",
+			"label": "Justice"
+		},
+		{
+			"id": "wealth",
+			"label": "Patrimoine et train de vie"
+		}
+	],
+	"families": [
+		{
+			"id": "family.donation",
+			"label": "Verser un don à son organisation",
+			"description": "Transférer une partie de ses économies au budget politique, en trois formats. Plafond annuel, tous formats confondus.",
+			"annualCap": {
+				"resource": "personalCashCents",
+				"amount": 3000000
+			}
+		},
+		{
+			"id": "family.campaign_advance",
+			"label": "Avancer des fonds à sa campagne",
+			"description": "Prêter de son argent personnel à une candidature en cours : versé au budget politique, rendu après le scrutin si le score le permet, perdu sinon. Une avance par campagne."
+		}
 	],
 	"actions": [
 		{
@@ -40,7 +92,11 @@
 					"value": 1
 				}
 			],
-			"fieldwork": { "op": "addResource", "resource": "influence", "value": 1 }
+			"fieldwork": {
+				"op": "addResource",
+				"resource": "influence",
+				"value": 1
+			}
 		},
 		{
 			"id": "network.meet_officials",
@@ -73,8 +129,17 @@
 			"maxPerTurn": 1,
 			"costs": [],
 			"effects": [
-				{ "op": "addStat", "stat": "player.exposure", "value": 3 },
-				{ "op": "addResourceRandom", "resource": "influence", "min": -2, "max": 5 }
+				{
+					"op": "addStat",
+					"stat": "player.exposure",
+					"value": 3
+				},
+				{
+					"op": "addResourceRandom",
+					"resource": "influence",
+					"min": -2,
+					"max": 5
+				}
 			]
 		},
 		{
@@ -87,9 +152,22 @@
 			"maxPerTurn": 1,
 			"costs": [],
 			"effects": [
-				{ "op": "addStat", "stat": "player.exposure", "value": 4 },
-				{ "op": "addResourceRandom", "resource": "influence", "min": 0, "max": 6 },
-				{ "op": "addStat", "stat": "player.stress", "value": 1 }
+				{
+					"op": "addStat",
+					"stat": "player.exposure",
+					"value": 4
+				},
+				{
+					"op": "addResourceRandom",
+					"resource": "influence",
+					"min": 0,
+					"max": 6
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 1
+				}
 			]
 		},
 		{
@@ -100,11 +178,28 @@
 			"description": "Vous voilà simultanément à Lille, Brest et Carpentras, en trois dimensions et légèrement transparent. La salle de Carpentras a reçu la version avec l’accent belge.",
 			"timeCost": 30,
 			"maxPerTurn": 1,
-			"costs": [{ "resource": "politicalBudgetCents", "amount": 200000 }],
+			"costs": [
+				{
+					"resource": "politicalBudgetCents",
+					"amount": 200000
+				}
+			],
 			"effects": [
-				{ "op": "addStat", "stat": "player.exposure", "value": 6 },
-				{ "op": "addResource", "resource": "influence", "value": 8 },
-				{ "op": "addStat", "stat": "player.stress", "value": 2 }
+				{
+					"op": "addStat",
+					"stat": "player.exposure",
+					"value": 6
+				},
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 8
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				}
 			]
 		},
 		{
@@ -148,9 +243,17 @@
 					"group": "support.middle_class",
 					"value": 1
 				},
-				{ "op": "addStat", "stat": "player.exposure", "value": 3 }
+				{
+					"op": "addStat",
+					"stat": "player.exposure",
+					"value": 3
+				}
 			],
-			"fieldwork": { "op": "addResource", "resource": "influence", "value": 1 }
+			"fieldwork": {
+				"op": "addResource",
+				"resource": "influence",
+				"value": 1
+			}
 		},
 		{
 			"id": "organization.fundraising",
@@ -184,7 +287,11 @@
 					"value": 1
 				}
 			],
-			"fieldwork": { "op": "addResource", "resource": "politicalBudgetCents", "value": 5000 }
+			"fieldwork": {
+				"op": "addResource",
+				"resource": "politicalBudgetCents",
+				"value": 5000
+			}
 		},
 		{
 			"id": "organization.gala",
@@ -193,8 +300,17 @@
 			"description": "Salle des fêtes louée, nappes blanches, discours de vingt minutes et couverts à 300 € : les donateurs viennent pour être vus, et attendent qu’on s’en souvienne.",
 			"timeCost": 40,
 			"maxPerTurn": 1,
-			"costs": [{ "resource": "politicalBudgetCents", "amount": 20000 }],
-			"requires": { "op": "gte", "stat": "resources.influence", "value": 20 },
+			"costs": [
+				{
+					"resource": "politicalBudgetCents",
+					"amount": 20000
+				}
+			],
+			"requires": {
+				"op": "gte",
+				"stat": "resources.influence",
+				"value": 20
+			},
 			"unavailableReason": "Il faut au moins 20 points d’influence pour remplir une salle de donateurs.",
 			"effects": [
 				{
@@ -203,10 +319,26 @@
 					"min": 100000,
 					"max": 300000
 				},
-				{ "op": "addStat", "stat": "player.stress", "value": 3 },
-				{ "op": "addSupport", "group": "support.business", "value": 2 },
-				{ "op": "addSupport", "group": "support.activists", "value": -1 },
-				{ "op": "addStat", "stat": "player.exposure", "value": 3 }
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 3
+				},
+				{
+					"op": "addSupport",
+					"group": "support.business",
+					"value": 2
+				},
+				{
+					"op": "addSupport",
+					"group": "support.activists",
+					"value": -1
+				},
+				{
+					"op": "addStat",
+					"stat": "player.exposure",
+					"value": 3
+				}
 			]
 		},
 		{
@@ -228,7 +360,7 @@
 		{
 			"id": "personal.donate",
 			"category": "political_finance",
-			"label": "Verser un don à son organisation",
+			"label": "Verser un don modeste à son organisation",
 			"description": "Transférer une partie de ses économies au budget politique. Le geste est noble, le compte en banque moins enthousiaste.",
 			"timeCost": 5,
 			"maxPerTurn": 1,
@@ -243,6 +375,107 @@
 					"op": "addResource",
 					"resource": "politicalBudgetCents",
 					"value": 50000
+				}
+			],
+			"scale": {
+				"family": "family.donation",
+				"format": "modest"
+			}
+		},
+		{
+			"id": "personal.donate_sustained",
+			"category": "political_finance",
+			"label": "Verser un don soutenu à son organisation",
+			"description": "Quelques milliers d’euros, et le trésorier vous appelle par votre prénom. Encore faut-il une organisation capable de les dépenser autrement qu’en photocopies.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [
+				{
+					"resource": "personalCashCents",
+					"amount": 300000
+				}
+			],
+			"requires": {
+				"op": "any",
+				"conditions": [
+					{
+						"op": "gte",
+						"stat": "player.activists",
+						"value": 25
+					},
+					{
+						"op": "gte",
+						"stat": "player.staff",
+						"value": 1
+					}
+				]
+			},
+			"unavailableReason": "Il faut un comité local (25 militants) ou un collaborateur pour employer un don de cette taille.",
+			"scale": {
+				"family": "family.donation",
+				"format": "sustained"
+			},
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "politicalBudgetCents",
+					"value": 300000
+				},
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "personal.donate_major",
+			"category": "political_finance",
+			"label": "Verser un don majeur à son organisation",
+			"description": "Quinze mille euros d’un coup : le parti apprécie, la presse remarque, et les mauvaises langues demandent ce que vous espérez en échange.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [
+				{
+					"resource": "personalCashCents",
+					"amount": 1500000
+				}
+			],
+			"requires": {
+				"op": "any",
+				"conditions": [
+					{
+						"op": "gte",
+						"stat": "player.activists",
+						"value": 100
+					},
+					{
+						"op": "gte",
+						"stat": "player.staff",
+						"value": 2
+					}
+				]
+			},
+			"unavailableReason": "Il faut une section implantée (100 militants) ou deux collaborateurs pour employer un don de cette taille.",
+			"scale": {
+				"family": "family.donation",
+				"format": "major"
+			},
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "politicalBudgetCents",
+					"value": 1500000
+				},
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
+					"value": 2
+				},
+				{
+					"op": "addStat",
+					"stat": "player.exposure",
+					"value": 2
 				}
 			]
 		},
@@ -484,9 +717,19 @@
 			"maxPerTurn": 1,
 			"costs": [],
 			"effects": [
-				{ "op": "giveInterview" },
-				{ "op": "addMediaRelation", "media": "target", "value": 4 },
-				{ "op": "addStat", "stat": "player.exposure", "value": 3 }
+				{
+					"op": "giveInterview"
+				},
+				{
+					"op": "addMediaRelation",
+					"media": "target",
+					"value": 4
+				},
+				{
+					"op": "addStat",
+					"stat": "player.exposure",
+					"value": 3
+				}
 			],
 			"target": "media"
 		},
@@ -497,8 +740,19 @@
 			"description": "Une table discrète, un vin correct et des confidences « off » qui ne le resteront pas toutes. On ne vous doit rien, mais on vous connaît mieux.",
 			"timeCost": 10,
 			"maxPerTurn": 1,
-			"costs": [{ "resource": "politicalBudgetCents", "amount": 30000 }],
-			"effects": [{ "op": "addMediaRelation", "media": "target", "value": 8 }],
+			"costs": [
+				{
+					"resource": "politicalBudgetCents",
+					"amount": 30000
+				}
+			],
+			"effects": [
+				{
+					"op": "addMediaRelation",
+					"media": "target",
+					"value": 8
+				}
+			],
 			"target": "media"
 		},
 		{
@@ -508,17 +762,35 @@
 			"description": "Un texte, un exposé des motifs et une tournée des groupes parlementaires. Le vote a lieu à la fin du trimestre ; adoptée, la réforme entre en vigueur au 1er janvier suivant, pour tout le monde.",
 			"timeCost": 40,
 			"maxPerTurn": 1,
-			"costs": [{ "resource": "influence", "amount": 10 }],
+			"costs": [
+				{
+					"resource": "influence",
+					"amount": 10
+				}
+			],
 			"requires": {
 				"op": "any",
 				"conditions": [
-					{ "op": "holdsMandate", "mandate": "mandate.deputy" },
-					{ "op": "holdsMandate", "mandate": "mandate.senator" },
-					{ "op": "holdsMandate", "mandate": "mandate.minister" }
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.deputy"
+					},
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.senator"
+					},
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.minister"
+					}
 				]
 			},
 			"unavailableReason": "Réservé aux parlementaires et aux ministres.",
-			"effects": [{ "op": "proposeReform" }],
+			"effects": [
+				{
+					"op": "proposeReform"
+				}
+			],
 			"target": "reform"
 		},
 		{
@@ -573,7 +845,10 @@
 					"value": 1
 				}
 			],
-			"fieldwork": { "op": "prepareCampaign", "value": 1 }
+			"fieldwork": {
+				"op": "prepareCampaign",
+				"value": 1
+			}
 		},
 		{
 			"id": "campaign.rally",
@@ -609,8 +884,134 @@
 					"group": "support.middle_class",
 					"value": 1
 				},
-				{ "op": "addStat", "stat": "player.exposure", "value": 4 }
+				{
+					"op": "addStat",
+					"stat": "player.exposure",
+					"value": 4
+				}
 			]
+		},
+		{
+			"id": "campaign.advance_modest",
+			"category": "campaign",
+			"label": "Avancer 5 000 € à sa campagne",
+			"description": "Un chèque à son propre comité de campagne, en espérant que les électeurs remboursent : au-delà d’un score honorable, l’avance revient.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [
+				{
+					"resource": "personalCashCents",
+					"amount": 500000
+				}
+			],
+			"scale": {
+				"family": "family.campaign_advance",
+				"format": "modest"
+			},
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "politicalBudgetCents",
+					"value": 500000
+				},
+				{
+					"op": "advanceCampaign",
+					"valueCents": 500000
+				}
+			],
+			"target": "campaign"
+		},
+		{
+			"id": "campaign.advance_sustained",
+			"category": "campaign",
+			"label": "Avancer 20 000 € à sa campagne",
+			"description": "De quoi louer des salles et imprimer des affiches qui ne décollent pas sous la pluie. Il faut quelqu’un pour les coller.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [
+				{
+					"resource": "personalCashCents",
+					"amount": 2000000
+				}
+			],
+			"requires": {
+				"op": "any",
+				"conditions": [
+					{
+						"op": "gte",
+						"stat": "player.activists",
+						"value": 25
+					},
+					{
+						"op": "gte",
+						"stat": "player.staff",
+						"value": 1
+					}
+				]
+			},
+			"unavailableReason": "Il faut un comité local (25 militants) ou un collaborateur pour dépenser une telle avance.",
+			"scale": {
+				"family": "family.campaign_advance",
+				"format": "sustained"
+			},
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "politicalBudgetCents",
+					"value": 2000000
+				},
+				{
+					"op": "advanceCampaign",
+					"valueCents": 2000000
+				}
+			],
+			"target": "campaign"
+		},
+		{
+			"id": "campaign.advance_major",
+			"category": "campaign",
+			"label": "Avancer 60 000 € à sa campagne",
+			"description": "Une vraie campagne, payée de sa poche : équipe, tournée et sondages. Une défaite cuisante, et l’argent est perdu.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [
+				{
+					"resource": "personalCashCents",
+					"amount": 6000000
+				}
+			],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "gte",
+						"stat": "player.activists",
+						"value": 100
+					},
+					{
+						"op": "gte",
+						"stat": "player.staff",
+						"value": 1
+					}
+				]
+			},
+			"unavailableReason": "Il faut une section implantée (100 militants) et au moins un collaborateur pour mener une telle campagne.",
+			"scale": {
+				"family": "family.campaign_advance",
+				"format": "major"
+			},
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "politicalBudgetCents",
+					"value": 6000000
+				},
+				{
+					"op": "advanceCampaign",
+					"valueCents": 6000000
+				}
+			],
+			"target": "campaign"
 		},
 		{
 			"id": "staff.interview",
@@ -620,7 +1021,11 @@
 			"timeCost": 15,
 			"maxPerTurn": 2,
 			"costs": [],
-			"effects": [{ "op": "courtCandidate" }],
+			"effects": [
+				{
+					"op": "courtCandidate"
+				}
+			],
 			"target": "candidate"
 		},
 		{
@@ -630,8 +1035,18 @@
 			"description": "Une annonce sur le site du parti et trois coups de fil aux anciens. Deux CV au trimestre prochain, sans surprise ni garantie.",
 			"timeCost": 10,
 			"maxPerTurn": 1,
-			"costs": [{ "resource": "politicalBudgetCents", "amount": 80000 }],
-			"effects": [{ "op": "orderSearch", "level": "simple" }],
+			"costs": [
+				{
+					"resource": "politicalBudgetCents",
+					"amount": 80000
+				}
+			],
+			"effects": [
+				{
+					"op": "orderSearch",
+					"level": "simple"
+				}
+			],
 			"target": "search"
 		},
 		{
@@ -641,8 +1056,18 @@
 			"description": "Un cahier des charges, des réseaux sollicités et deux trimestres de patience pour des profils confirmés. Exiger un trait précis rétrécit le vivier.",
 			"timeCost": 15,
 			"maxPerTurn": 1,
-			"costs": [{ "resource": "politicalBudgetCents", "amount": 300000 }],
-			"effects": [{ "op": "orderSearch", "level": "targeted" }],
+			"costs": [
+				{
+					"resource": "politicalBudgetCents",
+					"amount": 300000
+				}
+			],
+			"effects": [
+				{
+					"op": "orderSearch",
+					"level": "targeted"
+				}
+			],
 			"target": "search"
 		},
 		{
@@ -652,8 +1077,18 @@
 			"description": "Un cabinet discret, des honoraires qui ne le sont pas, et trois trimestres pour dénicher une pointure au dossier vérifié. Elle pourra encore vous dire non.",
 			"timeCost": 20,
 			"maxPerTurn": 1,
-			"costs": [{ "resource": "politicalBudgetCents", "amount": 1000000 }],
-			"effects": [{ "op": "orderSearch", "level": "headhunt" }],
+			"costs": [
+				{
+					"resource": "politicalBudgetCents",
+					"amount": 1000000
+				}
+			],
+			"effects": [
+				{
+					"op": "orderSearch",
+					"level": "headhunt"
+				}
+			],
 			"target": "search"
 		},
 		{
@@ -663,8 +1098,17 @@
 			"description": "Des références appelées, d’anciens collègues interrogés. On en apprend beaucoup, dont une partie est vraie.",
 			"timeCost": 10,
 			"maxPerTurn": 2,
-			"costs": [{ "resource": "politicalBudgetCents", "amount": 100000 }],
-			"effects": [{ "op": "vetCandidate" }],
+			"costs": [
+				{
+					"resource": "politicalBudgetCents",
+					"amount": 100000
+				}
+			],
+			"effects": [
+				{
+					"op": "vetCandidate"
+				}
+			],
 			"target": "candidate"
 		},
 		{
@@ -675,7 +1119,12 @@
 			"timeCost": 10,
 			"maxPerTurn": 2,
 			"costs": [],
-			"effects": [{ "op": "hireStaff", "offer": "low" }],
+			"effects": [
+				{
+					"op": "hireStaff",
+					"offer": "low"
+				}
+			],
 			"target": "candidate"
 		},
 		{
@@ -686,7 +1135,12 @@
 			"timeCost": 10,
 			"maxPerTurn": 2,
 			"costs": [],
-			"effects": [{ "op": "hireStaff", "offer": "standard" }],
+			"effects": [
+				{
+					"op": "hireStaff",
+					"offer": "standard"
+				}
+			],
 			"target": "candidate"
 		},
 		{
@@ -697,7 +1151,12 @@
 			"timeCost": 10,
 			"maxPerTurn": 2,
 			"costs": [],
-			"effects": [{ "op": "hireStaff", "offer": "generous" }],
+			"effects": [
+				{
+					"op": "hireStaff",
+					"offer": "generous"
+				}
+			],
 			"target": "candidate"
 		},
 		{
@@ -728,7 +1187,11 @@
 			"timeCost": 2,
 			"maxPerTurn": 10,
 			"costs": [],
-			"effects": [{ "op": "releaseUpgrade" }],
+			"effects": [
+				{
+					"op": "releaseUpgrade"
+				}
+			],
 			"target": "upgrade"
 		},
 		{
@@ -1081,12 +1544,29 @@
 			"description": "Relire le dossier avec vos avocats, apprendre par cœur la formule « je n’ai aucun souvenir de cette réunion » et choisir une cravate de circonstance.",
 			"timeCost": 20,
 			"maxPerTurn": 2,
-			"costs": [{ "resource": "personalCashCents", "amount": 150000 }],
-			"requires": { "op": "gte", "stat": "player.openCases", "value": 1 },
+			"costs": [
+				{
+					"resource": "personalCashCents",
+					"amount": 150000
+				}
+			],
+			"requires": {
+				"op": "gte",
+				"stat": "player.openCases",
+				"value": 1
+			},
 			"unavailableReason": "Aucun dossier judiciaire ne vous vise.",
 			"effects": [
-				{ "op": "addStat", "stat": "player.defense", "value": 15 },
-				{ "op": "addStat", "stat": "player.stress", "value": 2 }
+				{
+					"op": "addStat",
+					"stat": "player.defense",
+					"value": 15
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				}
 			]
 		},
 		{
@@ -1097,7 +1577,11 @@
 			"timeCost": 5,
 			"maxPerTurn": 5,
 			"costs": [],
-			"effects": [{ "op": "releaseUpgrade" }],
+			"effects": [
+				{
+					"op": "releaseUpgrade"
+				}
+			],
 			"target": "asset"
 		},
 		{
@@ -1110,10 +1594,18 @@
 			"costs": [],
 			"requires": {
 				"op": "not",
-				"condition": { "op": "lifestyle", "lifestyle": "lifestyle.modest" }
+				"condition": {
+					"op": "lifestyle",
+					"lifestyle": "lifestyle.modest"
+				}
 			},
 			"unavailableReason": "C’est déjà votre train de vie.",
-			"effects": [{ "op": "setLifestyle", "lifestyle": "lifestyle.modest" }]
+			"effects": [
+				{
+					"op": "setLifestyle",
+					"lifestyle": "lifestyle.modest"
+				}
+			]
 		},
 		{
 			"id": "lifestyle.adopt_comfortable",
@@ -1125,10 +1617,18 @@
 			"costs": [],
 			"requires": {
 				"op": "not",
-				"condition": { "op": "lifestyle", "lifestyle": "lifestyle.comfortable" }
+				"condition": {
+					"op": "lifestyle",
+					"lifestyle": "lifestyle.comfortable"
+				}
 			},
 			"unavailableReason": "C’est déjà votre train de vie.",
-			"effects": [{ "op": "setLifestyle", "lifestyle": "lifestyle.comfortable" }]
+			"effects": [
+				{
+					"op": "setLifestyle",
+					"lifestyle": "lifestyle.comfortable"
+				}
+			]
 		},
 		{
 			"id": "lifestyle.adopt_lavish",
@@ -1140,10 +1640,18 @@
 			"costs": [],
 			"requires": {
 				"op": "not",
-				"condition": { "op": "lifestyle", "lifestyle": "lifestyle.lavish" }
+				"condition": {
+					"op": "lifestyle",
+					"lifestyle": "lifestyle.lavish"
+				}
 			},
 			"unavailableReason": "C’est déjà votre train de vie.",
-			"effects": [{ "op": "setLifestyle", "lifestyle": "lifestyle.lavish" }]
+			"effects": [
+				{
+					"op": "setLifestyle",
+					"lifestyle": "lifestyle.lavish"
+				}
+			]
 		}
 	]
 }

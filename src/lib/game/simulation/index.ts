@@ -45,7 +45,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 20;
+export const SIMULATION_REPORT_VERSION = 21;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -164,6 +164,22 @@ export interface SimulationRun {
 	readonly searchesOrdered: number;
 	readonly raisesGranted: number;
 	readonly staffProgress: number;
+	/**
+	 * Montée en échelle (P3-23) : formats de don choisis, avances de campagne,
+	 * argent personnel engagé en politique (avances rendues déduites) et sa part
+	 * dans la fortune, coût moyen d'un point d'influence gagné par les actions au
+	 * premier et au dernier tiers de la carrière, part des actions de début de
+	 * partie parmi les actions du dernier tiers (en %).
+	 */
+	readonly donationsModest: number;
+	readonly donationsSustained: number;
+	readonly donationsMajor: number;
+	readonly campaignAdvances: number;
+	readonly personalSpentOnPoliticsCents: number;
+	readonly wealthSpentPercent: number;
+	readonly influenceCostEarlyCents: number | null;
+	readonly influenceCostLateCents: number | null;
+	readonly earlyActionsLateSharePercent: number;
 	/** Justice (P3-01) : faits inscrits dont le joueur est auteur ou complice, dossiers le visant, condamnations. */
 	readonly facts: number;
 	readonly playerCases: number;
@@ -425,6 +441,21 @@ function promiseWish(
 }
 
 /**
+ * Avance de campagne (P3-23) : l'ambitieuse avance le plus grand format
+ * accessible à chaque candidature en cours, la mixte le format modeste.
+ */
+function advanceWish(strategy: SimulationStrategy, state: GameState, content: Content): PlanStep[] {
+	if (strategy !== 'ambitious' && strategy !== 'mixed') return [];
+	const formats = content.actionIds.filter((id) => content.actions[id]?.target === 'campaign');
+	const order = strategy === 'ambitious' ? [...formats].reverse() : formats.slice(0, 1);
+	return state.campaigns
+		.filter((campaign) => campaign.status === 'running' && campaign.advanceCents === 0)
+		.flatMap((campaign) =>
+			order.map((id): PlanStep => ({ kind: 'action', id, target: campaign.campaignId }))
+		);
+}
+
+/**
  * Médias par politique (P3-03) : l'ambitieuse accorde une interview chaque
  * trimestre au média le mieux disposé qui la suit et l'accepte (sinon, elle
  * déjeune avec le mieux disposé) ; la mixte déjeune une fois l'an avec le moins bien disposé ;
@@ -596,6 +627,100 @@ function recruitmentCounts(
 	};
 }
 
+/** Actions de début de partie (P3-23) : terrain, réseau local et petits dons. */
+const EARLY_ACTIONS: ReadonlySet<string> = new Set([
+	'activism.leaflets',
+	'network.meet_officials',
+	'party.section_meeting',
+	'campaign.canvass',
+	'personal.donate'
+]);
+
+/** Mesures de la montée en échelle des actions (P3-23). */
+function scaleCounts(
+	state: GameState,
+	content: Content
+): Pick<
+	SimulationRun,
+	| 'donationsModest'
+	| 'donationsSustained'
+	| 'donationsMajor'
+	| 'campaignAdvances'
+	| 'personalSpentOnPoliticsCents'
+	| 'wealthSpentPercent'
+	| 'influenceCostEarlyCents'
+	| 'influenceCostLateCents'
+	| 'earlyActionsLateSharePercent'
+> {
+	const quarters = state.history.flatMap((entry) =>
+		entry.type === 'turn.resolved' ? [entry] : []
+	);
+	const steps = quarters.flatMap((entry) =>
+		entry.steps.map((step) => ({ turn: entry.turn, step }))
+	);
+	const scaled = (id: string) => content.actions[id]?.scale;
+	const donations = (format: string): number =>
+		steps.filter(
+			({ step }) =>
+				step.kind === 'action' &&
+				scaled(step.id)?.format === format &&
+				content.actions[step.id]?.target !== 'campaign'
+		).length;
+	let spent = 0;
+	for (const { step } of steps) {
+		const action = step.kind === 'action' ? content.actions[step.id] : undefined;
+		if (!action?.scale) continue;
+		spent += action.costs
+			.filter((cost) => cost.resource === 'personalCashCents')
+			.reduce((total, cost) => total + cost.amount, 0);
+	}
+	const repaid = quarters.reduce(
+		(total, entry) =>
+			total +
+			(entry.deadlines?.campaigns ?? []).reduce(
+				(sum, result) => sum + (result.advance?.repaid ? result.advance.cents : 0),
+				0
+			),
+		0
+	);
+	const net = Math.max(0, spent - repaid);
+	const fortune = net + Math.max(0, state.resources.personalCashCents);
+	const first = quarters[0]?.turn ?? state.turn;
+	const length = Math.max(1, state.turn - first);
+	const third = (turn: number): number => Math.min(2, Math.floor(((turn - first) * 3) / length));
+	const costPerInfluence = (index: number): number | null => {
+		let money = 0;
+		let influence = 0;
+		for (const { turn, step } of steps) {
+			if (third(turn) !== index || step.kind !== 'action') continue;
+			for (const change of step.changes) {
+				if (change.resource === 'influence') influence += Math.max(0, change.delta);
+				else money += Math.max(0, -change.delta);
+			}
+		}
+		return influence > 0 ? Math.round(money / influence) : null;
+	};
+	const late = steps.filter(({ turn, step }) => third(turn) === 2 && step.kind === 'action');
+	return {
+		donationsModest: donations('modest'),
+		donationsSustained: donations('sustained'),
+		donationsMajor: donations('major'),
+		campaignAdvances: steps.filter(
+			({ step }) => step.kind === 'action' && content.actions[step.id]?.target === 'campaign'
+		).length,
+		personalSpentOnPoliticsCents: net,
+		wealthSpentPercent: fortune > 0 ? Math.round((net * 100) / fortune) : 0,
+		influenceCostEarlyCents: costPerInfluence(0),
+		influenceCostLateCents: costPerInfluence(2),
+		earlyActionsLateSharePercent:
+			late.length > 0
+				? Math.round(
+						(late.filter(({ step }) => EARLY_ACTIONS.has(step.id)).length * 100) / late.length
+					)
+				: 0
+	};
+}
+
 /** Stress à partir duquel les politiques prudente et mixte lâchent un mandat (P3-09). */
 export const BURNOUT_STRESS = 70;
 const RESIGNS_WHEN_EXHAUSTED: ReadonlySet<SimulationStrategy> = new Set(['prudent', 'mixed']);
@@ -639,6 +764,9 @@ const STRATEGY_WISHES: Readonly<
 		action('activism.public_meeting'),
 		action('organization.fundraising'),
 		action('network.meet_officials'),
+		// Le plus grand format accessible (P3-23) : un seul passe par trimestre.
+		action('personal.donate_major'),
+		action('personal.donate_sustained'),
 		action('personal.donate'),
 		action('activism.leaflets'),
 		action('activism.leaflets'),
@@ -730,6 +858,7 @@ function wishesFor(
 		...partyWish(strategy, state, seed, content),
 		...candidacyWish(strategy, state, content),
 		...promiseWish(strategy, state, seed, content),
+		...advanceWish(strategy, state, content),
 		...mediaWish(strategy, state, seed, content),
 		...reformWish(strategy, state, seed, content),
 		...hireWish(strategy, state, content)
@@ -993,6 +1122,7 @@ function finalizeRun(
 		staffHired: state.staff.length,
 		staffDepartures: state.staff.filter((member) => member.status === 'left').length,
 		...recruitmentCounts(state),
+		...scaleCounts(state, content),
 		...justiceCounts(state),
 		resignations: state.mandates.filter((mandate) => mandate.endReason === 'resigned').length,
 		estimatedActiveMinutes: estimateActiveMinutes(summary.quartersPlayed, decisions, alertEpisodes),
@@ -1474,6 +1604,15 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'searchesOrdered',
 		'raisesGranted',
 		'staffProgress',
+		'donationsModest',
+		'donationsSustained',
+		'donationsMajor',
+		'campaignAdvances',
+		'personalSpentOnPoliticsCents',
+		'wealthSpentPercent',
+		'influenceCostEarlyCents',
+		'influenceCostLateCents',
+		'earlyActionsLateSharePercent',
 		'facts',
 		'playerCases',
 		'convictions',
@@ -1556,6 +1695,15 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.searchesOrdered,
 		run.raisesGranted,
 		run.staffProgress,
+		run.donationsModest,
+		run.donationsSustained,
+		run.donationsMajor,
+		run.campaignAdvances,
+		run.personalSpentOnPoliticsCents,
+		run.wealthSpentPercent,
+		run.influenceCostEarlyCents,
+		run.influenceCostLateCents,
+		run.earlyActionsLateSharePercent,
 		run.facts,
 		run.playerCases,
 		run.convictions,

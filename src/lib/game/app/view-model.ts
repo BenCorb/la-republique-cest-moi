@@ -17,6 +17,9 @@ import {
 	type Content,
 	type Effect,
 	PROMISE_PROGRESS_MAX,
+	type ActionDefinition,
+	type ActionFamilyDefinition,
+	type ActionFormat,
 	type PromiseStatus,
 	type GaugeId,
 	type ResourceAmount,
@@ -87,6 +90,8 @@ import {
 	progressionTenths,
 	activistCapacity,
 	activistTier,
+	familyFormats,
+	familySpentThisYear,
 	fieldworkEffects,
 	nextActivistTier,
 	pressAudience,
@@ -232,6 +237,27 @@ export interface CatalogItemView {
 	 * d'adhésion, pas de campagne, influence insuffisante…), par opposition à un
 	 * blocage du trimestre (temps, argent, limite atteinte).
 	 */
+	readonly outOfReach: boolean;
+	/**
+	 * Famille à l'échelle (P3-23) : les trois formats sous cette seule ligne, du
+	 * modeste au majeur ; absent pour une action ordinaire.
+	 */
+	readonly formats?: readonly ActionFormatView[] | undefined;
+	/** Plafond annuel de la famille et dépense de l'année, en clair (P3-23). */
+	readonly familyNote?: string | null | undefined;
+}
+
+/** Format d'une famille d'actions à l'échelle (P3-23), avec son coût et son prérequis. */
+export interface ActionFormatView {
+	readonly id: string;
+	readonly format: string;
+	readonly label: string;
+	readonly timeCost: number;
+	readonly costChips: readonly ChipView[];
+	readonly effectChips: readonly ChipView[];
+	readonly planned: number;
+	readonly addable: boolean;
+	readonly reason: string | null;
 	readonly outOfReach: boolean;
 }
 
@@ -557,6 +583,21 @@ export interface CampaignView {
 	/** Sondage : fourchette du score face à l'adversaire principal (en cours seulement). */
 	readonly poll: { readonly min: number; readonly max: number } | null;
 	readonly outcome: string | null;
+	/** Avance personnelle versée et son sort (P3-23), en clair, ou `null`. */
+	readonly advance: string | null;
+	/** Formats d'avance possibles pour une candidature en cours (P3-23), vide sinon. */
+	readonly advanceOffers: readonly AdvanceOfferView[];
+}
+
+/** Format d'avance de campagne (P3-23) : montant, prérequis et disponibilité. */
+export interface AdvanceOfferView {
+	readonly actionId: string;
+	readonly label: string;
+	readonly format: string;
+	readonly timeCost: number;
+	readonly planned: boolean;
+	readonly addable: boolean;
+	readonly reason: string | null;
 }
 
 export interface CareerView {
@@ -1289,6 +1330,8 @@ function describeEffect(range: EffectRange, content: Content): string {
 			return 'Départ de l’organisation';
 		case 'preparation':
 			return `Préparation de campagne + ${range.value}`;
+		case 'advance':
+			return `Avance de ${formatMoney(range.valueCents)}, remboursée à partir de ${content.balance.campaigns.advanceRepayMinPercent} % des voix`;
 		case 'promise':
 			return range.change === 'make'
 				? 'Engagement inscrit au registre des promesses'
@@ -1317,6 +1360,25 @@ const PROMISE_CHANGE_LABELS: { readonly [K in PromiseChange]: string } = {
 	abandoned: 'promesse abandonnée',
 	recalled: 'promesse rappelée en campagne'
 };
+
+/** Formats d'une action à l'échelle, en clair (P3-23). */
+export const ACTION_FORMAT_LABELS: { readonly [K in ActionFormat]: string } = {
+	modest: 'Modeste',
+	sustained: 'Soutenu',
+	major: 'Majeur'
+};
+
+/** Avance personnelle d'une campagne et son sort (P3-23), en clair. */
+function advanceLabel(campaign: GameState['campaigns'][number], content: Content): string | null {
+	if (campaign.advanceCents === 0) return null;
+	const amount = formatMoney(campaign.advanceCents);
+	const threshold = content.balance.campaigns.advanceRepayMinPercent;
+	if (campaign.status === 'running') {
+		return `Avance personnelle : ${amount}, rendue à partir de ${threshold} % des voix`;
+	}
+	const repaid = campaign.status !== 'disqualified' && (campaign.playerPercent ?? 0) >= threshold;
+	return `Avance personnelle : ${amount}, ${repaid ? 'rendue après le scrutin' : 'perdue'}`;
+}
 
 /** États d'une promesse, en clair (registre). */
 export const PROMISE_STATUS_LABELS: { readonly [K in PromiseStatus]: string } = {
@@ -1351,6 +1413,8 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 						: 'candidature déposée sans investiture';
 				case 'preparation':
 					return `préparation de campagne + ${change.delta}`;
+				case 'campaignAdvance':
+					return `avance personnelle de ${formatMoney(change.cents)} à la campagne`;
 				case 'familyJoined':
 					return change.relation === 'partner'
 						? 'une nouvelle vie à deux'
@@ -1459,6 +1523,15 @@ function deadlineLines(
 			lines.push({
 				kind: 'economy',
 				text: `Frais de campagne remboursés — ${RESOURCE_NAMES.politicalBudgetCents} ${formatDelta('politicalBudgetCents', refund)}`
+			});
+		}
+		// Avance personnelle (P3-23) : rendue ou perdue selon le score.
+		if (result.advance) {
+			lines.push({
+				kind: 'economy',
+				text: result.advance.repaid
+					? `Avance de campagne rendue — ${RESOURCE_NAMES.personalCashCents} ${formatDelta('personalCashCents', result.advance.cents)}`
+					: `Avance de campagne de ${formatMoney(result.advance.cents)} perdue : le score n’atteint pas ${content.balance.campaigns.advanceRepayMinPercent} % des voix`
 			});
 		}
 	}
@@ -3476,6 +3549,11 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 		content.actionIds.find((id) => content.actions[id]?.target === 'mandate') ?? null;
 	const declareActionId =
 		content.actionIds.find((id) => content.actions[id]?.target === 'ballot') ?? null;
+	// Avance de campagne (P3-23) : la famille dont les formats ciblent une candidature.
+	const advanceFamily = content.actionFamilyIds.find(
+		(familyId) => familyFormats(familyId, content)[0]?.target === 'campaign'
+	);
+	const advanceFormats = advanceFamily ? familyFormats(advanceFamily, content) : [];
 	const campaignView = (campaign: GameState['campaigns'][number]): CampaignView => {
 		const ballot = state.ballots.find((entry) => entry.ballotId === campaign.ballotId);
 		const rival = campaign.opponentId ? state.characters[campaign.opponentId] : undefined;
@@ -3529,7 +3607,31 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 							pollingCompetence(state.staff, state.characters, state.turn, content)
 						)
 					: null,
-			outcome
+			outcome,
+			advance: advanceLabel(campaign, content),
+			advanceOffers:
+				campaign.status === 'running' && campaign.advanceCents === 0
+					? advanceFormats.map((action): AdvanceOfferView => {
+							const step: PlanStep = {
+								kind: 'action',
+								id: action.id,
+								target: campaign.campaignId
+							};
+							return {
+								actionId: action.id,
+								label: action.label,
+								format: ACTION_FORMAT_LABELS[action.scale!.format],
+								timeCost: action.timeCost,
+								planned: plan.some(
+									(entry) =>
+										entry.kind === 'action' &&
+										entry.id === action.id &&
+										entry.target === campaign.campaignId
+								),
+								...addability(state, plan, step, content)
+							};
+						})
+					: []
 		};
 	};
 	const scheduled = state.ballots
@@ -4268,11 +4370,44 @@ export function projectView(
 	const planned = (kind: PlanStep['kind'], id: string): number =>
 		plan.filter((step) => step.kind === kind && step.id === id).length;
 
+	// Famille à l'échelle (P3-23) : formats, ligne hors de portée seulement si tous le sont.
+	const familyRow = (family: ActionFamilyDefinition, modest: ActionDefinition) => {
+		const formats = familyFormats(family.id, content).map((format): ActionFormatView => {
+			const add = addability(state, plan, { kind: 'action', id: format.id }, content);
+			return {
+				id: format.id,
+				format: ACTION_FORMAT_LABELS[format.scale!.format],
+				label: format.label,
+				timeCost: format.timeCost,
+				costChips: amountChips(format.costs, -1),
+				effectChips: format.effects.map((effect) => effectChip(effectRange(effect), content)),
+				planned: planned('action', format.id),
+				...add
+			};
+		});
+		const spent = family.annualCap
+			? familySpentThisYear(family.id, state.history, state.turn, content)
+			: 0;
+		return {
+			label: family.label,
+			description: `${family.description} ${modest.description}`,
+			formats,
+			planned: formats.reduce((total, format) => total + format.planned, 0),
+			outOfReach: formats.every((format) => format.outOfReach),
+			familyNote: family.annualCap
+				? `Plafond annuel : ${formatResource(family.annualCap.resource, family.annualCap.amount)} (${formatResource(family.annualCap.resource, spent)} déjà versés cette année)`
+				: null
+		};
+	};
+
 	// Les actions ciblées se planifient depuis les écrans Monde politique et Carrière.
 	const actions: CatalogItemView[] = content.actionIds.flatMap((id) => {
 		const action = content.actions[id]!;
 		// Une action d'une époque à venir reste invisible (P3-07).
 		if (action.target || !eraReached(action.fromEra, state.turn, content)) return [];
+		// Famille à l'échelle (P3-23) : une seule ligne, portée par le format modeste.
+		if (action.scale && action.scale.format !== 'modest') return [];
+		const family = action.scale ? content.actionFamilies[action.scale.family] : undefined;
 		// Bonus de terrain du palier militant (P3-19), annoncé dans la prévision.
 		const bonus = fieldworkEffects(action, state.player.activists, content);
 		return {
@@ -4299,7 +4434,8 @@ export function projectView(
 						: null,
 			category: action.category ?? null,
 			planned: planned('action', id),
-			...addability(state, plan, { kind: 'action', id }, content)
+			...addability(state, plan, { kind: 'action', id }, content),
+			...(family ? familyRow(family, action) : {})
 		} satisfies CatalogItemView;
 	});
 

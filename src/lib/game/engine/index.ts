@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.37.0';
+export const RULES_VERSION = '0.38.0';
 
 export {
 	START_YEAR,
@@ -214,6 +214,7 @@ export {
 	campaignScore,
 	mobilizationPenalty,
 	mobilizationPercent,
+	advanceIssue,
 	candidacyIssue,
 	careerEffectIssue,
 	opponentStrength,
@@ -437,3 +438,4 @@ export {
 	type AccelerationStopReason
 } from './acceleration.ts';
 export { assertInvariants, checkContentReferences, checkInvariants } from './invariants.ts';
+export { cappedCost, familyFormats, familyOf, familySpentThisYear, formatAmount } from './scale.ts';
