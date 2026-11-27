@@ -16,6 +16,7 @@
  * stress certain et une fourchette de santé. Elle ne lit ni ne fait avancer le
  * PRNG et n'expose aucune probabilité.
  */
+import { fieldworkEffects } from './activists.ts';
 import {
 	RESOURCE_IDS,
 	type Condition,
@@ -451,8 +452,12 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 			if (!eraReached(definition.fromEra, state.turn, content)) {
 				fail('condition_not_met', `« ${label} » n’existe pas encore à cette époque.`);
 			}
-			ranges = definition.effects.map(effectRange);
-			actionEffects = definition.effects;
+			// Bonus de terrain selon le palier militant du début du trimestre (P3-19).
+			actionEffects = [
+				...definition.effects,
+				...fieldworkEffects(definition, state.player.activists, content)
+			];
+			ranges = actionEffects.map(effectRange);
 			if (definition.target === 'party') {
 				if (target === null || !Object.hasOwn(content.parties, target)) {
 					fail('invalid_target', `« ${label} » : choisissez un parti existant.`);
@@ -806,7 +811,12 @@ export function executePlan(
 			timeUsed += definition.timeCost;
 			for (const cost of definition.costs) add(cost.resource, -cost.amount);
 			const expanded = expandRelease(
-				expandPromiseEffects(definition.effects, target, career.promises, content),
+				expandPromiseEffects(
+					[...definition.effects, ...fieldworkEffects(definition, state.player.activists, content)],
+					target,
+					career.promises,
+					content
+				),
 				target,
 				upgrades,
 				content

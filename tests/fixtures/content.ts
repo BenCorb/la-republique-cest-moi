@@ -100,6 +100,41 @@ export const fixtureBalance = {
 		hostileAttitude: -15,
 		partnerStress: 1,
 		partnerAgeSpread: 5
+	},
+	/**
+	 * Base militante de test (P3-19) : neutre par défaut (aucune cotisation, aucun
+	 * frais, aucune pénalité de mobilisation) ; `tests/unit/activists.test.ts`
+	 * fixe ses propres valeurs.
+	 */
+	activists: {
+		start: 0,
+		baseCapacity: 15,
+		partyCapacity: 40,
+		mandateCapacityPerRank: 4,
+		reachInfluenceFactor: 2,
+		reachExposureDivisor: 5,
+		campaignReach: 10,
+		attractionThreshold: 0,
+		attractionPercentPerPoint: 4,
+		baseAttritionPercent: 4,
+		discontentThreshold: 10,
+		discontentDivisor: 2,
+		overCapacityAttritionPercent: 10,
+		recruitsPerVoteTenths: 3,
+		duesCents: 0,
+		partyMachinePercent: 40,
+		mobilizationWeight: 0,
+		tiers: [
+			{
+				id: 'tier.isolated',
+				label: 'Quelques fidèles',
+				min: 0,
+				fieldMultiplier: 0,
+				upkeepCents: 0
+			},
+			{ id: 'tier.core', label: 'Noyau', min: 5, fieldMultiplier: 1, upkeepCents: 0 },
+			{ id: 'tier.committee', label: 'Comité', min: 25, fieldMultiplier: 2, upkeepCents: 0 }
+		]
 	}
 };
 
@@ -336,7 +371,8 @@ export const fixtureCareer = {
 			grants: 'mandate.councillor',
 			bonusGrant: { mandate: 'mandate.mayor', minPercent: 60 },
 			requiresAnyMandate: [],
-			rivalStrength: 30
+			rivalStrength: 30,
+			mobilizationNeed: 0
 		},
 		{
 			id: 'election.national',
@@ -349,7 +385,8 @@ export const fixtureCareer = {
 			minAge: 30,
 			grants: 'mandate.deputy',
 			requiresAnyMandate: ['mandate.councillor'],
-			rivalStrength: 40
+			rivalStrength: 40,
+			mobilizationNeed: 0
 		}
 	],
 	mandates: [

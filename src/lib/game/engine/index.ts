@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.34.0';
+export const RULES_VERSION = '0.35.0';
 
 export {
 	START_YEAR,
@@ -106,8 +106,18 @@ export {
 	type PartyState,
 	type PoliticalChange,
 	type WorldRecord,
-	type WorldState
+	type WorldState,
+	type ActivistsRecord
 } from './state.ts';
+export {
+	activistCapacity,
+	activistTier,
+	fieldworkEffects,
+	nextActivistTier,
+	resolveActivists,
+	type ActivistsInputs,
+	type ActivistsResolution
+} from './activists.ts';
 export {
 	createTerritory,
 	departmentOf,
@@ -175,6 +185,8 @@ export {
 	campaignPoll,
 	campaignRefund,
 	campaignScore,
+	mobilizationPenalty,
+	mobilizationPercent,
 	candidacyIssue,
 	careerEffectIssue,
 	opponentStrength,

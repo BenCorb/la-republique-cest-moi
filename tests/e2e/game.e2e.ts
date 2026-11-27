@@ -342,24 +342,41 @@ test.describe('parcours de jeu', () => {
 	test('planifie un achat qui ne produit qu’au trimestre suivant', async ({ page }) => {
 		await startCareer(page, 'e2e-achat');
 		await page.getByRole('button', { name: 'Organisation', exact: true }).click();
+		// Base militante organique (P3-19) : plus de militant acheté.
+		await expect(page.getByTestId('activists')).toContainText('Base militante');
+		await expect(page.getByTestId('activists-count')).toHaveText('3 militants');
+		await expect(
+			page.getByRole('button', { name: 'Planifier l’achat « Recruter un militant bénévole »' })
+		).toHaveCount(0);
 		await page
-			.getByRole('button', { name: 'Planifier l’achat « Recruter un militant bénévole »' })
+			.getByRole('button', { name: 'Planifier l’achat « Adhérer à un cercle de réflexion »' })
 			.click();
-		await expect(page.getByText('Actif à partir du trimestre prochain.').first()).toBeVisible();
+		await expect(page.getByTestId('group-network.think_tank')).toContainText(
+			'Actif à partir du trimestre prochain'
+		);
 		await nextQuarter(page);
 		await page.getByRole('button', { name: 'Organisation', exact: true }).click();
-		const group = page.getByTestId('group-organization.volunteer');
-		await expect(group).toContainText('Militant bénévole');
+		const group = page.getByTestId('group-network.think_tank');
+		await expect(group).toContainText('Cercle de réflexion');
 		await expect(group).toContainText('Actif ce trimestre');
-		await expect(group).toContainText('Au départ : Soutien : Militants − 2');
 
 		// Départ gratuit, effectif dès ce trimestre, annulable dans le plan.
-		await page.getByRole('button', { name: 'Prévoir un départ : Militant bénévole' }).click();
+		await page.getByRole('button', { name: 'Prévoir un départ : Cercle de réflexion' }).click();
 		await expect(group).toContainText('1 départ prévu ce trimestre');
 		await nextQuarter(page);
 		await page.getByRole('button', { name: 'Organisation', exact: true }).click();
 		await expect(group).toHaveCount(0);
 		await expect(page.getByText('Personne ne travaille encore pour vous.')).toBeVisible();
+	});
+
+	test('annonce le bonus de la base militante sur les actions de terrain (P3-19)', async ({
+		page
+	}) => {
+		await startCareer(page, 'e2e-terrain-militant');
+		await page.getByRole('button', { name: 'Agenda', exact: true }).click();
+		await expect(page.getByTestId('field-bonus-activism.leaflets')).toContainText(
+			'Action de terrain : bonus à partir du palier « Noyau »'
+		);
 	});
 
 	test('refuse explicitement une sauvegarde d’une ancienne version, sans l’effacer', async ({

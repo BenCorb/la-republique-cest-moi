@@ -1,20 +1,6 @@
 {
 	"upgrades": [
 		{
-			"id": "organization.volunteer",
-			"family": "organization",
-			"ownedLabel": "Militant bénévole",
-			"releaseEffects": [{ "op": "addSupport", "group": "support.activists", "value": -2 }],
-			"label": "Recruter un militant bénévole",
-			"description": "Bénévole, motivé, disponible le week-end. Ses frais de photocopies et de covoiturage, eux, ne sont pas bénévoles.",
-			"treasury": "politicalBudgetCents",
-			"timeCost": 15,
-			"maxOwned": 10,
-			"price": [],
-			"upkeep": [{ "resource": "politicalBudgetCents", "amount": 1500 }],
-			"production": [{ "resource": "influence", "amount": 1 }]
-		},
-		{
 			"id": "organization.donor_file",
 			"family": "organization",
 			"ownedLabel": "Fichier de donateurs",
@@ -34,15 +20,32 @@
 			"family": "organization",
 			"ownedLabel": "Permanence",
 			"label": "Ouvrir une permanence",
-			"description": "Un local en rez-de-chaussée, une affiche à votre effigie et une machine à café qui fédère davantage que le programme.",
+			"description": "Un local en rez-de-chaussée, une affiche à votre effigie et une machine à café qui fédère davantage que le programme. On y accueille et on y garde les militants.",
 			"treasury": "politicalBudgetCents",
 			"timeCost": 30,
 			"maxOwned": 1,
 			"price": [{ "resource": "politicalBudgetCents", "amount": 150000 }],
 			"upkeep": [{ "resource": "politicalBudgetCents", "amount": 20000 }],
-			"production": [{ "resource": "influence", "amount": 4 }],
+			"production": [],
 			"requires": { "op": "gte", "stat": "resources.influence", "value": 20 },
-			"unavailableReason": "Il faut au moins 20 points d’influence pour justifier une permanence."
+			"unavailableReason": "Il faut au moins 20 points d’influence pour justifier une permanence.",
+			"activists": { "capacity": 120, "retentionPercent": 1 }
+		},
+		{
+			"id": "organization.federation",
+			"family": "organization",
+			"ownedLabel": "Fédération départementale",
+			"label": "Structurer une fédération départementale",
+			"description": "Un trésorier, un fichier tenu à jour, des réunions de secteur le jeudi soir et un local partagé avec l’amicale des boulistes. Votre base cesse d’être une bande de copains.",
+			"treasury": "politicalBudgetCents",
+			"timeCost": 30,
+			"maxOwned": 3,
+			"price": [{ "resource": "politicalBudgetCents", "amount": 800000 }],
+			"upkeep": [{ "resource": "politicalBudgetCents", "amount": 150000 }],
+			"production": [],
+			"requires": { "op": "gte", "stat": "player.activists", "value": 100 },
+			"unavailableReason": "Il faut une section implantée (au moins 100 militants) pour structurer une fédération.",
+			"activists": { "capacity": 400, "retentionPercent": 1 }
 		},
 		{
 			"id": "communication.press_officer",

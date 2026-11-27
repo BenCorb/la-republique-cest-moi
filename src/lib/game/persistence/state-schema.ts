@@ -262,8 +262,22 @@ const turnEntry = z.strictObject({
 		popularity: int,
 		health: int,
 		stress: int,
-		exposure: int
+		exposure: int,
+		activists: int
 	}),
+	activists: z
+		.strictObject({
+			arrivals: int,
+			recruits: int,
+			departures: int,
+			total: int,
+			capacity: int,
+			tierBefore: id,
+			tierAfter: id,
+			duesCents: int,
+			upkeepCents: int
+		})
+		.nullable(),
 	justice: z
 		.strictObject({
 			cases: z.array(
@@ -341,7 +355,8 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 			parentIds: z.array(id),
 			siblingIds: z.array(id),
 			formerPartnerIds: z.array(id)
-		})
+		}),
+		activists: int
 	}),
 	resources: z.strictObject({
 		influence: int,

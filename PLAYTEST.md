@@ -1177,6 +1177,12 @@ parties réelles.
   respective de la base personnelle et de la machine du parti ; frais logistiques des grands
   effectifs.
 
+  **Correction (P3-19, 26 novembre 2026) :** première tranche livrée — effectif organique, capacité
+  d’accueil (permanence, fédérations, parti, mandats), paliers, bonus de terrain annoncés, cotisations et
+  frais, besoin de mobilisation par scrutin dans le score, recrues après une campagne même perdue ;
+  voir GDD §5.2 et ARCHITECTURE §8.4 unvicies. Événements de croissance, délégation et effets d’un
+  changement de parti restent pour la vague de contenu.
+
 - **PT-P3-09-015 — Montrer immédiatement les conséquences et mettre en scène chaque nouveau
   trimestre (26 novembre 2026, irritant gênant, feedback, événements et rythme temporel).** Après un
   choix d’événement, la fenêtre se ferme sans présenter clairement ce qui vient de se produire. Après
