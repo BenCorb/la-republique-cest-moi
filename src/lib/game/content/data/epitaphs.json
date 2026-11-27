@@ -117,6 +117,12 @@
 	],
 	"distinctions": [
 		{
+			"id": "distinction.matignon",
+			"label": "Le Locataire de Matignon",
+			"description": "Nommé Premier ministre, au sommet de la vie politique.",
+			"criteria": [{ "metric": "highestRank", "cmp": "gte", "value": 80 }]
+		},
+		{
 			"id": "distinction.integrity",
 			"label": "L’Intègre",
 			"description": "Des mandats exercés sans un seul fait douteux au registre.",

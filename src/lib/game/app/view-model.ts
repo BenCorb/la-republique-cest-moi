@@ -3797,11 +3797,20 @@ function buildWorld(state: GameState, plan: readonly PlanStep[], content: Conten
 			const pmId = primeMinisterId(world);
 			const pm = pmId ? state.characters[pmId] : undefined;
 			const acronym = (partyId: string): string => content.parties[partyId]?.acronym ?? partyId;
-			const playerLeads = partyLedByPlayer(state.player) === world.governingPartyId;
+			const playerLeads =
+				partyLedByPlayer(state.player) === world.governingPartyId ||
+				state.mandates.some(
+					(mandate) => mandate.status === 'active' && mandate.mandateId === 'mandate.prime_minister'
+				);
 			return {
 				president: `${president ? displayName(president) : 'Le président'} (${acronym(world.president.partyId)})`,
 				primeMinister: playerLeads
-					? `Nommé par le président dans votre majorité (${acronym(world.governingPartyId)})`
+					? state.mandates.some(
+							(mandate) =>
+								mandate.status === 'active' && mandate.mandateId === 'mandate.prime_minister'
+						)
+						? `vous (${acronym(world.governingPartyId)})`
+						: `nommé par le président dans votre majorité (${acronym(world.governingPartyId)})`
 					: `${pm ? displayName(pm) : '—'} (${acronym(world.governingPartyId)})`,
 				cohabitation: cohabitation(world),
 				nextPresidential: `Présidentielle au ${formatTurn(world.president.termEndTurn)}`
@@ -5280,9 +5289,11 @@ export function projectView(
 				advice: buildAdvice(state, pending.instanceId, pending.eventId, content),
 				appointment:
 					pending.eventId === content.balance.government.appointmentEvent && state.appointment
-						? state.appointment.portfolio
-							? `Portefeuille proposé : ${content.portfolios[state.appointment.portfolio]?.title ?? state.appointment.portfolio}.`
-							: 'Fonction proposée : un secrétariat d’État, première marche du gouvernement.'
+						? state.appointment.mandateId === 'mandate.prime_minister'
+							? 'Matignon : le président vous propose de former le gouvernement.'
+							: state.appointment.portfolio
+								? `Portefeuille proposé : ${content.portfolios[state.appointment.portfolio]?.title ?? state.appointment.portfolio}.`
+								: 'Fonction proposée : un secrétariat d’État, première marche du gouvernement.'
 						: null,
 				report:
 					pending.eventId === content.balance.elections.contests.runoffEvent

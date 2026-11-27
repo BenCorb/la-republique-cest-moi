@@ -123,6 +123,12 @@ export function adoptionPercent(
 			? rules.governingBonusPercent
 			: 0) +
 		(minister ? rules.ministerBonusPercent : 0) +
+		// Matignon (P3-36) : la majorité suit plus volontiers le Premier ministre.
+		(activeMandates(career.mandates).some(
+			(mandate) => mandate.mandateId === 'mandate.prime_minister'
+		)
+			? rules.ministerBonusPercent * 2
+			: 0) +
 		Math.round(((apparatus - 50) * rules.apparatusWeightPercent) / 100) +
 		Math.round(((world.indicators.stability - 50) * rules.stabilityWeightPercent) / 100);
 	return Math.max(rules.adoptionPercent.min, Math.min(rules.adoptionPercent.max, value));

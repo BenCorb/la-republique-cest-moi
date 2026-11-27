@@ -1100,6 +1100,18 @@ Décisions du créateur (ROADMAP §5.2 : sommet de carrière, portefeuilles) ; c
 - **Simulation** : toute politique candidate accepte une nomination (sauf l'aléatoire et la patrimoniale, qui suivent leur règle). Mesure (60 carrières, seed `p3-35`) : aucune erreur ni violation ; ministère atteint dans 42 carrières sur 60, comme avant P3-35. **À revoir en P3-09** : la patrimoniale atteint un ministère sans mandat électif, par la seule influence.
 - `RULES_VERSION = '0.44.0'`. Tests : `tests/unit/government.test.ts` (président et Premier ministre, présidentielle unique, proposition après des législatives, réponse unique, remaniement d'un impopulaire) ; audit des faits du catalogue et politiques de risque mis à jour.
 
+### 8.4 quatertrigesies Décisions de P3-36 : Matignon (27 novembre 2026)
+
+Décision du créateur (ROADMAP §5.2 : Premier ministre au plus en V1) ; chiffres : **décisions déléguées, provisoires**.
+
+- **Fonction** : `mandate.prime_minister` (« Matignon », rang 80, 50 points de temps, 9 d'influence et 36 000 € par trimestre, stress 6, fin avec le gouvernement), incompatible avec l'Assemblée, le Sénat, un ministère et un secrétariat d'État. Le Premier ministre affiché dans le monde devient le joueur.
+- **Nomination** (même mécanisme de proposition que P3-35) : le chef du parti majoritaire est appelé à Matignon à la formation du gouvernement qui suit des législatives ; un ministre de stature ≥ 100 peut l'être à un remaniement, dans 10 % des cas. Le texte de la proposition ne cite plus le dirigeant de la majorité (qui peut être le joueur).
+- **Actions** : discours de politique générale (premier trimestre seulement, condition `player.pmTurns`), 49.3 (stabilité − 6, la censure devient possible), remaniement, arbitrage entre ministres, partenaires sociaux, démission ; la réforme institutionnelle est ouverte au Premier ministre avec un bonus d'adoption doublé par rapport à un ministre.
+- **Événements** : motion de censure repoussée (stabilité entre 26 et 45) ou adoptée (stabilité ≤ 25 : fin de Matignon), renvoi par le président (popularité ≤ 28), trois crises nationales (inondations, krach, grève des transports). Un Premier ministre impopulaire est aussi remercié au remaniement (P3-35).
+- **Bilan** : distinction « Le Locataire de Matignon » (plus haute fonction de rang 80).
+- **Simulation** : Matignon atteint dans 20 carrières sur 60 (seed `p3-36` : 8 ambitieuses sur 12, 6 mixtes, 4 prudentes, 2 patrimoniales), aucune erreur ni violation, durée active médiane 76 minutes. **À revoir en P3-09** : sommet sans doute trop accessible sur une carrière de soixante ans.
+- `RULES_VERSION = '0.45.0'`. Tests : `tests/unit/government.test.ts` (appel du chef du parti majoritaire, conditions de censure et de renvoi) ; les deux événements rares sont déclarés au scénario du catalogue réel.
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.

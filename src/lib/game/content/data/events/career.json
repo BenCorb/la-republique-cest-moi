@@ -1,6 +1,397 @@
 {
 	"events": [
 		{
+			"id": "matignon.censure_survived",
+			"category": "career",
+			"title": "La motion de censure est repoussée",
+			"text": "L’opposition a déposé sa motion de censure. Il manque trente voix : votre majorité, rappelée de ses circonscriptions, a tenu. De justesse, et avec des conditions.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 9,
+			"maxOccurrences": 3,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.prime_minister"
+					},
+					{
+						"op": "lte",
+						"stat": "world.stability",
+						"value": 45
+					},
+					{
+						"op": "gte",
+						"stat": "world.stability",
+						"value": 26
+					}
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "thank",
+					"label": "Remercier la majorité",
+					"hints": ["Les députés se sentent écoutés", "Il faudra leur rendre la politesse"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": 3
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -2
+						}
+					],
+					"outcome": [
+						"Un déjeuner à Matignon pour les députés de la majorité ; les promesses de circonscription s’accumulent."
+					]
+				},
+				{
+					"id": "defy",
+					"label": "Ironiser sur l’opposition",
+					"hints": ["Un bon mot au journal de 20 heures", "La tension reste vive"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 3
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "stability",
+							"value": -2
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Votre formule fait le tour des rédactions. L’opposition, vexée, prépare déjà la prochaine motion."
+					]
+				}
+			]
+		},
+		{
+			"id": "matignon.censure_adopted",
+			"category": "career",
+			"title": "Le gouvernement est renversé",
+			"text": "La motion de censure est adoptée : pour la première fois depuis longtemps, l’Assemblée renverse le gouvernement. Il vous reste à porter votre démission à l’Élysée.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 6,
+			"priority": 9,
+			"maxOccurrences": 2,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.prime_minister"
+					},
+					{
+						"op": "lte",
+						"stat": "world.stability",
+						"value": 25
+					}
+				]
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "endMandate",
+					"mandate": "mandate.prime_minister"
+				},
+				{
+					"op": "addIndicator",
+					"indicator": "stability",
+					"value": -5
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 6
+				},
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": -5
+				}
+			]
+		},
+		{
+			"id": "matignon.dismissed",
+			"category": "career",
+			"title": "Le président vous remercie",
+			"text": "Un entretien d’une demi-heure à l’Élysée, un communiqué de trois lignes : le président souhaite « un nouvel élan ». Votre successeur est déjà dans l’antichambre.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 9,
+			"maxOccurrences": 2,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.prime_minister"
+					},
+					{
+						"op": "lte",
+						"stat": "player.popularity",
+						"value": 28
+					}
+				]
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "endMandate",
+					"mandate": "mandate.prime_minister"
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 4
+				},
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
+					"value": -3
+				}
+			]
+		},
+		{
+			"id": "matignon.flood_crisis",
+			"category": "career",
+			"title": "Des inondations historiques",
+			"text": "Des rivières sortent de leur lit dans trois régions, les images de toits émergeant de l’eau tournent en boucle. Les maires réclament l’état de catastrophe naturelle.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 9,
+			"maxOccurrences": 3,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.prime_minister"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "visit",
+					"label": "Se rendre sur place en bottes",
+					"hints": ["Présent auprès des sinistrés", "Les images peuvent se retourner"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Bottes, ciré et promesses : vous êtes là. Une sinistrée vous apostrophe devant les caméras ; vous l’écoutez, longuement."
+					]
+				},
+				{
+					"id": "fund",
+					"label": "Débloquer un fonds d’urgence",
+					"hints": ["Les élus locaux respirent", "Le budget souffre"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": 2
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "economy",
+							"value": -2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 1
+						}
+					],
+					"outcome": [
+						"Un décret dans la nuit, des aides en dix jours : les préfets n’en reviennent pas."
+					]
+				}
+			]
+		},
+		{
+			"id": "matignon.market_crash",
+			"category": "career",
+			"title": "Un krach boursier",
+			"text": "Les places financières s’effondrent un jeudi noir. Les banques appellent Bercy, Bercy appelle Matignon et tout le monde attend votre allocution.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 9,
+			"maxOccurrences": 3,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.prime_minister"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "rescue",
+					"label": "Garantir les dépôts et soutenir les banques",
+					"hints": ["Les marchés se calment", "Les contribuables s’en souviendront"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "economy",
+							"value": 3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": -2
+						}
+					],
+					"outcome": [
+						"Un plan de garantie annoncé avant l’ouverture : les marchés se calment, les éditorialistes parlent de « socialisation des pertes »."
+					]
+				},
+				{
+					"id": "wait",
+					"label": "Laisser les marchés se corriger",
+					"hints": ["Rigueur doctrinale", "Le chômage menace"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "economy",
+							"value": -3
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": -2
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Vous refusez de « céder à la panique ». Les marchés continuent de céder, eux."
+					]
+				}
+			]
+		},
+		{
+			"id": "matignon.transport_strike",
+			"category": "career",
+			"title": "Le pays à l’arrêt",
+			"text": "Une grève reconductible paralyse trains et métros depuis dix jours. Les usagers marchent, les commentateurs comptent, et l’Élysée vous demande une sortie de crise.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 9,
+			"maxOccurrences": 3,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.prime_minister"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "negotiate",
+					"label": "Nommer un médiateur",
+					"hints": ["La grève s’essouffle", "Des concessions coûteuses"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": 3
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "economy",
+							"value": -1
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -1
+						}
+					],
+					"outcome": [
+						"Un médiateur, trois nuits de négociation et un protocole d’accord. Les trains repartent."
+					]
+				},
+				{
+					"id": "firm",
+					"label": "Tenir bon",
+					"hints": ["Votre autorité s’affirme", "Le pays souffre"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": -3
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "stability",
+							"value": -2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.wealthy",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Le mouvement s’épuise au bout d’un mois. Vous avez gagné ; beaucoup s’en souviendront."
+					]
+				}
+			]
+		},
+		{
 			"id": "government.official_car",
 			"category": "career",
 			"title": "La voiture de fonction a le plein",
@@ -1055,7 +1446,7 @@
 			"id": "career.ministry_call",
 			"category": "career",
 			"title": "Un coup de fil de Matignon",
-			"text": "Le téléphone sonne un dimanche soir : {governing_leader}, chargé de former le gouvernement, vous propose d’y entrer. Le portefeuille est sur la table ; il faudrait répondre avant le journal de 20 heures.",
+			"text": "Le téléphone sonne un dimanche soir : l’Élysée, puis la voix du président lui-même. Il compose un gouvernement et pense à vous ; il faudrait répondre avant le journal de 20 heures.",
 			"blocking": true,
 			"trigger": "followUp",
 			"weight": 0,

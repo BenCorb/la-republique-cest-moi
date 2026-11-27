@@ -197,7 +197,12 @@
 		}
 	],
 	"balance": {
-		"proposerMandates": ["mandate.deputy", "mandate.senator", "mandate.minister"],
+		"proposerMandates": [
+			"mandate.deputy",
+			"mandate.senator",
+			"mandate.minister",
+			"mandate.prime_minister"
+		],
 		"baseAdoptionPercent": 25,
 		"governingBonusPercent": 25,
 		"ministerMandate": "mandate.minister",

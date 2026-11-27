@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.44.0';
+export const RULES_VERSION = '0.45.0';
 
 export { candidacyRoleOf } from './plan.ts';
 export { congressAppraisal, partyLedByPlayer, resolvePartyCareer } from './party.ts';

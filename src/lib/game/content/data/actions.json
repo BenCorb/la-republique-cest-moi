@@ -67,6 +67,112 @@
 	],
 	"actions": [
 		{
+			"id": "matignon.general_policy",
+			"category": "mandate",
+			"label": "Prononcer le discours de politique générale",
+			"description": "Une heure à la tribune de l’Assemblée, des chiffres ronds, des réformes « sans tabou » et une ovation calibrée par les questeurs. On ne le fait qu’une fois.",
+			"timeCost": 30,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{ "op": "holdsMandate", "mandate": "mandate.prime_minister" },
+					{ "op": "eq", "stat": "player.pmTurns", "value": 0 }
+				]
+			},
+			"unavailableReason": "Il faut venir d’être nommé à Matignon.",
+			"effects": [
+				{ "op": "addIndicator", "indicator": "stability", "value": 5 },
+				{ "op": "addResource", "resource": "influence", "value": 5 },
+				{ "op": "addSupport", "group": "support.apparatus", "value": 3 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 4 }
+			]
+		},
+		{
+			"id": "matignon.article_49_3",
+			"category": "mandate",
+			"label": "Engager la responsabilité du gouvernement (49.3)",
+			"description": "Le texte passe sans vote, l’opposition dépose sa motion de censure dans l’heure. Efficace, impopulaire et rarement oublié.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.prime_minister" },
+			"unavailableReason": "Il faut être à Matignon.",
+			"effects": [
+				{ "op": "addIndicator", "indicator": "stability", "value": -6 },
+				{ "op": "addIndicator", "indicator": "economy", "value": 1 },
+				{ "op": "addSupport", "group": "support.apparatus", "value": 2 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": -2 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 4 }
+			]
+		},
+		{
+			"id": "matignon.reshuffle",
+			"category": "mandate",
+			"label": "Remanier le gouvernement",
+			"description": "Trois sortants, quatre entrants, un ministère renommé et une photo sur le perron. La majorité se ressoude, les remerciés écrivent leurs mémoires.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.prime_minister" },
+			"unavailableReason": "Il faut être à Matignon.",
+			"effects": [
+				{ "op": "addIndicator", "indicator": "stability", "value": 4 },
+				{ "op": "addSupport", "group": "support.apparatus", "value": 2 },
+				{ "op": "addResource", "resource": "influence", "value": -2 },
+				{ "op": "addStat", "stat": "player.stress", "value": 2 }
+			]
+		},
+		{
+			"id": "matignon.arbitrate",
+			"category": "mandate",
+			"label": "Arbitrer entre deux ministres",
+			"description": "Bercy veut économiser, l’Éducation veut des postes : une réunion interministérielle, un « bleu » de Matignon et deux ministres qui boudent en sortant.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.prime_minister" },
+			"unavailableReason": "Il faut être à Matignon.",
+			"effects": [
+				{ "op": "addResource", "resource": "influence", "value": 3 },
+				{ "op": "addIndicator", "indicator": "stability", "value": 1 },
+				{ "op": "addStat", "stat": "player.stress", "value": 2 }
+			]
+		},
+		{
+			"id": "matignon.social_partners",
+			"category": "mandate",
+			"label": "Recevoir les partenaires sociaux",
+			"description": "Le grand salon, les croissants, huit organisations et un relevé de décisions que chacune interprétera à sa façon.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.prime_minister" },
+			"unavailableReason": "Il faut être à Matignon.",
+			"effects": [
+				{ "op": "addIndicator", "indicator": "socialClimate", "value": 3 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+				{ "op": "addSupport", "group": "support.business", "value": -1 }
+			]
+		},
+		{
+			"id": "matignon.resign",
+			"category": "mandate",
+			"label": "Remettre sa démission",
+			"description": "Une lettre au président, une passation de pouvoirs dans la cour de Matignon et un dernier discours sur « le sens de l’État ».",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.prime_minister" },
+			"unavailableReason": "Il faut être à Matignon.",
+			"effects": [
+				{ "op": "endMandate", "mandate": "mandate.prime_minister" },
+				{ "op": "addStat", "stat": "player.stress", "value": -5 },
+				{ "op": "addResource", "resource": "influence", "value": 2 }
+			]
+		},
+		{
 			"id": "government.secretary_tv_tour",
 			"category": "mandate",
 			"label": "Faire la tournée des plateaux",

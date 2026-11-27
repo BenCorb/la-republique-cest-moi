@@ -328,7 +328,10 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 			'press.donor_investigation',
 			'entourage.loyal_chief',
 			'relations.donor_returns',
-			'justice.entourage_revelation'
+			'justice.entourage_revelation',
+			// Matignon renversé ou remercié (P3-36) : `tests/unit/government.test.ts`.
+			'matignon.censure_adopted',
+			'matignon.dismissed'
 		]);
 		expect(content.eventIds.filter((id) => !seen.has(id) && !targeted.has(id))).toEqual([]);
 	});

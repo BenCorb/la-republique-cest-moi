@@ -61,6 +61,12 @@ export function readStat(context: ConditionContext, stat: StatId): number {
 			return partyBidIssue(context.player, context.turn) === null ? 1 : 0;
 		case 'player.partyBid':
 			return context.player.partyCareer?.bid ? 1 : 0;
+		case 'player.pmTurns': {
+			const office = activeMandates(context.mandates).find(
+				(mandate) => mandate.mandateId === 'mandate.prime_minister'
+			);
+			return office ? context.turn - office.startTurn : -1;
+		}
 		case 'player.partyRank': {
 			const rank = context.player.partyCareer?.rank;
 			return rank === 'leader' ? 3 : rank === 'cadre' ? 2 : rank === 'member' ? 1 : 0;

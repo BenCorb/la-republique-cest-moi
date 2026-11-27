@@ -14,6 +14,8 @@ import {
 	type GameState
 } from '../../src/lib/game/engine/index.ts';
 import { fixtureContent } from '../fixtures/content.ts';
+import { loadContent } from '../../src/lib/game/content/load.ts';
+import { evaluateCondition } from '../../src/lib/game/engine/conditions.ts';
 
 const content = fixtureContent;
 
@@ -177,5 +179,61 @@ describe('gouvernement (P3-35)', () => {
 			rules
 		);
 		expect(shaken.career.mandates[0]).toMatchObject({ status: 'ended', endReason: 'removed' });
+	});
+
+	it('appelle à Matignon le chef du parti majoritaire, renversé ou remercié selon le contexte (P3-36)', () => {
+		const state = heavyweight();
+		const leader = {
+			...state.player,
+			partyCareer: {
+				rank: 'leader' as const,
+				rankSince: 0,
+				nextCongressTurn: 6,
+				bid: null,
+				retryTurn: null
+			}
+		};
+		const formed = resolveGovernment(
+			career(state),
+			leader,
+			state.world,
+			100,
+			{ legislative: true },
+			10,
+			createRng('matignon'),
+			content
+		);
+		expect(formed.career.appointment).toMatchObject({
+			mandateId: 'mandate.prime_minister',
+			portfolio: null
+		});
+		// Catalogue réel : la censure et le renvoi visent un Premier ministre fragilisé.
+		const real = loadContent();
+		const base = createGame({ seed: 'censure' }, real);
+		const office = {
+			instanceId: 'term.1',
+			mandateId: 'mandate.prime_minister',
+			startTurn: 0,
+			access: 'nomination' as const,
+			status: 'active' as const,
+			endTurn: null,
+			endReason: null,
+			side: null,
+			portfolio: null
+		};
+		const context = (stability: number, popularity: number) => ({
+			...base,
+			mandates: [office],
+			world: { ...base.world, indicators: { ...base.world.indicators, stability } },
+			player: { ...base.player, popularity }
+		});
+		const when = (id: string) => {
+			const event = real.events[id]!;
+			return event.when!;
+		};
+		expect(evaluateCondition(context(20, 50), when('matignon.censure_adopted'))).toBe(true);
+		expect(evaluateCondition(context(60, 50), when('matignon.censure_adopted'))).toBe(false);
+		expect(evaluateCondition(context(60, 20), when('matignon.dismissed'))).toBe(true);
+		expect(evaluateCondition(context(60, 50), when('matignon.dismissed'))).toBe(false);
 	});
 });

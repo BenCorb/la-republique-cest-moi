@@ -27,6 +27,7 @@ import type { PlayerState, PoliticalChange, WorldState } from './state.ts';
 
 export const SECRETARY_MANDATE = 'mandate.secretary_of_state';
 export const MINISTER_MANDATE = 'mandate.minister';
+export const PRIME_MINISTER_MANDATE = 'mandate.prime_minister';
 
 /** Stature gouvernementale : influence, popularité, rang du mandat principal, rang dans le parti. */
 export function governmentStature(
@@ -50,7 +51,10 @@ export function governmentStature(
 export function governmentPost(career: Pick<CareerParts, 'mandates'>): string | null {
 	return (
 		activeMandates(career.mandates).find(
-			(mandate) => mandate.mandateId === SECRETARY_MANDATE || mandate.mandateId === MINISTER_MANDATE
+			(mandate) =>
+				mandate.mandateId === SECRETARY_MANDATE ||
+				mandate.mandateId === MINISTER_MANDATE ||
+				mandate.mandateId === PRIME_MINISTER_MANDATE
 		)?.mandateId ?? null
 	);
 }
@@ -91,6 +95,7 @@ export function resolveGovernment(
 
 	const changes: PoliticalChange[] = [];
 	const post = governmentPost(career);
+	let promoteToMatignon = false;
 	const stature = governmentStature(player, influence, career, content);
 	let parts = career;
 
@@ -107,7 +112,20 @@ export function resolveGovernment(
 			changes.push(...ended.changes);
 			return { career: parts, rng: current, changes };
 		}
-		if (post !== SECRETARY_MANDATE || stature < rules.ministerStature) {
+		if (post === PRIME_MINISTER_MANDATE) return { career: parts, rng: current, changes };
+		// Matignon (P3-36) : le chef du parti majoritaire, ou un ministre de très grande
+		// stature, que le président choisit dans une partie des remaniements seulement.
+		let matignon =
+			trigger.legislative &&
+			player.partyCareer?.rank === 'leader' &&
+			player.partyId === world.governingPartyId;
+		if (!matignon && post === MINISTER_MANDATE && stature >= rules.primeMinisterStature) {
+			const roll = nextInt(current, 1, 100);
+			current = roll.rng;
+			matignon = roll.value <= rules.primeMinisterChancePercent;
+		}
+		promoteToMatignon = matignon;
+		if (!matignon && (post !== SECRETARY_MANDATE || stature < rules.ministerStature)) {
 			return { career: parts, rng: current, changes };
 		}
 	} else if (
@@ -119,14 +137,25 @@ export function resolveGovernment(
 		return { career: parts, rng: current, changes };
 	}
 
-	const minister = stature >= rules.ministerStature;
+	// Matignon (P3-36) : le chef du parti majoritaire, ou une stature exceptionnelle.
+	// Le chef du parti majoritaire est appelé à Matignon à la formation du gouvernement.
+	const primeMinister =
+		promoteToMatignon ||
+		(trigger.legislative &&
+			player.partyCareer?.rank === 'leader' &&
+			player.partyId === world.governingPartyId);
+	const minister = !primeMinister && stature >= rules.ministerStature;
 	let portfolio: string | null = null;
 	if (minister && content.portfolioIds.length > 0) {
 		const draw = nextInt(current, 0, content.portfolioIds.length - 1);
 		current = draw.rng;
 		portfolio = content.portfolioIds[draw.value]!;
 	}
-	const mandateId = minister ? MINISTER_MANDATE : SECRETARY_MANDATE;
+	const mandateId = primeMinister
+		? PRIME_MINISTER_MANDATE
+		: minister
+			? MINISTER_MANDATE
+			: SECRETARY_MANDATE;
 	parts = {
 		...parts,
 		appointment: { mandateId, portfolio, offeredTurn: turn, reshuffle: post !== null }

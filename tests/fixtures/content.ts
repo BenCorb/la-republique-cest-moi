@@ -226,6 +226,8 @@ export const fixtureBalance = {
 	government: {
 		secretaryStature: 55,
 		ministerStature: 72,
+		primeMinisterStature: 100,
+		primeMinisterChancePercent: 10,
 		reshuffleStability: 55,
 		reshuffleChancePercent: 0,
 		keepPopularity: 30,

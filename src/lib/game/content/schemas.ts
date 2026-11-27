@@ -1477,6 +1477,8 @@ export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	government: z.strictObject({
 		secretaryStature: nonNegativeInt,
 		ministerStature: nonNegativeInt,
+		primeMinisterStature: nonNegativeInt,
+		primeMinisterChancePercent: z.number().int().min(0).max(100),
 		reshuffleStability: nonNegativeInt,
 		reshuffleChancePercent: z.number().int().min(0).max(100),
 		keepPopularity: nonNegativeInt,

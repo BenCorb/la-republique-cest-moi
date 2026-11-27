@@ -224,6 +224,20 @@
 			"stressPerTurn": 3
 		},
 		{
+			"id": "mandate.prime_minister",
+			"label": "Matignon",
+			"rank": 80,
+			"election": null,
+			"endsWithGovernment": true,
+			"requires": [],
+			"timePerTurn": 50,
+			"income": [
+				{ "resource": "influence", "amount": 9 },
+				{ "resource": "personalCashCents", "amount": 3600000 }
+			],
+			"stressPerTurn": 6
+		},
+		{
 			"id": "mandate.minister",
 			"label": "Portefeuille ministériel",
 			"rank": 60,
@@ -251,7 +265,11 @@
 			["mandate.minister", "mandate.senator"],
 			["mandate.secretary_of_state", "mandate.deputy"],
 			["mandate.secretary_of_state", "mandate.senator"],
-			["mandate.secretary_of_state", "mandate.minister"]
+			["mandate.secretary_of_state", "mandate.minister"],
+			["mandate.prime_minister", "mandate.deputy"],
+			["mandate.prime_minister", "mandate.senator"],
+			["mandate.prime_minister", "mandate.minister"],
+			["mandate.prime_minister", "mandate.secretary_of_state"]
 		],
 		"maxMandates": 3
 	},

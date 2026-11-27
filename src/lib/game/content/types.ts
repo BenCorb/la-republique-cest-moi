@@ -132,6 +132,8 @@ export const STAT_IDS = [
 	'player.affiliated',
 	/** Rang dans le parti (P3-34) : 0 sans parti, 1 militant, 2 cadre, 3 chef. */
 	'player.partyRank',
+	/** Trimestres à Matignon depuis la nomination (P3-36), −1 hors de Matignon. */
+	'player.pmTurns',
 	/** Candidature à la direction possible au prochain congrès (P3-34), 1 ou 0. */
 	'player.partyBidOpen',
 	/** Candidature à la direction déclarée (P3-34), 1 ou 0. */
@@ -1151,6 +1153,10 @@ export interface GovernmentBalance {
 	/** Stature exigée pour un secrétariat d'État, puis pour un ministère. */
 	readonly secretaryStature: number;
 	readonly ministerStature: number;
+	/** Stature exigée pour Matignon (le chef du parti majoritaire y est appelé d'office, P3-36). */
+	readonly primeMinisterStature: number;
+	/** Chance (%) qu'un ministre de cette stature soit appelé à Matignon à un remaniement. */
+	readonly primeMinisterChancePercent: number;
 	/** Remaniement possible sous cette stabilité, avec cette chance par trimestre (%). */
 	readonly reshuffleStability: number;
 	readonly reshuffleChancePercent: number;
