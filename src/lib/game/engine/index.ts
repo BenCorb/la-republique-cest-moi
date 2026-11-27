@@ -10,10 +10,12 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.43.0';
+export const RULES_VERSION = '0.44.0';
 
 export { candidacyRoleOf } from './plan.ts';
 export { congressAppraisal, partyLedByPlayer, resolvePartyCareer } from './party.ts';
+export { governmentPost, governmentStature, resolveGovernment } from './government.ts';
+export { cohabitation, primeMinisterId } from './world.ts';
 export { effectiveSystem, listSystem, seatsFor } from './ballots.ts';
 export {
 	START_YEAR,

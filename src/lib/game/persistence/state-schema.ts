@@ -79,6 +79,12 @@ const politicalChange = z.discriminatedUnion('kind', [
 		invested: z.boolean()
 	}),
 	z.strictObject({
+		kind: z.literal('appointment'),
+		mandateId: id,
+		portfolio: id.nullable(),
+		status: z.enum(['offered', 'accepted', 'declined'])
+	}),
+	z.strictObject({
 		kind: z.literal('partyRank'),
 		partyId: id,
 		rank: z.enum(['member', 'cadre', 'leader']),
@@ -277,7 +283,15 @@ const turnEntry = z.strictObject({
 					leaderId: id,
 					reason: z.enum(['retirement', 'internal_vote', 'death'])
 				})
-			)
+			),
+			president: z
+				.strictObject({
+					previousId: id,
+					presidentId: id,
+					partyId: id,
+					reelected: z.boolean()
+				})
+				.nullable()
 		})
 		.nullable(),
 	supports: z.array(z.strictObject({ groupId: id, delta: int })).nullable(),
@@ -473,6 +487,12 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 		indicators: z.strictObject({ economy: int, socialClimate: int, stability: int }),
 		parties: z.record(id, z.strictObject({ strength: int, leaderId: id })),
 		governingPartyId: id,
+		president: z.strictObject({
+			characterId: id,
+			partyId: id,
+			electedTurn: int,
+			termEndTurn: int
+		}),
 		media: z.record(id, z.strictObject({ relation: int, interviewTurn: int.nullable() })),
 		press: z.strictObject({
 			usedHeadlines: z.record(text, z.array(id)),
@@ -514,7 +534,8 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 			status: z.enum(['active', 'ended']),
 			endTurn: int.nullable(),
 			endReason: mandateEndReason.nullable(),
-			side: z.enum(['majority', 'opposition']).nullable()
+			side: z.enum(['majority', 'opposition']).nullable(),
+			portfolio: id.nullable()
 		})
 	),
 	ballots: z.array(
@@ -531,6 +552,14 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 			report: ballotReport.nullable()
 		})
 	),
+	appointment: z
+		.strictObject({
+			mandateId: id,
+			portfolio: id.nullable(),
+			offeredTurn: int,
+			reshuffle: z.boolean()
+		})
+		.nullable(),
 	investitures: z.array(
 		z.strictObject({
 			requestId: id,

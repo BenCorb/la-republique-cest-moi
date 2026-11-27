@@ -190,6 +190,8 @@ export type Condition =
 	| { readonly op: 'memberOf'; readonly party: string }
 	/** Le joueur exerce un mandat de cette définition. */
 	| { readonly op: 'holdsMandate'; readonly mandate: string }
+	/** Portefeuille ministériel exercé (P3-35). */
+	| { readonly op: 'holdsPortfolio'; readonly portfolio: string }
 	/** Le joueur pourrait recevoir ce mandat sans en quitter aucun (cumul et incompatibilités). */
 	| { readonly op: 'canHoldMandate'; readonly mandate: string }
 	/** Origine ou engagement du joueur (P2-08). */
@@ -276,6 +278,7 @@ export type Effect =
 	| { readonly op: 'runoffDecision'; readonly decision: RunoffDecision }
 	| { readonly op: 'requestInvestiture' }
 	| { readonly op: 'partyBid'; readonly posture: PartyPosture }
+	| { readonly op: 'appointment'; readonly decision: 'accept' | 'decline' }
 	| { readonly op: 'rallySupport'; readonly value: number }
 	| { readonly op: 'investitureDecision'; readonly decision: 'dissident' | 'renounce' }
 	/** Préparation ajoutée à chaque campagne en cours. */
@@ -1139,6 +1142,35 @@ export interface Balance {
 	readonly activists: ActivistsBalance;
 	/** Carrière partisane (P3-34). */
 	readonly partyCareer: PartyCareerBalance;
+	/** Gouvernement : président, nominations et remaniements (P3-35). */
+	readonly government: GovernmentBalance;
+}
+
+/** Gouvernement (P3-35, décisions déléguées provisoires). */
+export interface GovernmentBalance {
+	/** Stature exigée pour un secrétariat d'État, puis pour un ministère. */
+	readonly secretaryStature: number;
+	readonly ministerStature: number;
+	/** Remaniement possible sous cette stabilité, avec cette chance par trimestre (%). */
+	readonly reshuffleStability: number;
+	readonly reshuffleChancePercent: number;
+	/** Popularité en deçà de laquelle un membre du gouvernement est remercié au remaniement. */
+	readonly keepPopularity: number;
+	/** Mandat présidentiel (trimestres), premier scrutin, chance de réélection (%). */
+	readonly presidentTermTurns: number;
+	readonly firstPresidentialTurn: number;
+	readonly reelectionChancePercent: number;
+	/** Événement bloquant de la proposition de nomination (`followUp`). */
+	readonly appointmentEvent: string;
+}
+
+/** Portefeuille ministériel jouable (P3-35). */
+export interface PortfolioDefinition {
+	readonly id: string;
+	/** Nom court (« Intérieur »). */
+	readonly label: string;
+	/** Nom du ministère, en minuscules (« ministère de l’Intérieur »). */
+	readonly title: string;
 }
 
 /** Posture d'une candidature à la direction du parti (P3-34). */
@@ -2058,6 +2090,9 @@ export interface Content {
 	readonly electionIds: readonly string[];
 	readonly mandates: Readonly<Record<string, MandateDefinition>>;
 	readonly mandateIds: readonly string[];
+	/** Portefeuilles ministériels jouables (P3-35). */
+	readonly portfolios: Readonly<Record<string, PortfolioDefinition>>;
+	readonly portfolioIds: readonly string[];
 	readonly institutions: InstitutionsDefinition;
 	readonly origins: Readonly<Record<string, OriginDefinition>>;
 	readonly originIds: readonly string[];

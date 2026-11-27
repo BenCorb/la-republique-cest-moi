@@ -1005,10 +1005,16 @@ export function chooseSimulationDecision(
 	view: PendingEventView,
 	strategy: SimulationStrategy,
 	seed: string,
-	turn: number
+	turn: number,
+	/** Événement de nomination au gouvernement (P3-35) : toute politique candidate accepte. */
+	appointmentEvent: string | null = null
 ): EventChoiceView | null {
 	const available = view.choices.filter((choice) => choice.available);
 	if (available.length === 0) return null;
+	if (view.eventId === appointmentEvent && strategy !== 'random-valid') {
+		const accept = available.find((choice) => choice.id === 'accept');
+		if (accept && strategy !== 'patrimonial') return accept;
+	}
 	// Entre les deux tours (P3-29) : se maintenir si possible, sinon fusionner, sinon se désister.
 	const runoff = ['maintain', 'merge', 'withdraw'].map((id) =>
 		available.find((choice) => choice.id === id)
@@ -1339,7 +1345,13 @@ export function simulateCareer(
 				error = `Décision sans vue publique au tour ${state.turn}.`;
 				break;
 			}
-			const choice = chooseSimulationDecision(view, strategy, seed, state.turn);
+			const choice = chooseSimulationDecision(
+				view,
+				strategy,
+				seed,
+				state.turn,
+				content.balance.government.appointmentEvent
+			);
 			if (!choice) {
 				error = `Aucun choix public disponible pour ${view.eventId}.`;
 				break;

@@ -99,7 +99,8 @@ const mandate = (mandateId: string): MandateInstance => ({
 	status: 'active',
 	endTurn: null,
 	endReason: null,
-	side: null
+	side: null,
+	portfolio: null
 });
 
 function campaign(overrides: Partial<Campaign> = {}): Campaign {

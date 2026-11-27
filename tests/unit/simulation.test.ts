@@ -173,7 +173,8 @@ describe('simulateur automatique', () => {
 			status: 'active' as const,
 			endTurn: null,
 			endReason: null,
-			side: null
+			side: null,
+			portfolio: null
 		});
 		const exhausted: GameState = {
 			...base,

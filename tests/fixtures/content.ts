@@ -223,6 +223,17 @@ export const fixtureBalance = {
 	 * frais, aucune pénalité de mobilisation) ; `tests/unit/activists.test.ts`
 	 * fixe ses propres valeurs.
 	 */
+	government: {
+		secretaryStature: 55,
+		ministerStature: 72,
+		reshuffleStability: 55,
+		reshuffleChancePercent: 0,
+		keepPopularity: 30,
+		presidentTermTurns: 20,
+		firstPresidentialTurn: 9,
+		reelectionChancePercent: 55,
+		appointmentEvent: 'test.appointment'
+	},
 	partyCareer: {
 		congressCycleTurns: 12,
 		congressOffset: 6,
@@ -605,7 +616,11 @@ export const fixtureCareer = {
 	institutions: {
 		incompatibilities: [['mandate.minister', 'mandate.deputy']],
 		maxMandates: 3
-	}
+	},
+	portfolios: [
+		{ id: 'portfolio.test_a', label: 'Essais', title: 'ministère des Essais' },
+		{ id: 'portfolio.test_b', label: 'Épreuves', title: 'ministère des Épreuves' }
+	]
 };
 
 export const fixtureTraits = {
@@ -813,6 +828,35 @@ export const fixtureEvents = {
 						hints: [],
 						costs: [],
 						effects: [{ op: 'investitureDecision', decision: 'dissident' }]
+					}
+				]
+			},
+			{
+				id: 'test.appointment',
+				category: 'career',
+				title: 'Entrée au gouvernement',
+				text: 'Un portefeuille vous est proposé.',
+				blocking: true,
+				trigger: 'followUp',
+				weight: 0,
+				priority: 40,
+				cooldownTurns: 0,
+				unique: false,
+				actors: [],
+				choices: [
+					{
+						id: 'accept',
+						label: 'Accepter',
+						hints: [],
+						costs: [],
+						effects: [{ op: 'appointment', decision: 'accept' }]
+					},
+					{
+						id: 'decline',
+						label: 'Décliner',
+						hints: [],
+						costs: [],
+						effects: [{ op: 'appointment', decision: 'decline' }]
 					}
 				]
 			},

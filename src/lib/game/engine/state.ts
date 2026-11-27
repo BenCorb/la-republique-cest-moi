@@ -194,6 +194,16 @@ export interface WorldState {
 	/** États des partis du catalogue, par identifiant. */
 	readonly parties: Readonly<Record<string, PartyState>>;
 	readonly governingPartyId: string;
+	/**
+	 * Président de la République (P3-35), personnage du monde réélu ou remplacé
+	 * à chaque échéance ; il nomme le Premier ministre dans la majorité.
+	 */
+	readonly president: {
+		readonly characterId: string;
+		readonly partyId: string;
+		readonly electedTurn: Turn;
+		readonly termEndTurn: Turn;
+	};
 	/** Médias du catalogue, par identifiant (P3-03). */
 	readonly media: Readonly<Record<string, MediaState>>;
 	/** Mémoire anti-répétition du fil de presse (P3-15). */
@@ -245,6 +255,8 @@ export interface MandateInstance {
 	 * `null` hors scrutin de liste.
 	 */
 	readonly side: 'majority' | 'opposition' | null;
+	/** Portefeuille d'un ministre (P3-35), sinon `null`. */
+	readonly portfolio: string | null;
 }
 
 export interface BallotShare {
@@ -338,6 +350,16 @@ export interface BallotReport {
 }
 
 export type CampaignStatus = 'running' | 'won' | 'lost' | 'disqualified' | 'withdrawn';
+
+/** Proposition d'entrée au gouvernement (P3-35), offerte à la frontière. */
+export interface AppointmentOffer {
+	readonly mandateId: string;
+	/** Portefeuille d'un ministère, `null` pour un secrétariat d'État. */
+	readonly portfolio: string | null;
+	readonly offeredTurn: Turn;
+	/** Remaniement (le joueur est déjà au gouvernement) plutôt que formation. */
+	readonly reshuffle: boolean;
+}
 
 /**
  * Demande d'investiture nationale (P3-30, instance `investiture.N`) : tranchée
@@ -599,6 +621,13 @@ export type PoliticalChange =
 			readonly ballotId: string;
 			readonly status: InvestitureRequest['status'];
 	  }
+	/** Proposition d'entrée au gouvernement, acceptée ou déclinée (P3-35). */
+	| {
+			readonly kind: 'appointment';
+			readonly mandateId: string;
+			readonly portfolio: string | null;
+			readonly status: 'offered' | 'accepted' | 'declined';
+	  }
 	/** Statut dans le parti (P3-34) : promotion, congrès gagné ou perdu, chef renversé. */
 	| {
 			readonly kind: 'partyRank';
@@ -855,6 +884,13 @@ export interface WorldRecord {
 	readonly indicators: readonly { readonly indicator: IndicatorId; readonly delta: number }[];
 	readonly parties: readonly { readonly partyId: string; readonly delta: number }[];
 	readonly leaderChanges: readonly LeaderChange[];
+	/** Présidentielle de ce trimestre (P3-35), sinon `null`. */
+	readonly president: {
+		readonly previousId: string;
+		readonly presidentId: string;
+		readonly partyId: string;
+		readonly reelected: boolean;
+	} | null;
 }
 
 export interface ResourceChange {
@@ -1124,6 +1160,8 @@ export interface GameState {
 	readonly campaigns: readonly Campaign[];
 	/** Demandes d'investiture nationale, dans l'ordre (P3-30). */
 	readonly investitures: readonly InvestitureRequest[];
+	/** Proposition d'entrée au gouvernement en attente de réponse (P3-35), sinon `null`. */
+	readonly appointment: AppointmentOffer | null;
 	readonly institutions: InstitutionsState;
 	/** Entourage : collaborateurs en poste et partis, dans l'ordre d'embauche. */
 	readonly staff: readonly StaffMember[];
@@ -1236,6 +1274,7 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		ballots: createCalendar(START_TURN, content),
 		campaigns: [],
 		investitures: [],
+		appointment: null,
 		staff: [],
 		shortlists: {},
 		searches: [],

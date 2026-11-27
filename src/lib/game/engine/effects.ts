@@ -48,6 +48,8 @@ export type EffectRange =
 	| { readonly kind: 'mandate'; readonly change: 'grant' | 'end'; readonly mandate: string }
 	| { readonly kind: 'earlyElection'; readonly election: string; readonly delayTurns: number }
 	| { readonly kind: 'candidacy' }
+	/** Réponse à une proposition d'entrée au gouvernement (P3-35). */
+	| { readonly kind: 'appointment'; readonly decision: 'accept' | 'decline' }
 	/** Candidature à la direction du parti et ralliements (P3-34). */
 	| { readonly kind: 'partyBid'; readonly posture: PartyPosture }
 	| { readonly kind: 'rally'; readonly value: number }
@@ -213,6 +215,8 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'runoff', decision: effect.decision };
 		case 'requestInvestiture':
 			return { kind: 'investiture', decision: 'request' };
+		case 'appointment':
+			return { kind: 'appointment', decision: effect.decision };
 		case 'investitureDecision':
 			return { kind: 'investiture', decision: effect.decision };
 		case 'hireStaff':
@@ -299,6 +303,7 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 		case 'runoffDecision':
 			return { kind: 'runoff', effect, rng };
 		case 'requestInvestiture':
+		case 'appointment':
 			return { kind: 'career', effect, rng };
 		case 'investitureDecision':
 			return { kind: 'investiture', effect, rng };

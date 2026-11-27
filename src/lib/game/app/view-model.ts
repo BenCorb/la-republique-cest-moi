@@ -112,6 +112,9 @@ import {
 	type MandateInstance,
 	campaignPoll,
 	campaignRefundFor,
+	cohabitation,
+	partyLedByPlayer,
+	primeMinisterId,
 	congressAppraisal,
 	investitureAppraisal,
 	candidacyRoleOf,
@@ -390,6 +393,8 @@ export interface DecisionView {
 	readonly advice: AdviceView | null;
 	/** Premier tour d'un scrutin en attente du second (P3-29), sinon `null`. */
 	readonly report: BallotReportView | null;
+	/** Fonction proposée par le gouvernement (P3-35), sinon `null`. */
+	readonly appointment: string | null;
 }
 
 export interface JournalLine {
@@ -474,6 +479,13 @@ export interface WorldView {
 	/** Partis par intentions de vote décroissantes. */
 	readonly parties: readonly PartyView[];
 	readonly governingParty: string;
+	/** Exécutif (P3-35) : président, Premier ministre, cohabitation, prochaine présidentielle. */
+	readonly executive: {
+		readonly president: string;
+		readonly primeMinister: string;
+		readonly cohabitation: boolean;
+		readonly nextPresidential: string;
+	};
 	/** Situation du joueur : « Sans étiquette » ou « Membre du … depuis … ». */
 	readonly affiliation: string;
 	readonly partyAcronym: string | null;
@@ -1480,6 +1492,8 @@ function describeEffect(range: EffectRange, content: Content): string {
 			return 'Candidature déposée';
 		case 'runoff':
 			return RUNOFF_LABELS[range.decision];
+		case 'appointment':
+			return range.decision === 'accept' ? 'Entrée au gouvernement' : 'Proposition déclinée';
 		case 'partyBid':
 			return `Candidature à la direction : ${PARTY_POSTURE_LABELS[range.posture]}`;
 		case 'rally':
@@ -1594,6 +1608,8 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 						: 'candidature déposée sans investiture';
 				case 'investiture':
 					return INVESTITURE_STATUS_TEXT[change.status];
+				case 'appointment':
+					return `${change.status === 'offered' ? 'proposition d’entrée au gouvernement' : change.status === 'accepted' ? 'entrée au gouvernement' : 'proposition du gouvernement déclinée'} : ${change.portfolio ? (content.portfolios[change.portfolio]?.title ?? change.portfolio) : (content.mandates[change.mandateId]?.label ?? change.mandateId).toLocaleLowerCase('fr')}`;
 				case 'partyRank':
 					return `${PARTY_RANK_REASONS[change.reason]} (${content.parties[change.partyId]?.acronym ?? change.partyId})`;
 				case 'partyBid':
@@ -2011,9 +2027,18 @@ function electionName(electionId: string, state: GameState, content: Content): s
 }
 
 /** Nom localisé d'un mandat (P3-16) : selon le scrutin qui y mène ; sans lieu pour un ministère. */
-function mandateName(mandateId: string, state: GameState, content: Content): string {
+function mandateName(
+	mandateId: string,
+	state: GameState,
+	content: Content,
+	portfolio: string | null = null
+): string {
 	const mandate = content.mandates[mandateId];
 	if (!mandate) return mandateId;
+	// Ministre (P3-35) : le portefeuille nomme la fonction.
+	const ministry = portfolio ? content.portfolios[portfolio] : undefined;
+	if (ministry)
+		return `Ministre — ${ministry.title.charAt(0).toUpperCase()}${ministry.title.slice(1)}`;
 	const election = mandate.election ? content.elections[mandate.election] : undefined;
 	return election
 		? `${mandate.label} (${placeOf(election.scope, state.player.territory, content)})`
@@ -2101,7 +2126,7 @@ function targetLabel(target: string, state: GameState, content: Content): string
 		if (upgradeId && definition) return upgradeLabel(upgradeId, state, content, true);
 	}
 	const mandate = state.mandates.find((entry) => entry.instanceId === target);
-	if (mandate) return mandateName(mandate.mandateId, state, content);
+	if (mandate) return mandateName(mandate.mandateId, state, content, mandate.portfolio);
 	const ballot = state.ballots.find((entry) => entry.ballotId === target);
 	if (ballot) {
 		const label = electionName(ballot.electionId, state, content);
@@ -3487,7 +3512,7 @@ function buildMoments(state: GameState, content: Content): SummaryView['moments'
 	const top = Math.max(0, ...ranks);
 	const seen = new Set<string>();
 	state.mandates.forEach((mandate, index) => {
-		const label = mandateName(mandate.mandateId, state, content);
+		const label = mandateName(mandate.mandateId, state, content, mandate.portfolio);
 		const first = !seen.has(mandate.mandateId);
 		seen.add(mandate.mandateId);
 		if (!first && ranks[index] !== top) return;
@@ -3767,6 +3792,21 @@ function buildWorld(state: GameState, plan: readonly PlanStep[], content: Conten
 		})),
 		parties,
 		governingParty: content.parties[world.governingPartyId]?.name ?? world.governingPartyId,
+		executive: (() => {
+			const president = state.characters[world.president.characterId];
+			const pmId = primeMinisterId(world);
+			const pm = pmId ? state.characters[pmId] : undefined;
+			const acronym = (partyId: string): string => content.parties[partyId]?.acronym ?? partyId;
+			const playerLeads = partyLedByPlayer(state.player) === world.governingPartyId;
+			return {
+				president: `${president ? displayName(president) : 'Le président'} (${acronym(world.president.partyId)})`,
+				primeMinister: playerLeads
+					? `Nommé par le président dans votre majorité (${acronym(world.governingPartyId)})`
+					: `${pm ? displayName(pm) : '—'} (${acronym(world.governingPartyId)})`,
+				cohabitation: cohabitation(world),
+				nextPresidential: `Présidentielle au ${formatTurn(world.president.termEndTurn)}`
+			};
+		})(),
 		affiliation:
 			memberParty && current
 				? `Membre du ${memberParty.name} depuis le ${formatTurn(current.fromTurn)}`
@@ -3788,7 +3828,8 @@ function careerPartsOf(state: GameState): CareerParts {
 		campaigns: state.campaigns,
 		institutions: state.institutions,
 		promises: state.promises,
-		investitures: state.investitures
+		investitures: state.investitures,
+		appointment: state.appointment
 	};
 }
 
@@ -3826,7 +3867,8 @@ function buildInstitutions(
 		facts: state.facts,
 		cases: state.cases,
 		promises: state.promises,
-		investitures: state.investitures
+		investitures: state.investitures,
+		appointment: state.appointment
 	};
 	const allowed = !action?.requires || evaluateCondition(conditionContext, action.requires);
 	const parameters = content.institutionParameterIds.flatMap(
@@ -4254,7 +4296,9 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 	active.push(...unsorted.filter((mandate) => !active.includes(mandate)));
 	const main = mainMandate(state.mandates, content);
 	return {
-		mainFunction: main ? label(main.mandateId) : 'Sans mandat',
+		mainFunction: main
+			? mandateName(main.mandateId, state, content, main.portfolio)
+			: 'Sans mandat',
 		mandates: active.map((mandate) => {
 			const definition = content.mandates[mandate.mandateId];
 			const election = definition?.election ? content.elections[definition.election] : undefined;
@@ -4271,7 +4315,7 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 				: { addable: false, reason: null };
 			return {
 				instanceId: mandate.instanceId,
-				label: label(mandate.mandateId),
+				label: mandateName(mandate.mandateId, state, content, mandate.portfolio),
 				since: formatTurn(mandate.startTurn),
 				ends:
 					election && next
@@ -4449,7 +4493,7 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 		pastMandates: state.mandates
 			.filter((mandate) => mandate.status === 'ended')
 			.map((mandate) => ({
-				label: label(mandate.mandateId),
+				label: mandateName(mandate.mandateId, state, content, mandate.portfolio),
 				period: `${formatTurn(mandate.startTurn)} – ${formatTurn(mandate.endTurn ?? mandate.startTurn)} (${MANDATE_END_LABELS[mandate.endReason ?? 'term']})`
 			}))
 	};
@@ -5234,6 +5278,12 @@ export function projectView(
 					reason: choice.reason
 				})),
 				advice: buildAdvice(state, pending.instanceId, pending.eventId, content),
+				appointment:
+					pending.eventId === content.balance.government.appointmentEvent && state.appointment
+						? state.appointment.portfolio
+							? `Portefeuille proposé : ${content.portfolios[state.appointment.portfolio]?.title ?? state.appointment.portfolio}.`
+							: 'Fonction proposée : un secrétariat d’État, première marche du gouvernement.'
+						: null,
 				report:
 					pending.eventId === content.balance.elections.contests.runoffEvent
 						? (state.ballots

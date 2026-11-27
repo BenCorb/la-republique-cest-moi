@@ -265,6 +265,17 @@
 		"partnerStress": 1,
 		"partnerAgeSpread": 5
 	},
+	"government": {
+		"secretaryStature": 55,
+		"ministerStature": 72,
+		"reshuffleStability": 55,
+		"reshuffleChancePercent": 10,
+		"keepPopularity": 30,
+		"presidentTermTurns": 20,
+		"firstPresidentialTurn": 9,
+		"reelectionChancePercent": 55,
+		"appointmentEvent": "career.ministry_call"
+	},
 	"partyCareer": {
 		"congressCycleTurns": 12,
 		"congressOffset": 6,

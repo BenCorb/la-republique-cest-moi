@@ -52,6 +52,7 @@ import type {
 	BallotReport,
 	BallotShare,
 	InvestitureRequest,
+	AppointmentOffer,
 	Campaign,
 	CampaignStatus,
 	Character,
@@ -255,7 +256,8 @@ export type CareerEffect = Extract<
 			| 'declareCandidacy'
 			| 'prepareCampaign'
 			| 'advanceCampaign'
-			| 'requestInvestiture';
+			| 'requestInvestiture'
+			| 'appointment';
 	}
 >;
 
@@ -267,7 +269,8 @@ export function isCareerEffect(effect: Effect): effect is CareerEffect {
 		effect.op === 'declareCandidacy' ||
 		effect.op === 'prepareCampaign' ||
 		effect.op === 'advanceCampaign' ||
-		effect.op === 'requestInvestiture'
+		effect.op === 'requestInvestiture' ||
+		effect.op === 'appointment'
 	);
 }
 
@@ -280,6 +283,8 @@ export interface CareerParts {
 	readonly promises: readonly PromiseRecord[];
 	/** Demandes d'investiture nationale (P3-30). */
 	readonly investitures: readonly InvestitureRequest[];
+	/** Proposition d'entrée au gouvernement en attente (P3-35). */
+	readonly appointment: AppointmentOffer | null;
 }
 
 export function runningCampaigns(campaigns: readonly Campaign[]): Campaign[] {
@@ -443,6 +448,51 @@ export function applyCareerEffect(
 				]
 			};
 		}
+		case 'appointment': {
+			// Réponse à la proposition d'entrée au gouvernement (P3-35), une seule fois.
+			const offer = parts.appointment;
+			if (!offer) return { parts, changes: [] };
+			const cleared = { ...parts, appointment: null };
+			if (effect.decision === 'decline') {
+				return {
+					parts: cleared,
+					changes: [
+						{
+							kind: 'appointment',
+							mandateId: offer.mandateId,
+							portfolio: offer.portfolio,
+							status: 'declined'
+						}
+					]
+				};
+			}
+			const granted = applyCareerEffect(
+				{ op: 'grantMandate', mandate: offer.mandateId, replaceIncompatible: true },
+				cleared,
+				turn,
+				null,
+				content,
+				player
+			);
+			const mandates = granted.parts.mandates.map((mandate, index) =>
+				index === granted.parts.mandates.length - 1 &&
+				granted.parts.mandates.length > cleared.mandates.length
+					? { ...mandate, portfolio: offer.portfolio }
+					: mandate
+			);
+			return {
+				parts: { ...granted.parts, mandates },
+				changes: [
+					{
+						kind: 'appointment',
+						mandateId: offer.mandateId,
+						portfolio: offer.portfolio,
+						status: 'accepted'
+					},
+					...granted.changes
+				]
+			};
+		}
 		case 'requestInvestiture': {
 			if (target === null || investitureIssue(target, parts, player, turn, content)) {
 				return { parts, changes: [] };
@@ -522,7 +572,8 @@ export function applyCareerEffect(
 				status: 'active',
 				endTurn: null,
 				endReason: null,
-				side: null
+				side: null,
+				portfolio: null
 			};
 			return {
 				parts: { ...parts, mandates: [...ended.mandates, instance] },
@@ -614,6 +665,17 @@ export function careerEffectIssue(
 	player: Pick<PlayerState, 'ineligibleUntil' | 'territory'> | null = null,
 	turn: Turn = 0
 ): string | null {
+	if (effect.op === 'appointment') {
+		if (effect.decision === 'decline' || !parts.appointment) return null;
+		if (player && isIneligible(player, turn)) return INELIGIBLE;
+		return holdIssue(
+			parts.appointment.mandateId,
+			parts.mandates,
+			parts.institutions,
+			content,
+			true
+		);
+	}
 	if (effect.op === 'runoffDecision') {
 		return content && player ? runoffIssue(effect.decision, null, parts, player, content) : null;
 	}

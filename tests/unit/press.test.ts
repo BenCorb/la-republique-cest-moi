@@ -506,7 +506,8 @@ describe('presse régionale (P3-18)', () => {
 		status: 'active',
 		endTurn: null,
 		endReason: null,
-		side: null
+		side: null,
+		portfolio: null
 	};
 	const running = (electionId: string): Campaign => ({
 		campaignId: 'campaign.1',

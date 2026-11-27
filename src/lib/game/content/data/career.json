@@ -210,6 +210,20 @@
 			"stressPerTurn": 1
 		},
 		{
+			"id": "mandate.secretary_of_state",
+			"label": "Secrétariat d’État",
+			"rank": 50,
+			"election": null,
+			"endsWithGovernment": true,
+			"requires": [],
+			"timePerTurn": 35,
+			"income": [
+				{ "resource": "influence", "amount": 4 },
+				{ "resource": "personalCashCents", "amount": 2100000 }
+			],
+			"stressPerTurn": 3
+		},
+		{
 			"id": "mandate.minister",
 			"label": "Portefeuille ministériel",
 			"rank": 60,
@@ -234,8 +248,29 @@
 		"incompatibilities": [
 			["mandate.deputy", "mandate.senator"],
 			["mandate.minister", "mandate.deputy"],
-			["mandate.minister", "mandate.senator"]
+			["mandate.minister", "mandate.senator"],
+			["mandate.secretary_of_state", "mandate.deputy"],
+			["mandate.secretary_of_state", "mandate.senator"],
+			["mandate.secretary_of_state", "mandate.minister"]
 		],
 		"maxMandates": 3
-	}
+	},
+	"portfolios": [
+		{ "id": "portfolio.interior", "label": "Intérieur", "title": "ministère de l’Intérieur" },
+		{ "id": "portfolio.justice", "label": "Justice", "title": "ministère de la Justice" },
+		{
+			"id": "portfolio.economy",
+			"label": "Économie et Finances",
+			"title": "ministère de l’Économie et des Finances"
+		},
+		{ "id": "portfolio.labour", "label": "Travail", "title": "ministère du Travail" },
+		{
+			"id": "portfolio.education",
+			"label": "Éducation",
+			"title": "ministère de l’Éducation nationale"
+		},
+		{ "id": "portfolio.health", "label": "Santé", "title": "ministère de la Santé" },
+		{ "id": "portfolio.ecology", "label": "Écologie", "title": "ministère de l’Écologie" },
+		{ "id": "portfolio.agriculture", "label": "Agriculture", "title": "ministère de l’Agriculture" }
+	]
 }

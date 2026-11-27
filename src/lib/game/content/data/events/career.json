@@ -1,6 +1,726 @@
 {
 	"events": [
 		{
+			"id": "government.official_car",
+			"category": "career",
+			"title": "La voiture de fonction a le plein",
+			"text": "Le chauffeur vous demande, l’air de rien, si la berline vous dépose aussi à la maison de campagne pour le pont de l’Ascension. La carte carburant ne pose jamais de questions.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "any",
+						"conditions": [
+							{
+								"op": "holdsMandate",
+								"mandate": "mandate.minister"
+							},
+							{
+								"op": "holdsMandate",
+								"mandate": "mandate.secretary_of_state"
+							}
+						]
+					},
+					{
+						"op": "capability",
+						"capability": "public_office"
+					}
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "take",
+					"label": "Partir en voiture de fonction",
+					"hints": ["Des vacances sans frais", "Les chauffeurs ont parfois de la mémoire"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "personalCashCents",
+							"value": 150000
+						},
+						{
+							"op": "recordFact",
+							"offense": "offense.conflict_of_interest",
+							"severity": 1
+						}
+					],
+					"outcome": [
+						"Quatre heures d’autoroute à l’arrière d’une berline officielle. Le chauffeur, lui, a tout noté dans son carnet de bord."
+					]
+				},
+				{
+					"id": "train",
+					"label": "Prendre le train comme tout le monde",
+					"hints": ["Exemplaire", "Moins confortable"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 1
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 1
+						}
+					],
+					"outcome": [
+						"Seconde classe, voiture 14. Un voyageur vous reconnaît et prend un selfie ; la photo fait le tour des réseaux, à votre avantage."
+					]
+				}
+			]
+		},
+		{
+			"id": "government.lobby_seminar",
+			"category": "career",
+			"title": "Un séminaire dans un palace",
+			"text": "Une fédération professionnelle vous invite à « un séminaire de réflexion » dans un palace de la Côte, tous frais payés. Le programme tient sur une demi-page ; le spa, sur trois.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.minister"
+					},
+					{
+						"op": "capability",
+						"capability": "public_office"
+					}
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "accept",
+					"label": "Accepter l’invitation",
+					"hints": ["Trois jours de repos", "Les fédérations ont parfois de la mémoire"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -5
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 2
+						},
+						{
+							"op": "recordFact",
+							"offense": "offense.conflict_of_interest",
+							"severity": 2
+						}
+					],
+					"outcome": [
+						"Trois jours de « réflexion » entre deux massages. La fédération repart avec quelques amendements bien compris."
+					]
+				},
+				{
+					"id": "decline",
+					"label": "Décliner poliment",
+					"hints": ["Rien à se reprocher", "La fédération boude"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": -1
+						}
+					],
+					"outcome": [
+						"Vous déclinez par courrier. La fédération trouve un autre ministre, moins regardant."
+					]
+				}
+			]
+		},
+		{
+			"id": "government.interior_riots",
+			"category": "career",
+			"title": "Une nuit de violences urbaines",
+			"text": "Des voitures brûlent dans trois villes, les images tournent en boucle et l’opposition réclame votre démission avant le journal de 13 heures.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "holdsPortfolio",
+				"portfolio": "portfolio.interior"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "firm",
+					"label": "Déployer les forces mobiles",
+					"hints": ["L’ordre revient", "Les quartiers s’en souviendront"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "stability",
+							"value": 2
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": -2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.wealthy",
+							"value": 2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": -2
+						}
+					],
+					"outcome": [
+						"Les compagnies de CRS quadrillent les quartiers ; le calme revient, la colère reste."
+					]
+				},
+				{
+					"id": "dialogue",
+					"label": "Recevoir les élus et les associations",
+					"hints": ["La tension baisse", "On vous trouve faible"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": 2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 1
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -2
+						}
+					],
+					"outcome": [
+						"Une nuit de réunions en préfecture, des promesses de moyens et un calme fragile."
+					]
+				}
+			]
+		},
+		{
+			"id": "government.justice_escape",
+			"category": "career",
+			"title": "Une évasion spectaculaire",
+			"text": "Un détenu célèbre s’est évadé par hélicoptère d’une maison d’arrêt censée être imprenable. Les chaînes d’info rediffusent la scène au ralenti.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "holdsPortfolio",
+				"portfolio": "portfolio.justice"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "sanction",
+					"label": "Limoger le directeur de l’administration pénitentiaire",
+					"hints": ["Un responsable désigné", "Les surveillants s’insurgent"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 1
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": -1
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 3
+						}
+					],
+					"outcome": [
+						"Le directeur part, les surveillants manifestent, l’évadé envoie une carte postale."
+					]
+				},
+				{
+					"id": "plan",
+					"label": "Annoncer un plan de sécurisation des prisons",
+					"hints": ["Rassurant", "Coûteux"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 2
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "economy",
+							"value": -1
+						}
+					],
+					"outcome": [
+						"Des filets anti-hélicoptères pour toutes les prisons ; le budget suivra, dit-on."
+					]
+				}
+			]
+		},
+		{
+			"id": "government.economy_downgrade",
+			"category": "career",
+			"title": "L’agence de notation vous dégrade",
+			"text": "Une agence de notation retire un « A » à la France un vendredi soir. Les marchés ouvrent lundi ; les éditorialistes, eux, n’ont jamais fermé.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "holdsPortfolio",
+				"portfolio": "portfolio.economy"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "austerity",
+					"label": "Annoncer un plan de rigueur",
+					"hints": ["Les marchés se calment", "La rue gronde"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "economy",
+							"value": 2
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": -3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": -2
+						}
+					],
+					"outcome": [
+						"Gel des dépenses, hausse d’une taxe oubliée : les marchés saluent, les syndicats appellent à manifester."
+					]
+				},
+				{
+					"id": "shrug",
+					"label": "Minimiser la nouvelle",
+					"hints": ["Rien ne change", "On vous trouve léger"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"« Une agence n’est pas un peuple », déclarez-vous. Une phrase reprise partout, pas toujours en bien."
+					]
+				}
+			]
+		},
+		{
+			"id": "government.labour_strike",
+			"category": "career",
+			"title": "La grève générale menace",
+			"text": "Les syndicats appellent à une journée de grève reconductible contre votre projet de loi. Les transports s’arrêtent déjà dans les sondages.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "holdsPortfolio",
+				"portfolio": "portfolio.labour"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "hold",
+					"label": "Maintenir le texte",
+					"hints": ["Autorité affirmée", "Le pays bloqué"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": -3
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "stability",
+							"value": -1
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Trois semaines de grève, des files d’attente interminables et un texte voté de justesse."
+					]
+				},
+				{
+					"id": "withdraw",
+					"label": "Retirer l’article contesté",
+					"hints": ["La grève s’arrête", "Recul assumé"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": 3
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"L’article disparaît, les trains repartent et l’opposition parle de « reculade »."
+					]
+				}
+			]
+		},
+		{
+			"id": "government.education_strike",
+			"category": "career",
+			"title": "Les enseignants dans la rue",
+			"text": "Une réforme des programmes, un mot de trop dans une interview et voilà les salles de classe vides. Les parents d’élèves comptent les jours de garde.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "holdsPortfolio",
+				"portfolio": "portfolio.education"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "negotiate",
+					"label": "Ouvrir des négociations",
+					"hints": ["Apaisement", "Une réforme édulcorée"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": 2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 1
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -1
+						}
+					],
+					"outcome": [
+						"Des groupes de travail, une concertation et une réforme qui ressemble beaucoup à l’ancienne."
+					]
+				},
+				{
+					"id": "persist",
+					"label": "Tenir bon",
+					"hints": ["Fermeté", "Les parents vous en veulent"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": -2
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": -2
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						}
+					],
+					"outcome": ["La grève s’essouffle ; la rancune, non."]
+				}
+			]
+		},
+		{
+			"id": "government.health_epidemic",
+			"category": "career",
+			"title": "Une épidémie de grippe sévère",
+			"text": "Les urgences débordent, les pharmacies manquent de vaccins et un professeur de médecine vous accuse d’imprévoyance sur tous les plateaux.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "holdsPortfolio",
+				"portfolio": "portfolio.health"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "vaccines",
+					"label": "Commander des millions de doses",
+					"hints": ["Rassurant", "Peut-être trop"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 2
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "economy",
+							"value": -2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Les vaccins arrivent en masse ; une partie dormira longtemps dans des entrepôts."
+					]
+				},
+				{
+					"id": "hospitals",
+					"label": "Débloquer des moyens pour les urgences",
+					"hints": ["Les soignants respirent", "Le budget souffre"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 2
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": 1
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "economy",
+							"value": -1
+						}
+					],
+					"outcome": [
+						"Des lits rouverts, des primes annoncées : les soignants applaudissent, sans illusion."
+					]
+				}
+			]
+		},
+		{
+			"id": "government.ecology_spill",
+			"category": "career",
+			"title": "Une marée noire sur les côtes",
+			"text": "Un pétrolier battant pavillon de complaisance se brise au large. Les plages se couvrent de mazout et les bénévoles de cirés.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "holdsPortfolio",
+				"portfolio": "portfolio.ecology"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "site",
+					"label": "Se rendre sur place en bottes",
+					"hints": ["Présent", "Les images ne pardonnent rien"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 4
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Vous ramassez un oiseau mazouté devant les caméras. L’image fait le tour du pays."
+					]
+				},
+				{
+					"id": "law",
+					"label": "Annoncer une loi sur le transport maritime",
+					"hints": ["Sérieux", "Lointain"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": -1
+						}
+					],
+					"outcome": [
+						"Un projet de loi ambitieux, attendu pour la prochaine session, ou celle d’après."
+					]
+				}
+			]
+		},
+		{
+			"id": "government.agriculture_crisis",
+			"category": "career",
+			"title": "Les tracteurs bloquent les préfectures",
+			"text": "Prix du lait effondrés, fumier devant les préfectures et un syndicat agricole qui exige d’être reçu dans l’heure.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "holdsPortfolio",
+				"portfolio": "portfolio.agriculture"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "aid",
+					"label": "Annoncer un plan d’aide d’urgence",
+					"hints": ["Les campagnes s’apaisent", "Bruxelles fronce les sourcils"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 2
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "economy",
+							"value": -1
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Une enveloppe d’urgence et une promesse de « réforme structurelle ». Les tracteurs rentrent à la ferme."
+					]
+				},
+				{
+					"id": "market",
+					"label": "Rappeler les règles du marché",
+					"hints": ["Cohérent", "Les campagnes vous en veulent"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": -2
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": -2
+						}
+					],
+					"outcome": [
+						"Le fumier reste devant la préfecture une semaine de plus, et dans les mémoires plus longtemps."
+					]
+				}
+			]
+		},
+		{
 			"id": "career.party_federation_feud",
 			"category": "career",
 			"title": "Deux fédérations, une seule circonscription",
@@ -12,7 +732,11 @@
 			"maxOccurrences": 2,
 			"cooldownTurns": 12,
 			"unique": false,
-			"when": { "op": "eq", "stat": "player.partyRank", "value": 3 },
+			"when": {
+				"op": "eq",
+				"stat": "player.partyRank",
+				"value": 3
+			},
 			"actors": [],
 			"choices": [
 				{
@@ -21,8 +745,16 @@
 					"hints": ["L’appareil se resserre autour de vous", "La base grogne contre le copinage"],
 					"costs": [],
 					"effects": [
-						{ "op": "addSupport", "group": "support.apparatus", "value": 4 },
-						{ "op": "addSupport", "group": "support.activists", "value": -3 }
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": 4
+						},
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": -3
+						}
 					],
 					"outcome": [
 						"Le fidèle est investi. L’autre fédération publie un communiqué amer, puis rentre dans le rang."
@@ -32,10 +764,23 @@
 					"id": "primary",
 					"label": "Organiser une primaire locale",
 					"hints": ["Les militants apprécient", "Des semaines de querelles en perspective"],
-					"costs": [{ "resource": "politicalBudgetCents", "amount": 30000 }],
+					"costs": [
+						{
+							"resource": "politicalBudgetCents",
+							"amount": 30000
+						}
+					],
 					"effects": [
-						{ "op": "addSupport", "group": "support.activists", "value": 4 },
-						{ "op": "addStat", "stat": "player.stress", "value": 2 }
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": 4
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
 					],
 					"outcome": [
 						"Les militants votent, les urnes sont scellées, le perdant conteste. Le parti en sort plus vivant, et plus bruyant."
@@ -55,7 +800,11 @@
 			"maxOccurrences": 2,
 			"cooldownTurns": 16,
 			"unique": false,
-			"when": { "op": "eq", "stat": "player.partyRank", "value": 3 },
+			"when": {
+				"op": "eq",
+				"stat": "player.partyRank",
+				"value": 3
+			},
 			"actors": [],
 			"choices": [
 				{
@@ -64,9 +813,21 @@
 					"hints": ["La fronde se calme", "Votre autorité s’en ressent"],
 					"costs": [],
 					"effects": [
-						{ "op": "addSupport", "group": "support.activists", "value": 3 },
-						{ "op": "addSupport", "group": "support.apparatus", "value": -2 },
-						{ "op": "addResource", "resource": "influence", "value": -2 }
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": 3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": -2
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -2
+						}
 					],
 					"outcome": [
 						"Trois frondeurs entrent au bureau national et découvrent les réunions du lundi matin. La tribune est vite oubliée."
@@ -78,9 +839,21 @@
 					"hints": ["L’appareil vous suit", "La presse s’en régale"],
 					"costs": [],
 					"effects": [
-						{ "op": "addSupport", "group": "support.apparatus", "value": 3 },
-						{ "op": "addStat", "stat": "player.exposure", "value": 4 },
-						{ "op": "addStat", "stat": "player.stress", "value": 2 }
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 4
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
 					],
 					"outcome": [
 						"Les signataires sont privés de commission, puis de tribune. L’ordre règne, et un éditorialiste parle de « caporalisme »."
@@ -281,36 +1054,13 @@
 		{
 			"id": "career.ministry_call",
 			"category": "career",
-			"title": "Un coup de fil un dimanche soir",
-			"text": "Le téléphone sonne un dimanche soir : {governing_leader} vous propose d’entrer au gouvernement, au ministère délégué aux Petites Choses Importantes. Il faudrait répondre avant le journal de 20 heures.",
+			"title": "Un coup de fil de Matignon",
+			"text": "Le téléphone sonne un dimanche soir : {governing_leader}, chargé de former le gouvernement, vous propose d’y entrer. Le portefeuille est sur la table ; il faudrait répondre avant le journal de 20 heures.",
 			"blocking": true,
-			"trigger": "random",
-			"weight": 3,
-			"priority": 8,
-			"cooldownTurns": 12,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 40,
 			"unique": false,
-			"when": {
-				"op": "all",
-				"conditions": [
-					{
-						"op": "eq",
-						"stat": "player.partyGoverning",
-						"value": 1
-					},
-					{
-						"op": "gte",
-						"stat": "resources.influence",
-						"value": 60
-					},
-					{
-						"op": "not",
-						"condition": {
-							"op": "holdsMandate",
-							"mandate": "mandate.minister"
-						}
-					}
-				]
-			},
 			"actors": [],
 			"choices": [
 				{
@@ -324,9 +1074,8 @@
 					"costs": [],
 					"effects": [
 						{
-							"op": "grantMandate",
-							"mandate": "mandate.minister",
-							"replaceIncompatible": true
+							"op": "appointment",
+							"decision": "accept"
 						},
 						{
 							"op": "addResource",
@@ -357,13 +1106,18 @@
 					"costs": [],
 					"effects": [
 						{
+							"op": "appointment",
+							"decision": "decline"
+						},
+						{
 							"op": "addResource",
 							"resource": "influence",
 							"value": -2
 						}
 					]
 				}
-			]
+			],
+			"cooldownTurns": 0
 		},
 		{
 			"id": "career.minister_reshuffled",

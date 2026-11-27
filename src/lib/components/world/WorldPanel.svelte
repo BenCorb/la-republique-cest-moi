@@ -25,6 +25,14 @@
 			<p class="mt-2 text-sm">
 				Gouvernement conduit par <span class="font-semibold">{world.governingParty}</span>.
 			</p>
+			<p class="mt-1 text-sm" data-testid="executive">
+				Président de la République : <span class="font-semibold">{world.executive.president}</span>
+				· Premier ministre : <span class="font-semibold">{world.executive.primeMinister}</span>
+				{#if world.executive.cohabitation}
+					<span class="text-warning"> · cohabitation</span>
+				{/if}
+				<span class="text-muted"> · {world.executive.nextPresidential}</span>
+			</p>
 			<p class="mt-1 text-sm" data-testid="era">
 				Époque : <span class="font-semibold">{world.era.label}</span>
 				<span class="text-muted">— {world.era.description}</span>

@@ -44,6 +44,7 @@ import { resolvePress } from './press.ts';
 import { effectiveContent, resolveReforms } from './reforms.ts';
 import { resolveActivists } from './activists.ts';
 import { partyLedByPlayer } from './party.ts';
+import { resolveGovernment } from './government.ts';
 import { resolveStaffFrontier, resolveStaffProduction } from './staff.ts';
 import { resolveFamily } from './family.ts';
 import type {
@@ -238,7 +239,7 @@ function commitTurn(
 		: null;
 
 	// 5. Échéances de la fin de T : fins de mandat, scrutins, échéances suivantes.
-	const deadlines =
+	let deadlines =
 		world && exposure && team && family
 			? resolveDeadlines(
 					{
@@ -254,6 +255,35 @@ function commitTurn(
 					content
 				)
 			: null;
+
+	// 5 bis-0. Gouvernement : formation après des législatives, remaniements (P3-35).
+	const government = deadlines
+		? resolveGovernment(
+				deadlines.career,
+				deadlines.player,
+				deadlines.world,
+				deadlines.resources.influence,
+				{
+					legislative: deadlines.record.ballots.some(
+						(ballot) => content.elections[ballot.electionId]?.decidesGovernment === true
+					)
+				},
+				resolvedTurn,
+				deadlines.rng,
+				content
+			)
+		: null;
+	if (deadlines && government) {
+		deadlines = {
+			...deadlines,
+			career: government.career,
+			rng: government.rng,
+			record: {
+				...deadlines.record,
+				mandates: [...deadlines.record.mandates, ...government.changes]
+			}
+		};
+	}
 
 	// 5 bis. Justice : étapes échues des dossiers, révélations, usure de la défense.
 	const justice = deadlines
@@ -370,6 +400,19 @@ function commitTurn(
 								...justice!.scheduled,
 								...pledges.scheduled,
 								...team!.scheduled,
+								// Proposition d'entrée au gouvernement (P3-35), au début de T+1.
+								...(government?.changes.some(
+									(change) => change.kind === 'appointment' && change.status === 'offered'
+								)
+									? [
+											{
+												eventId: content.balance.government.appointmentEvent,
+												dueTurn: nextTurn,
+												sourceInstanceId: 'government',
+												actors: {}
+											}
+										]
+									: []),
 								// Investiture refusée (P3-30) : renoncer ou se présenter en dissident, au début de T+1.
 								...(deadlines?.record.investitures ?? [])
 									.filter((entry) => !entry.granted)
@@ -488,6 +531,10 @@ function commitTurn(
 				frontier?.career.investitures ??
 				settled?.career.investitures ??
 				production.career.investitures,
+			appointment:
+				frontier?.career.appointment ??
+				settled?.career.appointment ??
+				production.career.appointment,
 			upgrades: wealth?.upgrades ?? execution.upgrades,
 			facts: frontier?.facts ?? state.facts,
 			cases: settled?.cases ?? state.cases,

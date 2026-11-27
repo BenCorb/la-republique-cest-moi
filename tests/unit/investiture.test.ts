@@ -109,7 +109,8 @@ function candidate(content: Content): GameState {
 		status: 'active',
 		endTurn: null,
 		endReason: null,
-		side: null
+		side: null,
+		portfolio: null
 	};
 	return {
 		...base,

@@ -905,7 +905,8 @@ export function choiceAvailability(
 		campaigns: state.campaigns,
 		institutions: state.institutions,
 		promises: state.promises,
-		investitures: state.investitures
+		investitures: state.investitures,
+		appointment: state.appointment
 	};
 	for (const effect of choice.effects) {
 		const issue = careerEffectIssue(effect, career, content ?? null, state.player, state.turn);
@@ -984,7 +985,8 @@ export function chooseEvent(
 				campaigns: state.campaigns,
 				institutions: state.institutions,
 				promises: state.promises,
-				investitures: state.investitures
+				investitures: state.investitures,
+				appointment: state.appointment
 			},
 			staff: state.staff,
 			shortlists: state.shortlists,
@@ -1081,6 +1083,7 @@ export function chooseEvent(
 			institutions: outcome.career.institutions,
 			promises: outcome.career.promises,
 			investitures: outcome.career.investitures,
+			appointment: outcome.career.appointment,
 			staff: outcome.staff,
 			shortlists: outcome.shortlists,
 			facts: outcome.facts,

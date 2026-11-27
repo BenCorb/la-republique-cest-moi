@@ -67,6 +67,305 @@
 	],
 	"actions": [
 		{
+			"id": "government.secretary_tv_tour",
+			"category": "mandate",
+			"label": "Faire la tournée des plateaux",
+			"description": "Matinale, chaîne d’info, émission du dimanche : le secrétaire d’État explique, réexplique et finit par croire à ce qu’il explique.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.secretary_of_state" },
+			"unavailableReason": "Il faut être secrétaire d’État.",
+			"effects": [
+				{ "op": "addStat", "stat": "player.exposure", "value": 4 },
+				{ "op": "addResource", "resource": "influence", "value": 2 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 }
+			]
+		},
+		{
+			"id": "government.secretary_inaugurate",
+			"category": "mandate",
+			"label": "Inaugurer à la place du ministre",
+			"description": "Un ruban, des ciseaux trop petits et un discours écrit pour quelqu’un d’autre. La presse locale, elle, est ravie.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.secretary_of_state" },
+			"unavailableReason": "Il faut être secrétaire d’État.",
+			"effects": [
+				{ "op": "addResource", "resource": "influence", "value": 2 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+				{ "op": "addStat", "stat": "player.stress", "value": -1 }
+			]
+		},
+		{
+			"id": "government.interior_security_plan",
+			"category": "mandate",
+			"label": "Annoncer un plan de sécurité",
+			"description": "Trois mille policiers, dont mille cinq cents déjà promis par vos prédécesseurs. Les électeurs inquiets applaudissent, les autres comptent.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.interior" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.wealthy", "value": 2 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.activists", "value": -1 },
+				{ "op": "addIndicator", "indicator": "socialClimate", "value": -1 }
+			]
+		},
+		{
+			"id": "government.interior_protest",
+			"category": "mandate",
+			"label": "Encadrer une manifestation",
+			"description": "Une préfecture en alerte, des consignes de fermeté « proportionnée » et une nuit à suivre les écrans. Tout repose sur le dernier carrefour.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.interior" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addResourceRandom", "resource": "influence", "min": -3, "max": 4 },
+				{ "op": "addIndicator", "indicator": "stability", "value": 1 },
+				{ "op": "addStat", "stat": "player.stress", "value": 3 }
+			]
+		},
+		{
+			"id": "government.justice_circular",
+			"category": "mandate",
+			"label": "Publier une circulaire de politique pénale",
+			"description": "Quatre pages aux procureurs, une ligne reprise au journal télévisé. Les magistrats grincent, les électeurs retiennent la ligne.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.justice" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.activists", "value": -1 },
+				{ "op": "addResource", "resource": "influence", "value": 2 }
+			]
+		},
+		{
+			"id": "government.justice_prison_visit",
+			"category": "mandate",
+			"label": "Visiter une prison",
+			"description": "Cellules surpeuplées, gardiens épuisés et un photographe qui cherche le bon angle. Vous promettez des places ; les syndicats, des moyens.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.justice" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 2 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 2 },
+				{ "op": "addStat", "stat": "player.stress", "value": 1 }
+			]
+		},
+		{
+			"id": "government.economy_budget",
+			"category": "mandate",
+			"label": "Présenter le budget",
+			"description": "Le projet de loi de finances, ses hypothèses de croissance optimistes et son « effort partagé ». Les marchés lisent les annexes, les Français les gros titres.",
+			"timeCost": 25,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.economy" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addIndicator", "indicator": "economy", "value": 1 },
+				{ "op": "addSupport", "group": "support.business", "value": 3 },
+				{ "op": "addSupport", "group": "support.working_class", "value": -2 },
+				{ "op": "addResource", "resource": "influence", "value": 3 }
+			]
+		},
+		{
+			"id": "government.economy_factory",
+			"category": "mandate",
+			"label": "Négocier la reprise d’une usine",
+			"description": "Un repreneur introuvable, puis trouvé, puis hésitant. Vous promettez des aides et une visite ; les salariés, eux, promettent de se souvenir.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.economy" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addResourceRandom", "resource": "influence", "min": -2, "max": 5 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 3 },
+				{ "op": "addStat", "stat": "player.stress", "value": 2 }
+			]
+		},
+		{
+			"id": "government.labour_conference",
+			"category": "mandate",
+			"label": "Ouvrir une conférence sociale",
+			"description": "Les partenaires sociaux autour d’une table, la photo de famille et un communiqué commun aussi vague qu’unanime.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.labour" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addIndicator", "indicator": "socialClimate", "value": 2 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.business", "value": -1 }
+			]
+		},
+		{
+			"id": "government.labour_unemployment",
+			"category": "mandate",
+			"label": "Réformer l’assurance chômage",
+			"description": "Durée d’indemnisation, conditions d’accès et une formule sur « le retour à l’activité ». Le patronat salue, la rue se prépare.",
+			"timeCost": 25,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.labour" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addIndicator", "indicator": "economy", "value": 1 },
+				{ "op": "addIndicator", "indicator": "socialClimate", "value": -3 },
+				{ "op": "addSupport", "group": "support.business", "value": 3 },
+				{ "op": "addSupport", "group": "support.working_class", "value": -3 }
+			]
+		},
+		{
+			"id": "government.education_rhythms",
+			"category": "mandate",
+			"label": "Annoncer une réforme des rythmes scolaires",
+			"description": "Le mercredi matin change de camp, les parents d’élèves aussi. Chaque ministre a sa réforme ; voici la vôtre.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.education" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": -1 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+				{ "op": "addResource", "resource": "influence", "value": 3 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 2 }
+			]
+		},
+		{
+			"id": "government.education_unions",
+			"category": "mandate",
+			"label": "Recevoir les syndicats enseignants",
+			"description": "Deux heures de réunion, trois revendications, un relevé de conclusions que chacun lira à sa façon.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.education" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addIndicator", "indicator": "socialClimate", "value": 2 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+				{ "op": "addStat", "stat": "player.stress", "value": 1 }
+			]
+		},
+		{
+			"id": "government.health_prevention",
+			"category": "mandate",
+			"label": "Lancer une campagne de prévention",
+			"description": "Une affiche, un slogan, un hashtag et une agence de communication qui facture le tout. Les médecins approuvent, les fumeurs aussi, distraitement.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 20000 }],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.health" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 1 }
+			]
+		},
+		{
+			"id": "government.health_maternity",
+			"category": "mandate",
+			"label": "Sauver une maternité menacée",
+			"description": "Le rapport recommandait la fermeture, le maire la grève de la faim. Vous trouvez des crédits ; la Cour des comptes trouvera la ligne.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.health" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 3 },
+				{ "op": "addIndicator", "indicator": "economy", "value": -1 },
+				{ "op": "addResource", "resource": "influence", "value": 2 }
+			]
+		},
+		{
+			"id": "government.ecology_climate",
+			"category": "mandate",
+			"label": "Signer un accord climat",
+			"description": "Un sommet, une nuit de négociations et un texte « historique » qui engage surtout les gouvernements suivants.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.ecology" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.business", "value": -2 },
+				{ "op": "addResource", "resource": "influence", "value": 4 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 2 }
+			]
+		},
+		{
+			"id": "government.ecology_windfarm",
+			"category": "mandate",
+			"label": "Inaugurer un parc éolien",
+			"description": "Vingt mâts, un vent capricieux et une association de riverains qui a apporté ses banderoles.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.ecology" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+				{ "op": "addSupport", "group": "support.working_class", "value": -1 },
+				{ "op": "addResource", "resource": "influence", "value": 2 }
+			]
+		},
+		{
+			"id": "government.agriculture_salon",
+			"category": "mandate",
+			"label": "Arpenter le Salon de l’agriculture",
+			"description": "Huit heures debout, quarante poignées de main par hectare et un fromage par stand. Le premier trimestre est le seul où l’on vous attend.",
+			"timeCost": 30,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{ "op": "holdsPortfolio", "portfolio": "portfolio.agriculture" },
+					{ "op": "eq", "stat": "calendar.quarter", "value": 1 }
+				]
+			},
+			"unavailableReason": "Il faut tenir le portefeuille de l’Agriculture, au premier trimestre.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 3 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+				{ "op": "addStat", "stat": "player.stress", "value": 2 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 3 }
+			]
+		},
+		{
+			"id": "government.agriculture_subsidies",
+			"category": "mandate",
+			"label": "Négocier les aides avec les syndicats agricoles",
+			"description": "Une nuit rue de Varenne, un tracteur devant la grille et une enveloppe qui grossit à chaque heure de négociation.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.agriculture" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 2 },
+				{ "op": "addIndicator", "indicator": "economy", "value": -1 },
+				{ "op": "addIndicator", "indicator": "socialClimate", "value": 1 }
+			]
+		},
+		{
 			"id": "activism.leaflets",
 			"category": "activism",
 			"label": "Distribuer des tracts",

@@ -33,7 +33,8 @@ function holding(state: GameState, ...mandateIds: string[]): GameState {
 		status: 'active',
 		endTurn: null,
 		endReason: null,
-		side: null
+		side: null,
+		portfolio: null
 	}));
 	return { ...state, mandates };
 }
@@ -121,6 +122,8 @@ describe('capacités exigées par les infractions (P3-12)', () => {
 			'finance.expense_report › charge',
 			'finance.gala_table › help',
 			'finance.generous_donor › accept',
+			'government.lobby_seminar › accept',
+			'government.official_car › take',
 			'institutions.transparency_audit › omit',
 			'mandate.lobby_breakfast › sign',
 			'personal.family_job_request › hire',
@@ -217,7 +220,7 @@ describe('le retour du donateur (P3-12)', () => {
 			...state,
 			characters: {
 				...state.characters,
-				[donor.id]: { ...donor, traits: ['trait.venality'] }
+				[donor.id]: { ...donor, traits: ['trait.venality'], knownTraits: [] }
 			},
 			relationships: {
 				...state.relationships,

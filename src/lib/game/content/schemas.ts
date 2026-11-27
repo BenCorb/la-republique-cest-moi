@@ -121,6 +121,7 @@ export const conditionSchema: z.ZodType<Condition> = z.lazy(() =>
 		z.strictObject({ op: z.enum(COMPARISON_OPS), stat: z.enum(STAT_IDS), value: safeInt }),
 		z.strictObject({ op: z.literal('memberOf'), party: contentId }),
 		z.strictObject({ op: z.literal('holdsMandate'), mandate: contentId }),
+		z.strictObject({ op: z.literal('holdsPortfolio'), portfolio: contentId }),
 		z.strictObject({ op: z.literal('canHoldMandate'), mandate: contentId }),
 		z.strictObject({ op: z.literal('origin'), origin: contentId }),
 		z.strictObject({ op: z.literal('engagement'), engagement: contentId }),
@@ -210,6 +211,7 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 	}),
 	z.strictObject({ op: z.literal('requestInvestiture') }),
 	z.strictObject({ op: z.literal('partyBid'), posture: z.enum(PARTY_POSTURES) }),
+	z.strictObject({ op: z.literal('appointment'), decision: z.enum(['accept', 'decline']) }),
 	z.strictObject({ op: z.literal('rallySupport'), value: positiveInt }),
 	z.strictObject({
 		op: z.literal('investitureDecision'),
@@ -799,7 +801,19 @@ const institutionsSchema: z.ZodType<InstitutionsDefinition> = z.strictObject({
 export const careerCatalogSchema = z.strictObject({
 	elections: z.array(electionSchema).min(1),
 	mandates: z.array(mandateSchema).min(1),
-	institutions: institutionsSchema
+	institutions: institutionsSchema,
+	portfolios: z
+		.array(
+			z.strictObject({
+				id: contentId.refine(
+					(value) => value.startsWith('portfolio.'),
+					'identifiant « portfolio.nom »'
+				),
+				label: frenchText,
+				title: frenchText
+			})
+		)
+		.default([])
 });
 
 export const supportsBalanceSchema: z.ZodType<SupportsBalance> = z.strictObject({
@@ -1460,6 +1474,17 @@ export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	entourage: entourageBalanceSchema,
 	family: familyBalanceSchema,
 	activists: activistsBalanceSchema,
+	government: z.strictObject({
+		secretaryStature: nonNegativeInt,
+		ministerStature: nonNegativeInt,
+		reshuffleStability: nonNegativeInt,
+		reshuffleChancePercent: z.number().int().min(0).max(100),
+		keepPopularity: nonNegativeInt,
+		presidentTermTurns: positiveInt,
+		firstPresidentialTurn: nonNegativeInt,
+		reelectionChancePercent: z.number().int().min(0).max(100),
+		appointmentEvent: contentId
+	}),
 	partyCareer: z.strictObject({
 		congressCycleTurns: positiveInt,
 		congressOffset: nonNegativeInt,

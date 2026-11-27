@@ -26,7 +26,7 @@ import { ageAt, type Turn } from './calendar.ts';
 import { generatePerson } from './characters.ts';
 import { withPopularity } from './supports.ts';
 import { resolveMediaRef } from './territory.ts';
-import { nextFloat, nextInt, type RngState } from './random.ts';
+import { createRng, nextFloat, nextInt, type RngState } from './random.ts';
 import type {
 	Character,
 	LeaderChange,
@@ -46,6 +46,41 @@ function jitter(rng: RngState, amplitude: number): { value: number; rng: RngStat
 
 function clamp(value: number, min: number, max: number): number {
 	return Math.min(max, Math.max(min, value));
+}
+
+/** Nouveau président de la République (P3-35), personnage du monde. */
+function newPresident(
+	partyId: string,
+	turn: Turn,
+	characters: Readonly<Record<string, Character>>,
+	rng: RngState,
+	content: Content
+): { character: Character; rng: RngState } {
+	return generatePerson(
+		{
+			tags: ['politician', 'president'],
+			epithet: null,
+			renewal: null,
+			partyId,
+			minAge: 52,
+			maxAge: 66,
+			successorOf: null
+		},
+		turn,
+		characters,
+		rng,
+		content
+	);
+}
+
+/** Le président est-il d'un autre parti que la majorité ? (P3-35) */
+export function cohabitation(world: WorldState): boolean {
+	return world.president.partyId !== world.governingPartyId;
+}
+
+/** Premier ministre (P3-35) : nommé par le président dans la majorité, son dirigeant. */
+export function primeMinisterId(world: WorldState): string | null {
+	return world.parties[world.governingPartyId]?.leaderId ?? null;
 }
 
 /** Nouveau dirigeant de parti, tiré au sort (P2-01), au modèle commun des personnages. */
@@ -91,11 +126,35 @@ export function createWorld(rng: RngState, turn: Turn, content: Content): WorldC
 		currentRng = generated.rng;
 		parties[partyId] = { strength: party.baseStrength, leaderId: generated.character.id };
 	}
+	// Président de la République (P3-35) : élu du premier parti d'opposition, d'où
+	// une cohabitation possible dès le départ.
+	const presidentParty =
+		[...content.partyIds]
+			.filter((id) => id !== content.world.startingGoverningParty)
+			.sort(
+				(left, right) =>
+					(content.parties[right]?.baseStrength ?? 0) - (content.parties[left]?.baseStrength ?? 0)
+			)[0] ?? content.world.startingGoverningParty;
+	// PRNG dérivé : le président ne décale aucun autre tirage de la partie.
+	const president = newPresident(
+		presidentParty,
+		turn,
+		characters,
+		createRng(`${rng.seed}#president`),
+		content
+	);
+	characters[president.character.id] = president.character;
 	return {
 		world: {
 			indicators: { ...content.balance.world.startingIndicators },
 			parties,
 			governingPartyId: content.world.startingGoverningParty,
+			president: {
+				characterId: president.character.id,
+				partyId: presidentParty,
+				electedTurn: turn,
+				termEndTurn: content.balance.government.firstPresidentialTurn
+			},
 			media: Object.fromEntries(
 				content.mediaIds.map((mediaId) => [
 					mediaId,
@@ -244,11 +303,58 @@ export function resolveWorld(
 		});
 	}
 
+	// 4. Présidentielle (P3-35), sans élection jouable en V1 : le sortant, en forme et
+	// d'un des deux premiers partis, peut être réélu ; sinon le premier parti l'emporte.
+	let president = world.president;
+	let presidentRecord: WorldRecord['president'] = null;
+	if (turn > president.termEndTurn) {
+		const ranked = [...content.partyIds].sort(
+			(left, right) => (parties[right]?.strength ?? 0) - (parties[left]?.strength ?? 0)
+		);
+		const incumbent = updatedCharacters[president.characterId];
+		let reelected = false;
+		if (
+			incumbent?.status === 'active' &&
+			ageAt(incumbent.birthTurn, turn) < 78 &&
+			ranked.slice(0, 2).includes(president.partyId)
+		) {
+			const roll = nextInt(currentRng, 1, 100);
+			currentRng = roll.rng;
+			reelected = roll.value <= content.balance.government.reelectionChancePercent;
+		}
+		const term = content.balance.government.presidentTermTurns;
+		if (reelected) {
+			president = { ...president, electedTurn: turn, termEndTurn: president.termEndTurn + term };
+		} else {
+			const partyId = ranked[0] ?? president.partyId;
+			const elected = newPresident(partyId, turn, updatedCharacters, currentRng, content);
+			currentRng = elected.rng;
+			updatedCharacters[elected.character.id] = elected.character;
+			president = {
+				characterId: elected.character.id,
+				partyId,
+				electedTurn: turn,
+				termEndTurn: president.termEndTurn + term
+			};
+		}
+		presidentRecord = {
+			previousId: world.president.characterId,
+			presidentId: president.characterId,
+			partyId: president.partyId,
+			reelected
+		};
+	}
+
 	return {
-		world: { ...world, indicators, parties },
+		world: { ...world, indicators, parties, president },
 		characters: updatedCharacters,
 		rng: currentRng,
-		record: { indicators: indicatorChanges, parties: partyChanges, leaderChanges }
+		record: {
+			indicators: indicatorChanges,
+			parties: partyChanges,
+			leaderChanges,
+			president: presidentRecord
+		}
 	};
 }
 

@@ -74,7 +74,8 @@ function mandate(
 		status: endTurn === null ? 'active' : 'ended',
 		endTurn,
 		endReason: endTurn === null ? null : 'term',
-		side: null
+		side: null,
+		portfolio: null
 	};
 }
 

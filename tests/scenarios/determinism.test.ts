@@ -78,7 +78,7 @@ describe('scénario : passage du temps', () => {
 				family: { inheritance: 0, childCosts: 0, stress: 0, neglected: false, widowed: null },
 				wellbeing: { contributions: [], deathCause: null },
 				characters: { departures: [], arrivals: [] },
-				world: { indicators: [], parties: [], leaderChanges: [] },
+				world: { indicators: [], parties: [], leaderChanges: [], president: null },
 				supports: [],
 				deadlines: {
 					mandates: [],

@@ -138,7 +138,8 @@ function councillor(state: GameState): GameState {
 		status: 'active',
 		endTurn: null,
 		endReason: null,
-		side: null
+		side: null,
+		portfolio: null
 	};
 	return { ...state, mandates: [mandate] };
 }
@@ -163,7 +164,8 @@ describe('candidature', () => {
 		campaigns: state.campaigns,
 		institutions: state.institutions,
 		promises: state.promises,
-		investitures: state.investitures
+		investitures: state.investitures,
+		appointment: state.appointment
 	});
 
 	it('s’ouvre jusqu’à la clôture, sous conditions d’âge et de mandat', () => {
@@ -343,7 +345,8 @@ describe('scrutin du joueur', () => {
 			status: 'active',
 			endTurn: null,
 			endReason: null,
-			side: null
+			side: null,
+			portfolio: null
 		};
 		const result = commit({ ...before, mandates: [...before.mandates, minister] });
 		expect(result.state.campaigns[0]).toMatchObject({

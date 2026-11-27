@@ -127,7 +127,8 @@ function holding(state: GameState, ...mandateIds: string[]): GameState {
 		status: 'active',
 		endTurn: null,
 		endReason: null,
-		side: null
+		side: null,
+		portfolio: null
 	}));
 	return { ...state, mandates };
 }

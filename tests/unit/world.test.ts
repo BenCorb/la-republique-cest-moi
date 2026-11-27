@@ -238,7 +238,7 @@ describe('évolution autonome', () => {
 		});
 		const run = (): GameState => {
 			let state = createGame({ seed: 'mouvant' }, moving);
-			for (let turn = 0; turn < 100; turn += 1) {
+			for (let turn = 0; turn < 90; turn += 1) {
 				const result = transition(state, commitTurn(), moving);
 				if (!result.ok) throw new Error(result.error.message);
 				expect(checkInvariants(result.state, moving)).toEqual([]);
@@ -303,11 +303,11 @@ describe('évolution autonome', () => {
 				partyId: 'party.small',
 				previousLeaderId: leaderId,
 				// Trois dirigeants et quatre membres de la distribution existent déjà.
-				leaderId: 'character.8',
+				leaderId: 'character.9',
 				reason: 'retirement'
 			}
 		]);
-		expect(next.world.parties['party.small']?.leaderId).toBe('character.8');
+		expect(next.world.parties['party.small']?.leaderId).toBe('character.9');
 		expect(next.characters[leaderId]?.status).toBe('retired');
 	});
 

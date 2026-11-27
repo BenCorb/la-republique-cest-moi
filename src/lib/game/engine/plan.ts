@@ -358,7 +358,8 @@ function careerOf(state: GameState): CareerParts {
 		campaigns: state.campaigns,
 		institutions: state.institutions,
 		promises: state.promises,
-		investitures: state.investitures
+		investitures: state.investitures,
+		appointment: state.appointment
 	};
 }
 

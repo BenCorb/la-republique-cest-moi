@@ -176,6 +176,10 @@ export function evaluateCondition(context: ConditionContext, condition: Conditio
 			return activeMandates(context.mandates).some(
 				(mandate) => mandate.mandateId === condition.mandate
 			);
+		case 'holdsPortfolio':
+			return activeMandates(context.mandates).some(
+				(mandate) => mandate.portfolio === condition.portfolio
+			);
 		case 'support': {
 			const value = context.player.supports[condition.group] ?? 0;
 			return condition.cmp === 'gte'

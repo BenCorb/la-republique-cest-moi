@@ -119,6 +119,9 @@
 		<div class="p-6">
 			<h2 id="decision-title" class="font-serif text-2xl text-primary">{decision.title}</h2>
 			<p id="decision-text" class="mt-3 leading-relaxed">{decision.text}</p>
+			{#if decision.appointment}
+				<p class="mt-3 font-semibold" data-testid="appointment-offer">{decision.appointment}</p>
+			{/if}
 			{#if decision.report}
 				<div class="mt-4 rounded-md border border-line p-3">
 					<p class="mb-1 text-sm font-semibold">{decision.report.title} — premier tour</p>
