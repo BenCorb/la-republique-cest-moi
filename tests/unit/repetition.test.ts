@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadContent } from '../../src/lib/game/content/load.ts';
-import type { HeadlineDefinition } from '../../src/lib/game/content/types.ts';
+import type { Content, HeadlineDefinition } from '../../src/lib/game/content/types.ts';
 import {
 	ALWAYS_COVERED_TOPICS,
 	articleAngle,
@@ -106,27 +106,27 @@ const WISHES: PlanStep[] = [
 ];
 
 /** Carrière automatique sur le catalogue réel, invariants vérifiés à chaque trimestre. */
-function career(seed: string, turns: number): GameState {
-	let state = createGame({ seed }, content);
+function career(seed: string, turns: number, used: Content = content): GameState {
+	let state = createGame({ seed }, used);
 	for (let turn = 0; turn < turns && state.end === null; turn += 1) {
 		let steps = WISHES;
 		for (;;) {
-			const preview = previewPlan(state, { steps }, content);
+			const preview = previewPlan(state, { steps }, used);
 			if (preview.valid) break;
 			const rejected = new Set(preview.issues.map((issue) => issue.index));
 			steps = steps.filter((_step, index) => !rejected.has(index));
 		}
-		const result = transition(state, commitTurn({ steps }), content);
+		const result = transition(state, commitTurn({ steps }), used);
 		if (!result.ok) throw new Error(result.error.message);
 		state = result.state;
-		for (let view = describePendingEvent(state, content); view;) {
+		for (let view = describePendingEvent(state, used); view;) {
 			const choice = view.choices.find((candidate) => candidate.available)!;
-			const chosen = transition(state, chooseEventCommand(view.instanceId, choice.id), content);
+			const chosen = transition(state, chooseEventCommand(view.instanceId, choice.id), used);
 			if (!chosen.ok) throw new Error(chosen.error.message);
 			state = chosen.state;
-			view = describePendingEvent(state, content);
+			view = describePendingEvent(state, used);
 		}
-		expect(checkInvariants(state, content)).toEqual([]);
+		expect(checkInvariants(state, used)).toEqual([]);
 	}
 	return state;
 }
@@ -140,12 +140,35 @@ describe('presse et événements sur une carrière (P3-15)', () => {
 	);
 
 	it('ne reprend un titre qu’après épuisement de son pool', () => {
+		// Catalogue réduit à deux titres par groupe : le catalogue réel est devenu
+		// assez riche pour ne plus rien répéter sur une carrière, ce que l'on veut
+		// pourtant vérifier ici.
+		const seen = new Map<string, number>();
+		const sparse: Content = {
+			...content,
+			headlines: content.headlines.filter((headline) => {
+				const group = JSON.stringify([
+					headline.topic,
+					headline.tone,
+					headline.details,
+					headline.kinds
+				]);
+				const count = seen.get(group) ?? 0;
+				seen.set(group, count + 1);
+				return count < 2;
+			})
+		};
+		const articles = career('anti-répétition', 160, sparse).history.flatMap((entry) =>
+			entry.type === 'turn.resolved'
+				? (entry.press?.articles ?? []).map((article) => ({ ...article, turn: entry.turn }))
+				: []
+		);
 		expect(articles.length).toBeGreaterThan(20);
 		// Dernière parution de chaque titre, par pool (sujet, tonalité, précision, famille de média).
 		const lastSeen = new Map<string, number>();
 		let repeats = 0;
 		for (const article of articles) {
-			const media = content.media[article.mediaId]!;
+			const media = sparse.media[article.mediaId]!;
 			const key = headlinePoolKey(article.topic, article.tone, article.detail, media.kind);
 			const previous = lastSeen.get(`${key}|${article.headlineId}`);
 			if (previous !== undefined) {
@@ -156,7 +179,7 @@ describe('presse et événements sur une carrière (P3-15)', () => {
 					article.detail,
 					media,
 					article.turn,
-					content
+					sparse
 				);
 				// Tout titre du pool est déjà paru, sauf un titre daté entré depuis.
 				const previousYear = yearOf(previous);
