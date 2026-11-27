@@ -277,8 +277,15 @@ function checkPromiseInvariants(state: GameState): string[] {
 		if (ongoing && inProgress && pledge.dueTurn !== null && pledge.dueTurn < state.turn) {
 			violations.push(`échéance de promesse non traitée : ${id}`);
 		}
-		if (pledge.status === 'announced' && (pledge.progress !== 0 || pledge.amended)) {
+		if (
+			pledge.status === 'announced' &&
+			(pledge.progress !== 0 || pledge.amended || pledge.leverHeld)
+		) {
 			violations.push(`promesse annoncée déjà engagée : ${id}`);
+		}
+		// Levier vérifié (P3-22) : une promesse n'est tenue qu'avec le mandat qui la permet.
+		if (pledge.status === 'kept' && (!pledge.leverHeld || pledge.amended)) {
+			violations.push(`promesse tenue sans levier ou après compromis : ${id}`);
 		}
 		if (pledge.recalls < 0 || (pledge.recalls === 0) !== (pledge.lastRecalledTurn === null)) {
 			violations.push(`rappels incohérents : ${id}`);
@@ -883,7 +890,7 @@ export function checkContentReferences(state: GameState, content: Content): stri
 			continue;
 		}
 		const campaign = state.campaigns.find((entry) => entry.campaignId === pledge.campaignId);
-		if (campaign && !definition.elections.includes(campaign.electionId)) {
+		if (campaign && definition.election !== campaign.electionId) {
 			violations.push(`promesse étrangère à l’élection : ${pledge.pledgeId}`);
 		}
 		if (pledge.recalls > content.promiseRules.maxRecalls) {

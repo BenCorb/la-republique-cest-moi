@@ -8,6 +8,7 @@ import {
 	commitTurn,
 	createGame,
 	evaluateCondition,
+	pledgeTarget,
 	previewPlan,
 	promiseIssue,
 	settlementOutcome,
@@ -108,10 +109,10 @@ function load(overrides: Partial<RawContent> = {}): Content {
 
 const catalog = load();
 const declare: PlanStep = { kind: 'action', id: 'campaign.declare', target: 'ballot.1' };
-const pledge = (promiseId: string): PlanStep => ({
+const pledge = (promiseId: string, campaignId = 'campaign.1'): PlanStep => ({
 	kind: 'action',
 	id: 'campaign.pledge',
-	target: promiseId
+	target: pledgeTarget(campaignId, promiseId)
 });
 const prepare = (pledgeId: string): PlanStep => ({
 	kind: 'action',
@@ -181,6 +182,7 @@ describe('engagements de campagne', () => {
 				status: 'announced',
 				progress: 0,
 				amended: false,
+				leverHeld: false,
 				dueTurn: null,
 				closedTurn: null,
 				recalls: 0,
@@ -206,8 +208,15 @@ describe('engagements de campagne', () => {
 
 		const declared = commit(base, [declare]).state;
 		const career = { ...declared, promises: declared.promises };
-		expect(promiseIssue('promise.test_national', career, catalog)).toMatch(/ne concerne pas/);
-		expect(promiseIssue('promise.unknown', career, catalog)).toMatch(/catalogue/);
+		expect(promiseIssue('campaign.1/promise.test_national', career, catalog)).toMatch(
+			/ne concerne pas/
+		);
+		expect(promiseIssue('campaign.1/promise.unknown', career, catalog)).toMatch(/catalogue/);
+		// La campagne destinataire est nommée : une cible sans campagne en cours est refusée (P3-22).
+		expect(promiseIssue('promise.test_tax', career, catalog)).toMatch(/catalogue/);
+		expect(promiseIssue('campaign.9/promise.test_tax', career, catalog)).toMatch(
+			/candidature en cours/
+		);
 
 		const twice = previewPlan(
 			declared,
@@ -221,8 +230,8 @@ describe('engagements de campagne', () => {
 			pledge('promise.test_school')
 		]).state;
 		expect(full.promises).toHaveLength(2);
-		const capped = previewPlan(full, { steps: [pledge('promise.test_national')] }, catalog);
-		expect(capped.valid).toBe(false);
+		const capped = previewPlan(full, { steps: [pledge('promise.test_clean')] }, catalog);
+		expect(capped.issues[0]?.message).toMatch(/2 engagements au plus/);
 	});
 });
 
@@ -233,7 +242,11 @@ describe('après le scrutin', () => {
 		const before = advanceTo(declared, 40);
 		const result = commit(before);
 		expect(result.state.campaigns[0]?.status).toBe('won');
-		expect(result.state.promises[0]).toMatchObject({ status: 'in_progress', dueTurn: 46 });
+		expect(result.state.promises[0]).toMatchObject({
+			status: 'in_progress',
+			dueTurn: 46,
+			leverHeld: true
+		});
 		expect(result.state.events.scheduled).toContainEqual({
 			eventId: 'test.promise_dilemma',
 			dueTurn: 42,
@@ -399,23 +412,36 @@ describe('rappels en campagne', () => {
 describe('projection', () => {
 	it('propose les engagements en campagne et décrit le registre sans rien cacher', () => {
 		const declared = commit(strongCandidate(), [declare]).state;
-		const offers = projectView(declared, [], catalog).career.promises.offers;
-		expect(offers.map((offer) => [offer.promiseId, offer.addable])).toEqual([
-			['promise.test_tax', true],
-			['promise.test_school', true],
-			['promise.test_national', false]
+		const campaigns = projectView(declared, [], catalog).career.promises.campaigns;
+		expect(campaigns).toHaveLength(1);
+		expect(campaigns[0]).toMatchObject({ campaignId: 'campaign.1', made: 0 });
+		const town = declared.player.territory.homeTown.name;
+		// Scrutin, territoire et fonction visée nommés ; seules les promesses de ce scrutin (P3-22).
+		expect(campaigns[0]?.title).toBe(`Élection locale (${town})`);
+		expect(campaigns[0]?.detail).toMatch(/^Scrutin au T1 2010 · Fonction visée : /);
+		expect(campaigns[0]?.detail).toContain('à partir de 60 %');
+		const offers = campaigns[0]!.offers;
+		expect(offers.map((offer) => [offer.target, offer.addable])).toEqual([
+			['campaign.1/promise.test_tax', true],
+			['campaign.1/promise.test_school', true],
+			['campaign.1/promise.test_clean', true]
 		]);
 		expect(offers[0]?.effects).toEqual(['Soutien : Possédants + 2']);
+		expect(offers[0]?.theme).toBe('Fiscalité');
+		expect(offers[0]?.description).toBe(`Promesse de test pour ${town}.`);
+		expect(offers[1]?.lever).toMatch(/^Levier : .+ — décider et réaliser$/);
 		const promised = commit(declared, [pledge('promise.test_tax')]).state;
 		const elected = commit(advanceTo(promised, 40)).state;
 		const view = projectView(elected, [prepare('pledge.1')], catalog);
-		expect(view.career.promises.offers).toEqual([]);
+		expect(view.career.promises.campaigns).toEqual([]);
 		expect(view.career.promises.pledges[0]).toMatchObject({
 			label: 'Baisser les impôts',
 			status: 'En cours',
 			inProgress: true,
-			preparePlanned: true
+			preparePlanned: true,
+			limited: false
 		});
+		expect(view.career.promises.pledges[0]?.origin).toMatch(/^Élection locale \(.+\) — annoncée/);
 		expect(view.career.promises.pledges[0]?.detail).toMatch(/Échéance : T3 2011/);
 		const journal = JSON.stringify(projectView(elected, [], catalog).journal);
 		expect(journal).toContain('« Baisser les impôts » : élu, place à la réalisation');
@@ -454,11 +480,12 @@ describe('validation du catalogue', () => {
 	it('refuse une élection inconnue, un effet incertain et un dilemme trop tardif', () => {
 		const promise = fixturePromises.promises[0]!;
 		const broken = {
+			...fixturePromises,
 			balance: { ...fixturePromises.balance, dilemmaDelayTurns: { min: 2, max: 6 } },
 			promises: [
 				{
 					...promise,
-					elections: ['election.unknown'],
+					election: 'election.unknown',
 					kept: [{ op: 'addResourceRandom', resource: 'influence', min: 1, max: 2 }]
 				},
 				...fixturePromises.promises.slice(1)
@@ -468,5 +495,156 @@ describe('validation du catalogue', () => {
 		expect(messages).toMatch(/élection inconnue/);
 		expect(messages).toMatch(/effets certains/);
 		expect(messages).toMatch(/avant l’échéance/);
+	});
+
+	it('vérifie le thème, le levier, les déclinaisons et les variables (P3-22)', () => {
+		const [tax, school] = fixturePromises.promises;
+		const broken = {
+			...fixturePromises,
+			promises: [
+				{ ...tax!, theme: 'theme.unknown', label: 'Baisser les impôts de {place}' },
+				// Levier qui n'est pas attribué par l'élection locale.
+				{ ...school!, lever: ['mandate.deputy'], description: 'Pour {town}.' },
+				// Seconde déclinaison du même thème pour la même élection.
+				{ ...school!, id: 'promise.test_school_bis' },
+				...fixturePromises.promises.slice(2)
+			]
+		};
+		const messages = issues({ promises: broken }).join(' ');
+		expect(messages).toMatch(/thème inconnu : theme.unknown/);
+		expect(messages).toMatch(/intitulé d’une promesse ne contient aucune variable/);
+		expect(messages).toMatch(/levier non attribué par election.local : mandate.deputy/);
+		expect(messages).toMatch(/variable inconnue dans la description : \{town\}/);
+		expect(messages).toMatch(/deux déclinaisons du thème theme.test_services/);
+	});
+});
+
+describe('promesses contextualisées (P3-22)', () => {
+	/** Élu local au T40, puis candidat aux scrutins national (T60) et local (T64). */
+	function twoCampaigns(): GameState {
+		const declared = commit(strongCandidate(), [declare]).state;
+		const elected = advanceTo(declared, 41);
+		const ballot = (electionId: string): string =>
+			elected.ballots.find(
+				(entry) => entry.electionId === electionId && entry.status === 'scheduled'
+			)!.ballotId;
+		const national = commit(elected, [
+			{ kind: 'action', id: 'campaign.declare', target: ballot('election.national') }
+		]).state;
+		return commit(national, [
+			{ kind: 'action', id: 'campaign.declare', target: ballot('election.local') }
+		]).state;
+	}
+
+	it('rattache l’engagement à la campagne choisie, jamais à la plus proche', () => {
+		const state = twoCampaigns();
+		const [national, local] = state.campaigns.filter((entry) => entry.status === 'running');
+		expect(national?.electionId).toBe('election.national');
+		expect(local?.electionId).toBe('election.local');
+		// Une promesse locale adressée à la campagne nationale est refusée.
+		expect(
+			promiseIssue(pledgeTarget(national!.campaignId, 'promise.test_tax'), state, catalog)
+		).toMatch(/ne concerne pas/);
+		const result = commit(state, [
+			pledge('promise.test_tax', local!.campaignId),
+			pledge('promise.test_tax_national', national!.campaignId)
+		]).state;
+		expect(result.promises.map((entry) => [entry.promiseId, entry.campaignId])).toEqual([
+			['promise.test_tax', local!.campaignId],
+			['promise.test_tax_national', national!.campaignId]
+		]);
+		const view = projectView(result, [], catalog).career.promises;
+		expect(view.campaigns.map((entry) => [entry.campaignId, entry.made])).toEqual([
+			[national!.campaignId, 1],
+			[local!.campaignId, 1]
+		]);
+		expect(view.campaigns[0]?.offers.map((offer) => offer.promiseId)).toEqual([
+			'promise.test_national',
+			'promise.test_tax_national'
+		]);
+	});
+
+	it('élu sans le levier annoncé, la promesse n’est au mieux que partiellement tenue', () => {
+		const definition = catalog.promises['promise.test_tax']!;
+		// Levier hors de portée de l'élection locale : contenu modifié sans validation.
+		const leverless: Content = {
+			...catalog,
+			promises: {
+				...catalog.promises,
+				'promise.test_tax': { ...definition, lever: ['mandate.deputy'] }
+			}
+		};
+		const declared = commit(
+			strongCandidate(leverless),
+			[declare, pledge('promise.test_tax')],
+			leverless
+		).state;
+		const won = commit(advanceTo(declared, 40, 'hold', leverless), [], leverless);
+		expect(won.state.campaigns[0]?.status).toBe('won');
+		expect(won.state.promises[0]).toMatchObject({ status: 'in_progress', leverHeld: false });
+		expect(quarterLog(won).promises?.politics).toContainEqual({
+			kind: 'promise',
+			pledgeId: 'pledge.1',
+			promiseId: 'promise.test_tax',
+			change: 'limited'
+		});
+		expect(projectView(won.state, [], leverless).career.promises.pledges[0]?.limited).toBe(true);
+		let state = advanceTo(won.state, 42, 'hold', leverless);
+		while (state.promises[0]!.progress < 100) {
+			state = commit(state, [prepare('pledge.1')], leverless).state;
+		}
+		expect(settlementOutcome(state.promises[0]!, leverless)).toBe('partial');
+		expect(advanceTo(state, 47, 'hold', leverless).promises[0]?.status).toBe('partial');
+	});
+
+	it('rappelle une promesse d’une autre échelle avec l’événement qui lui est propre', () => {
+		const recalling = load({
+			promises: { ...fixturePromises, balance: { ...fixturePromises.balance, recallPercent: 100 } }
+		});
+		const first = commit(
+			strongCandidate(recalling),
+			[declare, pledge('promise.test_tax')],
+			recalling
+		);
+		const dropped = advanceTo(
+			commit(advanceTo(first.state, 40, 'drop', recalling), [], recalling).state,
+			43,
+			'drop',
+			recalling
+		);
+		expect(dropped.promises[0]?.status).toBe('abandoned');
+		const ballot = dropped.ballots.find(
+			(entry) => entry.electionId === 'election.national' && entry.status === 'scheduled'
+		)!;
+		const declaredNational = commit(
+			dropped,
+			[{ kind: 'action', id: 'campaign.declare', target: ballot.ballotId }],
+			recalling
+		).state;
+		const recalled = commit(declaredNational, [], recalling).state;
+		expect(recalled.promises[0]).toMatchObject({ recalls: 1 });
+		expect(recalled.events.pending[0]?.eventId).toBe('test.promise_recall_broken_elsewhere');
+	});
+});
+
+describe('catalogue réel (P3-22)', () => {
+	it('décline au moins quatre promesses par scrutin, toutes tenables par un mandat de ce scrutin', async () => {
+		const { loadContentFromFiles } = await import('../../src/lib/game/content/load-node.ts');
+		const content = loadContentFromFiles();
+		for (const electionId of content.electionIds) {
+			const variants = content.promiseIds.filter(
+				(id) => content.promises[id]?.election === electionId
+			);
+			expect(variants.length, electionId).toBeGreaterThanOrEqual(4);
+		}
+		// Un même thème porte des intitulés différents d'un scrutin à l'autre.
+		const labels = new Map<string, Set<string>>();
+		for (const id of content.promiseIds) {
+			const definition = content.promises[id]!;
+			const set = labels.get(definition.theme) ?? new Set<string>();
+			expect(set.has(definition.label), id).toBe(false);
+			set.add(definition.label);
+			labels.set(definition.theme, set);
+		}
 	});
 });
