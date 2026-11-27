@@ -1681,6 +1681,11 @@ section.
   attendent des décisions du créateur et sont examinés après le playtest B2. P3-29 et P3-30 restent à
   faire.
 
+- **Décisions du créateur (27 novembre 2026, début du rush V1).** PT-B1-002 : investiture seedée avec
+  appréciation qualitative, refus ouvrant retrait ou dissidence (P3-30). PT-B1-004 : une
+  contre-proposition salariale, puis départ (P3-33). PT-B1-007 : noyau de carrière partisane sans
+  scission (P3-34). Détail au §5.2 de `ROADMAP.md`.
+
 ## Playtest B2 — Systèmes de la phase 3
 
 **Statut : clos de façon partielle (27 novembre 2026), décision du créateur.** Une carrière entamée
@@ -1768,3 +1773,6 @@ l’étude tant que le créateur ne l’a pas validée.
   la situation de l’entourage), pour donner davantage de choix différents entre deux trimestres. Le
   périmètre et les actions retenues restent à définir avec le créateur ; ce chantier peut rejoindre
   la vague de contenu P3-24.
+
+  **Décision du créateur (27 novembre 2026) :** intégré à P3-24, quinze à vingt actions
+  contextuelles.
