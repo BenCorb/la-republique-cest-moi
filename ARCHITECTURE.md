@@ -1013,6 +1013,15 @@ Retour PT-B1-005. Projection seulement : ni état, ni règle, ni `RULES_VERSION`
 
 - `noteHighlights` ajoute un fait « Recrutement conclu » (ton gain : poste, salaire convenu, travail dès le trimestre) ou « Offre déclinée » (ton coût : candidat sorti de la présélection, prime non versée) pour chaque changement `hired` ou `hireRefused` des étapes du trimestre résolu. Il est placé après scrutins, mandats et justice, avant la vie des partis, dans la limite de cinq faits par note ; le journal garde le détail.
 - Test : `tests/unit/recruitment.test.ts` (refus et accord annoncés une seule fois).
+### 8.4 septvicies Décisions de P3-32 : leviers de la base militante (27 novembre 2026)
+
+Retour PT-B1-006. Projection seulement : ni état, ni règle, ni `RULES_VERSION` modifiés. Forme d'interface provisoire, à juger au playtest B2.
+
+- `ActivistsView.levers` (`activistLevers`) : constats tirés de l'état public, sans seuil ni pourcentage — arrivées (notoriété, soutien des militants suffisant ou trop bas, campagne en cours ou attrait des candidatures, places presque ou toutes occupées), départs (usure, retenue par un local actif ou non, mécontentement si le soutien passe sous le seuil de `balance.activists`, surnombre), et moyens d'augmenter l'accueil (adhésion et sa section, locaux de l'époque encore achetables avec leurs places, mandats selon leur rang).
+- `ActivistsView.lastMove` distingue arrivées, recrues après le scrutin et départs (`ActivistsRecord`).
+- `UpgradeView.activists` : places d'accueil et réduction de l'usure d'un local, actives au trimestre suivant l'achat ; affichées sur la carte « Développer l'organisation ».
+- Interface : détail repliable « Faire grandir la base militante » dans le panneau « Base militante », à la place de la phrase d'aide.
+- Tests : `tests/unit/activists.test.ts` (leviers favorables et défavorables, options de capacité, aucune formule affichée, carte de local) ; E2E de l'onglet Organisation.
 
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 

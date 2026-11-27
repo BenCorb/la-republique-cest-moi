@@ -75,10 +75,35 @@
 				{#if view.activists.lastMove}
 					<p class="text-xs text-muted">{view.activists.lastMove}</p>
 				{/if}
-				<p class="text-xs text-muted">
-					La notoriété fait connaître votre nom ; le soutien des militants décide qui reste. Un
-					local accueille et retient, les campagnes attirent, les reniements font partir.
-				</p>
+				<details class="text-xs" data-testid="activist-levers">
+					<summary class="cursor-pointer text-primary">Faire grandir la base militante</summary>
+					<div class="mt-2 flex flex-col gap-2">
+						<div>
+							<h3 class="font-semibold">Ce qui fait venir des militants</h3>
+							<ul class="mt-1 flex flex-col gap-0.5">
+								{#each view.activists.levers.arrivals as lever (lever.text)}
+									<li class={lever.sense === 'cost' ? 'text-warning' : ''}>{lever.text}</li>
+								{/each}
+							</ul>
+						</div>
+						<div>
+							<h3 class="font-semibold">Ce qui les fait partir</h3>
+							<ul class="mt-1 flex flex-col gap-0.5">
+								{#each view.activists.levers.departures as lever (lever.text)}
+									<li class={lever.sense === 'cost' ? 'text-warning' : ''}>{lever.text}</li>
+								{/each}
+							</ul>
+						</div>
+						<div>
+							<h3 class="font-semibold">Augmenter durablement l’accueil</h3>
+							<ul class="mt-1 flex flex-col gap-0.5">
+								{#each view.activists.levers.capacity as option (option)}
+									<li>{option}</li>
+								{/each}
+							</ul>
+						</div>
+					</div>
+				</details>
 			</section>
 
 			<section aria-labelledby="producers-title">
@@ -169,6 +194,9 @@
 										: 'aucune'}
 								</li>
 								<li>Production par trimestre : {upgrade.effects.join(', ')}</li>
+								{#if upgrade.activists}
+									<li data-testid="upgrade-activists-{upgrade.id}">{upgrade.activists}</li>
+								{/if}
 								<li>Possédés : {upgrade.owned} / {upgrade.maxOwned}</li>
 							</ul>
 							<div class="mt-auto flex flex-col gap-2">

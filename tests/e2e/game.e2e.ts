@@ -409,6 +409,19 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByTestId('format-personal.donate')).toBeDisabled();
 	});
 
+	test('explique comment faire grandir la base militante (PT-B1-006)', async ({ page }) => {
+		await startCareer(page, 'e2e-leviers');
+		await page.getByRole('button', { name: 'Organisation', exact: true }).click();
+		const levers = page.getByTestId('activist-levers');
+		await levers.getByText('Faire grandir la base militante').click();
+		await expect(levers).toContainText('Ce qui fait venir des militants');
+		await expect(levers).toContainText('Ce qui les fait partir');
+		await expect(levers).toContainText('Adhérer à un parti');
+		await expect(page.getByTestId('upgrade-activists-organization.local_office')).toContainText(
+			'+ 120 places d’accueil'
+		);
+	});
+
 	test('refuse explicitement une sauvegarde d’une ancienne version, sans l’effacer', async ({
 		page
 	}) => {
