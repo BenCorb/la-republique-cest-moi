@@ -380,7 +380,17 @@ function candidacyWish(
 	state: GameState,
 	content: Content
 ): PlanStep[] {
-	const declareId = content.actionIds.find((id) => content.actions[id]?.target === 'ballot');
+	const declareId = content.actionIds.find(
+		(id) =>
+			content.actions[id]?.target === 'ballot' &&
+			content.actions[id]?.effects.some(
+				(effect) => effect.op === 'declareCandidacy' && effect.role !== 'colistier'
+			)
+	);
+	// Encartée, une politique demande l'investiture là où elle est exigée (P3-30).
+	const investitureId = content.actionIds.find((id) =>
+		content.actions[id]?.effects.some((effect) => effect.op === 'requestInvestiture')
+	);
 	const targets = CANDIDACY_TARGETS[strategy];
 	if (!declareId || (targets !== 'all' && targets.length === 0)) return [];
 	const ballots = [...state.ballots]
@@ -392,6 +402,10 @@ function candidacyWish(
 	for (const ballot of ballots) {
 		const step: PlanStep = { kind: 'action', id: declareId, target: ballot.ballotId };
 		if (previewPlan(state, { steps: [step] }, content).valid) return [step];
+		if (investitureId) {
+			const request: PlanStep = { kind: 'action', id: investitureId, target: ballot.ballotId };
+			if (previewPlan(state, { steps: [request] }, content).valid) return [request];
+		}
 	}
 	return [];
 }

@@ -240,6 +240,7 @@ describe('croissance et attrition', () => {
 			ballots: [],
 			people: [],
 			runoffs: [],
+			investitures: [],
 			campaigns: [
 				{
 					campaignId: 'campaign.1',

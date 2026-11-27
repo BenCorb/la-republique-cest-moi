@@ -268,6 +268,8 @@ export type Effect =
 	/** Candidature à l'échéance choisie dans le plan (`target`), sous conditions d'éligibilité. */
 	| { readonly op: 'declareCandidacy'; readonly role?: 'head' | 'colistier' | undefined }
 	| { readonly op: 'runoffDecision'; readonly decision: RunoffDecision }
+	| { readonly op: 'requestInvestiture' }
+	| { readonly op: 'investitureDecision'; readonly decision: 'dissident' | 'renounce' }
 	/** Préparation ajoutée à chaque campagne en cours. */
 	| { readonly op: 'prepareCampaign'; readonly value: number }
 	/**
@@ -1252,6 +1254,35 @@ export interface SupportsBalance {
  * Modèle de campagne et de scrutin du joueur (hypothèses de tuning, P2-03). Les
  * poids sont des pourcentages appliqués aux composantes du score.
  */
+/**
+ * Investiture nationale (P3-30, décisions déléguées provisoires) : appréciation
+ * de la candidature par l'appareil, sans seuil affiché ; décision tirée une fois.
+ */
+export interface InvestitureBalance {
+	/** Poids (en %) de l'appui de l'appareil, de l'influence (plafonnée à 100) et de la popularité. */
+	readonly apparatusPercent: number;
+	readonly influencePercent: number;
+	readonly popularityPercent: number;
+	/** Points par mandat exercé, plafonnés. */
+	readonly mandatePoints: number;
+	readonly mandateCap: number;
+	/** Points d'un mandat local ou régional exercé (ancrage). */
+	readonly localPoints: number;
+	/** Pénalité quand un candidat mieux placé brigue l'investiture, et sa fréquence (%). */
+	readonly rivalPenalty: number;
+	readonly rivalChancePercent: number;
+	/** Bornes de la chance d'investiture (%). */
+	readonly minChancePercent: number;
+	readonly maxChancePercent: number;
+	/** Seuils d'appréciation : « candidature soutenue », « investiture disputée ». */
+	readonly supportedFrom: number;
+	readonly disputedFrom: number;
+	/** Appui de l'appareil perdu par une candidature dissidente. */
+	readonly dissidentApparatus: number;
+	/** Événement bloquant après un refus (`followUp`). */
+	readonly refusedEvent: string;
+}
+
 export interface CampaignsBalance {
 	readonly popularityWeightPercent: number;
 	/** Part du score du parti au scrutin reprise par un candidat investi. */
@@ -1285,6 +1316,8 @@ export interface CampaignsBalance {
 	readonly rivalryAttitude: number;
 	/** Âge maximal d'un adversaire le jour du scrutin. */
 	readonly opponentMaxAge: number;
+	/** Investiture nationale (P3-30). */
+	readonly investiture: InvestitureBalance;
 }
 
 /** Entourage et délégation (hypothèses de tuning, P2-05). */
@@ -1527,6 +1560,8 @@ export interface ElectionDefinition {
 	readonly grants: string;
 	/** Mandat de la tête de la liste victorieuse (le maire, élu par le conseil), sinon absent. */
 	readonly headGrant?: string | undefined;
+	/** Un candidat encarté doit demander l'investiture de son parti (P3-30). */
+	readonly investiture?: boolean | undefined;
 	/**
 	 * Mode de scrutin (P3-29) : liste à deux tours avec prime majoritaire,
 	 * uninominal à deux tours, ou sénatoriales (grands électeurs, liste à la

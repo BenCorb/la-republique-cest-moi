@@ -49,6 +49,8 @@ export type EffectRange =
 	| { readonly kind: 'candidacy' }
 	/** Décision d'entre-deux-tours (P3-29). */
 	| { readonly kind: 'runoff'; readonly decision: RunoffDecision }
+	/** Investiture demandée, ou décision après un refus (P3-30). */
+	| { readonly kind: 'investiture'; readonly decision: 'request' | 'dissident' | 'renounce' }
 	| {
 			readonly kind: 'staff';
 			readonly change:
@@ -130,6 +132,11 @@ export type ResolvedEffect =
 			readonly kind: 'runoff';
 			readonly effect: Extract<Effect, { op: 'runoffDecision' }>;
 			readonly rng: RngState;
+	  }
+	| {
+			readonly kind: 'investiture';
+			readonly effect: Extract<Effect, { op: 'investitureDecision' }>;
+			readonly rng: RngState;
 	  };
 
 export type LifestyleEffect = Extract<Effect, { op: 'setLifestyle' }>;
@@ -200,6 +207,10 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'candidacy' };
 		case 'runoffDecision':
 			return { kind: 'runoff', decision: effect.decision };
+		case 'requestInvestiture':
+			return { kind: 'investiture', decision: 'request' };
+		case 'investitureDecision':
+			return { kind: 'investiture', decision: effect.decision };
 		case 'hireStaff':
 			return { kind: 'staff', change: 'hire' };
 		case 'courtCandidate':
@@ -277,6 +288,10 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 			return { kind: 'reform', effect, rng };
 		case 'runoffDecision':
 			return { kind: 'runoff', effect, rng };
+		case 'requestInvestiture':
+			return { kind: 'career', effect, rng };
+		case 'investitureDecision':
+			return { kind: 'investiture', effect, rng };
 		case 'addRelation':
 		case 'revealTraits':
 			return { kind: 'people', effect, rng };

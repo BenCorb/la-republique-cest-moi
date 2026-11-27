@@ -162,7 +162,8 @@ describe('candidature', () => {
 		ballots: state.ballots,
 		campaigns: state.campaigns,
 		institutions: state.institutions,
-		promises: state.promises
+		promises: state.promises,
+		investitures: state.investitures
 	});
 
 	it('s’ouvre jusqu’à la clôture, sous conditions d’âge et de mandat', () => {

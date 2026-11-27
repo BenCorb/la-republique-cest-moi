@@ -111,6 +111,7 @@ import {
 	type MandateInstance,
 	campaignPoll,
 	campaignRefundFor,
+	investitureAppraisal,
 	candidacyRoleOf,
 	effectiveSystem,
 	listSystem,
@@ -129,6 +130,7 @@ import {
 	type StaffRecord,
 	type EventRecord,
 	type CampaignStatus,
+	type InvestitureRequest,
 	type BallotReport,
 	type BallotContestant
 } from '../engine/index.ts';
@@ -585,6 +587,20 @@ export interface BallotView {
 	readonly candidacyPlanned: boolean;
 	readonly candidacyAddable: boolean;
 	readonly candidacyReason: string | null;
+	/**
+	 * Investiture nationale (P3-30) : appréciation qualitative et facteurs
+	 * observables, demande possible, prévue, ou issue ; `null` hors scrutin concerné.
+	 */
+	readonly investiture: {
+		readonly actionId: string;
+		readonly appraisal: string;
+		readonly factors: readonly { readonly label: string; readonly favorable: boolean }[];
+		readonly planned: boolean;
+		readonly addable: boolean;
+		readonly reason: string | null;
+		/** Issue d'une demande déjà faite, en clair, sinon `null`. */
+		readonly status: string | null;
+	} | null;
 	/** Place sur la liste d'un parti (P3-29) : action, prévue, possible ; `null` sans liste. */
 	readonly listPlace: {
 		readonly actionId: string;
@@ -1362,6 +1378,15 @@ const PARTY_REFERENCE_LABELS: Readonly<Record<string, string>> = {
 	target: 'parti choisi'
 };
 
+/** Étapes d'une investiture, au journal (P3-30). */
+const INVESTITURE_STATUS_TEXT: Readonly<Record<InvestitureRequest['status'], string>> = {
+	pending: 'investiture demandée au parti',
+	granted: 'investiture accordée : candidature déposée sous l’étiquette du parti',
+	refused: 'investiture refusée par le parti',
+	dissident: 'candidature dissidente, sans étiquette ni moyens du parti',
+	renounced: 'renoncement à la candidature, discipline saluée par l’appareil'
+};
+
 /** Issue d'une candidature après le second tour (P3-29). */
 const RUNOFF_OUTCOMES: Readonly<Record<Exclude<CampaignStatus, 'running'>, string>> = {
 	won: 'élu',
@@ -1412,6 +1437,12 @@ function describeEffect(range: EffectRange, content: Content): string {
 			return 'Candidature déposée';
 		case 'runoff':
 			return RUNOFF_LABELS[range.decision];
+		case 'investiture':
+			return range.decision === 'request'
+				? 'Demande d’investiture'
+				: range.decision === 'dissident'
+					? 'Candidature dissidente'
+					: 'Renoncement à la candidature';
 		case 'fact':
 			return `Fait inscrit au registre : ${content.offenses[range.offense]?.label ?? range.offense}`;
 		case 'lifestyle':
@@ -1514,6 +1545,8 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 					return change.invested
 						? 'candidature déposée avec l’investiture du parti'
 						: 'candidature déposée sans investiture';
+				case 'investiture':
+					return INVESTITURE_STATUS_TEXT[change.status];
 				case 'runoff':
 					return `second tour : ${RUNOFF_OUTCOMES[change.status]}${change.playerPercent === null ? '' : ` (${change.playerPercent} %)`}`;
 				case 'preparation':
@@ -3691,7 +3724,8 @@ function careerPartsOf(state: GameState): CareerParts {
 		ballots: state.ballots,
 		campaigns: state.campaigns,
 		institutions: state.institutions,
-		promises: state.promises
+		promises: state.promises,
+		investitures: state.investitures
 	};
 }
 
@@ -3728,7 +3762,8 @@ function buildInstitutions(
 		staff: state.staff,
 		facts: state.facts,
 		cases: state.cases,
-		promises: state.promises
+		promises: state.promises,
+		investitures: state.investitures
 	};
 	const allowed = !action?.requires || evaluateCondition(conditionContext, action.requires);
 	const parameters = content.institutionParameterIds.flatMap(
@@ -4042,6 +4077,10 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 	const declareActionId =
 		ballotActions.find((id) => candidacyRoleOf(content.actions[id]?.effects ?? []) === 'head') ??
 		null;
+	const investitureActionId =
+		content.actionIds.find((id) =>
+			content.actions[id]?.effects.some((effect) => effect.op === 'requestInvestiture')
+		) ?? null;
 	const listActionId =
 		ballotActions.find(
 			(id) => candidacyRoleOf(content.actions[id]?.effects ?? []) === 'colistier'
@@ -4228,7 +4267,45 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 							content
 						)
 					: { addable: false, reason: null };
+			const request = state.investitures.find((entry) => entry.ballotId === ballot.ballotId);
+			const appraisal =
+				definition?.investiture && state.player.partyId !== null && investitureActionId
+					? investitureAppraisal(
+							ballot.ballotId,
+							state.player,
+							state.resources.influence,
+							state.mandates,
+							content
+						)
+					: null;
+			const investitureStep = investitureActionId
+				? addability(
+						state,
+						plan,
+						{ kind: 'action', id: investitureActionId, target: ballot.ballotId },
+						content
+					)
+				: { addable: false, reason: null };
 			return {
+				investiture:
+					appraisal && investitureActionId
+						? {
+								actionId: investitureActionId,
+								appraisal: appraisal.label,
+								factors: appraisal.factors,
+								planned: plan.some(
+									(step) =>
+										step.kind === 'action' &&
+										step.id === investitureActionId &&
+										step.target === ballot.ballotId
+								),
+								addable: !request && investitureStep.addable,
+								reason: request ? null : investitureStep.reason,
+								status: request
+									? `${INVESTITURE_STATUS_TEXT[request.status].charAt(0).toUpperCase()}${INVESTITURE_STATUS_TEXT[request.status].slice(1)}${request.reasons.length > 0 ? ` (${request.reasons.join(', ')})` : ''}.`
+									: null
+							}
+						: null,
 				listPlace: listOpen
 					? {
 							actionId: listActionId,

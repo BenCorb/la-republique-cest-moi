@@ -101,7 +101,23 @@ export const fixtureBalance = {
 		rivalExperienceBonus: 3,
 		rivalExperienceCap: 3,
 		rivalryAttitude: -8,
-		opponentMaxAge: 72
+		opponentMaxAge: 72,
+		investiture: {
+			apparatusPercent: 40,
+			influencePercent: 20,
+			popularityPercent: 20,
+			mandatePoints: 10,
+			mandateCap: 30,
+			localPoints: 10,
+			rivalPenalty: 25,
+			rivalChancePercent: 35,
+			minChancePercent: 5,
+			maxChancePercent: 95,
+			supportedFrom: 65,
+			disputedFrom: 40,
+			dissidentApparatus: 10,
+			refusedEvent: 'test.investiture_refused'
+		}
 	},
 	entourage: {
 		candidatesPerPost: 2,
@@ -744,6 +760,35 @@ export const fixtureEvents = {
 						hints: [],
 						costs: [],
 						effects: [{ op: 'runoffDecision', decision: 'withdraw' }]
+					}
+				]
+			},
+			{
+				id: 'test.investiture_refused',
+				category: 'campaign',
+				title: 'Investiture refusée',
+				text: 'Un autre portera les couleurs du parti.',
+				blocking: true,
+				trigger: 'followUp',
+				weight: 0,
+				priority: 45,
+				cooldownTurns: 0,
+				unique: false,
+				actors: [],
+				choices: [
+					{
+						id: 'renounce',
+						label: 'Renoncer',
+						hints: [],
+						costs: [],
+						effects: [{ op: 'investitureDecision', decision: 'renounce' }]
+					},
+					{
+						id: 'dissident',
+						label: 'Dissidence',
+						hints: [],
+						costs: [],
+						effects: [{ op: 'investitureDecision', decision: 'dissident' }]
 					}
 				]
 			},

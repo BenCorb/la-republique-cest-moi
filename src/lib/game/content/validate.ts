@@ -577,6 +577,16 @@ function effectIssues(
 					});
 				}
 				break;
+			case 'requestInvestiture':
+				if (targetKind !== 'ballot') {
+					issues.push({
+						source,
+						path: at,
+						message: 'investiture réservée aux actions ciblant une échéance'
+					});
+				}
+				break;
+			case 'investitureDecision':
 			case 'runoffDecision':
 				if (roles === null) {
 					issues.push({
@@ -870,6 +880,7 @@ function crossCheckPolitics(
 				(effect.op === 'joinParty' && effect.party === 'target') ||
 				(effect.op === 'endMandate' && effect.mandate === 'target') ||
 				effect.op === 'declareCandidacy' ||
+				effect.op === 'requestInvestiture' ||
 				effect.op === 'advanceCampaign' ||
 				effect.op === 'hireStaff' ||
 				effect.op === 'courtCandidate' ||
@@ -1824,7 +1835,8 @@ export function validateContent(raw: RawContent): ContentValidation {
 				...promisesCatalog.data.promises.map((promise) => promise.dilemmaEvent),
 				...Object.values(promisesCatalog.data.balance.recallEvents),
 				balance.data.entourage.renegotiation.event,
-				balance.data.elections.contests.runoffEvent
+				balance.data.elections.contests.runoffEvent,
+				balance.data.campaigns.investiture.refusedEvent
 			])
 		)
 	);

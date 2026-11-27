@@ -245,6 +245,38 @@
 									>
 										<Megaphone class="size-3.5" aria-hidden="true" /> Se présenter
 									</button>
+									{#if ballot.investiture}
+										{@const investiture = ballot.investiture}
+										<div class="flex w-full flex-col items-end gap-1" data-testid="investiture">
+											<p class="text-xs">
+												<span class="font-semibold">{investiture.appraisal}</span>
+												<span class="text-muted">
+													— {investiture.factors
+														.map((factor) => `${factor.favorable ? '+' : '−'} ${factor.label}`)
+														.join(' · ')}
+												</span>
+											</p>
+											{#if investiture.status}
+												<p class="text-xs text-muted">{investiture.status}</p>
+											{:else}
+												<button
+													type="button"
+													class="btn-secondary btn-small"
+													disabled={!investiture.addable || investiture.planned || accelerating}
+													title={investiture.reason ?? undefined}
+													aria-label="Demander l’investiture : {ballot.label} du {ballot.dateLabel}"
+													onclick={() =>
+														session.controller.addStep({
+															kind: 'action',
+															id: investiture.actionId,
+															target: ballot.ballotId
+														})}
+												>
+													{investiture.planned ? 'Investiture demandée' : 'Demander l’investiture'}
+												</button>
+											{/if}
+										</div>
+									{/if}
 									{#if ballot.listPlace}
 										{@const place = ballot.listPlace}
 										<button

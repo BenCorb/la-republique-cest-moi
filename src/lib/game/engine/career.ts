@@ -26,7 +26,7 @@ import {
 } from '../content/types.ts';
 import { ageAt, formatTurn, type Turn } from './calendar.ts';
 import { addRelation, generatePerson, meet, sortedIds } from './characters.ts';
-import { nextInt, type RngState } from './random.ts';
+import { hashSeed, nextInt, type RngState } from './random.ts';
 import { localRivalModifier } from './territory.ts';
 import {
 	canMerge,
@@ -50,6 +50,7 @@ import type {
 	Ballot,
 	BallotReport,
 	BallotShare,
+	InvestitureRequest,
 	Campaign,
 	CampaignStatus,
 	Character,
@@ -252,7 +253,8 @@ export type CareerEffect = Extract<
 			| 'callEarlyElection'
 			| 'declareCandidacy'
 			| 'prepareCampaign'
-			| 'advanceCampaign';
+			| 'advanceCampaign'
+			| 'requestInvestiture';
 	}
 >;
 
@@ -263,7 +265,8 @@ export function isCareerEffect(effect: Effect): effect is CareerEffect {
 		effect.op === 'callEarlyElection' ||
 		effect.op === 'declareCandidacy' ||
 		effect.op === 'prepareCampaign' ||
-		effect.op === 'advanceCampaign'
+		effect.op === 'advanceCampaign' ||
+		effect.op === 'requestInvestiture'
 	);
 }
 
@@ -274,6 +277,8 @@ export interface CareerParts {
 	readonly institutions: InstitutionsState;
 	/** Registre des promesses, rattachées aux campagnes (P3-04). */
 	readonly promises: readonly PromiseRecord[];
+	/** Demandes d'investiture nationale (P3-30). */
+	readonly investitures: readonly InvestitureRequest[];
 }
 
 export function runningCampaigns(campaigns: readonly Campaign[]): Campaign[] {
@@ -324,7 +329,8 @@ export function candidacyIssue(
 	player: PlayerState,
 	turn: Turn,
 	content: Content,
-	role: 'head' | 'colistier' = 'head'
+	role: 'head' | 'colistier' = 'head',
+	viaInvestiture = false
 ): string | null {
 	const ballot = parts.ballots.find((entry) => entry.ballotId === ballotIdValue);
 	if (!ballot || ballot.status !== 'scheduled') return 'Aucune élection programmée à cette date.';
@@ -338,6 +344,10 @@ export function candidacyIssue(
 		return `Il faut avoir ${definition.minAge} ans le jour du scrutin.`;
 	}
 	if (isIneligible(player, ballot.turn)) return INELIGIBLE;
+	// Pas de candidature sous étiquette sans l'accord du parti (P3-30).
+	if (role === 'head' && definition.investiture && player.partyId !== null && !viaInvestiture) {
+		return 'Encarté, demandez d’abord l’investiture de votre parti.';
+	}
 	if (role === 'colistier' && !listSystem(effectiveSystem(definition, player.territory, content))) {
 		return 'Ce scrutin n’a pas de listes : seule une candidature personnelle est possible.';
 	}
@@ -428,6 +438,33 @@ export function applyCareerEffect(
 						campaignId: campaign.campaignId,
 						ballotId: ballot.ballotId,
 						invested: campaign.invested
+					}
+				]
+			};
+		}
+		case 'requestInvestiture': {
+			if (target === null || investitureIssue(target, parts, player, turn, content)) {
+				return { parts, changes: [] };
+			}
+			const ballot = parts.ballots.find((entry) => entry.ballotId === target)!;
+			const request: InvestitureRequest = {
+				requestId: `investiture.${parts.investitures.length + 1}`,
+				ballotId: ballot.ballotId,
+				electionId: ballot.electionId,
+				partyId: player.partyId!,
+				requestedTurn: turn,
+				status: 'pending',
+				resolvedTurn: null,
+				reasons: []
+			};
+			return {
+				parts: { ...parts, investitures: [...parts.investitures, request] },
+				changes: [
+					{
+						kind: 'investiture',
+						requestId: request.requestId,
+						ballotId: ballot.ballotId,
+						status: 'pending'
 					}
 				]
 			};
@@ -979,7 +1016,20 @@ export function resolveDeadlines(
 	let currentRng = rng;
 	const people: PeopleChange[] = [];
 
-	// 0. Campagnes en cours : préparation passive et exposition (stress).
+	// 0. Investitures demandées ce trimestre : décision unique et seedée (P3-30).
+	const investiture = resolveInvestitures(
+		career,
+		player,
+		resources.influence,
+		turn,
+		currentRng,
+		content
+	);
+	career = investiture.career;
+	currentRng = investiture.rng;
+	const investitures = investiture.resolved;
+
+	// 0 bis. Campagnes en cours : préparation passive et exposition (stress).
 	const running = runningCampaigns(career.campaigns);
 	if (running.length > 0) {
 		career = {
@@ -1041,11 +1091,11 @@ export function resolveDeadlines(
 			characters,
 			relationships,
 			rng: currentRng,
-			record: { mandates: [], ballots: [], campaigns: [], people, runoffs: [] }
+			record: { mandates: [], ballots: [], campaigns: [], people, runoffs: [], investitures }
 		};
 	}
 
-	const mandateChanges: PoliticalChange[] = [];
+	const mandateChanges: PoliticalChange[] = [...investiture.changes];
 	const campaignRecords: DeadlinesRecord['campaigns'][number][] = [];
 	const runoffs: string[] = [];
 
@@ -1203,7 +1253,8 @@ export function resolveDeadlines(
 			ballots: ballotRecords,
 			campaigns: campaignRecords,
 			people,
-			runoffs
+			runoffs,
+			investitures
 		}
 	};
 }
@@ -1501,5 +1552,243 @@ export function resolveRunoff(
 			...settled.mandates
 		],
 		people: settled.people
+	};
+}
+
+// ---------------------------------------------------------------------------
+// Investiture nationale (P3-30)
+// ---------------------------------------------------------------------------
+
+/** Raison pour laquelle le joueur ne peut demander l'investiture à cette échéance, ou `null`. */
+export function investitureIssue(
+	ballotIdValue: string,
+	parts: CareerParts,
+	player: PlayerState,
+	turn: Turn,
+	content: Content
+): string | null {
+	const ballot = parts.ballots.find((entry) => entry.ballotId === ballotIdValue);
+	const definition = ballot ? content.elections[ballot.electionId] : undefined;
+	if (!ballot || !definition) return 'Aucune élection programmée à cette date.';
+	if (!definition.investiture) return 'Ce scrutin ne passe pas par une investiture nationale.';
+	if (player.partyId === null) return 'Il faut être membre d’un parti.';
+	if (parts.investitures.some((request) => request.ballotId === ballot.ballotId)) {
+		return 'L’investiture a déjà été demandée pour ce scrutin.';
+	}
+	return candidacyIssue(ballotIdValue, parts, player, turn, content, 'head', true);
+}
+
+/** Facteur observable de l'appréciation d'une investiture. */
+export interface InvestitureFactor {
+	readonly label: string;
+	readonly favorable: boolean;
+}
+
+/**
+ * Appréciation d'une demande d'investiture : seuls des facteurs observables
+ * (appareil, influence, mandats, ancrage, popularité, candidat mieux placé)
+ * et une appréciation qualitative sont montrés ; la chance reste interne.
+ */
+export function investitureAppraisal(
+	ballotIdValue: string,
+	player: PlayerState,
+	influence: number,
+	mandates: readonly MandateInstance[],
+	content: Content
+): { chancePercent: number; label: string; factors: InvestitureFactor[] } {
+	const rules = content.balance.campaigns.investiture;
+	const apparatus = player.supports[content.balance.campaigns.apparatusGroup] ?? 0;
+	const held = activeMandates(mandates).length;
+	const local = localMandates(mandates, content) > 0;
+	const rival =
+		hashSeed(`${ballotIdValue}:${player.partyId ?? ''}`) % 100 < rules.rivalChancePercent;
+	const score =
+		(apparatus * rules.apparatusPercent +
+			Math.min(100, influence) * rules.influencePercent +
+			player.popularity * rules.popularityPercent) /
+			100 +
+		Math.min(rules.mandateCap, held * rules.mandatePoints) +
+		(local ? rules.localPoints : 0) -
+		(rival ? rules.rivalPenalty : 0);
+	const chancePercent = Math.round(
+		Math.min(rules.maxChancePercent, Math.max(rules.minChancePercent, score))
+	);
+	const factors: InvestitureFactor[] = [
+		apparatus >= 50
+			? { label: 'l’appareil vous soutient', favorable: true }
+			: apparatus < 25
+				? { label: 'l’appareil vous connaît mal', favorable: false }
+				: { label: 'l’appareil reste partagé', favorable: apparatus >= 35 },
+		influence >= 60
+			? { label: 'une influence reconnue', favorable: true }
+			: { label: 'une influence encore modeste', favorable: false },
+		held > 0
+			? { label: `${held} mandat(s) exercé(s)`, favorable: true }
+			: { label: 'aucun mandat exercé', favorable: false },
+		local
+			? { label: 'un ancrage local', favorable: true }
+			: { label: 'pas d’ancrage local', favorable: false },
+		player.popularity >= 45
+			? { label: 'une popularité solide', favorable: true }
+			: { label: 'une popularité fragile', favorable: false },
+		...(rival ? [{ label: 'un candidat mieux placé brigue la place', favorable: false }] : [])
+	];
+	const label =
+		chancePercent >= rules.supportedFrom
+			? 'Candidature soutenue'
+			: chancePercent >= rules.disputedFrom
+				? 'Investiture disputée'
+				: 'Investiture peu probable';
+	return { chancePercent, label, factors };
+}
+
+/** Candidature de tête créée par une investiture accordée ou une dissidence. */
+function headCampaign(
+	parts: CareerParts,
+	ballot: Ballot,
+	partyId: string,
+	invested: boolean,
+	turn: Turn
+): Campaign {
+	return {
+		campaignId: campaignId(parts.campaigns.length + 1),
+		ballotId: ballot.ballotId,
+		electionId: ballot.electionId,
+		declaredTurn: turn,
+		partyId,
+		invested,
+		preparation: 0,
+		advanceCents: 0,
+		opponentId: null,
+		status: 'running',
+		playerPercent: null,
+		reason: null,
+		role: 'head',
+		listRank: 1,
+		resultTurn: null
+	};
+}
+
+/**
+ * Demandes en attente tranchées à la frontière (une seule fois, tirage seedé) :
+ * accordée, la candidature investie est déposée ; refusée, les motifs
+ * défavorables sont consignés et le choix suivra au trimestre suivant.
+ */
+function resolveInvestitures(
+	career: CareerParts,
+	player: PlayerState,
+	influence: number,
+	turn: Turn,
+	rng: RngState,
+	content: Content
+): {
+	career: CareerParts;
+	rng: RngState;
+	changes: PoliticalChange[];
+	resolved: { requestId: string; granted: boolean }[];
+} {
+	let current = rng;
+	let parts = career;
+	const changes: PoliticalChange[] = [];
+	const resolved: { requestId: string; granted: boolean }[] = [];
+	for (const request of career.investitures) {
+		if (request.status !== 'pending') continue;
+		const ballot = parts.ballots.find((entry) => entry.ballotId === request.ballotId);
+		const appraisal = investitureAppraisal(
+			request.ballotId,
+			player,
+			influence,
+			parts.mandates,
+			content
+		);
+		const draw = nextInt(current, 1, 100);
+		current = draw.rng;
+		const open =
+			ballot?.status === 'scheduled' &&
+			player.partyId === request.partyId &&
+			candidacyIssue(request.ballotId, parts, player, turn, content, 'head', true) === null;
+		const granted = open && draw.value <= appraisal.chancePercent;
+		const reasons = granted
+			? []
+			: open
+				? appraisal.factors.filter((factor) => !factor.favorable).map((factor) => factor.label)
+				: ['votre candidature n’est plus recevable'];
+		const status: InvestitureRequest['status'] = granted ? 'granted' : 'refused';
+		parts = {
+			...parts,
+			investitures: parts.investitures.map((entry) =>
+				entry.requestId === request.requestId
+					? { ...entry, status, resolvedTurn: turn, reasons }
+					: entry
+			)
+		};
+		changes.push({
+			kind: 'investiture',
+			requestId: request.requestId,
+			ballotId: request.ballotId,
+			status
+		});
+		if (granted && ballot) {
+			const campaign = headCampaign(parts, ballot, request.partyId, true, request.requestedTurn);
+			parts = { ...parts, campaigns: [...parts.campaigns, campaign] };
+			changes.push({
+				kind: 'candidacy',
+				campaignId: campaign.campaignId,
+				ballotId: ballot.ballotId,
+				invested: true
+			});
+		}
+		resolved.push({ requestId: request.requestId, granted });
+	}
+	return { career: parts, rng: current, changes, resolved };
+}
+
+/** Demande refusée qui attend la décision du joueur, la plus ancienne d'abord. */
+export function refusedInvestiture(
+	parts: Pick<CareerParts, 'investitures'>
+): InvestitureRequest | null {
+	return parts.investitures.find((request) => request.status === 'refused') ?? null;
+}
+
+/**
+ * Décision après un refus : renoncer (l'appareil apprécie la discipline) ou se
+ * présenter en dissident, sans étiquette ni moyens du parti (l'appareil s'en
+ * détourne). Renvoie la variation d'appui de l'appareil à appliquer.
+ */
+export function decideInvestiture(
+	parts: CareerParts,
+	decision: 'dissident' | 'renounce',
+	turn: Turn,
+	content: Content
+): { parts: CareerParts; changes: PoliticalChange[]; apparatusDelta: number } {
+	const request = refusedInvestiture(parts);
+	if (!request) return { parts, changes: [], apparatusDelta: 0 };
+	const rules = content.balance.campaigns.investiture;
+	const ballot = parts.ballots.find((entry) => entry.ballotId === request.ballotId);
+	const dissident = decision === 'dissident' && ballot?.status === 'scheduled';
+	const status: InvestitureRequest['status'] = dissident ? 'dissident' : 'renounced';
+	let career: CareerParts = {
+		...parts,
+		investitures: parts.investitures.map((entry) =>
+			entry.requestId === request.requestId ? { ...entry, status } : entry
+		)
+	};
+	const changes: PoliticalChange[] = [
+		{ kind: 'investiture', requestId: request.requestId, ballotId: request.ballotId, status }
+	];
+	if (dissident) {
+		const campaign = headCampaign(career, ballot, request.partyId, false, turn);
+		career = { ...career, campaigns: [...career.campaigns, campaign] };
+		changes.push({
+			kind: 'candidacy',
+			campaignId: campaign.campaignId,
+			ballotId: ballot.ballotId,
+			invested: false
+		});
+	}
+	return {
+		parts: career,
+		changes,
+		apparatusDelta: dissident ? -rules.dissidentApparatus : Math.ceil(rules.dissidentApparatus / 3)
 	};
 }

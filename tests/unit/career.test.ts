@@ -285,7 +285,8 @@ describe('calendrier électoral', () => {
 			ballots: base.ballots,
 			campaigns: base.campaigns,
 			institutions: base.institutions,
-			promises: base.promises
+			promises: base.promises,
+			investitures: base.investitures
 		};
 		const outcome = applyCareerEffect(
 			{ op: 'callEarlyElection', election: 'election.local', delayTurns: 1 },
@@ -319,6 +320,7 @@ describe('calendrier électoral', () => {
 						mandates: [],
 						ballots: base.ballots.map((ballot) => ({ ...ballot, turn: 0 })),
 						campaigns: [],
+						investitures: [],
 						institutions: base.institutions,
 						promises: []
 					}

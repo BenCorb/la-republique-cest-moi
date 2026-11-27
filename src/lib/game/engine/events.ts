@@ -57,7 +57,13 @@ import {
 } from './characters.ts';
 import { applyPoliticalEffect, oppositionPartyId } from './world.ts';
 import { inEras } from './eras.ts';
-import { applyCareerEffect, careerEffectIssue, resolveRunoff, type CareerParts } from './career.ts';
+import {
+	applyCareerEffect,
+	careerEffectIssue,
+	decideInvestiture,
+	resolveRunoff,
+	type CareerParts
+} from './career.ts';
 import {
 	applyPostEffect,
 	bindEventPost,
@@ -374,6 +380,27 @@ function applyAutomaticEffects(
 			politics.push(...outcome.changes);
 		} else if (resolved.kind === 'reform') {
 			throw new Error('Proposition de réforme hors du plan.');
+		} else if (resolved.kind === 'investiture') {
+			// Après un refus d'investiture (P3-30) : renoncer ou se présenter en dissident.
+			const outcome = decideInvestiture(career, resolved.effect.decision, turn, content);
+			career = outcome.parts;
+			politics.push(...outcome.changes);
+			if (outcome.apparatusDelta !== 0) {
+				const support = applyPoliticalEffect(
+					{
+						op: 'addSupport',
+						group: content.balance.campaigns.apparatusGroup,
+						value: outcome.apparatusDelta
+					},
+					player,
+					world,
+					turn,
+					null,
+					content
+				);
+				player = support.player;
+				politics.push(...support.changes);
+			}
 		} else if (resolved.kind === 'runoff') {
 			// Second tour après la décision du joueur (P3-29), jugé au trimestre courant.
 			const outcome = resolveRunoff(
@@ -874,7 +901,8 @@ export function choiceAvailability(
 		ballots: state.ballots,
 		campaigns: state.campaigns,
 		institutions: state.institutions,
-		promises: state.promises
+		promises: state.promises,
+		investitures: state.investitures
 	};
 	for (const effect of choice.effects) {
 		const issue = careerEffectIssue(effect, career, content ?? null, state.player, state.turn);
@@ -952,7 +980,8 @@ export function chooseEvent(
 				ballots: state.ballots,
 				campaigns: state.campaigns,
 				institutions: state.institutions,
-				promises: state.promises
+				promises: state.promises,
+				investitures: state.investitures
 			},
 			staff: state.staff,
 			shortlists: state.shortlists,
@@ -1048,6 +1077,7 @@ export function chooseEvent(
 			campaigns: outcome.career.campaigns,
 			institutions: outcome.career.institutions,
 			promises: outcome.career.promises,
+			investitures: outcome.career.investitures,
 			staff: outcome.staff,
 			shortlists: outcome.shortlists,
 			facts: outcome.facts,

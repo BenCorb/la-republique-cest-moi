@@ -57,6 +57,7 @@ import {
 	advanceIssue,
 	applyCareerEffect,
 	candidacyIssue,
+	investitureIssue,
 	isCareerEffect,
 	mandateIncome,
 	reservedTime,
@@ -356,7 +357,8 @@ function careerOf(state: GameState): CareerParts {
 		ballots: state.ballots,
 		campaigns: state.campaigns,
 		institutions: state.institutions,
-		promises: state.promises
+		promises: state.promises,
+		investitures: state.investitures
 	};
 }
 
@@ -531,14 +533,16 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 				const issue =
 					target === null
 						? 'choisissez une élection'
-						: candidacyIssue(
-								target,
-								workingCareer,
-								workingPlayer,
-								state.turn,
-								content,
-								candidacyRoleOf(definition.effects)
-							);
+						: definition.effects.some((effect) => effect.op === 'requestInvestiture')
+							? investitureIssue(target, workingCareer, workingPlayer, state.turn, content)
+							: candidacyIssue(
+									target,
+									workingCareer,
+									workingPlayer,
+									state.turn,
+									content,
+									candidacyRoleOf(definition.effects)
+								);
 				if (issue) fail('invalid_target', `« ${label} » : ${issue}`);
 			} else if (definition.target === 'search') {
 				const level = searchLevelOf(definition.effects);

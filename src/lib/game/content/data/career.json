@@ -33,6 +33,7 @@
 			"decidesGovernment": false,
 			"minAge": 30,
 			"grants": "mandate.senator",
+			"investiture": true,
 			"requiresAnyMandate": [
 				"mandate.municipal_councillor",
 				"mandate.mayor",
@@ -60,6 +61,7 @@
 			"decidesGovernment": true,
 			"minAge": 23,
 			"grants": "mandate.deputy",
+			"investiture": true,
 			"requiresAnyMandate": [],
 			"rivalStrength": 40,
 			"campaignRefundCents": 150000,

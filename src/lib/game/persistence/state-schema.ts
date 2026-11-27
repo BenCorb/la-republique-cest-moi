@@ -79,6 +79,12 @@ const politicalChange = z.discriminatedUnion('kind', [
 		invested: z.boolean()
 	}),
 	z.strictObject({
+		kind: z.literal('investiture'),
+		requestId: id,
+		ballotId: id,
+		status: z.enum(['pending', 'granted', 'refused', 'dissident', 'renounced'])
+	}),
+	z.strictObject({
 		kind: z.literal('runoff'),
 		campaignId: id,
 		decision: z.enum(['maintain', 'merge', 'withdraw']),
@@ -281,7 +287,8 @@ const turnEntry = z.strictObject({
 				})
 			),
 			people: z.array(peopleChange),
-			runoffs: z.array(id)
+			runoffs: z.array(id),
+			investitures: z.array(z.strictObject({ requestId: id, granted: z.boolean() }))
 		})
 		.nullable(),
 	exposure: int.nullable(),
@@ -494,6 +501,18 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 			winnerPartyId: id.nullable(),
 			cancelReason: text.nullable(),
 			report: ballotReport.nullable()
+		})
+	),
+	investitures: z.array(
+		z.strictObject({
+			requestId: id,
+			ballotId: id,
+			electionId: id,
+			partyId: id,
+			requestedTurn: int,
+			status: z.enum(['pending', 'granted', 'refused', 'dissident', 'renounced']),
+			resolvedTurn: int.nullable(),
+			reasons: z.array(text)
 		})
 	),
 	campaigns: z.array(

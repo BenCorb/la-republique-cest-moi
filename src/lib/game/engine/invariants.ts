@@ -717,6 +717,30 @@ function checkCareerInvariants(state: GameState): string[] {
 			violations.push(`score de campagne incohérent : ${campaign.campaignId}`);
 		}
 	});
+	// Investitures (P3-30) : séquence, décision unique à la frontière de la demande.
+	state.investitures.forEach((request, index) => {
+		if (request.requestId !== `investiture.${index + 1}`) {
+			violations.push(`identifiant d’investiture invalide : ${request.requestId}`);
+		}
+		if (
+			request.status === 'pending' &&
+			request.requestedTurn !== state.turn &&
+			state.phase !== 'ended'
+		) {
+			violations.push(`investiture jamais tranchée : ${request.requestId}`);
+		}
+		if ((request.status === 'pending') !== (request.resolvedTurn === null)) {
+			violations.push(`date de décision d’investiture incohérente : ${request.requestId}`);
+		}
+		if (
+			request.status === 'granted' &&
+			!state.campaigns.some(
+				(campaign) => campaign.ballotId === request.ballotId && campaign.invested
+			)
+		) {
+			violations.push(`investiture accordée sans candidature : ${request.requestId}`);
+		}
+	});
 	for (const campaign of state.campaigns) {
 		if (campaign.opponentId === null) continue;
 		const opponent = state.characters[campaign.opponentId];

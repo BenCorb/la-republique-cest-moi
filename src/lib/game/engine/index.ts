@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.40.0';
+export const RULES_VERSION = '0.41.0';
 
 export { candidacyRoleOf } from './plan.ts';
 export { effectiveSystem, listSystem, seatsFor } from './ballots.ts';
@@ -88,6 +88,7 @@ export {
 	type BallotShare,
 	type Campaign,
 	type BallotReport,
+	type InvestitureRequest,
 	type BallotContestant,
 	type CampaignStatus,
 	type FamilyState,
@@ -217,6 +218,9 @@ export {
 	campaignRefund,
 	campaignRefundFor,
 	pendingRunoff,
+	investitureAppraisal,
+	investitureIssue,
+	refusedInvestiture,
 	resolveRunoff,
 	settleCampaign,
 	campaignScore,

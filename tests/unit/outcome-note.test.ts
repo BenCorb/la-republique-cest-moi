@@ -190,6 +190,7 @@ describe('faits marquants de la note', () => {
 			ballots: [],
 			people: [],
 			runoffs: [],
+			investitures: [],
 			campaigns: [
 				{
 					campaignId: 'campaign.1',

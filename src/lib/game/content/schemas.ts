@@ -207,6 +207,11 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 		op: z.literal('declareCandidacy'),
 		role: z.enum(['head', 'colistier']).optional()
 	}),
+	z.strictObject({ op: z.literal('requestInvestiture') }),
+	z.strictObject({
+		op: z.literal('investitureDecision'),
+		decision: z.enum(['dissident', 'renounce'])
+	}),
 	z.strictObject({
 		op: z.literal('runoffDecision'),
 		decision: z.enum(['maintain', 'merge', 'withdraw'])
@@ -736,6 +741,7 @@ export const electionSchema: z.ZodType<ElectionDefinition> = z
 		minAge: positiveInt,
 		grants: contentId,
 		headGrant: contentId.optional(),
+		investiture: z.boolean().optional(),
 		system: z.enum(['list', 'single', 'senate']),
 		turnout: z.strictObject({
 			min: z.number().int().min(1).max(100),
@@ -1079,7 +1085,23 @@ export const campaignsBalanceSchema: z.ZodType<CampaignsBalance> = z.strictObjec
 	rivalExperienceBonus: nonNegativeInt,
 	rivalExperienceCap: nonNegativeInt,
 	rivalryAttitude: safeInt.refine((value) => Math.abs(value) <= 100, 'variation de -100 à 100'),
-	opponentMaxAge: positiveInt
+	opponentMaxAge: positiveInt,
+	investiture: z.strictObject({
+		apparatusPercent: nonNegativeInt,
+		influencePercent: nonNegativeInt,
+		popularityPercent: nonNegativeInt,
+		mandatePoints: nonNegativeInt,
+		mandateCap: nonNegativeInt,
+		localPoints: nonNegativeInt,
+		rivalPenalty: nonNegativeInt,
+		rivalChancePercent: z.number().int().min(0).max(100),
+		minChancePercent: z.number().int().min(0).max(100),
+		maxChancePercent: z.number().int().min(0).max(100),
+		supportedFrom: nonNegativeInt,
+		disputedFrom: nonNegativeInt,
+		dissidentApparatus: nonNegativeInt,
+		refusedEvent: contentId
+	})
 });
 
 const hireOfferSchema = z.strictObject({

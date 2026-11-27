@@ -1,6 +1,44 @@
 {
 	"events": [
 		{
+			"id": "election.investiture_refused",
+			"category": "campaign",
+			"title": "L’investiture vous échappe",
+			"text": "La commission d’investiture a tranché, entre deux sandwichs et un vote à main levée : un autre portera les couleurs du parti. Le courrier est poli, les motifs le sont moins. Il reste deux chemins : se ranger, ou se présenter quand même, sans étiquette ni moyens, et avec un appareil qui ne l’oubliera pas.",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 45,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [],
+			"choices": [
+				{
+					"id": "renounce",
+					"label": "S’incliner et soutenir le candidat investi",
+					"hints": ["Pas de campagne cette fois", "L’appareil s’en souviendra, en bien"],
+					"costs": [],
+					"effects": [{ "op": "investitureDecision", "decision": "renounce" }],
+					"outcome": [
+						"Vous serrez la main du candidat investi devant les photographes. Le sourire est un peu crispé, mais le parti note la discipline."
+					]
+				},
+				{
+					"id": "dissident",
+					"label": "Se présenter en dissident",
+					"hints": [
+						"Candidature sans étiquette ni moyens du parti",
+						"L’appareil vous tourne le dos"
+					],
+					"costs": [],
+					"effects": [{ "op": "investitureDecision", "decision": "dissident" }],
+					"outcome": [
+						"Vous déposez votre candidature à la préfecture, seul. Le parti publie un communiqué sec ; vos affiches, elles, sont déjà imprimées."
+					]
+				}
+			]
+		},
+		{
 			"id": "election.runoff",
 			"category": "campaign",
 			"title": "Entre les deux tours",

@@ -699,6 +699,19 @@
 			"target": "ballot"
 		},
 		{
+			"id": "campaign.request_investiture",
+			"category": "campaign",
+			"label": "Demander l’investiture du parti",
+			"description": "Un dossier pour la commission d’investiture, trois déjeuners avec des secrétaires fédéraux et une photo avec le premier secrétaire. Aux législatives et aux sénatoriales, l’étiquette se mérite : accordée, elle vaut candidature ; refusée, il faudra choisir entre la discipline et la dissidence.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "gte", "stat": "player.affiliated", "value": 1 },
+			"unavailableReason": "Il faut être membre d’un parti.",
+			"effects": [{ "op": "requestInvestiture" }],
+			"target": "ballot"
+		},
+		{
 			"id": "campaign.pledge",
 			"category": "campaign",
 			"label": "Prendre un engagement de campagne",

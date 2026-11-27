@@ -98,12 +98,19 @@ function choosePlan(state: GameState, wishes: readonly PlanStep[]): TurnPlan {
 				}));
 		}
 		if (step !== CANDIDACY) return [step];
-		const open = state.ballots.find(
-			(ballot) =>
-				ballot.status === 'scheduled' &&
-				previewPlan(state, { steps: [declare(ballot.ballotId)] }, content).valid
-		);
-		return open ? [declare(open.ballotId)] : [];
+		// Encarté aux législatives et sénatoriales : l'investiture d'abord (P3-30).
+		const request = (target: string): PlanStep => ({
+			kind: 'action',
+			id: 'campaign.request_investiture',
+			target
+		});
+		for (const ballot of state.ballots) {
+			if (ballot.status !== 'scheduled') continue;
+			for (const step of [declare(ballot.ballotId), request(ballot.ballotId)]) {
+				if (previewPlan(state, { steps: [step] }, content).valid) return [step];
+			}
+		}
+		return [];
 	});
 	for (;;) {
 		const turnPlan: TurnPlan = { steps: candidate };

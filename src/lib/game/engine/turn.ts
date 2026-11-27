@@ -362,6 +362,15 @@ function commitTurn(
 								...justice!.scheduled,
 								...pledges.scheduled,
 								...team!.scheduled,
+								// Investiture refusée (P3-30) : renoncer ou se présenter en dissident, au début de T+1.
+								...(deadlines?.record.investitures ?? [])
+									.filter((entry) => !entry.granted)
+									.map((entry) => ({
+										eventId: content.balance.campaigns.investiture.refusedEvent,
+										dueTurn: nextTurn,
+										sourceInstanceId: entry.requestId,
+										actors: {}
+									})),
 								// Second tour en attente (P3-29) : décision au début de T+1.
 								...(deadlines?.record.runoffs ?? []).map((campaignIdValue) => ({
 									eventId: content.balance.elections.contests.runoffEvent,
@@ -466,6 +475,10 @@ function commitTurn(
 				settled?.career.institutions ??
 				production.career.institutions,
 			promises: frontier?.career.promises ?? settled?.career.promises ?? production.career.promises,
+			investitures:
+				frontier?.career.investitures ??
+				settled?.career.investitures ??
+				production.career.investitures,
 			upgrades: wealth?.upgrades ?? execution.upgrades,
 			facts: frontier?.facts ?? state.facts,
 			cases: settled?.cases ?? state.cases,

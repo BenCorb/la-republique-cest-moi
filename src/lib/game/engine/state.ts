@@ -319,6 +319,24 @@ export interface BallotReport {
 
 export type CampaignStatus = 'running' | 'won' | 'lost' | 'disqualified' | 'withdrawn';
 
+/**
+ * Demande d'investiture nationale (P3-30, instance `investiture.N`) : tranchée
+ * une seule fois à la frontière du trimestre de la demande ; accordée, elle
+ * vaut candidature sous l'étiquette ; refusée, elle ouvre le choix entre
+ * renoncer et une candidature dissidente.
+ */
+export interface InvestitureRequest {
+	readonly requestId: string;
+	readonly ballotId: string;
+	readonly electionId: string;
+	readonly partyId: string;
+	readonly requestedTurn: Turn;
+	readonly status: 'pending' | 'granted' | 'refused' | 'dissident' | 'renounced';
+	readonly resolvedTurn: Turn | null;
+	/** Motifs publics de la décision (facteurs défavorables), rédigés. */
+	readonly reasons: readonly string[];
+}
+
 /** Candidature du joueur à une échéance (instance `campaign.N`, P2-03). */
 export interface Campaign {
 	readonly campaignId: string;
@@ -540,6 +558,13 @@ export type PoliticalChange =
 			readonly characterId: string;
 			readonly postId: string;
 			readonly reason: StaffLeaveReason;
+	  }
+	/** Investiture demandée, accordée, refusée, puis dissidence ou renoncement (P3-30). */
+	| {
+			readonly kind: 'investiture';
+			readonly requestId: string;
+			readonly ballotId: string;
+			readonly status: InvestitureRequest['status'];
 	  }
 	/** Second tour tranché après la décision du joueur (P3-29). */
 	| {
@@ -772,6 +797,8 @@ export interface DeadlinesRecord {
 	}[];
 	/** Campagnes du joueur qualifiées pour un second tour qui attend sa décision (P3-29). */
 	readonly runoffs: readonly string[];
+	/** Demandes d'investiture tranchées à cette frontière (P3-30). */
+	readonly investitures: readonly { readonly requestId: string; readonly granted: boolean }[];
 }
 
 export interface LeaderChange {
@@ -1053,6 +1080,8 @@ export interface GameState {
 	readonly ballots: readonly Ballot[];
 	/** Candidatures du joueur, en cours et passées, dans l'ordre de déclaration. */
 	readonly campaigns: readonly Campaign[];
+	/** Demandes d'investiture nationale, dans l'ordre (P3-30). */
+	readonly investitures: readonly InvestitureRequest[];
 	readonly institutions: InstitutionsState;
 	/** Entourage : collaborateurs en poste et partis, dans l'ordre d'embauche. */
 	readonly staff: readonly StaffMember[];
@@ -1163,6 +1192,7 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		mandates: [],
 		ballots: createCalendar(START_TURN, content),
 		campaigns: [],
+		investitures: [],
 		staff: [],
 		shortlists: {},
 		searches: [],
