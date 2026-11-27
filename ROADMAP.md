@@ -218,7 +218,7 @@ Plan établi à partir des seize retours PT-P3-09-001 à 016 de `PLAYTEST.md`, c
 | 3 | P3-21 ✅ | Recrutement II : recherche, vérification, progression | 004, 005, 006 | P3-20 | L | Recherche à trois niveaux avec échéance sauvegardée et résolution unique ; vérification sans révéler de trait caché certain ; progression des juniors et renégociations |
 | 3 | P3-22 ✅ | Promesses contextualisées | 010 | P3-16 | M | Variantes par scrutin, campagne choisie explicitement, territoire cité, levier institutionnel vérifié ; rappels selon contexte |
 | 3 | P3-23 ✅ | Montée en échelle des actions | 013 | P3-19, P3-20 | M | Trois formats pour la première famille ; prérequis de capacité ; rendements décroissants ; simulation : part de fortune dépensée, coût marginal de l’influence, actions de début encore choisies |
-| — | Playtest B2 | Playtest des systèmes | — | P3-16 à 23 | — | Deux carrières ; sensation de progression, territoire, équipe et militants jugés lisibles |
+| — | Playtest B2 ✅ | Playtest des systèmes | — | P3-16 à 23 | — | Clos de façon partielle par le créateur (27 novembre 2026) : systèmes jugés fonctionnels sur une carrière ; points à observer reportés au playtest de P3-09 |
 | 4 | P3-24 | Contenu, vague 1 : quotidien et conséquences | 015, 016 | P3-14 à 23 | L | Matrice de couverture remplie pour les états courants ; textes de résultat pour les choix importants ; presse diversifiée par média et par région |
 | 4 | P3-25 | Contenu, vague 2 : chaînes et uniques | 016 | P3-24 | L | Chaînes à personnages récurrents, événements uniques par fonction ; événements de croissance militante et d’équipe |
 | 4 | P3-27 | Cohérence visuelle finale | — | P3-25 | S | Écrans restants (journal, monde politique, relations, patrimoine, justice, bilan) au style de P3-26 ; critères de `DESIGN.md` §10.9 vérifiés |
@@ -227,7 +227,9 @@ Plan établi à partir des seize retours PT-P3-09-001 à 016 de `PLAYTEST.md`, c
 
 Les écrans créés par P3-13 à P3-23 utilisent d’emblée les composants de P3-26. Les tâches de même priorité sans dépendance entre elles et sans fichiers communs peuvent avancer en parallèle sur des branches distinctes (par exemple P3-11 et P3-12, puis P3-16 et P3-19). Chaque tâche qui change l’état incrémente la version des règles ; les sauvegardes de l’alpha restent refusées comme obsolètes jusqu’à P3-10.
 
-**Retours du playtest B1 en attente (27 novembre 2026) :** PT-B1-004 (contre-proposition après un refus d’embauche) et PT-B1-007 (carrière interne au parti, direction et scission) demandent des décisions du créateur ; ils sont examinés après le playtest B2.
+**Rush V1 (27 novembre 2026) :** le créateur fait aboutir les tâches restantes (P3-29, P3-30, P3-24, P3-25, P3-27, puis P3-09 et P3-10) sur une branche unique, sans playtest intermédiaire (`AGENTS.md`). Le playtest B2 a donné PT-B2-001 (corrigé) et PT-B2-002 (actions contextuelles, à rattacher à P3-24).
+
+**Retours en attente d’une décision du créateur, à trancher en début de rush :** PT-B1-002 (investiture, prérequis de P3-30), PT-B1-004 (contre-proposition après un refus d’embauche), PT-B1-007 (carrière interne au parti, direction et scission) et PT-B2-002 (paquet d’actions contextuelles). Une proposition écartée passe après la V1.
 
 **Après la V1 :** déménagement, parachutage, grandes villes réelles et départementales ; outre-mer ; plusieurs médias par région ; trafic d’influence ; délégation complète des tâches de l’organisation ; débauchage par un rival et réputation d’employeur.
 

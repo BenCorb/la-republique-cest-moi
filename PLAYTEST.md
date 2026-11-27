@@ -1683,10 +1683,12 @@ section.
 
 ## Playtest B2 — Systèmes de la phase 3
 
-**Statut : à jouer.** Version : `main` après P3-32 (règles `0.39.0`). Les sauvegardes antérieures
-sont refusées comme obsolètes, sans être effacées : commencer de nouvelles carrières. Jouer en local
-(`npm run dev`, ou `npm run build` puis `npm run serve:static`) ou sur GitHub Pages après un
-redéploiement demandé explicitement.
+**Statut : clos de façon partielle (27 novembre 2026), décision du créateur.** Une carrière entamée
+suffit à juger que les systèmes de la phase 3 fonctionnent ; le reste du protocole n’a pas été joué.
+Plutôt que des playtests intermédiaires qui retombent sur des manques déjà prévus, le créateur fait
+d’abord aboutir la V1 (rush V1, voir `AGENTS.md`) ; le relevé complet des manques, corrections et
+retouches graphiques se fera au grand playtest de P3-09, qui reprend les points à observer
+ci-dessous. Version jouée : `main` après P3-32 (règles `0.39.0`).
 
 ### Objectif
 
