@@ -28,6 +28,7 @@ import { ageAt, formatTurn, type Turn } from './calendar.ts';
 import { addRelation, generatePerson, meet, sortedIds } from './characters.ts';
 import { hashSeed, nextInt, type RngState } from './random.ts';
 import { localRivalModifier } from './territory.ts';
+import { resolvePartyCareer } from './party.ts';
 import {
 	canMerge,
 	colistierParty,
@@ -1029,6 +1030,18 @@ export function resolveDeadlines(
 	currentRng = investiture.rng;
 	const investitures = investiture.resolved;
 
+	// 0 ter. Carrière partisane : promotion de cadre, congrès du parti (P3-34).
+	const party = resolvePartyCareer(
+		player,
+		currentWorld,
+		resources.influence,
+		turn,
+		currentRng,
+		content
+	);
+	player = party.player;
+	currentRng = party.rng;
+
 	// 0 bis. Campagnes en cours : préparation passive et exposition (stress).
 	const running = runningCampaigns(career.campaigns);
 	if (running.length > 0) {
@@ -1091,11 +1104,18 @@ export function resolveDeadlines(
 			characters,
 			relationships,
 			rng: currentRng,
-			record: { mandates: [], ballots: [], campaigns: [], people, runoffs: [], investitures }
+			record: {
+				mandates: [...investiture.changes, ...party.changes],
+				ballots: [],
+				campaigns: [],
+				people,
+				runoffs: [],
+				investitures
+			}
 		};
 	}
 
-	const mandateChanges: PoliticalChange[] = [...investiture.changes];
+	const mandateChanges: PoliticalChange[] = [...investiture.changes, ...party.changes];
 	const campaignRecords: DeadlinesRecord['campaigns'][number][] = [];
 	const runoffs: string[] = [];
 
@@ -1609,7 +1629,13 @@ export function investitureAppraisal(
 			100 +
 		Math.min(rules.mandateCap, held * rules.mandatePoints) +
 		(local ? rules.localPoints : 0) -
-		(rival ? rules.rivalPenalty : 0);
+		(rival ? rules.rivalPenalty : 0) +
+		// Un cadre, et plus encore le chef, accèdent mieux aux investitures (P3-34).
+		(player.partyCareer?.rank === 'leader'
+			? content.balance.partyCareer.leaderInvestitureBonus
+			: player.partyCareer?.rank === 'cadre'
+				? content.balance.partyCareer.cadreInvestitureBonus
+				: 0);
 	const chancePercent = Math.round(
 		Math.min(rules.maxChancePercent, Math.max(rules.minChancePercent, score))
 	);
@@ -1631,7 +1657,12 @@ export function investitureAppraisal(
 		player.popularity >= 45
 			? { label: 'une popularité solide', favorable: true }
 			: { label: 'une popularité fragile', favorable: false },
-		...(rival ? [{ label: 'un candidat mieux placé brigue la place', favorable: false }] : [])
+		...(rival ? [{ label: 'un candidat mieux placé brigue la place', favorable: false }] : []),
+		...(player.partyCareer?.rank === 'leader'
+			? [{ label: 'vous dirigez le parti', favorable: true }]
+			: player.partyCareer?.rank === 'cadre'
+				? [{ label: 'vous êtes cadre du parti', favorable: true }]
+				: [])
 	];
 	const label =
 		chancePercent >= rules.supportedFrom

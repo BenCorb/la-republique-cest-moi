@@ -79,6 +79,17 @@ const politicalChange = z.discriminatedUnion('kind', [
 		invested: z.boolean()
 	}),
 	z.strictObject({
+		kind: z.literal('partyRank'),
+		partyId: id,
+		rank: z.enum(['member', 'cadre', 'leader']),
+		reason: z.enum(['promotion', 'congress_won', 'congress_lost', 'ousted', 'confirmed'])
+	}),
+	z.strictObject({
+		kind: z.literal('partyBid'),
+		posture: z.enum(['unity', 'apparatus', 'rupture']),
+		rallies: int
+	}),
+	z.strictObject({
 		kind: z.literal('investiture'),
 		requestId: id,
 		ballotId: id,
@@ -413,6 +424,17 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 		defense: int,
 		ineligibleUntil: int.nullable(),
 		lifestyle: id,
+		partyCareer: z
+			.strictObject({
+				rank: z.enum(['member', 'cadre', 'leader']),
+				rankSince: int,
+				nextCongressTurn: int,
+				bid: z
+					.strictObject({ posture: z.enum(['unity', 'apparatus', 'rupture']), rallies: int })
+					.nullable(),
+				retryTurn: int.nullable()
+			})
+			.nullable(),
 		partyId: id.nullable(),
 		affiliations: z.array(z.strictObject({ partyId: id, fromTurn: int, toTurn: int.nullable() })),
 		supports: z.record(id, int),

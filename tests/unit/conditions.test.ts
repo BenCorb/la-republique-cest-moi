@@ -20,6 +20,7 @@ const context: ConditionContext = {
 		ineligibleUntil: null,
 		lifestyle: 'lifestyle.test_modest',
 		partyId: null,
+		partyCareer: null,
 		affiliations: [],
 		supports: {},
 		popularity: 0,

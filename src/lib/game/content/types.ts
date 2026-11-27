@@ -130,6 +130,12 @@ export const STAT_IDS = [
 	'world.stability',
 	/** 1 si le joueur est membre d'un parti, sinon 0. */
 	'player.affiliated',
+	/** Rang dans le parti (P3-34) : 0 sans parti, 1 militant, 2 cadre, 3 chef. */
+	'player.partyRank',
+	/** Candidature à la direction possible au prochain congrès (P3-34), 1 ou 0. */
+	'player.partyBidOpen',
+	/** Candidature à la direction déclarée (P3-34), 1 ou 0. */
+	'player.partyBid',
 	/** Force du parti du joueur (0 sans parti). */
 	'player.partyStrength',
 	/** 1 si le parti du joueur conduit le gouvernement, sinon 0. */
@@ -269,6 +275,8 @@ export type Effect =
 	| { readonly op: 'declareCandidacy'; readonly role?: 'head' | 'colistier' | undefined }
 	| { readonly op: 'runoffDecision'; readonly decision: RunoffDecision }
 	| { readonly op: 'requestInvestiture' }
+	| { readonly op: 'partyBid'; readonly posture: PartyPosture }
+	| { readonly op: 'rallySupport'; readonly value: number }
 	| { readonly op: 'investitureDecision'; readonly decision: 'dissident' | 'renounce' }
 	/** Préparation ajoutée à chaque campagne en cours. */
 	| { readonly op: 'prepareCampaign'; readonly value: number }
@@ -1129,6 +1137,50 @@ export interface Balance {
 	readonly entourage: EntourageBalance;
 	readonly family: FamilyBalance;
 	readonly activists: ActivistsBalance;
+	/** Carrière partisane (P3-34). */
+	readonly partyCareer: PartyCareerBalance;
+}
+
+/** Posture d'une candidature à la direction du parti (P3-34). */
+export type PartyPosture = 'unity' | 'apparatus' | 'rupture';
+export const PARTY_POSTURES = ['unity', 'apparatus', 'rupture'] as const;
+
+/**
+ * Carrière partisane (P3-34, décisions déléguées provisoires) : promotion de
+ * cadre par opportunité, congrès réguliers, candidature à la direction.
+ */
+export interface PartyCareerBalance {
+	/** Trimestres entre deux congrès, et rang du congrès dans le cycle (`turn % cycle`). */
+	readonly congressCycleTurns: number;
+	readonly congressOffset: number;
+	/** Promotion de cadre : appui de l'appareil, militants et ancienneté minimaux, chance par trimestre (%). */
+	readonly cadreMinApparatus: number;
+	readonly cadreMinActivists: number;
+	readonly cadreMinTurns: number;
+	readonly cadreChancePercent: number;
+	/** Poids (en %) de l'appareil, du soutien militant et de l'influence dans un congrès. */
+	readonly apparatusPercent: number;
+	readonly activistsPercent: number;
+	readonly influencePercent: number;
+	/** Points par ralliement obtenu, plafonnés. */
+	readonly rallyPoints: number;
+	readonly rallyCap: number;
+	/** Bornes de la chance de l'emporter au congrès (%). */
+	readonly minChancePercent: number;
+	readonly maxChancePercent: number;
+	/** Seuils d'appréciation : « favori », « congrès ouvert ». */
+	readonly favoriteFrom: number;
+	readonly openFrom: number;
+	/** Congrès à attendre après une défaite avant une nouvelle candidature. */
+	readonly retryCongresses: number;
+	/** Appui de l'appareil perdu après une défaite (doublé pour la rupture). */
+	readonly defeatApparatus: number;
+	/** Chef : contesté sous cet appui de l'appareil, et chance d'être renversé (%). */
+	readonly leaderChallengeApparatus: number;
+	readonly leaderOustChancePercent: number;
+	/** Bonus d'investiture d'un cadre et d'un chef du parti. */
+	readonly cadreInvestitureBonus: number;
+	readonly leaderInvestitureBonus: number;
 }
 
 /** Bonus de terrain d'une action (P3-19) : ressource ou préparation de campagne. */

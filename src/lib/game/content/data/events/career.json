@@ -1,6 +1,94 @@
 {
 	"events": [
 		{
+			"id": "career.party_federation_feud",
+			"category": "career",
+			"title": "Deux fédérations, une seule circonscription",
+			"text": "Le secrétaire fédéral du Nord et celle du Sud revendiquent la même investiture pour leurs protégés, menacent de démissionner, puis de ne pas démissionner. Le bureau national attend votre arbitrage avant le journal de vingt heures.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": { "op": "eq", "stat": "player.partyRank", "value": 3 },
+			"actors": [],
+			"choices": [
+				{
+					"id": "favour_loyal",
+					"label": "Trancher pour le plus fidèle",
+					"hints": ["L’appareil se resserre autour de vous", "La base grogne contre le copinage"],
+					"costs": [],
+					"effects": [
+						{ "op": "addSupport", "group": "support.apparatus", "value": 4 },
+						{ "op": "addSupport", "group": "support.activists", "value": -3 }
+					],
+					"outcome": [
+						"Le fidèle est investi. L’autre fédération publie un communiqué amer, puis rentre dans le rang."
+					]
+				},
+				{
+					"id": "primary",
+					"label": "Organiser une primaire locale",
+					"hints": ["Les militants apprécient", "Des semaines de querelles en perspective"],
+					"costs": [{ "resource": "politicalBudgetCents", "amount": 30000 }],
+					"effects": [
+						{ "op": "addSupport", "group": "support.activists", "value": 4 },
+						{ "op": "addStat", "stat": "player.stress", "value": 2 }
+					],
+					"outcome": [
+						"Les militants votent, les urnes sont scellées, le perdant conteste. Le parti en sort plus vivant, et plus bruyant."
+					]
+				}
+			]
+		},
+		{
+			"id": "career.party_frondeurs",
+			"category": "career",
+			"title": "La fronde au bureau national",
+			"text": "Une poignée de cadres signe une tribune réclamant « un nouveau souffle » à la tête du parti. Personne ne vous nomme, tout le monde vous désigne. La presse compte déjà les signatures.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": { "op": "eq", "stat": "player.partyRank", "value": 3 },
+			"actors": [],
+			"choices": [
+				{
+					"id": "concede",
+					"label": "Ouvrir la direction aux frondeurs",
+					"hints": ["La fronde se calme", "Votre autorité s’en ressent"],
+					"costs": [],
+					"effects": [
+						{ "op": "addSupport", "group": "support.activists", "value": 3 },
+						{ "op": "addSupport", "group": "support.apparatus", "value": -2 },
+						{ "op": "addResource", "resource": "influence", "value": -2 }
+					],
+					"outcome": [
+						"Trois frondeurs entrent au bureau national et découvrent les réunions du lundi matin. La tribune est vite oubliée."
+					]
+				},
+				{
+					"id": "crush",
+					"label": "Mater la fronde",
+					"hints": ["L’appareil vous suit", "La presse s’en régale"],
+					"costs": [],
+					"effects": [
+						{ "op": "addSupport", "group": "support.apparatus", "value": 3 },
+						{ "op": "addStat", "stat": "player.exposure", "value": 4 },
+						{ "op": "addStat", "stat": "player.stress", "value": 2 }
+					],
+					"outcome": [
+						"Les signataires sont privés de commission, puis de tribune. L’ordre règne, et un éditorialiste parle de « caporalisme »."
+					]
+				}
+			]
+		},
+		{
 			"id": "career.council_vacancy",
 			"category": "career",
 			"title": "Un siège se libère",

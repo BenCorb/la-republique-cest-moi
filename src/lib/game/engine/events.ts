@@ -57,6 +57,7 @@ import {
 } from './characters.ts';
 import { applyPoliticalEffect, oppositionPartyId } from './world.ts';
 import { inEras } from './eras.ts';
+import { partyLedByPlayer } from './party.ts';
 import {
 	applyCareerEffect,
 	careerEffectIssue,
@@ -195,6 +196,8 @@ function bindWorldVariables(
 				break;
 		}
 		if (partyId === null) return null;
+		// Le joueur dirige ce parti (P3-34) : aucun autre dirigeant à mettre en scène.
+		if (variable.endsWith('_leader') && partyId === partyLedByPlayer(player)) return null;
 		const value = variable.endsWith('_leader') ? world.parties[partyId]?.leaderId : partyId;
 		if (value === undefined) return null;
 		bound[variable] = value;

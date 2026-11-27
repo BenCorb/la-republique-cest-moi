@@ -223,6 +223,29 @@ export const fixtureBalance = {
 	 * frais, aucune pénalité de mobilisation) ; `tests/unit/activists.test.ts`
 	 * fixe ses propres valeurs.
 	 */
+	partyCareer: {
+		congressCycleTurns: 12,
+		congressOffset: 6,
+		cadreMinApparatus: 40,
+		cadreMinActivists: 30,
+		cadreMinTurns: 4,
+		cadreChancePercent: 25,
+		apparatusPercent: 40,
+		activistsPercent: 25,
+		influencePercent: 15,
+		rallyPoints: 4,
+		rallyCap: 20,
+		minChancePercent: 5,
+		maxChancePercent: 90,
+		favoriteFrom: 60,
+		openFrom: 35,
+		retryCongresses: 1,
+		defeatApparatus: 4,
+		leaderChallengeApparatus: 25,
+		leaderOustChancePercent: 35,
+		cadreInvestitureBonus: 10,
+		leaderInvestitureBonus: 30
+	},
 	activists: {
 		start: 0,
 		baseCapacity: 15,

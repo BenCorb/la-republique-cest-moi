@@ -6,6 +6,7 @@
  */
 import { GAUGE_MAX } from '../content/types.ts';
 import type {
+	PartyPosture,
 	ArticleTone,
 	ArticleTopic,
 	Content,
@@ -80,6 +81,25 @@ export interface PlayerState {
 	readonly family: FamilyState;
 	/** Base militante active, en nombre de personnes (P3-19). */
 	readonly activists: number;
+	/** Carrière dans le parti (P3-34), `null` sans adhésion. */
+	readonly partyCareer: PartyCareer | null;
+}
+
+export type PartyRank = 'member' | 'cadre' | 'leader';
+
+/**
+ * Carrière partisane (P3-34) : statut (militant, cadre, chef), prochain congrès
+ * du parti, candidature à la direction en préparation et délai après une défaite.
+ */
+export interface PartyCareer {
+	readonly rank: PartyRank;
+	readonly rankSince: Turn;
+	/** Trimestre du prochain congrès (tenu à la fin de ce trimestre). */
+	readonly nextCongressTurn: Turn;
+	/** Candidature à la direction pour le prochain congrès, sinon `null`. */
+	readonly bid: { readonly posture: PartyPosture; readonly rallies: number } | null;
+	/** Premier congrès où une nouvelle candidature est possible après une défaite. */
+	readonly retryTurn: Turn | null;
 }
 
 /** Liens familiaux du joueur : identifiants de personnages (P2-08). */
@@ -579,6 +599,15 @@ export type PoliticalChange =
 			readonly ballotId: string;
 			readonly status: InvestitureRequest['status'];
 	  }
+	/** Statut dans le parti (P3-34) : promotion, congrès gagné ou perdu, chef renversé. */
+	| {
+			readonly kind: 'partyRank';
+			readonly partyId: string;
+			readonly rank: PartyRank;
+			readonly reason: 'promotion' | 'congress_won' | 'congress_lost' | 'ousted' | 'confirmed';
+	  }
+	/** Candidature à la direction déclarée ou renforcée (P3-34). */
+	| { readonly kind: 'partyBid'; readonly posture: PartyPosture; readonly rallies: number }
 	/** Second tour tranché après la décision du joueur (P3-29). */
 	| {
 			readonly kind: 'runoff';
@@ -1151,6 +1180,7 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		defense: 0,
 		ineligibleUntil: null,
 		lifestyle: content.wealth.defaultLifestyle,
+		partyCareer: null,
 		partyId: null,
 		affiliations: [],
 		supports: startingSupports(content),

@@ -10,6 +10,7 @@ import { ageAt, quarterOf, yearOf } from './calendar.ts';
 import { activeMandates, cumulatedMandates, holdIssue, isIneligible } from './career.ts';
 import type { GameState } from './state.ts';
 import { netWorth } from './wealth.ts';
+import { partyBidIssue } from './world.ts';
 
 /** Sous-ensemble de l'état suffisant pour évaluer une condition. */
 export type ConditionContext = Pick<
@@ -56,6 +57,14 @@ export function readStat(context: ConditionContext, stat: StatId): number {
 			return context.world.indicators.stability;
 		case 'player.affiliated':
 			return context.player.partyId === null ? 0 : 1;
+		case 'player.partyBidOpen':
+			return partyBidIssue(context.player, context.turn) === null ? 1 : 0;
+		case 'player.partyBid':
+			return context.player.partyCareer?.bid ? 1 : 0;
+		case 'player.partyRank': {
+			const rank = context.player.partyCareer?.rank;
+			return rank === 'leader' ? 3 : rank === 'cadre' ? 2 : rank === 'member' ? 1 : 0;
+		}
 		case 'player.partyStrength':
 			return context.player.partyId === null
 				? 0

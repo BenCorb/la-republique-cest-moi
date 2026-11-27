@@ -13,6 +13,7 @@ import {
 	type Effect,
 	type GaugeId,
 	type IndicatorId,
+	type PartyPosture,
 	type ResourceId,
 	type RunoffDecision
 } from '../content/types.ts';
@@ -47,6 +48,9 @@ export type EffectRange =
 	| { readonly kind: 'mandate'; readonly change: 'grant' | 'end'; readonly mandate: string }
 	| { readonly kind: 'earlyElection'; readonly election: string; readonly delayTurns: number }
 	| { readonly kind: 'candidacy' }
+	/** Candidature à la direction du parti et ralliements (P3-34). */
+	| { readonly kind: 'partyBid'; readonly posture: PartyPosture }
+	| { readonly kind: 'rally'; readonly value: number }
 	/** Décision d'entre-deux-tours (P3-29). */
 	| { readonly kind: 'runoff'; readonly decision: RunoffDecision }
 	/** Investiture demandée, ou décision après un refus (P3-30). */
@@ -257,6 +261,10 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'media', change: 'relation', media: effect.media, value: effect.value };
 		case 'giveInterview':
 			return { kind: 'media', change: 'interview', media: 'target', value: 0 };
+		case 'partyBid':
+			return { kind: 'partyBid', posture: effect.posture };
+		case 'rallySupport':
+			return { kind: 'rally', value: effect.value };
 		case 'proposeReform':
 			return { kind: 'reform' };
 		default: {
@@ -283,6 +291,8 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 		case 'leaveParty':
 		case 'addMediaRelation':
 		case 'giveInterview':
+		case 'partyBid':
+		case 'rallySupport':
 			return { kind: 'politics', effect, rng };
 		case 'proposeReform':
 			return { kind: 'reform', effect, rng };

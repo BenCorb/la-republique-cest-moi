@@ -606,6 +606,137 @@
 			]
 		},
 		{
+			"id": "party.motion_loyal",
+			"category": "party",
+			"label": "Soutenir la motion de la direction",
+			"description": "Signer la motion du premier secrétaire, applaudir aux bons moments et voter comme il faut en commission des résolutions. La fidélité se remarque, surtout quand elle est rare.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "gte", "stat": "player.partyRank", "value": 1 },
+			"unavailableReason": "Il faut être membre d’un parti.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.apparatus", "value": 3 },
+				{ "op": "addSupport", "group": "support.activists", "value": -1 }
+			]
+		},
+		{
+			"id": "party.motion_dissident",
+			"category": "party",
+			"label": "Déposer une motion dissidente",
+			"description": "Un texte au vitriol, trente signatures arrachées en section et une tribune dans la presse militante. La base adore ; le bureau national, beaucoup moins.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "gte", "stat": "player.partyRank", "value": 1 },
+			"unavailableReason": "Il faut être membre d’un parti.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.apparatus", "value": -3 },
+				{ "op": "addSupport", "group": "support.activists", "value": 3 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 2 }
+			]
+		},
+		{
+			"id": "party.bid_unity",
+			"category": "party",
+			"label": "Briguer la direction : rassembler",
+			"description": "Une candidature au congrès sur la ligne du rassemblement : toutes les sensibilités, toutes les fédérations, et des sourires pour chacune. Votre popularité y pèse.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{ "op": "eq", "stat": "player.partyRank", "value": 2 },
+					{ "op": "eq", "stat": "player.partyBidOpen", "value": 1 }
+				]
+			},
+			"unavailableReason": "Il faut être cadre du parti, avant un congrès où une candidature est possible.",
+			"effects": [{ "op": "partyBid", "posture": "unity" }]
+		},
+		{
+			"id": "party.bid_apparatus",
+			"category": "party",
+			"label": "Briguer la direction : tenir l’appareil",
+			"description": "Une candidature au congrès adossée aux secrétaires fédéraux et aux mandats en commission. Votre appui dans l’appareil y pèse.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{ "op": "eq", "stat": "player.partyRank", "value": 2 },
+					{ "op": "eq", "stat": "player.partyBidOpen", "value": 1 }
+				]
+			},
+			"unavailableReason": "Il faut être cadre du parti, avant un congrès où une candidature est possible.",
+			"effects": [{ "op": "partyBid", "posture": "apparatus" }]
+		},
+		{
+			"id": "party.bid_rupture",
+			"category": "party",
+			"label": "Briguer la direction : la rupture",
+			"description": "Une candidature au congrès contre la direction sortante, portée par la base. Vos militants y pèsent ; une défaite coûte plus cher.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{ "op": "eq", "stat": "player.partyRank", "value": 2 },
+					{ "op": "eq", "stat": "player.partyBidOpen", "value": 1 }
+				]
+			},
+			"unavailableReason": "Il faut être cadre du parti, avant un congrès où une candidature est possible.",
+			"effects": [
+				{ "op": "partyBid", "posture": "rupture" },
+				{ "op": "addStat", "stat": "player.exposure", "value": 2 }
+			]
+		},
+		{
+			"id": "party.rally",
+			"category": "party",
+			"label": "Solliciter des ralliements",
+			"description": "Des dîners en tête-à-tête avec les responsables de fédération, une vice-présidence promise ici, une place sur une liste là. Chaque ralliement compte au congrès.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 20000 }],
+			"requires": { "op": "eq", "stat": "player.partyBid", "value": 1 },
+			"unavailableReason": "Il faut avoir déclaré sa candidature à la direction.",
+			"effects": [{ "op": "rallySupport", "value": 1 }]
+		},
+		{
+			"id": "party.arbitrate",
+			"category": "party",
+			"label": "Arbitrer les investitures",
+			"description": "Une nuit au siège, des fédérations à départager et des ambitions à décevoir. Le parti sort de la réunion plus discipliné ; vous, plus fatigué.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "eq", "stat": "player.partyRank", "value": 3 },
+			"unavailableReason": "Il faut diriger le parti.",
+			"effects": [
+				{ "op": "addResource", "resource": "influence", "value": 3 },
+				{ "op": "addSupport", "group": "support.apparatus", "value": 2 },
+				{ "op": "addStat", "stat": "player.stress", "value": 2 }
+			]
+		},
+		{
+			"id": "party.discipline",
+			"category": "party",
+			"label": "Recadrer un cadre frondeur",
+			"description": "Un entretien à huis clos, une menace de non-investiture et une poignée de main pour les photographes. L’appareil apprécie, la base un peu moins.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "eq", "stat": "player.partyRank", "value": 3 },
+			"unavailableReason": "Il faut diriger le parti.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.apparatus", "value": 3 },
+				{ "op": "addSupport", "group": "support.activists", "value": -2 }
+			]
+		},
+		{
 			"id": "party.leave",
 			"category": "party",
 			"label": "Rendre sa carte",

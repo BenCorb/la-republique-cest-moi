@@ -43,6 +43,7 @@ import { resolvePromises } from './promises.ts';
 import { resolvePress } from './press.ts';
 import { effectiveContent, resolveReforms } from './reforms.ts';
 import { resolveActivists } from './activists.ts';
+import { partyLedByPlayer } from './party.ts';
 import { resolveStaffFrontier, resolveStaffProduction } from './staff.ts';
 import { resolveFamily } from './family.ts';
 import type {
@@ -160,7 +161,14 @@ function commitTurn(
 		? null
 		: resolveCharacters(production.entourage.characters, nextTurn, wellbeing.rng, content);
 	const world = people
-		? resolveWorld(production.world, people.characters, nextTurn, people.rng, content)
+		? resolveWorld(
+				production.world,
+				people.characters,
+				nextTurn,
+				people.rng,
+				content,
+				partyLedByPlayer(production.player)
+			)
 		: null;
 
 	// 4 bis (suite). Entourage : départs, puis présélections pour les postes vacants.

@@ -46,7 +46,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 22;
+export const SIMULATION_REPORT_VERSION = 23;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -128,6 +128,8 @@ export interface SimulationRun {
 	>;
 	/** Scrutins du joueur tranchés au second tour (P3-29). */
 	readonly runoffs: number;
+	/** Plus haut statut atteint dans un parti (P3-34). */
+	readonly partyRankPeak: 'none' | 'member' | 'cadre' | 'leader';
 	/** Adversaires différents affrontés et plus grand nombre d'affrontements avec le même. */
 	readonly distinctOpponents: number;
 	/** Profil de départ et famille en fin de carrière (P2-08). */
@@ -347,7 +349,8 @@ function partyWish(
 	content: Content
 ): PlanStep[] {
 	const joinId = content.actionIds.find((id) => content.actions[id]?.target === 'party');
-	if (!joinId || state.player.partyId !== null) return [];
+	if (state.player.partyId !== null) return partyCareerWish(strategy, state, content);
+	if (!joinId) return [];
 	let target: string | undefined;
 	if (strategy === 'ambitious') {
 		target = [...content.partyIds].sort(
@@ -360,6 +363,30 @@ function partyWish(
 		target = content.partyIds[hashSeed(`${seed}:parti`) % content.partyIds.length];
 	}
 	return target ? [{ kind: 'action', id: joinId, target }] : [];
+}
+
+/**
+ * Carrière partisane (P3-34) : l'ambitieuse brigue la direction sur la ligne de
+ * l'appareil et sollicite des ralliements, la mixte sur celle du rassemblement ;
+ * chef, l'une et l'autre arbitrent les investitures. Les plans invalides
+ * sont écartés par la prévision.
+ */
+function partyCareerWish(
+	strategy: SimulationStrategy,
+	state: GameState,
+	content: Content
+): PlanStep[] {
+	const has = (id: string): boolean => Object.hasOwn(content.actions, id);
+	const steps: string[] =
+		strategy === 'ambitious'
+			? ['party.bid_apparatus', 'party.rally', 'party.arbitrate']
+			: strategy === 'mixed'
+				? ['party.bid_unity', 'party.arbitrate']
+				: [];
+	const bidding = state.player.partyCareer?.bid !== null && state.player.partyCareer !== null;
+	return steps
+		.filter((id) => has(id) && !(bidding && id.startsWith('party.bid_')))
+		.map((id): PlanStep => ({ kind: 'action', id }));
 }
 
 /**
@@ -1144,6 +1171,18 @@ function finalizeRun(
 				];
 			})
 		),
+		partyRankPeak: (() => {
+			const ranks = state.history.flatMap((entry) =>
+				entry.type === 'turn.resolved'
+					? (entry.deadlines?.mandates ?? []).flatMap((change) =>
+							change.kind === 'partyRank' ? [change.rank] : []
+						)
+					: []
+			);
+			if (ranks.includes('leader')) return 'leader' as const;
+			if (ranks.includes('cadre')) return 'cadre' as const;
+			return state.player.affiliations.length > 0 ? ('member' as const) : ('none' as const);
+		})(),
 		runoffs: state.campaigns.filter(
 			(campaign) =>
 				state.ballots.find((ballot) => ballot.ballotId === campaign.ballotId)?.report

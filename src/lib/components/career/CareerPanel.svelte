@@ -25,6 +25,40 @@
 		{#if supports}
 			<SupportsCard {supports} />
 		{/if}
+		{#if career.partyCareer}
+			{@const party = career.partyCareer}
+			<section
+				class="card flex flex-col gap-2"
+				aria-labelledby="parti-title"
+				data-testid="party-career"
+			>
+				<h2 id="parti-title" class="section-title">Votre parti</h2>
+				<p class="text-sm">
+					<span class="font-semibold">{party.rank}</span> du {party.party}, {party.since}
+				</p>
+				<p class="text-xs text-muted">{party.congress}</p>
+				{#if party.bid}
+					<p class="text-sm">{party.bid}</p>
+				{/if}
+				{#if party.appraisal}
+					<p class="text-xs">
+						<span class="font-semibold">{party.appraisal}</span>
+						<span class="text-muted">
+							— {party.factors
+								.map((factor) => `${factor.favorable ? '+' : '−'} ${factor.label}`)
+								.join(' · ')}
+						</span>
+					</p>
+				{/if}
+				{#if party.retry}
+					<p class="text-xs text-warning">{party.retry}</p>
+				{/if}
+				<p class="text-xs text-muted">
+					Motions, candidature à la direction et ralliements s’ajoutent depuis l’agenda (thème
+					Parti).
+				</p>
+			</section>
+		{/if}
 		<section class="card flex flex-col gap-3" aria-labelledby="mandats-title">
 			<h2 id="mandats-title" class="section-title">Mandats</h2>
 			<p class="text-sm" data-testid="main-function">

@@ -1075,6 +1075,20 @@ Décision du créateur (ROADMAP §5.2, PT-B1-004) ; montants : **décisions dél
 - **Correctif P3-30** : l'invariant « investiture accordée sans candidature » suit la candidature reportée sur une élection anticipée (même élection, même trimestre de dépôt).
 - `RULES_VERSION = '0.42.0'`. Tests : `tests/unit/recruitment.test.ts` (refus et contre-proposition, acceptation certaine, départ sans réponse ou au second refus, note du trimestre).
 
+### 8.4 duotrigesies Décisions de P3-34 : carrière partisane (27 novembre 2026)
+
+Décisions du créateur (ROADMAP §5.2) ; chiffres : **décisions déléguées, provisoires**.
+
+- **État** : `PlayerState.partyCareer` (`null` sans adhésion) : statut `member`, `cadre` ou `leader`, date, prochain congrès, candidature (posture, ralliements), délai après une défaite. Adhérer fait militant ; rendre sa carte efface la carrière partisane. Module `engine/party.ts`, appelé à l'étape 5 (après les investitures, avant les campagnes) ; changements `partyRank` et `partyBid` au relevé des échéances.
+- **Cadre par opportunité** : militant depuis 4 trimestres, appui de l'appareil ≥ 40 et au moins 30 militants, puis 25 % de chance par trimestre (tirage seulement quand ces conditions sont réunies).
+- **Congrès** tous les 12 trimestres (trimestre 6 du cycle de trois ans, `congressCycleTurns`, `congressOffset`). Un cadre déclare sa candidature avec l'une des trois postures (actions « Briguer la direction : rassembler / tenir l’appareil / la rupture ») et sollicite des ralliements (200 € et 15 points de temps chacun). Chance = appareil × 40 % + base militante (militants / 10, plafonnée à 100) × 25 % + influence × 15 % + 4 par ralliement (20 au plus) + posture (popularité × 15 %, appareil × 15 % ou base × 20 %), bornée entre 5 et 90 ; appréciation « Favori du congrès » (≥ 60), « Congrès ouvert » (≥ 35) ou « Candidature d’outsider », avec ses facteurs, sans chiffre. Décision seedée, unique, à la fin du trimestre du congrès.
+- **Défaite** : appui de l'appareil − 4 (− 8 pour la rupture) et un congrès d'attente avant une nouvelle candidature. **Chef** : reconduit à chaque congrès, sauf si l'appui de l'appareil est tombé sous 25 : il est alors renversé dans 35 % des cas (retour au rang de cadre, même délai).
+- **Effets du statut** : un chef remplace les renouvellements autonomes de sa direction (le monde ne tire plus de vote interne pour ce parti ; l'ancienne direction, en retrait, vieillit et se remplace normalement), et les événements qui mettraient en scène « le dirigeant de votre parti » ne se tirent plus. Bonus d'investiture : + 10 pour un cadre, + 30 pour un chef, affichés comme facteurs.
+- **Contenu** : motions (« Soutenir la motion de la direction », « Déposer une motion dissidente »), candidature et ralliements, actions du chef (« Arbitrer les investitures », « Recadrer un cadre frondeur »), deux événements du chef (fédérations rivales, fronde au bureau national). Conditions `player.partyRank`, `player.partyBidOpen`, `player.partyBid`. Pas de scission en V1.
+- **Interface** : carte « Votre parti » dans l'onglet Carrière (statut, congrès, candidature, appréciation, délai) ; journal des promotions et congrès.
+- **Simulation** : l'ambitieuse brigue la direction sur la ligne de l'appareil et sollicite des ralliements, la mixte sur celle du rassemblement ; rapport v23 avec `partyRankPeak`. Mesure (60 carrières, seed `p3-34`) : aucune erreur ni violation ; chef du parti 11 fois sur 12 (ambitieuse), 7 sur 12 (mixte). **À revoir en P3-09** : la direction est sans doute trop facile pour une stratégie persévérante. `RULES_VERSION = '0.43.0'`.
+- **Tests** : `tests/unit/party.test.ts` (adhésion et départ, promotion, candidature réservée aux cadres, congrès gagné ou perdu une seule fois et délai, chef renversé, direction non renouvelée) ; scénario du catalogue réel avec candidature à la direction.
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.

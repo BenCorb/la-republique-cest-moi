@@ -26,6 +26,7 @@ import {
 	type PromiseStatus,
 	type GaugeId,
 	type ResourceAmount,
+	type PartyPosture,
 	type ResourceId,
 	type RunoffDecision
 } from '../content/types.ts';
@@ -111,6 +112,7 @@ import {
 	type MandateInstance,
 	campaignPoll,
 	campaignRefundFor,
+	congressAppraisal,
 	investitureAppraisal,
 	candidacyRoleOf,
 	effectiveSystem,
@@ -131,6 +133,7 @@ import {
 	type EventRecord,
 	type CampaignStatus,
 	type InvestitureRequest,
+	type PartyRank,
 	type BallotReport,
 	type BallotContestant
 } from '../engine/index.ts';
@@ -639,7 +642,24 @@ export interface AdvanceOfferView {
 	readonly reason: string | null;
 }
 
+/** Carrière dans le parti (P3-34), sans aucun chiffre caché. */
+export interface PartyCareerView {
+	readonly party: string;
+	readonly rank: string;
+	readonly since: string;
+	readonly congress: string;
+	/** Candidature déclarée (posture, ralliements), sinon `null`. */
+	readonly bid: string | null;
+	/** Appréciation du congrès pour une candidature déclarée, sinon `null`. */
+	readonly appraisal: string | null;
+	readonly factors: readonly { readonly label: string; readonly favorable: boolean }[];
+	/** Délai après une défaite, en clair, sinon `null`. */
+	readonly retry: string | null;
+}
+
 export interface CareerView {
+	/** Carrière dans le parti (P3-34), `null` sans adhésion. */
+	readonly partyCareer: PartyCareerView | null;
 	/** Fonction principale (mandat de rang le plus élevé) ou « Sans mandat ». */
 	readonly mainFunction: string;
 	readonly mandates: readonly MandateView[];
@@ -1380,6 +1400,27 @@ const PARTY_REFERENCE_LABELS: Readonly<Record<string, string>> = {
 	target: 'parti choisi'
 };
 
+/** Carrière partisane (P3-34). */
+export const PARTY_POSTURE_LABELS: Readonly<Record<PartyPosture, string>> = {
+	unity: 'Rassemblement',
+	apparatus: 'Appareil',
+	rupture: 'Rupture'
+};
+export const PARTY_RANK_LABELS: Readonly<Record<PartyRank, string>> = {
+	member: 'Militant',
+	cadre: 'Cadre du parti',
+	leader: 'Chef du parti'
+};
+const PARTY_RANK_REASONS: Readonly<
+	Record<Extract<PoliticalChange, { kind: 'partyRank' }>['reason'], string>
+> = {
+	promotion: 'promotion : vous devenez cadre du parti',
+	congress_won: 'congrès gagné : vous prenez la tête du parti',
+	congress_lost: 'congrès perdu : la direction vous échappe',
+	ousted: 'congrès perdu : vous êtes renversé de la direction',
+	confirmed: 'congrès : votre direction est reconduite'
+};
+
 /** Étapes d'une investiture, au journal (P3-30). */
 const INVESTITURE_STATUS_TEXT: Readonly<Record<InvestitureRequest['status'], string>> = {
 	pending: 'investiture demandée au parti',
@@ -1439,6 +1480,10 @@ function describeEffect(range: EffectRange, content: Content): string {
 			return 'Candidature déposée';
 		case 'runoff':
 			return RUNOFF_LABELS[range.decision];
+		case 'partyBid':
+			return `Candidature à la direction : ${PARTY_POSTURE_LABELS[range.posture]}`;
+		case 'rally':
+			return `Ralliements au congrès + ${range.value}`;
 		case 'investiture':
 			return range.decision === 'request'
 				? 'Demande d’investiture'
@@ -1549,6 +1594,10 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 						: 'candidature déposée sans investiture';
 				case 'investiture':
 					return INVESTITURE_STATUS_TEXT[change.status];
+				case 'partyRank':
+					return `${PARTY_RANK_REASONS[change.reason]} (${content.parties[change.partyId]?.acronym ?? change.partyId})`;
+				case 'partyBid':
+					return `candidature à la direction, ligne du ${PARTY_POSTURE_LABELS[change.posture].toLocaleLowerCase('fr')} (${change.rallies} ralliement(s))`;
 				case 'runoff':
 					return `second tour : ${RUNOFF_OUTCOMES[change.status]}${change.playerPercent === null ? '' : ` (${change.playerPercent} %)`}`;
 				case 'preparation':
@@ -4369,6 +4418,28 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 				report: ballotReportView(ballot, state, content)
 			})),
 		declareActionId,
+		partyCareer: (() => {
+			const party = state.player.partyCareer;
+			if (!party || state.player.partyId === null) return null;
+			const appraisal = party.bid
+				? congressAppraisal(state.player, state.resources.influence, content)
+				: null;
+			return {
+				party: content.parties[state.player.partyId]?.name ?? state.player.partyId,
+				rank: PARTY_RANK_LABELS[party.rank],
+				since: `depuis le ${formatTurn(party.rankSince)}`,
+				congress: `Prochain congrès : ${formatTurn(party.nextCongressTurn)}`,
+				bid: party.bid
+					? `Candidature à la direction, ligne du ${PARTY_POSTURE_LABELS[party.bid.posture].toLocaleLowerCase('fr')} · ${party.bid.rallies} ralliement(s)`
+					: null,
+				appraisal: appraisal?.label ?? null,
+				factors: appraisal?.factors ?? [],
+				retry:
+					party.retryTurn !== null && party.retryTurn > party.nextCongressTurn
+						? `Nouvelle candidature possible au congrès du ${formatTurn(party.retryTurn)}`
+						: null
+			};
+		})(),
 		promises: buildPromises(state, plan, content),
 		media: buildMedia(state, plan, content),
 		pastCampaigns: state.campaigns

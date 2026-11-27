@@ -13,6 +13,7 @@ import { z } from 'zod';
 import {
 	ACTION_FORMATS,
 	HIRE_OFFERS,
+	PARTY_POSTURES,
 	ARTICLE_TONES,
 	REGIONAL_ANCHOR,
 	END_CAUSES,
@@ -208,6 +209,8 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 		role: z.enum(['head', 'colistier']).optional()
 	}),
 	z.strictObject({ op: z.literal('requestInvestiture') }),
+	z.strictObject({ op: z.literal('partyBid'), posture: z.enum(PARTY_POSTURES) }),
+	z.strictObject({ op: z.literal('rallySupport'), value: positiveInt }),
 	z.strictObject({
 		op: z.literal('investitureDecision'),
 		decision: z.enum(['dissident', 'renounce'])
@@ -1456,5 +1459,28 @@ export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	campaigns: campaignsBalanceSchema,
 	entourage: entourageBalanceSchema,
 	family: familyBalanceSchema,
-	activists: activistsBalanceSchema
+	activists: activistsBalanceSchema,
+	partyCareer: z.strictObject({
+		congressCycleTurns: positiveInt,
+		congressOffset: nonNegativeInt,
+		cadreMinApparatus: nonNegativeInt,
+		cadreMinActivists: nonNegativeInt,
+		cadreMinTurns: nonNegativeInt,
+		cadreChancePercent: z.number().int().min(0).max(100),
+		apparatusPercent: nonNegativeInt,
+		activistsPercent: nonNegativeInt,
+		influencePercent: nonNegativeInt,
+		rallyPoints: nonNegativeInt,
+		rallyCap: nonNegativeInt,
+		minChancePercent: z.number().int().min(0).max(100),
+		maxChancePercent: z.number().int().min(0).max(100),
+		favoriteFrom: nonNegativeInt,
+		openFrom: nonNegativeInt,
+		retryCongresses: nonNegativeInt,
+		defeatApparatus: nonNegativeInt,
+		leaderChallengeApparatus: nonNegativeInt,
+		leaderOustChancePercent: z.number().int().min(0).max(100),
+		cadreInvestitureBonus: nonNegativeInt,
+		leaderInvestitureBonus: nonNegativeInt
+	})
 });

@@ -286,6 +286,10 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 				HIRE,
 				act('campaign.canvass'),
 				act('party.section_meeting'),
+				// Carrière partisane (P3-34) : candidature à la direction, ralliements, arbitrages.
+				act('party.bid_apparatus'),
+				act('party.rally'),
+				act('party.arbitrate'),
 				act('network.meet_officials'),
 				act('organization.fundraising'),
 				act('personal.freelance'),
