@@ -181,6 +181,30 @@ describe('offre et réponse du candidat', () => {
 		expect(gameStateSchema.safeParse(after).success).toBe(true);
 	});
 
+	it('annonce l’issue du recrutement dans la note du trimestre suivant (PT-B1-005)', () => {
+		const refusal = scenario('refuse', 90);
+		const refused = commit(refusal.state, [hire(refusal.candidate, 'staff.hire_generous')]);
+		const declined = projectView(refused, [], content).quarterNote?.highlights.find((item) =>
+			item.key.startsWith('recruitment:')
+		);
+		expect(declined).toMatchObject({ title: 'Offre déclinée', tone: 'cost', kind: 'people' });
+		expect(declined?.text).toMatch(/décline le poste .* quitte la présélection/u);
+
+		const accord = scenario('accept', 30);
+		const hired = commit(accord.state, [hire(accord.candidate, 'staff.hire_generous')]);
+		const accepted = projectView(hired, [], content).quarterNote?.highlights.find((item) =>
+			item.key.startsWith('recruitment:')
+		);
+		expect(accepted).toMatchObject({ title: 'Recrutement conclu', tone: 'gain' });
+		expect(accepted?.text).toMatch(/accepte le poste .* par trimestre/u);
+		// Le trimestre suivant, sans nouvelle tentative, la note n'en reparle pas.
+		expect(
+			projectView(commit(hired), [], content).quarterNote?.highlights.some((item) =>
+				item.key.startsWith('recruitment:')
+			)
+		).toBe(false);
+	});
+
 	it('un accord inscrit le salaire convenu, versé à partir du trimestre suivant avec la prime', () => {
 		const { state, candidate } = scenario('accept', 30);
 		const salary = offeredSalaryCents(CHIEF, 30, 'generous', content);

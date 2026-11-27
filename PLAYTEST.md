@@ -1527,6 +1527,147 @@ ils ne valent pas encore validation complète du jalon B1.
   conséquences sous « Détail »), construites par la même fonction que le résultat d’une décision ;
   test de non-mélange et de reprise. À revoir en jeu.
 
+- **PT-B1-004 — Permettre une contre-proposition après le refus d’une offre de recrutement
+  (27 novembre 2026, gênant, recrutement et négociation).**
+
+  **Observation :** lorsqu’une offre de recrutement est refusée, le candidat disparaît immédiatement
+  des propositions disponibles.
+
+  **Impact :** cette disparition paraît trop radicale et met fin à la négociation dès le premier
+  désaccord, sans laisser au joueur la possibilité de réagir aux attentes du candidat.
+
+  **Proposition à étudier :** après avoir refusé l’offre initiale, le candidat formule une
+  contre-proposition que le joueur peut accepter ou refuser. Le candidat ne disparaît définitivement
+  des propositions qu’après le refus de cette contre-proposition. Les conditions exactes de cette
+  négociation restent à définir ; ce parcours n’est pas encore une décision validée.
+
+- **PT-B1-005 — Afficher l’issue d’un recrutement dans le bilan du trimestre suivant
+  (27 novembre 2026, gênant, recrutement et feedback).**
+
+  **Observation :** la fenêtre de bilan affichée au début du trimestre suivant n’indique pas l’issue
+  du recrutement tenté pendant le trimestre précédent. Pour connaître le résultat, le joueur doit
+  consulter le journal.
+
+  **Impact :** une action importante du trimestre reste invisible dans le récapitulatif qui doit en
+  présenter les conséquences, ce qui rompt le suivi immédiat et oblige à chercher l’information dans
+  un autre écran.
+
+  **Proposition :** faire apparaître dans ce bilan de début de trimestre le résultat du recrutement
+  tenté au trimestre précédent, qu’il s’agisse d’une acceptation ou d’un refus, sans remplacer le
+  détail conservé dans le journal.
+
+- **PT-B1-006 — Expliquer comment développer la base militante et sa capacité d’accueil
+  (27 novembre 2026, gênant, organisation et lisibilité).**
+
+  **Observation :** le panneau « Base militante » affiche l’effectif, le palier, la capacité actuelle,
+  ses composantes, les effets du palier et le dernier mouvement. Sa phrase d’aide indique seulement
+  que la notoriété fait connaître le joueur, que le soutien décide qui reste, que les locaux
+  accueillent et retiennent et que les campagnes attirent. Elle ne permet pas de comprendre clairement
+  quels leviers font arriver ou partir des militants, ni comment préparer leur croissance. De même,
+  les cartes « Ouvrir une permanence » et « Structurer une fédération départementale » décrivent leur
+  rôle en termes généraux, mais n’annoncent pas leur gain de places d’accueil ; celui-ci ne devient
+  visible dans le détail de la capacité qu’une fois le local actif.
+
+  **Impact :** le joueur peut constater que l’effectif ou le plafond évolue sans pouvoir relier cette
+  évolution à ses choix. Il peut notamment chercher une action directe de recrutement qui n’existe
+  plus, ignorer le rôle combiné de l’influence, de l’exposition, du soutien militant et des campagnes,
+  ou ne pas identifier la permanence et la fédération comme les principaux investissements qui
+  augmentent durablement l’accueil.
+
+  **Pistes à étudier :** rendre les leviers de croissance et de départ consultables depuis le panneau,
+  en langage de jeu et sans nécessairement révéler toute la formule ; mieux relier le dernier mouvement
+  à ses causes observables ; annoncer sur chaque local son apport de capacité et de rétention, ainsi
+  que son activation au trimestre suivant ; guider vers les moyens déjà existants d’augmenter la
+  capacité (adhésion, mandats et locaux). La forme exacte — aide contextuelle, détail repliable,
+  prévision ou autres repères — reste à tester et ne constitue pas une décision UX validée.
+
+- **PT-B1-007 — Construire une carrière interne au parti jusqu’à la direction ou la scission
+  (27 novembre 2026, orientation produit à arbitrer, partis et rejouabilité).**
+
+  **Observation :** rejoindre un parti donne aujourd’hui accès à la réunion de section, aux événements
+  de congrès, à une capacité militante supplémentaire et, selon l’appui de l’appareil, à
+  l’investiture. Les choix peuvent faire varier séparément le soutien des militants et celui de
+  l’appareil. Cette progression reste toutefois entièrement exprimée par des jauges : l’offre d’une
+  place au bureau de section ne crée aucun rôle durable, le joueur demeure simple adhérent, les
+  changements de direction sont autonomes et il ne peut ni briguer la tête de son parti ni transformer
+  une dissidence en nouvelle formation. Les huit partis du monde restent fixes.
+
+  **Impact :** l’adhésion apporte des bonus et des actions, mais ne constitue pas encore une véritable
+  trajectoire de carrière. Accumuler du soutien interne ne débouche sur aucun statut identifiable ;
+  soutenir la direction ou mobiliser la base militante produit des variations immédiates sans ouvrir
+  une lutte de pouvoir. Une carrière centrée sur le parti manque donc d’objectif de long terme et de
+  bifurcation comparable aux carrières électives.
+
+  **Orientation proposée :** faire de la carrière partisane une branche légère, fondée sur les deux
+  soutiens existants plutôt que sur de nouvelles équipes à gérer individuellement. L’appareil mesure
+  l’accès aux cadres, aux investitures et aux règles internes ; les militants mesurent la capacité à
+  entraîner la base. L’influence, les mandats, l’ancienneté et quelques relations peuvent compléter ces
+  deux appuis, sans créer une troisième monnaie interne.
+
+  **Noyau minimal recommandé pour la V1 :**
+
+  1. **Trois statuts lisibles.** À l’adhésion, le joueur est « Militant ». Une opportunité ponctuelle
+     permet de devenir « Cadre du parti » lorsque son appui interne et sa crédibilité suffisent ; ce
+     statut remplace les promotions purement narratives. « Chef du parti » est le troisième et dernier
+     palier. Les seuils exacts restent du réglage et l’interface peut les résumer qualitativement plutôt
+     que montrer une formule.
+  2. **Deux styles de progression.** Travailler avec la direction développe surtout l’appareil et
+     sécurise postes et investitures, au prix de compromis auprès des militants. Porter une ligne
+     dissidente développe militants et exposition, mais détériore l’appareil et peut affaiblir le parti.
+     Les réunions de section, congrès, choix de mandat, promesses et mission « Cultiver l’appareil »
+     alimentent déjà ce dilemme ; il faut éviter qu’une répétition trimestrielle de la même action soit
+     le chemin optimal.
+  3. **Une seule campagne interne à la fois.** Un cadre suffisamment établi peut préparer puis lancer
+     une candidature à la direction lors d’un congrès ou d’une crise de succession. La résolution
+     combine appui de l’appareil, soutien militant, influence, implantation élective et état du parti,
+     avec une appréciation préalable compréhensible. Le joueur choisit une posture : candidat de
+     rassemblement, candidat de l’appareil ou candidat de rupture. Chacune déplace les chances et les
+     contreparties sans ajouter une suite de meetings internes à gérer.
+  4. **Échec qui fait avancer l’histoire.** Une défaite coûte du temps, du budget politique, du stress
+     et une partie des soutiens ; elle impose un délai avant une nouvelle tentative. Elle peut toutefois
+     donner de l’exposition, installer le joueur comme rival de la direction et ouvrir un choix entre
+     ralliement, opposition interne et scission. Une victoire fait du joueur le dirigeant visible du
+     parti et remplace les renouvellements autonomes tant qu’il reste en fonction.
+  5. **Direction utile mais contraignante.** Le chef bénéficie d’un accès renforcé aux investitures,
+     de la machine du parti et d’une influence nationale accrue, sans rendre toutes ses candidatures
+     automatiquement gagnantes. En contrepartie, il doit ponctuellement arbitrer la ligne du parti,
+     répondre aux mauvais résultats et choisir entre discipline de l’appareil et attentes militantes.
+     Ces décisions passent par quelques événements marquants, pas par une administration trimestrielle.
+  6. **Scission comme bifurcation rare.** Un cadre ou candidat battu disposant d’une base militante et
+     d’une influence suffisantes peut « Provoquer une scission ». Pour la V1, l’action créerait
+     effectivement un petit parti plutôt que lancer un long sous-jeu incertain : sa force initiale
+     dépendrait des soutiens, des militants, des mandats et du résultat de la rupture. Le parti parent
+     perdrait une part correspondante de sa force ; le joueur conserverait ses mandats personnels,
+     deviendrait chef de la nouvelle formation, perdrait l’essentiel de l’appareil de l’ancien parti et
+     supporterait coût financier, stress, hostilité des anciens alliés et faibles moyens initiaux.
+  7. **Création encadrée.** La nouvelle formation reprendrait la ligne du parti parent avec au plus un
+     déplacement politique déclaré, et un nom choisi dans quelques propositions fictives et seedées.
+     Cette solution conserve des identifiants et textes validables, évite un éditeur de programme et
+     permet au parti de participer aux scrutins, à la presse et aux événements ordinaires. Une campagne
+     en cours devrait être absente ou explicitement convertie en candidature dissidente afin d’éviter
+     une étiquette incohérente.
+
+  **Actions et événements possibles dans ce noyau :** accepter ou refuser une responsabilité locale ;
+  négocier une place sur une liste ; soutenir la motion de la direction ou une motion dissidente ;
+  préparer un congrès ; solliciter des ralliements ; se retirer contre une concession ; contester la
+  direction ; reconnaître une défaite, organiser l’opposition interne ou faire scission ; une fois
+  chef, arbitrer une défaite électorale, une fronde de cadres ou un écart entre la base et l’appareil.
+  Chaque scène doit réutiliser les ressources, soutiens, relations et personnages existants.
+
+  **Extensions après la V1 :** courants internes persistants, postes intermédiaires supplémentaires,
+  parrainages régionaux, rival nommé menant sa propre campagne, coalition, fusion ou absorption de
+  partis, défections de mandataires, plateforme détaillée et choix libre du nom ou du sigle. Ces couches
+  risquent d’ajouter un second jeu de gestion et ne sont pas nécessaires pour rendre la branche
+  partisane jouable sur une carrière de 45 à 60 minutes.
+
+  **Décisions attendues du créateur :** noms et nombre exacts des statuts ; poids relatif de l’appareil
+  et des militants pour la promotion puis la direction ; résolution déterministe ou seedée de
+  l’élection interne ; calendrier fixe des congrès ou tentative déclenchée par le joueur avec délai ;
+  avantages précis du chef sur les investitures ; conditions d’accès à la scission ; création garantie
+  ou possibilité d’échec ; quantité de force transférée ; devenir des soutiens, relations, campagnes et
+  moyens militants lors de la rupture ; degré de choix du nom et de la ligne du nouveau parti. Cette
+  orientation complète PT-B1-002 sur les investitures, mais ne vaut pas encore décision fonctionnelle.
+
 - **Suites données (26 novembre 2026).** PT-B1-001 devient P3-29 (procès-verbal commun des scrutins)
   et PT-B1-002 devient P3-30 (investiture nationale), inscrites au §5.2 de `ROADMAP.md`. P3-30 attend
   les décisions du créateur listées ci-dessus ; P3-29 peut précéder P3-30, dont l’affichage du

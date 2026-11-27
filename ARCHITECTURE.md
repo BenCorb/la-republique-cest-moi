@@ -1007,6 +1007,13 @@ Retour PT-P3-09-013 ; décisions déléguées de ROADMAP §5.2 ; contenu au GDD 
 - **Versions** : `RULES_VERSION = '0.39.0'` ; format d'état toujours en version 1.
 - **Tests** : `tests/unit/scale.test.ts` (ligne unique et formats selon la capacité, un format par trimestre, plafond annuel et remise à zéro, avance ciblée unique, remboursement ou perte selon le score, sauvegarde, validation des familles, catalogue réel aux rendements décroissants) ; E2E de la ligne d'agenda ; rapport de simulation v21.
 
+### 8.4 sexvicies Décisions de P3-31 : issue du recrutement dans la note (27 novembre 2026)
+
+Retour PT-B1-005. Projection seulement : ni état, ni règle, ni `RULES_VERSION` modifiés.
+
+- `noteHighlights` ajoute un fait « Recrutement conclu » (ton gain : poste, salaire convenu, travail dès le trimestre) ou « Offre déclinée » (ton coût : candidat sorti de la présélection, prime non versée) pour chaque changement `hired` ou `hireRefused` des étapes du trimestre résolu. Il est placé après scrutins, mandats et justice, avant la vie des partis, dans la limite de cinq faits par note ; le journal garde le détail.
+- Test : `tests/unit/recruitment.test.ts` (refus et accord annoncés une seule fois).
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.

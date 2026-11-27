@@ -206,6 +206,8 @@ Plan établi à partir des seize retours PT-P3-09-001 à 016 de `PLAYTEST.md`, c
 | 2 | P3-15 ✅ | Anti-répétition et instrumentation du contenu | 016 | — | S | Mémoire sérialisée des titres, pioche sans remise, délai thématique, plafonds par événement ; rapport de couverture et de répétitions en simulation ; validation des pools trop petits |
 | — | Playtest B1 | Court playtest de contrôle | — | P3-11 à 15, P3-26 | — | Agenda, carnet, retours et nouveau style jugés satisfaisants ; corrections mineures avant le lot suivant |
 | 2 | P3-28 ✅ | Effets des événements dans la note | B1-003 | P3-14 | S | Pastilles des effets propres à chaque événement cité (ressources, jauges, soutiens), détail repliable, identiques après reprise ; aucune variation d’une autre source |
+| 2 | P3-31 ✅ | Issue du recrutement dans la note | B1-005 | P3-14, P3-20 | S | La note de cabinet du trimestre suivant annonce l’embauche (poste, salaire) ou le refus du candidat, sans remplacer le journal ; rien de répété au trimestre d’après |
+| 2 | P3-32 | Leviers de la base militante | B1-006 | P3-19 | S | Chaque local annonce sa capacité d’accueil et sa rétention, actives au trimestre suivant ; le panneau « Base militante » explique en langage de jeu ce qui fait venir ou partir les militants, sans formule ; aucune information cachée révélée |
 | 3 | P3-29 | Procès-verbal commun des scrutins | B1-001 | P3-16 | M | Résultat détaillé sérialisé pour tout scrutin (candidatures, étiquettes, parts à 100 %, rang, élu) ; même présentation avec ou sans le joueur ; listes sans étiquette aux municipales ; note, journal, presse et bilan lisent la même source ; rien de révélé avant le scrutin |
 | 3 | P3-30 | Investiture nationale | B1-002 | P3-29 | M | Décisions du créateur requises (voir PT-B1-002) ; demande d’investiture aux législatives et sénatoriales, appréciation sans seuil caché, résolution unique et seedée, refus motivé ouvrant retrait ou dissidence ; aucune campagne sous étiquette sans accord |
 | 3 | P3-16 ✅ | Territoire d’origine | 002 | — | L | `region`, `department`, `homeTown` sérialisés ; 13 régions ; générateur de communes seedé et validé ; noms visibles en campagne, mandat, presse et bilan ; effets légers de taille et de traits validés par simulation |
@@ -224,6 +226,8 @@ Plan établi à partir des seize retours PT-P3-09-001 à 016 de `PLAYTEST.md`, c
 | 5 | P3-10 | Livraison statique | — | P3-09 | S | Inchangé ; premier format de sauvegarde conservé et migrations |
 
 Les écrans créés par P3-13 à P3-23 utilisent d’emblée les composants de P3-26. Les tâches de même priorité sans dépendance entre elles et sans fichiers communs peuvent avancer en parallèle sur des branches distinctes (par exemple P3-11 et P3-12, puis P3-16 et P3-19). Chaque tâche qui change l’état incrémente la version des règles ; les sauvegardes de l’alpha restent refusées comme obsolètes jusqu’à P3-10.
+
+**Retours du playtest B1 en attente (27 novembre 2026) :** PT-B1-004 (contre-proposition après un refus d’embauche) et PT-B1-007 (carrière interne au parti, direction et scission) demandent des décisions du créateur ; ils sont examinés après le playtest B2.
 
 **Après la V1 :** déménagement, parachutage, grandes villes réelles et départementales ; outre-mer ; plusieurs médias par région ; trafic d’influence ; délégation complète des tâches de l’organisation ; débauchage par un rival et réputation d’employeur.
 
