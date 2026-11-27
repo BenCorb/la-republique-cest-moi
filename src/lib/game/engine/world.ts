@@ -25,6 +25,7 @@ import {
 import { ageAt, type Turn } from './calendar.ts';
 import { generatePerson } from './characters.ts';
 import { withPopularity } from './supports.ts';
+import { resolveMediaRef } from './territory.ts';
 import { nextFloat, nextInt, type RngState } from './random.ts';
 import type {
 	Character,
@@ -366,7 +367,10 @@ export function applyPoliticalEffect(
 			};
 		}
 		case 'addMediaRelation': {
-			const mediaId = effect.media === 'target' ? target : effect.media;
+			const mediaId =
+				effect.media === 'target'
+					? target
+					: resolveMediaRef(effect.media, player.territory.regionId, content);
 			const media = mediaId === null ? undefined : world.media[mediaId];
 			if (mediaId === null || !media) throw new Error(`Média inconnu : ${String(mediaId)}`);
 			const next = clamp(media.relation + effect.value, MEDIA_RELATION_MIN, MEDIA_RELATION_MAX);

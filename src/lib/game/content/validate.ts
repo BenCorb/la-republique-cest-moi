@@ -31,6 +31,7 @@ import {
 import {
 	ARTICLE_TONES,
 	ARTICLE_TOPICS,
+	REGIONAL_ANCHOR,
 	END_CAUSES,
 	PARTY_REFERENCES,
 	START_YEAR,
@@ -608,7 +609,11 @@ function effectIssues(
 				}
 				break;
 			case 'addMediaRelation':
-				if (effect.media === 'target' ? targetKind !== 'media' : !refs.media.has(effect.media)) {
+				if (
+					effect.media === 'target'
+						? targetKind !== 'media'
+						: effect.media !== REGIONAL_ANCHOR && !refs.media.has(effect.media)
+				) {
 					issues.push({
 						source,
 						path: `${at}.media`,
@@ -1733,7 +1738,15 @@ export function validateContent(raw: RawContent): ContentValidation {
 	issues.push(...crossCheckJustice(justiceCatalog.data, refs, knownIds, sourcedEvents));
 	issues.push(...crossCheckPolitics(actionList, upgradeList, sourcedEvents, refs));
 	issues.push(...crossCheckPromises(promisesCatalog.data, refs, knownIds, sourcedEvents));
-	issues.push(...crossCheckMedia(mediaCatalog.data, upgradeList, refs, knownIds));
+	issues.push(
+		...crossCheckMedia(
+			mediaCatalog.data,
+			upgradeList,
+			refs,
+			knownIds,
+			new Set(profileData.territory.regions.map((region) => region.id))
+		)
+	);
 	issues.push(...crossCheckReforms(reformsCatalog.data, career.institutions, refs, knownIds));
 	issues.push(...crossCheckEpitaphs(epitaphsCatalog.data, knownIds));
 	issues.push(
@@ -2120,10 +2133,12 @@ function crossCheckMedia(
 	catalog: MediaCatalog,
 	upgrades: readonly UpgradeDefinition[],
 	refs: Refs,
-	knownIds: Set<string>
+	knownIds: Set<string>,
+	regionIds: ReadonlySet<string>
 ): ContentIssue[] {
 	const source = 'media.json';
 	const issues: ContentIssue[] = [];
+	const anchors = new Map<string, string>();
 	catalog.media.forEach((entry, index) => {
 		const path = `media[${index}]`;
 		if (knownIds.has(entry.id)) {
@@ -2139,7 +2154,38 @@ function crossCheckMedia(
 				});
 			}
 		});
+		// Quotidien régional (P3-18) : une région connue, et seulement pour lui.
+		if (entry.scope === 'regional') {
+			if (entry.region === undefined || !regionIds.has(entry.region)) {
+				issues.push({
+					source,
+					path: `${path}.region`,
+					message: `région inconnue ou absente : ${entry.region ?? '—'}`
+				});
+			} else if (anchors.has(entry.region)) {
+				issues.push({
+					source,
+					path: `${path}.region`,
+					message: `région déjà couverte par ${anchors.get(entry.region)}`
+				});
+			} else anchors.set(entry.region, entry.id);
+		} else if (entry.region !== undefined) {
+			issues.push({
+				source,
+				path: `${path}.region`,
+				message: 'seul un quotidien régional est rattaché à une région'
+			});
+		}
 	});
+	for (const regionId of regionIds) {
+		if (!anchors.has(regionId)) {
+			issues.push({
+				source,
+				path: 'media',
+				message: `aucun quotidien régional pour ${regionId}`
+			});
+		}
+	}
 	catalog.headlines.forEach((headline, index) => {
 		const path = `headlines[${index}]`;
 		if (knownIds.has(headline.id)) {
@@ -2191,7 +2237,7 @@ function crossCheckMedia(
 		const mediaId = upgrade.asset?.media;
 		if (mediaId === undefined) return;
 		const path = `upgrades[${index}].asset.media`;
-		if (!refs.media.has(mediaId)) {
+		if (mediaId !== REGIONAL_ANCHOR && !refs.media.has(mediaId)) {
 			issues.push({ source: 'upgrades.json', path, message: `média inconnu : ${mediaId}` });
 		}
 		if (upgrade.maxOwned !== 1) {

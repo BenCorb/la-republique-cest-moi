@@ -200,6 +200,19 @@ test.describe('parcours de jeu', () => {
 		);
 	});
 
+	test('présente le quotidien de la région d’origine et lui seul (P3-18)', async ({ page }) => {
+		await page.goto('./?seed=e2e-beffroi');
+		await page.getByRole('button', { name: 'Nouvelle carrière' }).click();
+		await page.getByRole('combobox', { name: 'Région' }).selectOption({ label: 'Hauts-de-France' });
+		await page.getByRole('button', { name: 'Commencer la carrière' }).click();
+		await page.getByRole('button', { name: 'Carrière', exact: true }).click();
+		await expect(page.getByTestId('media-media.beffroi')).toContainText('Le Beffroi');
+		await expect(page.getByTestId('media-media.beffroi')).toContainText('Presse régionale');
+		await expect(page.getByTestId('media-media.bocage')).toHaveCount(0);
+		await page.getByRole('button', { name: 'Patrimoine', exact: true }).click();
+		await expect(page.getByText('Racheter Le Beffroi')).toBeVisible();
+	});
+
 	test('accorde une interview et la retrouve dans le fil de presse', async ({ page }) => {
 		await startCareer(page, 'e2e-medias');
 		await page.getByRole('button', { name: 'Carrière', exact: true }).click();
@@ -603,7 +616,7 @@ test.describe('parcours de jeu', () => {
 		await page.getByTestId('import-input').setInputFiles(file);
 		await page.getByRole('button', { name: 'Relations', exact: true }).click();
 		const card = page.getByTestId('person-cast.sophie_roux');
-		await expect(card).toContainText('Sophie Roux, du Courrier du Bocage');
+		await expect(card).toContainText('Sophie Roux, du quotidien régional');
 		await expect(card).toContainText('Attitude : favorable');
 		await expect(card).toContainText('Vous lui avez accordé un entretien.');
 		for (const trait of hidden) {
