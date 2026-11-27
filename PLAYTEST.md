@@ -1396,9 +1396,10 @@ chronométrages servent à recalibrer `ACTIVE_TIME_MODEL` (simulation)._
 
 ## Playtest B1 — Contrôle de l’interface et des retours
 
-**Statut : en cours (26 novembre 2026).** Ce court playtest vérifie les corrections P3-11 à P3-15
-et P3-26 avant le lot de systèmes suivant. Les retours ci-dessous sont consignés au fil de la partie ;
-ils ne valent pas encore validation complète du jalon B1.
+**Statut : retours consignés et triés (27 novembre 2026) ; validation du jalon par le créateur.**
+Ce court playtest vérifie les corrections P3-11 à P3-15 et P3-26 avant le lot de systèmes suivant.
+Les retours ci-dessous sont consignés au fil de la partie ; leurs suites sont résumées en fin de
+section.
 
 ### Résultats — retours en cours de session
 
@@ -1672,3 +1673,64 @@ ils ne valent pas encore validation complète du jalon B1.
   et PT-B1-002 devient P3-30 (investiture nationale), inscrites au §5.2 de `ROADMAP.md`. P3-30 attend
   les décisions du créateur listées ci-dessus ; P3-29 peut précéder P3-30, dont l’affichage du
   résultat dépend.
+
+- **Suites données (27 novembre 2026).** PT-B1-003 est traité par P3-28 (effets propres des
+  événements dans la note), PT-B1-005 par P3-31 (issue du recrutement dans la note) et PT-B1-006 par
+  P3-32 (leviers de la base militante, capacité annoncée sur les locaux), tous trois fusionnés.
+  PT-B1-004 (contre-proposition après un refus d’embauche) et PT-B1-007 (carrière interne au parti)
+  attendent des décisions du créateur et sont examinés après le playtest B2. P3-29 et P3-30 restent à
+  faire.
+
+## Playtest B2 — Systèmes de la phase 3
+
+**Statut : à jouer.** Version : `main` après P3-32 (règles `0.39.0`). Les sauvegardes antérieures
+sont refusées comme obsolètes, sans être effacées : commencer de nouvelles carrières. Jouer en local
+(`npm run dev`, ou `npm run build` puis `npm run serve:static`) ou sur GitHub Pages après un
+redéploiement demandé explicitement.
+
+### Objectif
+
+Vérifier en partie réelle les systèmes ajoutés depuis B1 avant la vague de contenu (P3-24) : territoire
+d’origine et presse régionale (P3-16, P3-18), terrain d’engagement (P3-17), base militante (P3-19,
+P3-32), recrutement complet (P3-20, P3-21, P3-31), promesses propres à chaque scrutin (P3-22) et
+formats d’action (P3-23). Critère de la feuille de route : deux carrières ; sensation de progression,
+territoire, équipe et militants jugés lisibles.
+
+### Protocole
+
+1. Jouer **deux carrières** contrastées, chacune avec une seed rejouable :
+   - `?seed=playtest-b2-1` : une région et un terrain d’engagement au choix, en visant une carrière
+     élective locale puis nationale (municipales, législatives), avec promesses et avances de
+     campagne ;
+   - `?seed=playtest-b2-2` : une autre région et un autre terrain, en misant sur l’organisation :
+     base militante, locaux, recrutement (recherche, vérification, progression) et dons.
+2. Jouer au moins jusqu’à un premier mandat national ou 20 ans de carrière ; jusqu’au bilan si le
+   temps le permet. Ne pas consulter les données internes.
+3. À chaque trimestre marquant, relire la note de cabinet : noter ce qui manque pour comprendre ce qui
+   s’est passé sans ouvrir le journal.
+4. Relever au fil de la partie le premier trimestre où un format soutenu puis majeur devient
+   accessible, et ce qui l’a débloqué.
+5. Chronométrer le temps actif (hors pauses), sans en faire l’objet principal : le chronométrage final
+   reste celui de P3-09.
+6. Exporter la sauvegarde d’une anomalie, avec la date de jeu concernée.
+
+### Points à observer
+
+| Sujet            | Question                                                                                                                                | Mesure CPU de référence                                                                           |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Création         | Région, commune et terrain d’engagement donnent-ils des débuts différents et lisibles ?                                                 | —                                                                                                 |
+| Territoire       | La commune, la région et la circonscription sont-elles assez présentes (scrutins, mandats, presse, bilan) ?                             | —                                                                                                 |
+| Presse régionale | Le quotidien régional suit-il la carrière de façon crédible ; la presse nationale arrive-t-elle au bon moment ?                         | —                                                                                                 |
+| Progression      | Sent-on la montée en puissance entre le début et le milieu de carrière (moyens, formats, équipe, base) ?                                | Coût d’un point d’influence : 255 € au premier tiers, 6 199 € au dernier (ambitieuse, P3-23)      |
+| Formats d’action | Les trois formats du don et de l’avance sont-ils compris ; les prérequis paraissent-ils justes ; l’avance perdue est-elle anticipée ?   | Ambitieuse : surtout le don soutenu, 3 dons majeurs, 30 % de la fortune engagée (P3-23)           |
+| Promesses        | Les engagements propres au scrutin, le levier affiché et la campagne choisie sont-ils clairs ? Une promesse limitée est-elle comprise ? | 10 à 45 promesses par carrière selon la stratégie (P3-22)                                         |
+| Équipe           | Salaire, attractivité, recherche, vérification et progression sont-ils lisibles ; l’issue d’une embauche apparaît-elle dans la note ?   | Compétence moyenne finale de l’équipe 37 à 64 ; 0,2 à 0,6 refus par carrière (P3-20, P3-21)       |
+| Base militante   | Comprend-on ce qui fait venir ou partir les militants, et comment augmenter l’accueil (détail « Faire grandir la base militante ») ?    | Pic moyen de 270 à 440 militants selon la stratégie ; organisation nationale non atteinte (P3-19) |
+| Actions de début | Tracts, réunions de section et petits dons restent-ils utiles à haut niveau, ou deviennent-ils une corvée ?                             | 12 % (aléatoire) à 42 % (prudente) d’actions de début au dernier tiers (P3-23)                    |
+| Interruptions    | De nouveaux arrêts d’accélération (recherches, avances, scrutins) sont-ils inutiles ?                                                   | —                                                                                                 |
+
+### Résultats — retours en cours de session
+
+Consigner chaque retour sous la forme **PT-B2-NNN — titre (date, gravité, sujets)**, suivie de
+l’observation, de l’impact et d’une proposition éventuelle, comme pour B1. Une proposition reste à
+l’étude tant que le créateur ne l’a pas validée.
