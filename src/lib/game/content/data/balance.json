@@ -122,6 +122,7 @@
 		"defeatInfluence": 1,
 		"defeatStress": 4,
 		"refundMinPercent": 5,
+		"advanceRepayMinPercent": 10,
 		"rivalExperienceBonus": 2,
 		"rivalExperienceCap": 2,
 		"rivalryAttitude": -8,

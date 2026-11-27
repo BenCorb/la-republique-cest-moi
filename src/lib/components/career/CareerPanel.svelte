@@ -170,6 +170,51 @@
 										à l’adversaire principal. Un sondage n’est pas un résultat.
 									</p>
 								{/if}
+								{#if ballot.campaign.advance}
+									<p class="text-xs" data-testid="advance-{ballot.campaign.campaignId}">
+										{ballot.campaign.advance}
+									</p>
+								{/if}
+								{#if ballot.campaign.advanceOffers.length > 0}
+									<div
+										class="mt-1 flex flex-col gap-1"
+										data-testid="advance-offers-{ballot.campaign.campaignId}"
+									>
+										<p class="text-xs text-muted">
+											Avancer des fonds personnels (une avance par campagne, rendue à partir d’un
+											score honorable, perdue sinon) :
+										</p>
+										<div class="flex flex-wrap gap-1">
+											{#each ballot.campaign.advanceOffers as offer (offer.actionId)}
+												{@const campaignId = ballot.campaign.campaignId}
+												{#if offer.planned}
+													<span class="text-xs text-muted">
+														{offer.label} : prévue ce trimestre.
+													</span>
+												{:else}
+													<button
+														type="button"
+														class="btn-secondary btn-small"
+														disabled={!offer.addable || accelerating}
+														title={offer.reason ?? offer.label}
+														aria-label="{offer.label} ({ballot.label})"
+														onclick={() =>
+															session.controller.addStep({
+																kind: 'action',
+																id: offer.actionId,
+																target: campaignId
+															})}
+													>
+														{offer.format} · {offer.label}
+													</button>
+												{/if}
+											{/each}
+										</div>
+										{#each ballot.campaign.advanceOffers.filter((offer) => offer.reason && !offer.planned) as offer (offer.actionId)}
+											<p class="text-xs text-muted">{offer.format} : {offer.reason}</p>
+										{/each}
+									</div>
+								{/if}
 							</div>
 						{:else if career.declareActionId}
 							<div class="mt-2 flex flex-wrap items-center justify-end gap-2">
@@ -216,6 +261,9 @@
 					{#each career.pastCampaigns as campaign (campaign.campaignId)}
 						<li>
 							<span class="font-medium">{campaign.label}, {campaign.dateLabel}</span> — {campaign.outcome}
+							{#if campaign.advance}
+								<span class="text-xs text-muted"> · {campaign.advance}</span>
+							{/if}
 						</li>
 					{/each}
 				</ul>

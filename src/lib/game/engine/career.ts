@@ -226,7 +226,12 @@ export type CareerEffect = Extract<
 	Effect,
 	{
 		op:
-			'grantMandate' | 'endMandate' | 'callEarlyElection' | 'declareCandidacy' | 'prepareCampaign';
+			| 'grantMandate'
+			| 'endMandate'
+			| 'callEarlyElection'
+			| 'declareCandidacy'
+			| 'prepareCampaign'
+			| 'advanceCampaign';
 	}
 >;
 
@@ -236,7 +241,8 @@ export function isCareerEffect(effect: Effect): effect is CareerEffect {
 		effect.op === 'endMandate' ||
 		effect.op === 'callEarlyElection' ||
 		effect.op === 'declareCandidacy' ||
-		effect.op === 'prepareCampaign'
+		effect.op === 'prepareCampaign' ||
+		effect.op === 'advanceCampaign'
 	);
 }
 
@@ -251,6 +257,19 @@ export interface CareerParts {
 
 export function runningCampaigns(campaigns: readonly Campaign[]): Campaign[] {
 	return campaigns.filter((campaign) => campaign.status === 'running');
+}
+
+/**
+ * Raison pour laquelle aucune avance ne peut être versée à cette campagne
+ * (P3-23), ou `null` : candidature en cours, une seule avance par campagne.
+ */
+export function advanceIssue(campaignIdValue: string, parts: CareerParts): string | null {
+	const campaign = runningCampaigns(parts.campaigns).find(
+		(entry) => entry.campaignId === campaignIdValue
+	);
+	if (!campaign) return 'choisissez une candidature en cours';
+	if (campaign.advanceCents > 0) return 'une seule avance par campagne';
+	return null;
 }
 
 /** Mandats encore en cours une fois passé le scrutin de cette élection (réélection possible). */
@@ -345,6 +364,7 @@ export function applyCareerEffect(
 				invested:
 					player.partyId !== null && apparatus >= content.balance.campaigns.investitureMinApparatus,
 				preparation: 0,
+				advanceCents: 0,
 				opponentId: null,
 				status: 'running',
 				playerPercent: null,
@@ -360,6 +380,20 @@ export function applyCareerEffect(
 						invested: campaign.invested
 					}
 				]
+			};
+		}
+		case 'advanceCampaign': {
+			if (target === null || advanceIssue(target, parts)) return { parts, changes: [] };
+			return {
+				parts: {
+					...parts,
+					campaigns: parts.campaigns.map((campaign) =>
+						campaign.campaignId === target
+							? { ...campaign, advanceCents: campaign.advanceCents + effect.valueCents }
+							: campaign
+					)
+				},
+				changes: [{ kind: 'campaignAdvance', campaignId: target, cents: effect.valueCents }]
 			};
 		}
 		case 'prepareCampaign': {
@@ -1092,12 +1126,19 @@ export function resolveDeadlines(
 						: entry
 				)
 			};
+			// Avance personnelle (P3-23) : rendue à partir d'un score minimal, perdue sinon.
+			const repaid =
+				campaign.advanceCents > 0 &&
+				status !== 'disqualified' &&
+				(playerPercent ?? 0) >= campaignBalance.advanceRepayMinPercent;
+			if (repaid) resources.personalCashCents += campaign.advanceCents;
 			campaignRecords.push({
 				campaignId: campaign.campaignId,
 				opponentId: campaign.opponentId,
 				status,
 				playerPercent,
-				reason: issue
+				reason: issue,
+				advance: campaign.advanceCents > 0 ? { cents: campaign.advanceCents, repaid } : null
 			});
 		}
 

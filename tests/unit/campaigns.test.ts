@@ -282,7 +282,8 @@ describe('scrutin du joueur', () => {
 				opponentId: campaign.opponentId,
 				status: 'won',
 				playerPercent: campaign.playerPercent,
-				reason: null
+				reason: null,
+				advance: null
 			}
 		]);
 	});
@@ -383,6 +384,7 @@ describe('invariants des campagnes', () => {
 					partyId: null,
 					invested: false,
 					preparation: 0,
+					advanceCents: 0,
 					opponentId: null,
 					status: 'running',
 					playerPercent: null,

@@ -269,6 +269,13 @@ export type Effect =
 	| { readonly op: 'declareCandidacy' }
 	/** Préparation ajoutée à chaque campagne en cours. */
 	| { readonly op: 'prepareCampaign'; readonly value: number }
+	/**
+	 * Avance personnelle à la campagne choisie dans le plan (`target` de type
+	 * `campaign`, P3-23) : le montant, égal au coût en argent personnel de
+	 * l'action, est versé au budget politique et remboursé après le scrutin si le
+	 * score atteint `campaigns.advanceRepayMinPercent`.
+	 */
+	| { readonly op: 'advanceCampaign'; readonly valueCents: number }
 	/** Embauche du candidat choisi dans le plan (`target`), sur son poste (P2-05). */
 	/** Offre faite au candidat (P3-20) : réduite, standard (par défaut) ou généreuse. */
 	| { readonly op: 'hireStaff'; readonly offer?: HireOffer | undefined }
@@ -841,6 +848,32 @@ export interface ActionCategory {
 	readonly label: string;
 }
 
+/**
+ * Formats d'une action à l'échelle (P3-23), du plus petit au plus grand :
+ * trois intensités lisibles plutôt qu'un curseur.
+ */
+export const ACTION_FORMATS = ['modest', 'sustained', 'major'] as const;
+export type ActionFormat = (typeof ACTION_FORMATS)[number];
+
+/**
+ * Famille d'actions à l'échelle (P3-23) : une seule ligne d'agenda, trois
+ * formats (actions du catalogue rattachées par `scale`), un seul format par
+ * trimestre, et éventuellement un plafond annuel sur une ressource dépensée.
+ */
+export interface ActionFamilyDefinition {
+	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	/** Dépense maximale de cette ressource par année civile, tous formats confondus. */
+	readonly annualCap?: ResourceAmount | undefined;
+}
+
+/** Rattachement d'une action à sa famille et son format (P3-23). */
+export interface ActionScale {
+	readonly family: string;
+	readonly format: ActionFormat;
+}
+
 export interface ActionDefinition {
 	/** Identifiant stable, par exemple `activism.leaflets`. */
 	readonly id: string;
@@ -866,6 +899,8 @@ export interface ActionDefinition {
 	 * palier militant atteint (bonus annoncé dans la prévision, aucun tirage).
 	 */
 	readonly fieldwork?: FieldworkBonus | undefined;
+	/** Format d'une famille d'actions à l'échelle (P3-23). */
+	readonly scale?: ActionScale | undefined;
 	/**
 	 * Cible à choisir dans le plan : `party` (identifiant de parti), `mandate`
 	 * (exemplaire de mandat en cours) ou `ballot` (échéance électorale).
@@ -886,6 +921,8 @@ export interface ActionDefinition {
 		| 'media'
 		| 'reform'
 		| 'search'
+		/** `campaign` : une candidature en cours (P3-23, avance de campagne). */
+		| 'campaign'
 		| undefined;
 }
 
@@ -1204,6 +1241,8 @@ export interface CampaignsBalance {
 	readonly defeatStress: number;
 	/** Score minimal (en %) ouvrant droit au remboursement forfaitaire des frais de campagne. */
 	readonly refundMinPercent: number;
+	/** Score minimal (en %) pour que l'avance personnelle de campagne soit remboursée (P3-23). */
+	readonly advanceRepayMinPercent: number;
 	/** Points gagnés par un adversaire pour chacune de ses victoires passées contre le joueur. */
 	readonly rivalExperienceBonus: number;
 	/** Nombre maximal de victoires prises en compte. */
@@ -1840,6 +1879,9 @@ export interface Content {
 	readonly actionIds: readonly string[];
 	/** Thèmes de l'agenda, dans l'ordre d'affichage (vide : un seul groupe). */
 	readonly actionCategories: readonly ActionCategory[];
+	/** Familles d'actions à l'échelle, par identifiant, dans l'ordre du catalogue (P3-23). */
+	readonly actionFamilies: Readonly<Record<string, ActionFamilyDefinition>>;
+	readonly actionFamilyIds: readonly string[];
 	readonly upgrades: Readonly<Record<string, UpgradeDefinition>>;
 	readonly upgradeIds: readonly string[];
 	readonly events: Readonly<Record<string, EventDefinition>>;

@@ -41,7 +41,9 @@ import {
 	INCUMBENT_VARIABLE,
 	TREASURY_IDS,
 	WORLD_TEMPLATE_VARIABLES,
+	ACTION_FORMATS,
 	type ActionDefinition,
+	type ActionFamilyDefinition,
 	type CandidateProfileDefinition,
 	type EntourageBalance,
 	SEARCH_LEVELS,
@@ -557,6 +559,15 @@ function effectIssues(
 					});
 				}
 				break;
+			case 'advanceCampaign':
+				if (targetKind !== 'campaign') {
+					issues.push({
+						source,
+						path: at,
+						message: 'avance réservée aux actions ciblant une candidature'
+					});
+				}
+				break;
 			case 'declareCandidacy':
 				if (targetKind !== 'ballot') {
 					issues.push({
@@ -850,6 +861,7 @@ function crossCheckPolitics(
 				(effect.op === 'joinParty' && effect.party === 'target') ||
 				(effect.op === 'endMandate' && effect.mandate === 'target') ||
 				effect.op === 'declareCandidacy' ||
+				effect.op === 'advanceCampaign' ||
 				effect.op === 'hireStaff' ||
 				effect.op === 'courtCandidate' ||
 				effect.op === 'vetCandidate' ||
@@ -1772,7 +1784,13 @@ export function validateContent(raw: RawContent): ContentValidation {
 			});
 		}
 	});
-	const knownIds = new Set([...actionList.map((a) => a.id), ...upgradeList.map((u) => u.id)]);
+	const actionFamilyList = actionCatalog.data.families ?? [];
+	issues.push(...crossCheckActionFamilies(actionList, actionFamilyList));
+	const knownIds = new Set([
+		...actionList.map((a) => a.id),
+		...upgradeList.map((u) => u.id),
+		...actionFamilyList.map((family) => family.id)
+	]);
 	const traitList = traitCatalog.data.traits;
 	issues.push(...crossCheckTraits(traitList, balance.data, knownIds));
 	issues.push(
@@ -1979,6 +1997,8 @@ export function validateContent(raw: RawContent): ContentValidation {
 			actions,
 			actionIds: actionList.map((action) => action.id),
 			actionCategories,
+			actionFamilies: Object.fromEntries(actionFamilyList.map((family) => [family.id, family])),
+			actionFamilyIds: actionFamilyList.map((family) => family.id),
 			upgrades,
 			upgradeIds: upgradeList.map((upgrade) => upgrade.id),
 			events,
@@ -2383,6 +2403,117 @@ function crossCheckMedia(
 }
 
 /** Effets permis dans une promesse : certains, sur les ressources, jauges et soutiens. */
+/** Coût total d'une action en centimes (ressources monétaires seulement). */
+function cashCost(action: ActionDefinition): number {
+	return action.costs
+		.filter((cost) => cost.resource !== 'influence')
+		.reduce((total, cost) => total + cost.amount, 0);
+}
+
+/**
+ * Familles d'actions à l'échelle (P3-23) : identifiants uniques ; chaque action
+ * à l'échelle appartient à une famille connue ; chaque famille a exactement un
+ * format modeste, soutenu et majeur, de même thème, cible et époque, limités à
+ * une occurrence par trimestre, au coût strictement croissant, les formats
+ * supérieurs soumis à un prérequis de capacité ; une avance de campagne verse
+ * exactement son coût en argent personnel.
+ */
+function crossCheckActionFamilies(
+	actions: readonly ActionDefinition[],
+	families: readonly ActionFamilyDefinition[]
+): ContentIssue[] {
+	const source = 'actions.json';
+	const issues: ContentIssue[] = [];
+	const familyIds = new Set<string>();
+	families.forEach((family, index) => {
+		if (familyIds.has(family.id)) {
+			issues.push({ source, path: `families[${index}].id`, message: 'famille en double' });
+		}
+		familyIds.add(family.id);
+	});
+	actions.forEach((action, index) => {
+		if (action.scale && !familyIds.has(action.scale.family)) {
+			issues.push({
+				source,
+				path: `actions[${index}].scale.family`,
+				message: `famille inconnue : ${action.scale.family}`
+			});
+		}
+		for (const effect of action.effects) {
+			if (effect.op !== 'advanceCampaign') continue;
+			const cash = action.costs.find((cost) => cost.resource === 'personalCashCents');
+			if (cash?.amount !== effect.valueCents) {
+				issues.push({
+					source,
+					path: `actions[${index}].effects`,
+					message: 'une avance de campagne verse exactement son coût en argent personnel'
+				});
+			}
+		}
+	});
+	families.forEach((family, index) => {
+		const path = `families[${index}]`;
+		const members = actions.filter((action) => action.scale?.family === family.id);
+		const byFormat = ACTION_FORMATS.map((format) =>
+			members.filter((action) => action.scale?.format === format)
+		);
+		if (byFormat.some((list) => list.length !== 1)) {
+			issues.push({
+				source,
+				path,
+				message: 'une famille a exactement un format modeste, un soutenu et un majeur'
+			});
+			return;
+		}
+		const [modest, sustained, major] = byFormat.map((list) => list[0]!) as [
+			ActionDefinition,
+			ActionDefinition,
+			ActionDefinition
+		];
+		const formats = [modest, sustained, major];
+		if (
+			formats.some(
+				(action) =>
+					action.category !== modest.category ||
+					action.target !== modest.target ||
+					action.fromEra !== modest.fromEra
+			)
+		) {
+			issues.push({
+				source,
+				path,
+				message: 'les formats d’une famille partagent thème, cible et époque'
+			});
+		}
+		if (formats.some((action) => action.maxPerTurn !== 1)) {
+			issues.push({ source, path, message: 'un format se planifie une fois par trimestre' });
+		}
+		if (!(cashCost(modest) < cashCost(sustained) && cashCost(sustained) < cashCost(major))) {
+			issues.push({ source, path, message: 'le coût des formats croît strictement' });
+		}
+		const cap = family.annualCap;
+		if (
+			cap &&
+			formats.some(
+				(action) =>
+					action.costs
+						.filter((cost) => cost.resource === cap.resource)
+						.reduce((total, cost) => total + cost.amount, 0) > cap.amount
+			)
+		) {
+			issues.push({ source, path, message: 'un format dépasse à lui seul le plafond annuel' });
+		}
+		if (sustained.requires === undefined || major.requires === undefined) {
+			issues.push({
+				source,
+				path,
+				message: 'les formats soutenu et majeur exigent un prérequis de capacité'
+			});
+		}
+	});
+	return issues;
+}
+
 const PROMISE_EFFECT_OPS: ReadonlySet<string> = new Set(['addResource', 'addStat', 'addSupport']);
 
 /**
