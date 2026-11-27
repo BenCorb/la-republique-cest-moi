@@ -895,8 +895,8 @@ export function checkContentReferences(state: GameState, content: Content): stri
 	if (!Object.hasOwn(content.origins, state.player.origin)) {
 		violations.push(`origine inconnue du catalogue : ${state.player.origin}`);
 	}
-	if (!Object.hasOwn(content.professions, state.player.profession)) {
-		violations.push(`profession inconnue du catalogue : ${state.player.profession}`);
+	if (!Object.hasOwn(content.engagements, state.player.engagement)) {
+		violations.push(`engagement inconnue du catalogue : ${state.player.engagement}`);
 	}
 	for (const member of state.staff) {
 		const post = content.posts[member.postId];

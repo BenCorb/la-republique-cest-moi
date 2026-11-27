@@ -134,6 +134,22 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByTestId('territory')).toContainText('Votre terre d’élection');
 	});
 
+	test('choisit le terrain d’engagement et en reçoit les actions (P3-17)', async ({ page }) => {
+		await page.goto('./?seed=e2e-terrain');
+		await page.getByRole('button', { name: 'Nouvelle carrière' }).click();
+		await expect(page.getByRole('group', { name: 'Terrain d’engagement' })).toBeVisible();
+		await expect(page.getByRole('radio', { name: /Vie associative/u })).toBeChecked();
+		await page.getByRole('radio', { name: /Syndicalisme/u }).check();
+		await expect(page.getByTestId('engagement-actions').first()).toContainText(
+			'Tenir la permanence syndicale'
+		);
+		await page.getByRole('button', { name: 'Commencer la carrière' }).click();
+		await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
+		await expect(page.getByText(/· Syndicalisme ·/u)).toBeVisible();
+		await page.getByRole('button', { name: 'Agenda', exact: true }).click();
+		await expect(page.getByText('Tenir la permanence syndicale').first()).toBeVisible();
+	});
+
 	test('affiche le calendrier électoral et la fonction principale', async ({ page }) => {
 		await startCareer(page, 'e2e-carriere');
 		await expect(page.getByTestId('header-function')).toHaveText('Fonction Sans mandat');

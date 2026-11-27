@@ -39,7 +39,7 @@ import {
 	type FamilyBalance,
 	type FamilyTemplate,
 	type OriginDefinition,
-	type ProfessionDefinition,
+	type EngagementDefinition,
 	type TerritoryDefinition,
 	type MissionDefinition,
 	type PostDefinition,
@@ -110,7 +110,7 @@ export const conditionSchema: z.ZodType<Condition> = z.lazy(() =>
 		z.strictObject({ op: z.literal('holdsMandate'), mandate: contentId }),
 		z.strictObject({ op: z.literal('canHoldMandate'), mandate: contentId }),
 		z.strictObject({ op: z.literal('origin'), origin: contentId }),
-		z.strictObject({ op: z.literal('profession'), profession: contentId }),
+		z.strictObject({ op: z.literal('engagement'), engagement: contentId }),
 		z.strictObject({ op: z.literal('lifestyle'), lifestyle: contentId }),
 		z.strictObject({ op: z.literal('ownsUpgrade'), upgrade: contentId }),
 		z.strictObject({ op: z.literal('institution'), parameter: contentId, level: contentId }),
@@ -1140,10 +1140,10 @@ const territorySchema: z.ZodType<TerritoryDefinition> = z.strictObject({
 	})
 });
 
-export const professionSchema: z.ZodType<ProfessionDefinition> = z.strictObject({
+export const engagementSchema: z.ZodType<EngagementDefinition> = z.strictObject({
 	id: contentId.refine(
-		(value) => value.startsWith('profession.'),
-		'identifiant « profession.nom »'
+		(value) => value.startsWith('engagement.'),
+		'identifiant « engagement.nom »'
 	),
 	label: frenchText,
 	description: frenchText,
@@ -1152,8 +1152,8 @@ export const professionSchema: z.ZodType<ProfessionDefinition> = z.strictObject(
 
 export const profileCatalogSchema = z.strictObject({
 	origins: z.array(originSchema).min(1),
-	professions: z.array(professionSchema).min(1),
-	defaults: z.strictObject({ origin: contentId, profession: contentId, region: contentId }),
+	engagements: z.array(engagementSchema).min(1),
+	defaults: z.strictObject({ origin: contentId, engagement: contentId, region: contentId }),
 	territory: territorySchema
 });
 

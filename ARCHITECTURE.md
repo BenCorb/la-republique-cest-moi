@@ -917,6 +917,16 @@ Retour PT-P3-09-015 (`PLAYTEST.md`) ; décisions déléguées de ROADMAP §5.2. 
 - **Interface** : `NoteDialog` (note de cabinet ou de période, avant toute décision ; anneau `Donut` et barres `ScoreBars`) ; `DecisionDialog` présente le résultat dans la même fenêtre, « Décision suivante » ou « Continuer » ; lien de réouverture sous la date de l’en-tête.
 - **Tests** : `tests/unit/outcome-note.test.ts` (effets réels et récit écrit, repli sans suite cachée, reprise sans rejeu, note après chaque trimestre, point de départ puis variations, victoire et défaite avec duel et bilan électoral, réouverture, note de période, effets propres d’un événement identiques après reprise) ; E2E d’une vraie campagne municipale jusqu’à la note du scrutin ; E2E de la note (date, focus, agenda, Échap, réouverture, reprise) et du résultat d’un choix (même fenêtre, reprise sans rejeu) ; aides E2E `nextQuarter`, `closeNote` et `settleDecisions` adaptées.
 
+### 8.4 novodecies Décisions de P3-17 : terrain d’engagement (26 novembre 2026)
+
+Retour PT-P3-09-001 ; décision du créateur (ROADMAP §5.2) et valeurs provisoires au GDD §3.1.
+
+- **Renommage complet** de la profession de l’alpha : `player.engagement` (état et schéma de sauvegarde), condition `{ op: 'engagement', engagement }`, catalogue `profiles.json` → `engagements` et `defaults.engagement`, `Content.engagements` / `engagementIds`, `EngagementDefinition` (identifiants `engagement.*`), option de création `engagement` (contrôleur, simulateur, rapport de simulation). Aucun alias : les sauvegardes antérieures sont refusées comme obsolètes (`RULES_VERSION = '0.33.0'`, alpha jetable) ; rapport de simulation v19 (colonne `engagement`).
+- **Catalogue** : six terrains (`union`, `association` par défaut, `student`, `public_service`, `business`, `press`), effets de départ limités à `addResource`, `addSupport`, `addStat` (validation inchangée) ; douze actions `engagement.<terrain>.<action>` de catégorie `work`, `maxPerTurn: 1`, `requires: engagement` et motif d’indisponibilité ; les six actions de profession sont retirées.
+- **Création** : `ProfileOptionView.actions` liste les actions propres d’un terrain (vide pour une origine) ; `CreationScreen` présente « Terrain d’engagement », ses effets et ses actions ; profil du tableau de bord « origine · terrain · famille ».
+- **Tests** : `tests/unit/engagement.test.ts` (six terrains, deux actions chacun dont une seule rémunérée et modeste, effets de départ, actions réservées au terrain et jouables au premier trimestre, options de création) ; agenda (actions d’un autre terrain hors de portée, avec motif) ; E2E de création avec le syndicalisme.
+- **Simulation indicative** (120 carrières, seed `p317`, toutes stratégies) : aucun terrain dominant ni bloquant ; l’écart entre terrains reste inférieur à la variance des stratégies. À rejouer au second volet de P3-09.
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.

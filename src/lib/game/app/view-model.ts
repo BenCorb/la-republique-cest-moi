@@ -202,7 +202,7 @@ export interface CatalogItemView {
 	/** Raison pour laquelle l'élément ne peut pas être ajouté au plan. */
 	readonly reason: string | null;
 	/**
-	 * Hors de portée : une condition n'est pas remplie (autre profession, pas
+	 * Hors de portée : une condition n'est pas remplie (autre terrain d’engagement, pas
 	 * d'adhésion, pas de campagne, influence insuffisante…), par opposition à un
 	 * blocage du trimestre (temps, argent, limite atteinte).
 	 */
@@ -1004,10 +1004,10 @@ export interface PlayerView {
 	readonly world: WorldView;
 	/** Personnages rencontrés : actifs d'abord, puis par date de rencontre. */
 	readonly people: readonly PersonView[];
-	/** Profil du personnage : origine, profession et situation familiale. */
+	/** Profil du personnage : origine, engagement et situation familiale. */
 	readonly profile: {
 		readonly origin: string;
-		readonly profession: string;
+		readonly engagement: string;
 		readonly family: string;
 	};
 	readonly career: CareerView;
@@ -2738,8 +2738,8 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 						})()
 					},
 					{
-						label: 'Profession',
-						value: content.professions[state.player.profession]?.label ?? state.player.profession
+						label: 'Terrain d’engagement',
+						value: content.engagements[state.player.engagement]?.label ?? state.player.engagement
 					},
 					{ label: 'Enfants', value: String(metrics.children) },
 					{ label: 'Plus fidèle soutien', value: ally },
@@ -3560,6 +3560,8 @@ export interface ProfileOptionView {
 	readonly label: string;
 	readonly description: string;
 	readonly effects: readonly string[];
+	/** Actions propres ouvertes par ce choix (terrain d'engagement, P3-17). */
+	readonly actions: readonly string[];
 }
 
 /** Choix proposés à la création d'un personnage (P2-08). */
@@ -3649,7 +3651,7 @@ export interface RegionOptionView {
 
 export function creationOptions(content: Content): {
 	readonly origins: readonly ProfileOptionView[];
-	readonly professions: readonly ProfileOptionView[];
+	readonly engagements: readonly ProfileOptionView[];
 	readonly regions: readonly RegionOptionView[];
 	readonly defaults: Content['defaultProfile'];
 } {
@@ -3662,11 +3664,17 @@ export function creationOptions(content: Content): {
 		id: entry.id,
 		label: entry.label,
 		description: entry.description,
-		effects: entry.effects.map((effect) => describeEffect(effectRange(effect), content))
+		effects: entry.effects.map((effect) => describeEffect(effectRange(effect), content)),
+		actions: content.actionIds
+			.map((id) => content.actions[id]!)
+			.filter(
+				(action) => action.requires?.op === 'engagement' && action.requires.engagement === entry.id
+			)
+			.map((action) => action.label)
 	});
 	return {
 		origins: content.originIds.map((id) => option(content.origins[id]!)),
-		professions: content.professionIds.map((id) => option(content.professions[id]!)),
+		engagements: content.engagementIds.map((id) => option(content.engagements[id]!)),
 		regions: content.regionIds.map((id) => {
 			const region = content.regions[id]!;
 			return {
@@ -3968,7 +3976,7 @@ export function projectView(
 		entourage: buildEntourage(state, plan, content),
 		profile: {
 			origin: content.origins[state.player.origin]?.label ?? state.player.origin,
-			profession: content.professions[state.player.profession]?.label ?? state.player.profession,
+			engagement: content.engagements[state.player.engagement]?.label ?? state.player.engagement,
 			family: describeFamily(state)
 		}
 	};
