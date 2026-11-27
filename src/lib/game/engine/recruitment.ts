@@ -18,10 +18,10 @@
  *
  * Valeurs provisoires de `balance.entourage.recruitment`.
  */
-import type { Content, HireOffer } from '../content/types.ts';
+import type { Content, HireOffer, SearchLevel, VettingLevel } from '../content/types.ts';
 import { mainMandate } from './career.ts';
 import { hashSeed } from './random.ts';
-import type { MandateInstance, PlayerState, StaffMember } from './state.ts';
+import type { Character, MandateInstance, PlayerState, StaffMember } from './state.ts';
 import type { Resources } from '../content/types.ts';
 
 /** Salaire demandé par un candidat de cette compétence pour ce poste, en centimes. */
@@ -157,4 +157,78 @@ export function acceptancePercent(
  */
 export function acceptanceRoll(seed: string, turn: number, candidateId: string): number {
 	return hashSeed(`${seed}:recrutement:${turn}:${candidateId}`) % 100;
+}
+
+// ---------------------------------------------------------------------------
+// Recrutement II (P3-21) : recherche, vérification, progression
+// ---------------------------------------------------------------------------
+
+/**
+ * Cible d'une recherche : `post.x`, ou `post.x/trait.y` quand un trait public
+ * est exigé. Ne vérifie pas l'existence des identifiants.
+ */
+export function parseSearchTarget(target: string): { postId: string; trait: string | null } {
+	const slash = target.indexOf('/');
+	return slash < 0
+		? { postId: target, trait: null }
+		: { postId: target.slice(0, slash), trait: target.slice(slash + 1) };
+}
+
+export function searchTarget(postId: string, trait: string | null): string {
+	return trait === null ? postId : `${postId}/${trait}`;
+}
+
+/** Chance de trouver, en % : celle du niveau, moins la pénalité d'un trait exigé. */
+export function searchFindPercent(
+	level: SearchLevel,
+	trait: string | null,
+	content: Content
+): number {
+	const search = content.balance.entourage.search;
+	return Math.max(0, search.levels[level].findPercent - (trait === null ? 0 : search.traitPenalty));
+}
+
+/** Part du prix rendue quand la recherche échoue ou devient sans objet. */
+export function searchRefundCents(level: SearchLevel, content: Content): number {
+	const search = content.balance.entourage.search;
+	return Math.round((search.levels[level].costCents * search.failureRefundPercent) / 100);
+}
+
+/**
+ * Traits cachés signalés par une vérification de dossier : chaque trait caché
+ * encore inconnu est signalé avec une probabilité qui dépend de sa présence
+ * réelle (`truePercent`) ou de son absence (`falsePercent`). Le tirage est une
+ * empreinte de la seed, du trimestre, du candidat et du trait : reproductible,
+ * sans décaler le PRNG. Un indice n'est jamais une certitude.
+ */
+export function vetHints(
+	seed: string,
+	turn: number,
+	character: Pick<Character, 'id' | 'traits' | 'knownTraits'>,
+	level: VettingLevel,
+	content: Content
+): string[] {
+	const { truePercent, falsePercent } = content.balance.entourage.vetting[level];
+	return content.traitIds.filter((traitId) => {
+		if (!content.traits[traitId]?.hidden || character.knownTraits.includes(traitId)) return false;
+		const roll = hashSeed(`${seed}:dossier:${turn}:${character.id}:${traitId}`) % 100;
+		return roll < (character.traits.includes(traitId) ? truePercent : falsePercent);
+	});
+}
+
+/** Progression d'un collaborateur par trimestre exercé, en dixièmes de point (interpolée). */
+export function progressionTenths(competence: number, content: Content): number {
+	const curve = content.balance.entourage.progression.curve;
+	const first = curve[0]!;
+	const last = curve.at(-1)!;
+	if (competence <= first.competence) return first.tenths;
+	if (competence >= last.competence) return last.tenths;
+	const upper = curve.findIndex((point) => point.competence >= competence);
+	const high = curve[upper]!;
+	const low = curve[upper - 1]!;
+	return Math.round(
+		low.tenths +
+			((high.tenths - low.tenths) * (competence - low.competence)) /
+				(high.competence - low.competence)
+	);
 }

@@ -65,7 +65,15 @@ describe('scénario : passage du temps', () => {
 					changes: []
 				},
 				mandates: { changes: [], stress: 0 },
-				staff: { payroll: [], production: [], departures: [], shortlisted: [] },
+				staff: {
+					payroll: [],
+					production: [],
+					departures: [],
+					shortlisted: [],
+					searches: [],
+					progress: [],
+					raiseRequests: []
+				},
 				family: { inheritance: 0, childCosts: 0, stress: 0, neglected: false, widowed: null },
 				wellbeing: { contributions: [], deathCause: null },
 				characters: { departures: [], arrivals: [] },

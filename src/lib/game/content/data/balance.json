@@ -168,6 +168,59 @@
 			"interviewInterest": 6,
 			"maxInterviews": 2,
 			"refusalAttitude": -5
+		},
+		"search": {
+			"levels": {
+				"simple": {
+					"costCents": 80000,
+					"delayTurns": 1,
+					"candidates": 2,
+					"findPercent": 90,
+					"profile": null,
+					"traitAllowed": false,
+					"vetting": null
+				},
+				"targeted": {
+					"costCents": 300000,
+					"delayTurns": 2,
+					"candidates": 2,
+					"findPercent": 80,
+					"profile": "profile.sought",
+					"traitAllowed": true,
+					"vetting": null
+				},
+				"headhunt": {
+					"costCents": 1000000,
+					"delayTurns": 3,
+					"candidates": 2,
+					"findPercent": 70,
+					"profile": "profile.headhunted",
+					"traitAllowed": true,
+					"vetting": "thorough"
+				}
+			},
+			"traitPenalty": 20,
+			"failureRefundPercent": 50,
+			"maxShortlist": 5
+		},
+		"vetting": {
+			"standard": { "truePercent": 65, "falsePercent": 20 },
+			"thorough": { "truePercent": 80, "falsePercent": 10 }
+		},
+		"progression": {
+			"curve": [
+				{ "competence": 0, "tenths": 15 },
+				{ "competence": 30, "tenths": 12 },
+				{ "competence": 50, "tenths": 6 },
+				{ "competence": 70, "tenths": 2 },
+				{ "competence": 85, "tenths": 0 }
+			],
+			"seniorityAttitude": 2
+		},
+		"renegotiation": {
+			"stepCompetence": 15,
+			"minTurns": 4,
+			"event": "event.staff.raise_request"
 		}
 	},
 	"family": {

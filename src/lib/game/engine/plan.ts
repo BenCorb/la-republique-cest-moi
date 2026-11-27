@@ -25,12 +25,13 @@ import {
 	type Effect,
 	type GaugeId,
 	type HireOffer,
+	type SearchLevel,
 	type ResourceAmount,
 	type ResourceId,
 	type Resources
 } from '../content/types.ts';
 import type { PlanStep, TurnPlan } from './commands.ts';
-import { evaluateCondition } from './conditions.ts';
+import { evaluateCondition, type ConditionContext } from './conditions.ts';
 import { resolveEconomy, type ProducerForecast } from './economy.ts';
 import { applyGauge, effectRange, gaugeKey, resolveEffect, type EffectRange } from './effects.ts';
 import { forecastWellbeing, type WellbeingForecast } from './health.ts';
@@ -71,6 +72,8 @@ import {
 	applyStaffEffect,
 	dismissIssue,
 	candidateInterviewIssue,
+	searchIssue,
+	vetIssue,
 	hireIssue,
 	isStaffEffect,
 	staffTimeBonus,
@@ -242,6 +245,12 @@ function releaseIssue(
 	return null;
 }
 
+/** Niveau de recherche porté par une action (P3-21), ou `null`. */
+function searchLevelOf(effects: readonly Effect[]): SearchLevel | null {
+	for (const effect of effects) if (effect.op === 'orderSearch') return effect.level;
+	return null;
+}
+
 /** Offre portée par une action d'embauche (P3-20), standard par défaut. */
 function hireOfferOf(effects: readonly Effect[]): HireOffer {
 	for (const effect of effects) if (effect.op === 'hireStaff') return effect.offer ?? 'standard';
@@ -313,7 +322,8 @@ function entourageOf(state: GameState): EntourageParts {
 		staff: state.staff,
 		shortlists: state.shortlists,
 		characters: state.characters,
-		relationships: state.relationships
+		relationships: state.relationships,
+		searches: state.searches
 	};
 }
 
@@ -450,6 +460,20 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 		let actionEffects: readonly Effect[] = [];
 		let released: string | null = null;
 		const target = targetOf(step);
+		const stepContext = (): ConditionContext => ({
+			turn: state.turn,
+			player: workingPlayer,
+			resources: working,
+			upgrades,
+			world: workingWorld,
+			mandates: workingCareer.mandates,
+			campaigns: workingCareer.campaigns,
+			staff: workingEntourage.staff,
+			institutions: workingCareer.institutions,
+			facts: state.facts,
+			cases: state.cases,
+			promises: workingCareer.promises
+		});
 
 		if (step.kind === 'action') {
 			const definition = definitionOf(content.actions, step.id);
@@ -479,34 +503,43 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 						? 'choisissez une élection'
 						: candidacyIssue(target, workingCareer, workingPlayer, state.turn, content);
 				if (issue) fail('invalid_target', `« ${label} » : ${issue}`);
+			} else if (definition.target === 'search') {
+				const level = searchLevelOf(definition.effects);
+				const issue =
+					target === null || level === null
+						? 'choisissez un poste'
+						: searchIssue(target, level, workingEntourage, stepContext(), content);
+				if (issue) fail('invalid_target', `« ${label} » : ${issue}.`);
 			} else if (definition.target === 'candidate' || definition.target === 'staff') {
 				const issue =
 					target === null
 						? 'choisissez une personne'
 						: definition.effects.some((effect) => effect.op === 'courtCandidate')
 							? candidateInterviewIssue(target, workingEntourage, content)
-							: definition.target === 'candidate'
-								? hireIssue(
-										target,
-										workingEntourage,
-										{
-											turn: state.turn,
-											player: workingPlayer,
-											resources: working,
-											upgrades,
-											world: workingWorld,
-											mandates: workingCareer.mandates,
-											campaigns: workingCareer.campaigns,
-											staff: workingEntourage.staff,
-											institutions: workingCareer.institutions,
-											facts: state.facts,
-											cases: state.cases,
-											promises: workingCareer.promises
-										},
-										content,
-										hireOfferOf(definition.effects)
-									)
-								: dismissIssue(target, workingEntourage);
+							: definition.effects.some((effect) => effect.op === 'vetCandidate')
+								? vetIssue(target, workingEntourage)
+								: definition.target === 'candidate'
+									? hireIssue(
+											target,
+											workingEntourage,
+											{
+												turn: state.turn,
+												player: workingPlayer,
+												resources: working,
+												upgrades,
+												world: workingWorld,
+												mandates: workingCareer.mandates,
+												campaigns: workingCareer.campaigns,
+												staff: workingEntourage.staff,
+												institutions: workingCareer.institutions,
+												facts: state.facts,
+												cases: state.cases,
+												promises: workingCareer.promises
+											},
+											content,
+											hireOfferOf(definition.effects)
+										)
+									: dismissIssue(target, workingEntourage);
 				if (issue) fail('invalid_target', `« ${label} » : ${issue}`);
 			} else if (definition.target === 'promise') {
 				const issue =
@@ -859,7 +892,7 @@ export function executePlan(
 				} else {
 					// Le candidat décide à l'exécution, selon l'attractivité du moment (P3-20).
 					const decision: HiringDecision | null =
-						resolved.effect.op === 'hireStaff'
+						resolved.effect.op === 'hireStaff' || resolved.effect.op === 'vetCandidate'
 							? {
 									seed: state.rng.seed,
 									attraction: attractiveness(

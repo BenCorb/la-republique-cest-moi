@@ -624,6 +624,50 @@
 			"target": "candidate"
 		},
 		{
+			"id": "staff.search_simple",
+			"category": "organisation",
+			"label": "Lancer une recherche simple",
+			"description": "Une annonce sur le site du parti et trois coups de fil aux anciens. Deux CV au trimestre prochain, sans surprise ni garantie.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 80000 }],
+			"effects": [{ "op": "orderSearch", "level": "simple" }],
+			"target": "search"
+		},
+		{
+			"id": "staff.search_targeted",
+			"category": "organisation",
+			"label": "Lancer une recherche ciblée",
+			"description": "Un cahier des charges, des réseaux sollicités et deux trimestres de patience pour des profils confirmés. Exiger un trait précis rétrécit le vivier.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 300000 }],
+			"effects": [{ "op": "orderSearch", "level": "targeted" }],
+			"target": "search"
+		},
+		{
+			"id": "staff.search_headhunt",
+			"category": "organisation",
+			"label": "Mandater un chasseur de têtes",
+			"description": "Un cabinet discret, des honoraires qui ne le sont pas, et trois trimestres pour dénicher une pointure au dossier vérifié. Elle pourra encore vous dire non.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 1000000 }],
+			"effects": [{ "op": "orderSearch", "level": "headhunt" }],
+			"target": "search"
+		},
+		{
+			"id": "staff.vet",
+			"category": "organisation",
+			"label": "Vérifier le dossier d’un candidat",
+			"description": "Des références appelées, d’anciens collègues interrogés. On en apprend beaucoup, dont une partie est vraie.",
+			"timeCost": 10,
+			"maxPerTurn": 2,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 100000 }],
+			"effects": [{ "op": "vetCandidate" }],
+			"target": "candidate"
+		},
+		{
 			"id": "staff.hire_low",
 			"category": "organisation",
 			"label": "Proposer une offre réduite",

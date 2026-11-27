@@ -48,7 +48,16 @@ export type EffectRange =
 	| { readonly kind: 'candidacy' }
 	| {
 			readonly kind: 'staff';
-			readonly change: 'hire' | 'dismiss' | 'leave' | 'replace' | 'shortlist' | 'interview';
+			readonly change:
+				| 'hire'
+				| 'dismiss'
+				| 'leave'
+				| 'replace'
+				| 'shortlist'
+				| 'interview'
+				| 'search'
+				| 'vet'
+				| 'raise';
 	  }
 	/** Départ d'un exemplaire de l'organisation ; ses effets propres sont ajoutés par le plan. */
 	| { readonly kind: 'release' }
@@ -135,7 +144,10 @@ export function gaugeKey(gauge: GaugeId): 'health' | 'stress' | 'exposure' | 'de
 	}
 }
 
-export type PeopleEffect = Extract<Effect, { op: 'addRelation' | 'revealTraits' | 'staffLeaves' }>;
+export type PeopleEffect = Extract<
+	Effect,
+	{ op: 'addRelation' | 'revealTraits' | 'staffLeaves' | 'grantRaise' }
+>;
 
 export function clampGauge(value: number): number {
 	return Math.min(GAUGE_MAX, Math.max(GAUGE_MIN, value));
@@ -180,6 +192,12 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'staff', change: 'hire' };
 		case 'courtCandidate':
 			return { kind: 'staff', change: 'interview' };
+		case 'orderSearch':
+			return { kind: 'staff', change: 'search' };
+		case 'vetCandidate':
+			return { kind: 'staff', change: 'vet' };
+		case 'grantRaise':
+			return { kind: 'staff', change: 'raise' };
 		case 'dismissStaff':
 			return { kind: 'staff', change: 'dismiss' };
 		case 'releaseUpgrade':
@@ -255,10 +273,13 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 		case 'hireStaff':
 		case 'dismissStaff':
 		case 'courtCandidate':
+		case 'orderSearch':
+		case 'vetCandidate':
 			return { kind: 'staffAction', effect, rng };
 		case 'releaseUpgrade':
 			return { kind: 'release', rng };
 		case 'staffLeaves':
+		case 'grantRaise':
 			return { kind: 'people', effect, rng };
 		case 'familyJoins':
 		case 'separate':

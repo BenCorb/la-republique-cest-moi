@@ -251,7 +251,7 @@ describe('instrumentation du contenu (P3-15)', () => {
 			content
 		);
 		const { aggregate } = report;
-		expect(report.reportVersion).toBe(19);
+		expect(report.reportVersion).toBe(20);
 		expect(aggregate.repeatedEvents.max).toBeGreaterThanOrEqual(0);
 		expect(aggregate.headlines.length).toBeGreaterThan(0);
 		const categories = aggregate.coverage.categories;
@@ -300,7 +300,10 @@ describe('événement rare du catalogue (P3-15)', () => {
 					leftTurn: null,
 					leaveReason: null,
 					salaryCents: 150_000,
-					bonusDueCents: 0
+					bonusDueCents: 0,
+					progressTenths: 0,
+					reviewedCompetence: 50,
+					reviewTurn: 0
 				}
 			]
 		};

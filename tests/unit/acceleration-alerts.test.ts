@@ -148,7 +148,10 @@ describe('alertes d’entourage et de budget', () => {
 				payroll: [],
 				production: [],
 				departures: [{ characterId: someone, postId: 'post.aide', reason: 'resigned' }],
-				shortlisted: ['post.aide']
+				shortlisted: ['post.aide'],
+				searches: [],
+				progress: [],
+				raiseRequests: []
 			}
 		});
 		const alerts = accelerationAlerts(state, EMPTY, catalog);
@@ -179,7 +182,10 @@ describe('alertes d’entourage et de budget', () => {
 					leftTurn: null,
 					leaveReason: null,
 					salaryCents: 150_000,
-					bonusDueCents: 0
+					bonusDueCents: 0,
+					progressTenths: 0,
+					reviewedCompetence: 50,
+					reviewTurn: 0
 				}
 			]
 		};

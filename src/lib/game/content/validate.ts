@@ -41,6 +41,9 @@ import {
 	TREASURY_IDS,
 	WORLD_TEMPLATE_VARIABLES,
 	type ActionDefinition,
+	type CandidateProfileDefinition,
+	type EntourageBalance,
+	SEARCH_LEVELS,
 	type Balance,
 	type CastMember,
 	type CapabilityId,
@@ -496,8 +499,27 @@ function effectIssues(
 					issues.push({ source, path: at, message: 'vie de famille réservée aux événements' });
 				}
 				break;
+			case 'orderSearch':
+				if (targetKind !== 'search') {
+					issues.push({
+						source,
+						path: at,
+						message: 'recherche réservée aux actions ciblant un poste (« search »)'
+					});
+				}
+				break;
+			case 'grantRaise':
+				if (roles === null || !roles.has(effect.role)) {
+					issues.push({
+						source,
+						path: `${at}.role`,
+						message: `augmentation réservée aux événements, rôle inconnu : ${effect.role}`
+					});
+				}
+				break;
 			case 'hireStaff':
 			case 'courtCandidate':
+			case 'vetCandidate':
 				if (targetKind !== 'candidate') {
 					issues.push({
 						source,
@@ -828,6 +850,8 @@ function crossCheckPolitics(
 				effect.op === 'declareCandidacy' ||
 				effect.op === 'hireStaff' ||
 				effect.op === 'courtCandidate' ||
+				effect.op === 'vetCandidate' ||
+				effect.op === 'orderSearch' ||
 				effect.op === 'dismissStaff' ||
 				effect.op === 'releaseUpgrade' ||
 				effect.op === 'makePromise' ||
@@ -1185,6 +1209,87 @@ function crossCheckEntourage(
 			issues.push(...effectIssues(mission.effects, refs, null, source, `${missionPath}.effects`));
 		});
 	});
+	return issues;
+}
+
+/**
+ * Recrutement II (P3-21) : profils des niveaux de recherche, prix des actions
+ * égal à celui du niveau, événement de renégociation de sujet `staff`.
+ */
+function crossCheckRecruitment(
+	entourage: EntourageBalance,
+	profiles: readonly CandidateProfileDefinition[],
+	actions: readonly ActionDefinition[],
+	events: readonly SourcedEvent[]
+): ContentIssue[] {
+	const issues: ContentIssue[] = [];
+	const profileIds = new Set(profiles.map((profile) => profile.id));
+	for (const level of SEARCH_LEVELS) {
+		const profile = entourage.search.levels[level].profile;
+		if (profile !== null && !profileIds.has(profile)) {
+			issues.push({
+				source: 'balance.json',
+				path: `entourage.search.levels.${level}.profile`,
+				message: `profil de candidat inconnu : ${profile}`
+			});
+		}
+	}
+	actions.forEach((action, index) => {
+		for (const effect of action.effects) {
+			if (effect.op !== 'orderSearch') continue;
+			const price = action.costs
+				.filter((cost) => cost.resource === 'politicalBudgetCents')
+				.reduce((total, cost) => total + cost.amount, 0);
+			if (price !== entourage.search.levels[effect.level].costCents) {
+				issues.push({
+					source: 'actions.json',
+					path: `actions[${index}].costs`,
+					message: `le prix d’une recherche « ${effect.level} » est celui de l’équilibrage (${entourage.search.levels[effect.level].costCents})`
+				});
+			}
+		}
+	});
+	const event = events.find((entry) => entry.event.id === entourage.renegotiation.event);
+	if (!event) {
+		issues.push({
+			source: 'balance.json',
+			path: 'entourage.renegotiation.event',
+			message: `événement inconnu : ${entourage.renegotiation.event}`
+		});
+	} else if (
+		!event.event.blocking ||
+		event.event.trigger !== 'followUp' ||
+		event.event.subject !== 'staff' ||
+		!event.event.actors.some((slot) => slot.role === 'collaborator')
+	) {
+		issues.push({
+			source: event.source,
+			path: `events[${event.index}]`,
+			message:
+				'la renégociation est un événement bloquant « followUp » de sujet « staff » avec un rôle « collaborator »'
+		});
+	}
+	for (const { source, index, event: definition } of events) {
+		const raises =
+			definition.blocking &&
+			definition.choices.some((choice) =>
+				choice.effects.some((effect) => effect.op === 'grantRaise')
+			);
+		if (raises && definition.subject !== 'staff') {
+			issues.push({
+				source,
+				path: `events[${index}].subject`,
+				message: 'une augmentation n’est accordée que par un événement de sujet « staff »'
+			});
+		}
+		if (definition.subject === 'staff' && definition.trigger !== 'followUp') {
+			issues.push({
+				source,
+				path: `events[${index}].trigger`,
+				message: 'un événement de sujet « staff » est programmé par le moteur (« followUp »)'
+			});
+		}
+	}
 	return issues;
 }
 
@@ -1689,7 +1794,8 @@ export function validateContent(raw: RawContent): ContentValidation {
 				justiceCatalog.data.balance.entourageRevelationEvent,
 				...promisesCatalog.data.promises.map((promise) => promise.dilemmaEvent),
 				promisesCatalog.data.balance.recallEvents.kept,
-				promisesCatalog.data.balance.recallEvents.abandoned
+				promisesCatalog.data.balance.recallEvents.abandoned,
+				balance.data.entourage.renegotiation.event
 			])
 		)
 	);
@@ -1765,6 +1871,14 @@ export function validateContent(raw: RawContent): ContentValidation {
 	);
 	const postList = entourageCatalog.data.posts;
 	issues.push(...crossCheckEntourage(postList, refs, knownIds));
+	issues.push(
+		...crossCheckRecruitment(
+			balance.data.entourage,
+			entourageCatalog.data.profiles,
+			actionList,
+			sourcedEvents
+		)
+	);
 	const traitIdSet = new Set(traitList.map((trait) => trait.id));
 	entourageCatalog.data.profiles.forEach((profile, index) => {
 		if (knownIds.has(profile.id)) {

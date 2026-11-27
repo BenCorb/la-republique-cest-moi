@@ -504,6 +504,11 @@ parties réelles.
   de la présélection ; voir GDD §6.2 et ARCHITECTURE §8.4 duovicies. Recherche ciblée, vérification et
   progression des juniors : P3-21.
 
+  **Correction (P3-21, 27 novembre 2026) :** recherche à trois niveaux (simple, ciblée, chasse de
+  tête) avec échéance sauvegardée et résolution unique, trait visible facultatif, moitié du prix
+  rendue en cas d’échec ; vérification de dossier par indices jamais certains ; progression des
+  juniors. Voir GDD §6.2 et ARCHITECTURE §8.4 tervicies.
+
 - **PT-P3-09-006 — Lier le salaire à la compétence et faire évoluer la masse salariale (26 novembre
   2026, direction souhaitée par le créateur, entourage, économie et progression).** Les candidats peu
   compétents doivent pouvoir former une équipe de départ imparfaite mais abordable. À mesure que le
@@ -569,6 +574,10 @@ parties réelles.
   **Correction (P3-20, 26 novembre 2026) :** salaire demandé selon la compétence, salaire convenu au
   contrat pour la réserve, la paie, les alertes et la masse salariale affichée ; trois offres
   prédéfinies. Progression et renégociations : P3-21.
+
+  **Correction (P3-21, 27 novembre 2026) :** progression des collaborateurs par trimestre exercé,
+  renégociation à chaque palier de 15 points (au plus une fois par an) par un événement bloquant ;
+  voir GDD §6.2 et ARCHITECTURE §8.4 tervicies.
 
 - **PT-P3-09-007 — Retirer automatiquement du plan les activités devenues impossibles (26 novembre
   2026, décision souhaitée par le créateur, agenda et accélération).** Lorsqu’une activité déjà

@@ -45,7 +45,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 19;
+export const SIMULATION_REPORT_VERSION = 20;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -160,6 +160,10 @@ export interface SimulationRun {
 	readonly hiresRefused: number;
 	readonly payrollFinalCents: number;
 	readonly teamCompetence: number;
+	/** Recrutement II (P3-21) : recherches commandées, augmentations accordées, points gagnés en poste. */
+	readonly searchesOrdered: number;
+	readonly raisesGranted: number;
+	readonly staffProgress: number;
 	/** Justice (P3-01) : faits inscrits dont le joueur est auteur ou complice, dossiers le visant, condamnations. */
 	readonly facts: number;
 	readonly playerCases: number;
@@ -527,14 +531,47 @@ function hireWish(strategy: SimulationStrategy, state: GameState, content: Conte
 		const step: PlanStep = { kind: 'action', id: hireId, target: candidate.characterId };
 		if (previewPlan(state, { steps: [step] }, content).valid) return [step];
 	}
+	// Sans candidat recrutable, l'ambitieuse commande une recherche ciblée (P3-21).
+	const searchId = content.actionIds.find((id) =>
+		content.actions[id]?.effects.some(
+			(effect) => effect.op === 'orderSearch' && effect.level === 'targeted'
+		)
+	);
+	if (strategy !== 'ambitious' || !searchId) return [];
+	for (const postId of content.postIds) {
+		const step: PlanStep = { kind: 'action', id: searchId, target: postId };
+		if (previewPlan(state, { steps: [step] }, content).valid) return [step];
+	}
 	return [];
 }
 
 function recruitmentCounts(
 	state: GameState
-): Pick<SimulationRun, 'hiresRefused' | 'payrollFinalCents' | 'teamCompetence'> {
+): Pick<
+	SimulationRun,
+	| 'hiresRefused'
+	| 'payrollFinalCents'
+	| 'teamCompetence'
+	| 'searchesOrdered'
+	| 'raisesGranted'
+	| 'staffProgress'
+> {
 	const active = state.staff.filter((member) => member.status === 'active');
+	const quarters = state.history.flatMap((entry) =>
+		entry.type === 'turn.resolved' ? [entry] : []
+	);
+	// Étapes du plan et choix des décisions bloquantes (la renégociation en est une).
+	const politics = state.history.flatMap((entry) =>
+		entry.type === 'turn.resolved' ? entry.steps.flatMap((step) => step.politics) : entry.politics
+	);
 	return {
+		searchesOrdered: politics.filter((change) => change.kind === 'searchOrdered').length,
+		raisesGranted: politics.filter((change) => change.kind === 'raiseGranted').length,
+		staffProgress: quarters.reduce(
+			(total, entry) =>
+				total + (entry.staff?.progress ?? []).reduce((sum, step) => sum + step.to - step.from, 0),
+			0
+		),
 		hiresRefused: state.history.reduce(
 			(total, entry) =>
 				entry.type === 'turn.resolved'
@@ -1434,6 +1471,9 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'hiresRefused',
 		'payrollFinalCents',
 		'teamCompetence',
+		'searchesOrdered',
+		'raisesGranted',
+		'staffProgress',
 		'facts',
 		'playerCases',
 		'convictions',
@@ -1513,6 +1553,9 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.hiresRefused,
 		run.payrollFinalCents,
 		run.teamCompetence,
+		run.searchesOrdered,
+		run.raisesGranted,
+		run.staffProgress,
 		run.facts,
 		run.playerCases,
 		run.convictions,

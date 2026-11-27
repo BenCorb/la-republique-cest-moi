@@ -249,6 +249,26 @@
 			"traits": ["trait.bluntness"],
 			"minAttractiveness": 55,
 			"rareWeight": 1
+		},
+		{
+			"id": "profile.sought",
+			"label": "Profil confirmé repéré par votre recherche",
+			"minCompetence": 45,
+			"maxCompetence": 72,
+			"traits": [],
+			"minAttractiveness": 100,
+			"rareWeight": 0,
+			"searchOnly": true
+		},
+		{
+			"id": "profile.headhunted",
+			"label": "Pointure approchée par un chasseur de têtes",
+			"minCompetence": 72,
+			"maxCompetence": 92,
+			"traits": [],
+			"minAttractiveness": 100,
+			"rareWeight": 0,
+			"searchOnly": true
 		}
 	]
 }

@@ -12,6 +12,7 @@ import type {
 	GaugeId,
 	IndicatorId,
 	PromiseStatus,
+	SearchLevel,
 	InstitutionsDefinition,
 	ResourceId,
 	Resources
@@ -286,6 +287,12 @@ export interface StaffMember {
 	readonly salaryCents: number;
 	/** Prime d'arrivée restant due, payée avec le premier salaire (P3-20). */
 	readonly bonusDueCents: number;
+	/** Progression en cours vers le prochain point de compétence, en dixièmes (P3-21). */
+	readonly progressTenths: number;
+	/** Compétence à l'embauche ou à la dernière demande d'augmentation (P3-21). */
+	readonly reviewedCompetence: number;
+	/** Trimestre du dernier accord ou de la dernière demande d'augmentation (P3-21). */
+	readonly reviewTurn: Turn;
 }
 
 /** Candidat présélectionné pour un poste vacant, avec le profil qui l'a fait proposer. */
@@ -294,6 +301,34 @@ export interface ShortlistEntry {
 	readonly profileId: string;
 	/** Entretiens approfondis déjà menés (P3-20). */
 	readonly interviews: number;
+	/**
+	 * Vérification du dossier (P3-21) : traits cachés signalés par les
+	 * références, peut-être à tort ; `null` tant que rien n'a été vérifié.
+	 */
+	readonly hints: readonly string[] | null;
+}
+
+/** Recherche de candidats commandée, en attente de son échéance (P3-21). */
+export interface RecruitmentSearch {
+	readonly postId: string;
+	readonly level: SearchLevel;
+	/** Trait public exigé, ou `null`. */
+	readonly trait: string | null;
+	readonly orderedTurn: Turn;
+	/** Frontière à laquelle le résultat arrive (une seule résolution). */
+	readonly dueTurn: Turn;
+}
+
+/** Issue d'une recherche à son échéance (P3-21). */
+export interface SearchOutcomeRecord {
+	readonly postId: string;
+	readonly level: SearchLevel;
+	readonly trait: string | null;
+	/** `cancelled` : poste pourvu ou fermé entre-temps. */
+	readonly outcome: 'found' | 'failed' | 'cancelled';
+	readonly candidates: readonly string[];
+	/** Part du prix rendue au budget politique. */
+	readonly refundCents: number;
 }
 
 /** Production d'un collaborateur au trimestre résolu. */
@@ -318,6 +353,16 @@ export interface StaffRecord {
 	}[];
 	/** Postes pour lesquels une nouvelle présélection a été proposée. */
 	readonly shortlisted: readonly string[];
+	/** Recherches arrivées à échéance (P3-21). */
+	readonly searches: readonly SearchOutcomeRecord[];
+	/** Compétence gagnée en poste ce trimestre (P3-21). */
+	readonly progress: readonly {
+		readonly characterId: string;
+		readonly from: number;
+		readonly to: number;
+	}[];
+	/** Demandes d'augmentation adressées ce trimestre (P3-21). */
+	readonly raiseRequests: readonly string[];
 }
 
 /** Règles du cumul en vigueur, copiées du catalogue (modifiables par réforme, P3-05). */
@@ -383,6 +428,21 @@ export type PoliticalChange =
 	| { readonly kind: 'hireRefused'; readonly characterId: string; readonly postId: string }
 	/** Entretien approfondi avec un candidat (P3-20). */
 	| { readonly kind: 'interviewed'; readonly characterId: string; readonly postId: string }
+	/** Recherche de candidats commandée (P3-21). */
+	| {
+			readonly kind: 'searchOrdered';
+			readonly postId: string;
+			readonly level: SearchLevel;
+			readonly dueTurn: Turn;
+	  }
+	/** Dossier du candidat vérifié (P3-21). */
+	| { readonly kind: 'vetted'; readonly characterId: string; readonly postId: string }
+	/** Augmentation accordée (P3-21). */
+	| {
+			readonly kind: 'raiseGranted';
+			readonly characterId: string;
+			readonly salaryCents: number;
+	  }
 	| {
 			readonly kind: 'familyJoined';
 			readonly characterId: string;
@@ -886,6 +946,8 @@ export interface GameState {
 	readonly staff: readonly StaffMember[];
 	/** Présélections ouvertes, par poste vacant. */
 	readonly shortlists: Readonly<Record<string, readonly ShortlistEntry[]>>;
+	/** Recherches de candidats en cours, une par poste au plus (P3-21). */
+	readonly searches: readonly RecruitmentSearch[];
 	/** Registre des faits, dans l'ordre d'inscription (P3-01). */
 	readonly facts: readonly Fact[];
 	/** Dossiers judiciaires, dans l'ordre d'ouverture (P3-01). */
@@ -991,6 +1053,7 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		campaigns: [],
 		staff: [],
 		shortlists: {},
+		searches: [],
 		institutions: {
 			incompatibilities: content.institutions.incompatibilities.map(
 				([left, right]) => [left, right] as const

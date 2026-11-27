@@ -695,12 +695,39 @@ function checkCareerInvariants(state: GameState): string[] {
 		if (!character.tags.includes('staff')) {
 			violations.push(`collaborateur sans étiquette d’entourage : ${member.characterId}`);
 		}
+		// Recrutement II (P3-21) : progression en dixièmes, dernier accord passé.
+		if (
+			!Number.isSafeInteger(member.progressTenths) ||
+			member.progressTenths < 0 ||
+			member.progressTenths > 9
+		) {
+			violations.push(`progression invalide : ${member.characterId}`);
+		}
+		if (member.reviewTurn > state.turn) {
+			violations.push(`accord salarial futur : ${member.characterId}`);
+		}
+	}
+	// Recherches (P3-21) : une par poste, échéance à venir (une échue est résolue à la frontière).
+	const searched = new Set<string>();
+	for (const search of state.searches) {
+		if (searched.has(search.postId))
+			violations.push(`deux recherches pour un poste : ${search.postId}`);
+		searched.add(search.postId);
+		if (search.dueTurn <= state.turn && state.phase !== 'ended') {
+			violations.push(`recherche échue non résolue : ${search.postId}`);
+		}
+		if (search.orderedTurn >= search.dueTurn) {
+			violations.push(`recherche sans délai : ${search.postId}`);
+		}
 	}
 	for (const [postId, entries] of Object.entries(state.shortlists)) {
 		if (occupied.has(postId)) violations.push(`présélection pour un poste pourvu : ${postId}`);
 		for (const entry of entries) {
 			if (!state.characters[entry.characterId]) {
 				violations.push(`candidat inconnu : ${entry.characterId}`);
+			}
+			if (entry.hints !== null && new Set(entry.hints).size !== entry.hints.length) {
+				violations.push(`indices en double : ${entry.characterId}`);
 			}
 		}
 	}

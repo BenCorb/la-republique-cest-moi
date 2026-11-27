@@ -287,7 +287,10 @@ describe('un poste pour la famille (P3-12)', () => {
 				state.characters[relativeId]!.competence,
 				content
 			),
-			bonusDueCents: 0
+			bonusDueCents: 0,
+			progressTenths: 0,
+			reviewedCompetence: state.characters[relativeId]!.competence,
+			reviewTurn: state.turn
 		});
 		// Le même personnage : famille, relations et entourage.
 		const relative = hired.characters[relativeId]!;
@@ -385,7 +388,8 @@ describe('un poste pour la famille (P3-12)', () => {
 		expect(selected.shortlists['post.chief_of_staff']).toContainEqual({
 			characterId: relativeId,
 			profileId: 'profile.connected',
-			interviews: 0
+			interviews: 0,
+			hints: null
 		});
 		expect(selected.characters[relativeId]!.tags).toContain('candidate');
 		expect(selected.staff).toEqual(state.staff);

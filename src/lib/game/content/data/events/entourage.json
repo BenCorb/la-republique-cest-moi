@@ -1,6 +1,57 @@
 {
 	"events": [
 		{
+			"id": "event.staff.raise_request",
+			"category": "entourage",
+			"title": "Une demande d’augmentation",
+			"text": "{collaborator} a beaucoup appris à vos côtés, et le sait. Entre deux dossiers, une phrase tombe : « Ailleurs, on me paierait au prix de ce que je vaux désormais. » Le chiffre suit, bien préparé.",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 30,
+			"cooldownTurns": 0,
+			"unique": false,
+			"subject": "staff",
+			"actors": [{ "role": "collaborator", "tags": ["staff"] }],
+			"choices": [
+				{
+					"id": "grant",
+					"label": "Accorder l’augmentation",
+					"hints": ["La masse salariale s’alourdit", "{collaborator} se sent reconnu"],
+					"costs": [],
+					"effects": [
+						{ "op": "grantRaise", "role": "collaborator" },
+						{
+							"op": "addRelation",
+							"role": "collaborator",
+							"value": 5,
+							"memory": "Vous avez reconnu ses progrès par une augmentation."
+						}
+					],
+					"outcome": [
+						"{collaborator} remercie sobrement et retourne travailler. Le trésorier, lui, soupire."
+					]
+				},
+				{
+					"id": "refuse",
+					"label": "Refuser pour l’instant",
+					"hints": ["Le budget est préservé", "{collaborator} pourrait regarder ailleurs"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "collaborator",
+							"value": -12,
+							"memory": "Vous avez refusé sa demande d’augmentation."
+						}
+					],
+					"outcome": [
+						"{collaborator} hoche la tête sans un mot. La demande reviendra, peut-être pas sous la même forme."
+					]
+				}
+			]
+		},
+		{
 			"id": "entourage.adviser_initiative",
 			"category": "entourage",
 			"title": "Une initiative malheureuse",

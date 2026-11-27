@@ -211,7 +211,10 @@ describe('offre et réponse du candidat', () => {
 			leftTurn: null,
 			leaveReason: null,
 			salaryCents: 300_000,
-			bonusDueCents: 0
+			bonusDueCents: 0,
+			progressTenths: 0,
+			reviewedCompetence: 50,
+			reviewTurn: 0
 		};
 		const quarters = content.balance.entourage.hireReserveQuarters;
 		expect(hireReserveCents([member], 100_000, content, 50_000)).toBe(
