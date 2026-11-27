@@ -12,6 +12,7 @@
 import { z } from 'zod';
 import {
 	ARTICLE_TONES,
+	REGIONAL_ANCHOR,
 	END_CAUSES,
 	LEGACY_METRICS,
 	ARTICLE_TOPICS,
@@ -245,7 +246,7 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 	z.strictObject({ op: z.literal('abandonPromise') }),
 	z.strictObject({
 		op: z.literal('addMediaRelation'),
-		media: z.union([contentId, z.literal('target')]),
+		media: z.union([contentId, z.literal('target'), z.literal(REGIONAL_ANCHOR)]),
 		value: safeInt.refine(
 			(value) => value !== 0 && Math.abs(value) <= MEDIA_RELATION_MAX,
 			'variation non nulle de -100 à 100'
@@ -323,7 +324,7 @@ export const assetSchema: z.ZodType<AssetDefinition> = z.strictObject({
 	failurePerMille: safeInt.refine((value) => value >= 0 && value <= 1000, 'de 0 à 1000'),
 	salePercent: smallPercent.refine((value) => value >= 0, 'part positive ou nulle'),
 	stressPerTurn: smallPercent,
-	media: contentId.optional()
+	media: z.union([contentId, z.literal(REGIONAL_ANCHOR)]).optional()
 });
 
 export const lifestyleSchema: z.ZodType<LifestyleDefinition> = z.strictObject({
@@ -818,7 +819,8 @@ export const mediaSchema: z.ZodType<MediaDefinition> = z.strictObject({
 	kind: z.enum(MEDIA_KINDS),
 	line: frenchText,
 	description: frenchText,
-	scope: z.enum(['national', 'local']),
+	scope: z.enum(['national', 'regional']),
+	region: contentId.optional(),
 	audience: safeInt.refine((value) => value >= 1 && value <= 100, 'audience de 1 à 100'),
 	baseRelation: smallPercent,
 	groups: z.array(contentId).min(1),
@@ -850,6 +852,8 @@ const toneEffect = safeInt.refine((value) => Math.abs(value) <= 20, 'effet de -2
 export const pressBalanceSchema: z.ZodType<PressBalance> = z.strictObject({
 	maxArticlesPerTurn: positiveInt,
 	nationalExposure: safeInt.refine((value) => value >= 0 && value <= 100, 'de 0 à 100'),
+	nationalMandateRank: positiveInt,
+	regionalNationalPercent: percent,
 	toneThreshold: safeInt.refine((value) => value >= 1 && value <= 100, 'de 1 à 100'),
 	toneEffects: z.strictObject({ critical: toneEffect, neutral: toneEffect, favorable: toneEffect }),
 	maxEffect: positiveInt,

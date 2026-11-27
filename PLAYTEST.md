@@ -362,6 +362,12 @@ parties réelles.
   média régional représentatif ou plusieurs par région ; possibilité de racheter son journal régional ;
   seuils auxquels la presse nationale commence puis domine la couverture.
 
+  **Correction (P3-18, 26 novembre 2026) :** treize quotidiens régionaux (un par région, Le Courrier
+  du Bocage pour la Normandie), rôle `regional_anchor` pour les événements et le rachat, presse
+  nationale ouverte par un mandat national, une candidature nationale ou l’exposition ; voir GDD §9.1
+  et ARCHITECTURE §8.4 vicies. Déménagement, parachutage et plusieurs médias par région restent après
+  la V1.
+
 - **PT-P3-09-004 — Lancer une recherche ciblée de collaborateurs (26 novembre 2026, proposition
   produit, entourage, stratégie et dépense du budget).** Pour un poste vacant, permettre au joueur de
   commander une recherche de profils en précisant les caractéristiques recherchées. Plus la demande

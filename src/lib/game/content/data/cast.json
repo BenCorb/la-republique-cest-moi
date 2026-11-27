@@ -20,20 +20,20 @@
 		},
 		{
 			"id": "cast.sophie_roux",
-			"name": "Sophie Roux, du Courrier du Bocage",
+			"name": "Sophie Roux, du quotidien régional",
 			"tags": ["journalist", "local_press"],
 			"age": 34,
 			"renewal": {
-				"epithet": "du Courrier du Bocage"
+				"epithet": "du quotidien régional"
 			}
 		},
 		{
 			"id": "cast.antoine_vasseur",
-			"name": "Antoine Vasseur, de Radio Bocage FM",
+			"name": "Antoine Vasseur, de la radio locale",
 			"tags": ["journalist", "radio"],
 			"age": 45,
 			"renewal": {
-				"epithet": "de Radio Bocage FM"
+				"epithet": "de la radio locale"
 			}
 		},
 		{

@@ -24,6 +24,7 @@ import {
 	describePendingEvent,
 	hashSeed,
 	followsPlayer,
+	pressAudience,
 	interviewIssue,
 	distinctionsOf,
 	divertedFunds,
@@ -429,9 +430,10 @@ function mediaWish(
 			content.actions[id]?.target === 'media' &&
 			!content.actions[id]?.effects.some((effect) => effect.op === 'giveInterview')
 	);
+	const audience = pressAudience(state.player, state.mandates, state.campaigns, content);
 	const followed = content.mediaIds.filter((mediaId) => {
 		const definition = content.media[mediaId];
-		return definition !== undefined && followsPlayer(definition, state.player.exposure, content);
+		return definition !== undefined && followsPlayer(definition, audience, content);
 	});
 	const relation = (mediaId: string): number => state.world.media[mediaId]?.relation ?? 0;
 	const byRelation = [...followed].sort((left, right) => relation(right) - relation(left));
@@ -615,7 +617,7 @@ function pressCounts(
 		criticalArticles: articles.filter((article) => article.tone === 'critical').length,
 		favorableArticles: articles.filter((article) => article.tone === 'favorable').length,
 		interviews: articles.filter((article) => article.topic === 'interview').length,
-		mediaOwned: ownedMedia(state.upgrades, content).size
+		mediaOwned: ownedMedia(state.upgrades, state.player.territory.regionId, content).size
 	};
 }
 

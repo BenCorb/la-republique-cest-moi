@@ -1153,7 +1153,7 @@ export const fixtureWealth = {
 };
 
 /**
- * Médias de test (P3-03) : un seul média local, des titres génériques et des
+ * Médias de test (P3-03) : un quotidien par région de test (P3-18), des titres génériques et des
  * effets nuls, sans nouvelle d'ambiance ni tirage : les tests existants
  * gardent leur PRNG et leurs soutiens. Les tests de presse utilisent `withPress`.
  */
@@ -1165,7 +1165,22 @@ export const fixtureMedia = {
 			kind: 'regional',
 			line: 'Presse locale',
 			description: 'Le journal du coin.',
-			scope: 'local',
+			scope: 'regional',
+			region: 'region.test',
+			audience: 50,
+			baseRelation: 0,
+			groups: ['support.workers'],
+			coverage: { justice: 1, promise: 1, election: 1, lifestyle: 1, ownership: 1 },
+			amplifyPercent: 100
+		},
+		{
+			id: 'media.other',
+			name: 'Le Journal d’ailleurs',
+			kind: 'regional',
+			line: 'Presse d’une autre région',
+			description: 'Le journal d’une région voisine.',
+			scope: 'regional',
+			region: 'region.other',
 			audience: 50,
 			baseRelation: 0,
 			groups: ['support.workers'],
@@ -1287,6 +1302,8 @@ export const fixtureMedia = {
 	balance: {
 		maxArticlesPerTurn: 3,
 		nationalExposure: 30,
+		nationalMandateRank: 40,
+		regionalNationalPercent: 50,
 		toneThreshold: 30,
 		toneEffects: { critical: 0, neutral: 0, favorable: 0 },
 		maxEffect: 5,

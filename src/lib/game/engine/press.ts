@@ -1,7 +1,8 @@
 /**
  * Médias et fil de presse (P3-03, GDD §9.1, ARCHITECTURE.md §8.4).
  *
- * - Cinq médias fictifs du catalogue, chacun avec sa ligne, son audience, ses
+ * - Médias fictifs du catalogue : quatre nationaux et un quotidien par région
+ *   (P3-18), chacun avec sa ligne, son audience, ses
  *   lecteurs (groupes de soutien) et ses sujets de prédilection. Leur relation
  *   envers le joueur (`WorldState.media`) évolue par les interviews, déjeuners
  *   et choix d'événements, puis revient lentement vers celle du catalogue.
@@ -43,6 +44,7 @@ import { nextInt, type RngState } from './random.ts';
 import type {
 	Article,
 	Campaign,
+	MandateInstance,
 	Ballot,
 	JusticeRecord,
 	LegalCase,
@@ -55,34 +57,83 @@ import type {
 	WorldState
 } from './state.ts';
 import { applyPoliticalEffect } from './world.ts';
+import { resolveMediaRef } from './territory.ts';
 
 /** Médias possédés par le joueur, par identifiant (actifs `asset.media`). */
-export function ownedMedia(upgrades: readonly OwnedUpgrade[], content: Content): Set<string> {
+export function ownedMedia(
+	upgrades: readonly OwnedUpgrade[],
+	regionId: string,
+	content: Content
+): Set<string> {
 	const owned = new Set<string>();
 	for (const upgrade of upgrades) {
-		const mediaId = content.upgrades[upgrade.upgradeId]?.asset?.media;
-		if (mediaId !== undefined) owned.add(mediaId);
+		const ref = content.upgrades[upgrade.upgradeId]?.asset?.media;
+		if (ref !== undefined) owned.add(resolveMediaRef(ref, regionId, content));
 	}
 	return owned;
 }
 
-/** Le média suit-il le joueur ? Un média national, seulement au-delà du seuil d'exposition. */
-export function followsPlayer(media: MediaDefinition, exposure: number, content: Content): boolean {
-	return media.scope === 'local' || exposure >= content.press.nationalExposure;
+/**
+ * Ce qui rend le joueur intéressant pour la presse (P3-18) : son exposition,
+ * sa région d'origine et une portée nationale (mandat de rang national ou
+ * candidature en cours à un scrutin national).
+ */
+export interface PressAudience {
+	readonly exposure: number;
+	readonly regionId: string;
+	readonly national: boolean;
+}
+
+export function pressAudience(
+	player: PlayerState,
+	mandates: readonly MandateInstance[],
+	campaigns: readonly Campaign[],
+	content: Content
+): PressAudience {
+	const rank = content.press.nationalMandateRank;
+	const national =
+		mandates.some(
+			(mandate) =>
+				mandate.status === 'active' && (content.mandates[mandate.mandateId]?.rank ?? 0) >= rank
+		) ||
+		campaigns.some(
+			(campaign) =>
+				campaign.status === 'running' &&
+				content.elections[campaign.electionId]?.scope === 'national'
+		);
+	return { exposure: player.exposure, regionId: player.territory.regionId, national };
+}
+
+/**
+ * Le média suit-il le joueur ? Le quotidien de sa région, toujours ; ceux des
+ * autres régions, jamais ; un média national, à partir d'une portée nationale
+ * ou du seuil d'exposition.
+ */
+export function followsPlayer(
+	media: MediaDefinition,
+	audience: PressAudience,
+	content: Content
+): boolean {
+	if (media.scope === 'regional') return media.region === audience.regionId;
+	return audience.national || audience.exposure >= content.press.nationalExposure;
 }
 
 /** Raison pour laquelle ce média ne peut pas être ciblé, ou `null`. */
 export function mediaIssue(
 	target: string,
-	player: PlayerState,
+	audience: PressAudience,
 	upgrades: readonly OwnedUpgrade[],
 	content: Content
 ): string | null {
 	const media = Object.hasOwn(content.media, target) ? content.media[target] : undefined;
 	if (!media) return 'choisissez un média du catalogue';
-	if (ownedMedia(upgrades, content).has(target)) return 'ce média vous appartient déjà';
-	if (!followsPlayer(media, player.exposure, content)) {
-		return `${media.name} ne s’intéresse pas encore à vous (exposition insuffisante)`;
+	if (ownedMedia(upgrades, audience.regionId, content).has(target))
+		return 'ce média vous appartient déjà';
+	if (media.scope === 'regional' && media.region !== audience.regionId) {
+		return `${media.name} ne couvre pas votre région`;
+	}
+	if (!followsPlayer(media, audience, content)) {
+		return `${media.name} ne s’intéresse pas encore à vous (exposition ou envergure nationale insuffisantes)`;
 	}
 	return null;
 }
@@ -172,6 +223,7 @@ const PROMISE_TONES: Readonly<Record<string, ArticleTone>> = {
 export interface PressInputs {
 	readonly turn: Turn;
 	readonly upgrades: readonly OwnedUpgrade[];
+	readonly mandates: readonly MandateInstance[];
 	readonly campaigns: readonly Campaign[];
 	readonly ballots: readonly Ballot[];
 	readonly cases: readonly LegalCase[];
@@ -228,8 +280,9 @@ function subjectsOf(
 		});
 	}
 	for (const upgrade of inputs.upgrades) {
-		const mediaId = content.upgrades[upgrade.upgradeId]?.asset?.media;
-		if (mediaId === undefined || upgrade.acquiredTurn !== inputs.turn) continue;
+		const ref = content.upgrades[upgrade.upgradeId]?.asset?.media;
+		if (ref === undefined || upgrade.acquiredTurn !== inputs.turn) continue;
+		const mediaId = resolveMediaRef(ref, player.territory.regionId, content);
 		subjects.push({
 			topic: 'ownership',
 			subjectId: mediaId,
@@ -403,10 +456,14 @@ export function headlinePoolReport(
 		].sort();
 		const details: (string | null)[] = declared.length > 0 ? declared : [null];
 		const tones: readonly ArticleTone[] = topic === 'ambient' ? ['neutral'] : ARTICLE_TONES;
+		// Les titres ne dépendent que de la famille du média : une ligne par famille
+		// (les treize quotidiens régionaux partagent leurs pools, P3-18).
+		const kinds = new Set<string>();
 		for (const mediaId of content.mediaIds) {
 			const media = content.media[mediaId]!;
 			const covered = topic === 'ambient' || topic === 'interview' || media.coverage[topic] > 0;
-			if (!covered) continue;
+			if (!covered || kinds.has(media.kind)) continue;
+			kinds.add(media.kind);
 			for (const tone of tones) {
 				if (media.kind === 'satirical' && tone === 'favorable') continue;
 				for (const detail of details) {
@@ -454,7 +511,8 @@ export function resolvePress(
 ): PressResolution {
 	let { player, world } = parts;
 	let memory = world.press;
-	const owned = ownedMedia(inputs.upgrades, content);
+	const owned = ownedMedia(inputs.upgrades, player.territory.regionId, content);
+	const audience = pressAudience(player, inputs.mandates, inputs.campaigns, content);
 	const listed = subjectsOf(inputs, player, world, parts.rng, content);
 	let rng = listed.rng;
 	const articles: Article[] = [];
@@ -485,14 +543,25 @@ export function resolvePress(
 						subject.topic !== 'interview' &&
 						entry.coverage[subject.topic] > 0 &&
 						!(subject.topic === 'ownership' && owned.has(entry.id)) &&
-						(subject.topic === 'justice' ||
-							subject.topic === 'ownership' ||
-							followsPlayer(entry, player.exposure, content))
+						// Couverture croisée (P3-18) : une affaire ou un rachat intéressent toute
+						// la presse nationale, jamais les titres d'autres régions.
+						(entry.scope === 'regional'
+							? entry.region === audience.regionId
+							: subject.topic === 'justice' ||
+								subject.topic === 'ownership' ||
+								followsPlayer(entry, audience, content))
 				);
 			const pick = weighted(
 				candidates,
 				(entry) =>
-					subject.topic === 'interview' ? 0 : entry.coverage[subject.topic] * entry.audience,
+					// Poids en centièmes : le quotidien régional pèse moins dans une carrière nationale.
+					subject.topic === 'interview'
+						? 0
+						: entry.coverage[subject.topic] *
+							entry.audience *
+							(entry.scope === 'regional' && audience.national
+								? content.press.regionalNationalPercent
+								: 100),
 				rng
 			);
 			rng = pick.rng;
@@ -562,7 +631,12 @@ export function resolvePress(
 	// Nouvelle d'ambiance : sans rapport avec le joueur, sans effet.
 	const ambient = chance(content.press.ambientPercent, rng);
 	rng = ambient.rng;
-	const mediaPick = ambient.hit ? pickOne(content.mediaIds, rng) : { item: null, rng };
+	// Ambiance : un média national ou le quotidien de la région, jamais celui d'une autre.
+	const ambientPool = content.mediaIds.filter((mediaId) => {
+		const entry = content.media[mediaId]!;
+		return entry.scope === 'national' || entry.region === audience.regionId;
+	});
+	const mediaPick = ambient.hit ? pickOne(ambientPool, rng) : { item: null, rng };
 	rng = mediaPick.rng;
 	const ambientMedia = mediaPick.item === null ? undefined : content.media[mediaPick.item];
 	if (ambientMedia) {

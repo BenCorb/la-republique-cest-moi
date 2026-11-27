@@ -8,6 +8,7 @@
  * n'avance pas le PRNG et ne modifie rien.
  */
 import {
+	REGIONAL_ANCHOR,
 	INDICATOR_IDS,
 	RESOURCE_IDS,
 	type Content,
@@ -69,6 +70,9 @@ import {
 	type CareerParts,
 	type QuarterSnapshot,
 	followsPlayer,
+	pressAudience,
+	regionalMedia,
+	resolveMediaRef,
 	ownedMedia,
 	type StaffLeaveReason,
 	activeMandates,
@@ -1536,7 +1540,7 @@ function targetLabel(target: string, state: GameState, content: Content): string
 				.flatMap((entry) => (entry.type === 'turn.resolved' ? entry.steps : []))
 				.find((step) => step.kind === 'purchase' && step.instanceId === target)?.id;
 		const definition = upgradeId ? content.upgrades[upgradeId] : undefined;
-		if (definition) return definition.ownedLabel ?? definition.label;
+		if (upgradeId && definition) return upgradeLabel(upgradeId, state, content, true);
 	}
 	const mandate = state.mandates.find((entry) => entry.instanceId === target);
 	if (mandate) return mandateName(mandate.mandateId, state, content);
@@ -1604,7 +1608,7 @@ function journalOfQuarter(entry: HistoryEntry, state: GameState, content: Conten
 		const label =
 			step.kind === 'action'
 				? `${content.actions[step.id]?.label ?? step.id}${target}`
-				: `Achat : ${content.upgrades[step.id]?.label ?? step.id}`;
+				: `Achat : ${upgradeLabel(step.id, state, content, false)}`;
 		const effects = joinParts(
 			changesText(step.changes),
 			gaugesText(step.gauges),
@@ -1613,7 +1617,7 @@ function journalOfQuarter(entry: HistoryEntry, state: GameState, content: Conten
 		lines.push({ kind: 'step', text: effects ? `${label} — ${effects}` : label });
 	}
 	for (const producer of entry.economy.producers) {
-		const label = content.upgrades[producer.upgradeId]?.label ?? producer.upgradeId;
+		const label = upgradeLabel(producer.upgradeId, state, content, true);
 		const count = (value: number): string => (value > 1 ? ` ×${value}` : '');
 		if (producer.active > 0) {
 			lines.push({
@@ -2252,6 +2256,25 @@ function audienceLabel(audience: number): string {
 			: 'Audience confidentielle';
 }
 
+/**
+ * Libellé d'une amélioration ou d'un actif ; le rachat du quotidien régional
+ * (rôle `regional_anchor`, P3-18) prend le nom du titre de la région du joueur.
+ */
+function upgradeLabel(
+	upgradeId: string,
+	state: GameState,
+	content: Content,
+	owned: boolean
+): string {
+	const definition = content.upgrades[upgradeId];
+	if (!definition) return upgradeId;
+	if (definition.asset?.media === REGIONAL_ANCHOR) {
+		const name = regionalMedia(state.player.territory.regionId, content)?.name;
+		if (name) return owned ? name : `Racheter ${name}`;
+	}
+	return owned ? (definition.ownedLabel ?? definition.label) : definition.label;
+}
+
 /** Relation d'un média, en clair (aucun chiffre affiché). */
 export function mediaRelationLabel(relation: number): string {
 	if (relation >= 50) return 'Très bienveillant';
@@ -2263,10 +2286,14 @@ export function mediaRelationLabel(relation: number): string {
 
 function buildMedia(state: GameState, plan: readonly PlanStep[], content: Content): MediaView {
 	const actionIds = content.actionIds.filter((id) => content.actions[id]?.target === 'media');
-	const owned = ownedMedia(state.upgrades, content);
+	const regionId = state.player.territory.regionId;
+	const owned = ownedMedia(state.upgrades, regionId, content);
+	const audience = pressAudience(state.player, state.mandates, state.campaigns, content);
 	const outlets = content.mediaIds.flatMap((mediaId): MediaOutletView[] => {
 		const definition = content.media[mediaId];
-		if (!definition) return [];
+		// Presse nationale et quotidien de la région ; les titres des autres régions restent hors champ.
+		if (!definition || (definition.scope === 'regional' && definition.region !== regionId))
+			return [];
 		const isOwned = owned.has(mediaId);
 		return [
 			{
@@ -2280,7 +2307,7 @@ function buildMedia(state: GameState, plan: readonly PlanStep[], content: Conten
 					? 'Votre propriété'
 					: mediaRelationLabel(state.world.media[mediaId]?.relation ?? 0),
 				owned: isOwned,
-				follows: followsPlayer(definition, state.player.exposure, content),
+				follows: followsPlayer(definition, audience, content),
 				actions: isOwned
 					? []
 					: actionIds.map((actionId) => {
@@ -2344,7 +2371,7 @@ function buildWealth(
 		return [
 			{
 				instanceId: upgrade.instanceId,
-				label: definition.ownedLabel ?? definition.label,
+				label: upgradeLabel(upgrade.upgradeId, state, content, true),
 				acquired: formatTurn(upgrade.acquiredTurn),
 				value: formatMoney(upgrade.valueCents),
 				income: upgrade.acquiredTurn < state.turn ? formatMoney(income) : null,
@@ -2419,7 +2446,7 @@ function buildOrganisation(
 		return [
 			{
 				upgradeId,
-				label: definition.ownedLabel ?? definition.label,
+				label: upgradeLabel(upgradeId, state, content, true),
 				owned: owned.length,
 				active: count('active'),
 				pending: count('pending'),
@@ -2572,8 +2599,9 @@ function buildMoments(state: GameState, content: Content): SummaryView['moments'
 		});
 	}
 	for (const upgrade of state.upgrades) {
-		const mediaId = content.upgrades[upgrade.upgradeId]?.asset?.media;
-		if (mediaId === undefined) continue;
+		const ref = content.upgrades[upgrade.upgradeId]?.asset?.media;
+		if (ref === undefined) continue;
+		const mediaId = resolveMediaRef(ref, state.player.territory.regionId, content);
 		moments.push({
 			turn: upgrade.acquiredTurn,
 			weight: 5,
@@ -2629,11 +2657,11 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 	const parties = state.player.affiliations
 		.map((affiliation) => content.parties[affiliation.partyId]?.acronym ?? affiliation.partyId)
 		.join(', ');
+	// Le quotidien de la région d'origine signe l'article (P3-18).
+	const paper =
+		regionalMedia(state.player.territory.regionId, content)?.name ?? 'La presse régionale';
 	return {
-		masthead:
-			cause === 'prison'
-				? 'Le Courrier du Bocage · Chronique judiciaire'
-				: 'Le Courrier du Bocage · Nécrologie',
+		masthead: `${paper} · ${cause === 'prison' ? 'Chronique judiciaire' : 'Nécrologie'}`,
 		title: obituary ? fill(obituary.headline) : `Fin de carrière à ${summary.age} ans`,
 		text: obituary ? fill(obituary.text) : '',
 		cause: CAUSE_LABELS[cause],
@@ -3718,7 +3746,7 @@ export function projectView(
 		return {
 			kind: 'purchase',
 			id,
-			label: upgrade.label,
+			label: upgradeLabel(id, state, content, false),
 			description: upgrade.description,
 			family: FAMILY_LABELS[upgrade.family] ?? upgrade.family,
 			treasury: RESOURCE_NAMES[upgrade.treasury],
@@ -3763,10 +3791,7 @@ export function projectView(
 		.map((producer) => ({
 			instanceId: producer.instanceId,
 			upgradeId: producer.upgradeId,
-			label:
-				content.upgrades[producer.upgradeId]?.ownedLabel ??
-				content.upgrades[producer.upgradeId]?.label ??
-				producer.upgradeId,
+			label: upgradeLabel(producer.upgradeId, state, content, true),
 			status: producer.status,
 			statusLabel:
 				producer.status === 'active'

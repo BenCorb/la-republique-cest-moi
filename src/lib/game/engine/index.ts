@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.32.0';
+export const RULES_VERSION = '0.34.0';
 
 export {
 	START_YEAR,
@@ -114,6 +114,8 @@ export {
 	generateTownName,
 	localRivalModifier,
 	placeOf,
+	regionalMedia,
+	resolveMediaRef,
 	territoryEffects,
 	type HomeTown,
 	type TerritoryState
@@ -344,7 +346,9 @@ export {
 	interviewIssue,
 	mediaIssue,
 	ownedMedia,
+	pressAudience,
 	resolvePress,
+	type PressAudience,
 	type HeadlinePool,
 	type PressInputs,
 	type PressParts,

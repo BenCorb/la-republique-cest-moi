@@ -841,7 +841,9 @@ export function checkContentReferences(state: GameState, content: Content): stri
 				continue;
 			}
 			const known = worldVariables.has(role)
-				? Object.hasOwn(content.parties, actorId) || Object.hasOwn(state.characters, actorId)
+				? Object.hasOwn(content.parties, actorId) ||
+					Object.hasOwn(state.characters, actorId) ||
+					(role === 'regional_media' && Object.hasOwn(content.media, actorId))
 				: Object.hasOwn(state.characters, actorId);
 			if (!known) violations.push(`acteur inconnu : ${role} = ${actorId}`);
 		}

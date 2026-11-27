@@ -8,11 +8,19 @@ import {
 	commitTurn,
 	createGame,
 	evaluateCondition,
+	followsPlayer,
+	mediaIssue,
+	ownedMedia,
+	pressAudience,
 	previewPlan,
+	resolveMediaRef,
 	resolvePress,
 	transition,
+	type Campaign,
 	type GameState,
 	type LegalCase,
+	type MandateInstance,
+	type OwnedUpgrade,
 	type PlanStep,
 	type PressInputs,
 	type TransitionSuccess
@@ -55,11 +63,22 @@ const outlet = (id: string, overrides: Record<string, unknown> = {}) => ({
 	...overrides
 });
 
-/** Trois médias : un local, un national, un satirique hostile ; effets lisibles. */
+/** Médias : le quotidien de la région, celui d'une autre région, un national, un satirique hostile ; effets lisibles. */
 const pressCatalog = {
 	...fixtureMedia,
 	media: [
-		outlet('media.local', { kind: 'regional', scope: 'local', groups: ['support.workers'] }),
+		outlet('media.local', {
+			kind: 'regional',
+			scope: 'regional',
+			region: 'region.test',
+			groups: ['support.workers']
+		}),
+		outlet('media.other', {
+			kind: 'regional',
+			scope: 'regional',
+			region: 'region.other',
+			groups: ['support.workers']
+		}),
 		outlet('media.national'),
 		outlet('media.satire', { kind: 'satirical', baseRelation: -40, groups: ['support.members'] })
 	],
@@ -159,6 +178,7 @@ function inputs(state: GameState, overrides: Partial<PressInputs> = {}): PressIn
 	return {
 		turn: state.turn,
 		upgrades: state.upgrades,
+		mandates: state.mandates,
 		campaigns: state.campaigns,
 		ballots: state.ballots,
 		cases: state.cases,
@@ -193,6 +213,7 @@ describe('médias et fil de presse (P3-03)', () => {
 		const state = createGame({ seed: 'medias' }, catalog);
 		expect(state.world.media).toEqual({
 			'media.local': { relation: 0, interviewTurn: null },
+			'media.other': { relation: 0, interviewTurn: null },
 			'media.national': { relation: 0, interviewTurn: null },
 			'media.satire': { relation: -40, interviewTurn: null }
 		});
@@ -470,6 +491,135 @@ describe('médias et fil de presse (P3-03)', () => {
 				expect.arrayContaining([
 					expect.stringContaining('interview réservée aux actions ciblant un média'),
 					expect.stringContaining('« target » réservé aux actions ciblant un média')
+				])
+			);
+		});
+	});
+});
+
+describe('presse régionale (P3-18)', () => {
+	const deputy: MandateInstance = {
+		instanceId: 'term.1',
+		mandateId: 'mandate.deputy',
+		startTurn: 0,
+		access: 'election',
+		status: 'active',
+		endTurn: null,
+		endReason: null
+	};
+	const running = (electionId: string): Campaign => ({
+		campaignId: 'campaign.1',
+		ballotId: 'ballot.1',
+		electionId,
+		declaredTurn: 0,
+		partyId: null,
+		invested: false,
+		preparation: 0,
+		opponentId: null,
+		status: 'running',
+		playerPercent: null,
+		reason: null
+	});
+
+	it('suit le joueur par son quotidien régional, jamais par celui d’une autre région', () => {
+		const state = createGame({ seed: 'région' }, catalog);
+		expect(state.player.territory.regionId).toBe('region.test');
+		const audience = pressAudience(state.player, [], [], catalog);
+		expect(audience).toEqual({
+			exposure: state.player.exposure,
+			regionId: 'region.test',
+			national: false
+		});
+		expect(followsPlayer(catalog.media['media.local']!, audience, catalog)).toBe(true);
+		expect(followsPlayer(catalog.media['media.other']!, audience, catalog)).toBe(false);
+		expect(followsPlayer(catalog.media['media.national']!, audience, catalog)).toBe(false);
+		expect(mediaIssue('media.other', audience, [], catalog)).toBe(
+			'Média media.other ne couvre pas votre région'
+		);
+		expect(previewPlan(state, { steps: [interview('media.other')] }, catalog).valid).toBe(false);
+	});
+
+	it('ouvre la presse nationale à un mandat national ou à une candidature nationale en cours', () => {
+		const { player } = createGame({ seed: 'envergure' }, catalog);
+		const national = catalog.media['media.national']!;
+		const withMandate = pressAudience(player, [deputy], [], catalog);
+		expect(withMandate.national).toBe(true);
+		expect(followsPlayer(national, withMandate, catalog)).toBe(true);
+		const ended = pressAudience(player, [{ ...deputy, status: 'ended' }], [], catalog);
+		expect(ended.national).toBe(false);
+		expect(pressAudience(player, [], [running('election.national')], catalog).national).toBe(true);
+		expect(pressAudience(player, [], [running('election.local')], catalog).national).toBe(false);
+		// Le seuil d'exposition reste une autre porte d'entrée.
+		const exposed = pressAudience({ ...player, exposure: 30 }, [], [], catalog);
+		expect(followsPlayer(national, exposed, catalog)).toBe(true);
+	});
+
+	it('n’écrit jamais dans le journal d’une autre région, même sur une affaire très exposée', () => {
+		const state = createGame({ seed: 'croisée' }, catalog);
+		const exposed = { ...state, player: { ...state.player, exposure: 90 } };
+		const promise = {
+			changes: [],
+			gauges: [],
+			politics: [
+				{
+					kind: 'promise' as const,
+					pledgeId: 'pledge.1',
+					promiseId: 'promise.tax',
+					change: 'kept' as const
+				}
+			]
+		};
+		const seen = new Set<string>();
+		for (let index = 0; index < 40; index += 1) {
+			const result = press(
+				{ ...exposed, rng: { ...exposed.rng, state: index * 7919 + 3 } },
+				{ promises: promise, mandates: [deputy] }
+			);
+			for (const article of result.record.articles) seen.add(article.mediaId);
+		}
+		expect(seen.has('media.other')).toBe(false);
+		expect(seen.has('media.local')).toBe(true);
+		expect(seen.has('media.national')).toBe(true);
+	});
+
+	it('résout le rôle du quotidien d’ancrage pour les effets et le rachat', () => {
+		expect(resolveMediaRef('regional_anchor', 'region.test', catalog)).toBe('media.local');
+		expect(resolveMediaRef('regional_anchor', 'region.other', catalog)).toBe('media.other');
+		expect(resolveMediaRef('media.national', 'region.test', catalog)).toBe('media.national');
+		const anchored = load({
+			upgrades: {
+				upgrades: [
+					...fixtureUpgrades.upgrades,
+					{ ...paper, asset: { ...paper.asset, media: 'regional_anchor' } }
+				]
+			}
+		});
+		const owned: OwnedUpgrade[] = [
+			{ instanceId: 'upgrade.1', upgradeId: 'test.paper', acquiredTurn: 0, valueCents: 0 }
+		];
+		expect([...ownedMedia(owned, 'region.test', anchored)]).toEqual(['media.local']);
+		expect([...ownedMedia(owned, 'region.other', anchored)]).toEqual(['media.other']);
+	});
+
+	describe('validation', () => {
+		it('exige un quotidien par région, rattaché à une région connue et unique', () => {
+			const media = (list: unknown[]) => ({ media: { ...pressCatalog, media: list } });
+			const [local, other, national, satire] = pressCatalog.media;
+			expect(issuesOf(media([local, national, satire]))).toEqual(
+				expect.arrayContaining([
+					expect.stringContaining('aucun quotidien régional pour region.other')
+				])
+			);
+			expect(
+				issuesOf(media([local, { ...other, region: 'region.test' }, national, satire]))
+			).toEqual(
+				expect.arrayContaining([expect.stringContaining('région déjà couverte par media.local')])
+			);
+			expect(
+				issuesOf(media([local, other, { ...national, region: 'region.test' }, satire]))
+			).toEqual(
+				expect.arrayContaining([
+					expect.stringContaining('seul un quotidien régional est rattaché à une région')
 				])
 			);
 		});
