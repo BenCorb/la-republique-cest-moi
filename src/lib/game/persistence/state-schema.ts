@@ -10,6 +10,7 @@ import {
 	ARTICLE_TONES,
 	ARTICLE_TOPICS,
 	GAUGE_IDS,
+	SEARCH_LEVELS,
 	INDICATOR_IDS,
 	PROMISE_STATUSES,
 	RESOURCE_IDS
@@ -53,6 +54,14 @@ const politicalChange = z.discriminatedUnion('kind', [
 	z.strictObject({ kind: z.literal('hired'), characterId: id, postId: id }),
 	z.strictObject({ kind: z.literal('hireRefused'), characterId: id, postId: id }),
 	z.strictObject({ kind: z.literal('interviewed'), characterId: id, postId: id }),
+	z.strictObject({
+		kind: z.literal('searchOrdered'),
+		postId: id,
+		level: z.enum(SEARCH_LEVELS),
+		dueTurn: int
+	}),
+	z.strictObject({ kind: z.literal('vetted'), characterId: id, postId: id }),
+	z.strictObject({ kind: z.literal('raiseGranted'), characterId: id, salaryCents: int }),
 	z.strictObject({
 		kind: z.literal('familyJoined'),
 		characterId: id,
@@ -164,7 +173,19 @@ const turnEntry = z.strictObject({
 			departures: z.array(
 				z.strictObject({ characterId: id, postId: id, reason: staffLeaveReason })
 			),
-			shortlisted: z.array(id)
+			shortlisted: z.array(id),
+			searches: z.array(
+				z.strictObject({
+					postId: id,
+					level: z.enum(SEARCH_LEVELS),
+					trait: id.nullable(),
+					outcome: z.enum(['found', 'failed', 'cancelled']),
+					candidates: z.array(id),
+					refundCents: int
+				})
+			),
+			progress: z.array(z.strictObject({ characterId: id, from: int, to: int })),
+			raiseRequests: z.array(id)
 		})
 		.nullable(),
 	wellbeing: z.strictObject({
@@ -444,12 +465,31 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 			leftTurn: int.nullable(),
 			leaveReason: staffLeaveReason.nullable(),
 			salaryCents: int,
-			bonusDueCents: int
+			bonusDueCents: int,
+			progressTenths: int,
+			reviewedCompetence: int,
+			reviewTurn: int
 		})
 	),
 	shortlists: z.record(
 		id,
-		z.array(z.strictObject({ characterId: id, profileId: id, interviews: int }))
+		z.array(
+			z.strictObject({
+				characterId: id,
+				profileId: id,
+				interviews: int,
+				hints: z.array(id).nullable()
+			})
+		)
+	),
+	searches: z.array(
+		z.strictObject({
+			postId: id,
+			level: z.enum(SEARCH_LEVELS),
+			trait: id.nullable(),
+			orderedTurn: int,
+			dueTurn: int
+		})
 	),
 	institutions: z.strictObject({
 		incompatibilities: z.array(z.tuple([id, id])),

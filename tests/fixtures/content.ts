@@ -121,7 +121,51 @@ export const fixtureBalance = {
 			interviewInterest: 6,
 			maxInterviews: 2,
 			refusalAttitude: -5
-		}
+		},
+		/**
+		 * Recrutement II de test (P3-21) : recherches certaines, aucune progression
+		 * ni renégociation (les tests dédiés utilisent le catalogue réel).
+		 */
+		search: {
+			levels: {
+				simple: {
+					costCents: 0,
+					delayTurns: 1,
+					candidates: 1,
+					findPercent: 100,
+					profile: null,
+					traitAllowed: false,
+					vetting: null
+				},
+				targeted: {
+					costCents: 0,
+					delayTurns: 1,
+					candidates: 1,
+					findPercent: 100,
+					profile: 'profile.novice',
+					traitAllowed: true,
+					vetting: null
+				},
+				headhunt: {
+					costCents: 0,
+					delayTurns: 1,
+					candidates: 1,
+					findPercent: 100,
+					profile: 'profile.expert',
+					traitAllowed: true,
+					vetting: 'thorough'
+				}
+			},
+			traitPenalty: 0,
+			failureRefundPercent: 50,
+			maxShortlist: 5
+		},
+		vetting: {
+			standard: { truePercent: 100, falsePercent: 0 },
+			thorough: { truePercent: 100, falsePercent: 0 }
+		},
+		progression: { curve: [{ competence: 0, tenths: 0 }], seniorityAttitude: 0 },
+		renegotiation: { stepCompetence: 100, minTurns: 4, event: 'test.raise_request' }
 	},
 	family: {
 		childCostCents: 10_000,
@@ -589,6 +633,30 @@ export const fixtureCast = {
 export const fixtureEvents = {
 	'events/test.json': {
 		events: [
+			{
+				id: 'test.raise_request',
+				category: 'entourage',
+				title: 'Augmentation',
+				text: '{collaborator} demande une augmentation.',
+				blocking: true,
+				trigger: 'followUp',
+				weight: 0,
+				priority: 30,
+				cooldownTurns: 0,
+				unique: false,
+				subject: 'staff',
+				actors: [{ role: 'collaborator', tags: ['staff'] }],
+				choices: [
+					{
+						id: 'grant',
+						label: 'Accorder',
+						hints: [],
+						costs: [],
+						effects: [{ op: 'grantRaise', role: 'collaborator' }]
+					},
+					{ id: 'refuse', label: 'Refuser', hints: [], costs: [], effects: [] }
+				]
+			},
 			{
 				id: 'test.revelation',
 				category: 'press',

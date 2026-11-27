@@ -61,6 +61,8 @@ import {
 	bindEventPost,
 	postEffectIssue,
 	staffLeavesByEvent,
+	grantRaise,
+	STAFF_ROLE,
 	type PostBinding,
 	type PostEffect
 } from './staff.ts';
@@ -216,6 +218,9 @@ interface EffectOutcome extends EffectParts {
 /** Parties de l'état lues par les conditions mais jamais modifiées par un effet automatique. */
 type FixedContext = Pick<ConditionContext, 'upgrades' | 'cases'>;
 
+/** Les événements ne commandent ni ne livrent de recherche (P3-21). */
+const NO_SEARCHES: GameState['searches'] = [];
+
 /** Poste lié à l'instance (sujet `post`) et acteur visé par un effet de poste (P3-12). */
 function postBinding(effect: PostEffect, actors: Readonly<Record<string, string>>): PostBinding {
 	return {
@@ -282,9 +287,18 @@ function applyAutomaticEffects(
 			if (!character || character.status !== 'active') continue;
 			if (resolved.effect.op === 'staffLeaves') {
 				const outcome = staffLeavesByEvent(
-					{ staff, shortlists, characters, relationships },
+					{ staff, shortlists, characters, relationships, searches: NO_SEARCHES },
 					character.id,
 					turn
+				);
+				staff = outcome.parts.staff;
+				politics.push(...outcome.changes);
+			} else if (resolved.effect.op === 'grantRaise') {
+				const outcome = grantRaise(
+					{ staff, shortlists, characters, relationships, searches: NO_SEARCHES },
+					character.id,
+					turn,
+					content
 				);
 				staff = outcome.parts.staff;
 				politics.push(...outcome.changes);
@@ -339,7 +353,7 @@ function applyAutomaticEffects(
 			const outcome = applyPostEffect(
 				resolved.effect,
 				postBinding(resolved.effect, actors),
-				{ staff, shortlists, characters, relationships },
+				{ staff, shortlists, characters, relationships, searches: NO_SEARCHES },
 				turn,
 				context(),
 				content
@@ -691,6 +705,14 @@ export function resolveEventFrontier(input: FrontierInput, content: Content): Fr
 			cancel(entry, 'Aucun poste d’entourage n’est concerné.');
 			continue;
 		}
+		// Sujet `staff` (P3-21) : le collaborateur transmis doit être encore en poste.
+		if (
+			definition.subject === 'staff' &&
+			resolved.actors[STAFF_ROLE] !== entry.actors[STAFF_ROLE]
+		) {
+			cancel(entry, 'Ce collaborateur ne fait plus partie de votre entourage.');
+			continue;
+		}
 		rng = resolved.rng;
 		create(definition, {
 			...resolved.actors,
@@ -835,7 +857,8 @@ export function choiceAvailability(
 		staff: state.staff,
 		shortlists: state.shortlists,
 		characters: state.characters,
-		relationships: state.relationships
+		relationships: state.relationships,
+		searches: state.searches
 	};
 	for (const effect of choice.effects) {
 		if (effect.op === 'hireActor' || effect.op === 'shortlistActor') {

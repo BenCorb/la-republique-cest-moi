@@ -178,7 +178,10 @@ describe('embauche et production', () => {
 				leftTurn: null,
 				leaveReason: null,
 				salaryCents: catalog.posts['post.aide']!.salaryCents,
-				bonusDueCents: 0
+				bonusDueCents: 0,
+				progressTenths: 0,
+				reviewedCompetence: state.characters[expertId]!.competence,
+				reviewTurn: 1
 			}
 		]);
 		expect(hired.state.shortlists['post.aide']).toBeUndefined();

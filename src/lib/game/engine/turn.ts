@@ -187,6 +187,13 @@ function commitTurn(
 		: null;
 
 	// 4 bis (fin). Famille : héritage, veuvage, enfants à charge, disponibilité.
+	// Recherches échouées ou annulées : une part du prix revient au budget politique (P3-21).
+	const teamResources = team
+		? {
+				...production.resources,
+				politicalBudgetCents: production.resources.politicalBudgetCents + team.refundCents
+			}
+		: production.resources;
 	const family = team
 		? resolveFamily(
 				{
@@ -194,7 +201,7 @@ function commitTurn(
 					characters: team.entourage.characters,
 					relationships: team.entourage.relationships
 				},
-				production.resources,
+				teamResources,
 				execution.timeUsed + reservedTime(state.mandates, content),
 				nextTurn,
 				content
@@ -332,7 +339,12 @@ function commitTurn(
 						nextInstanceNumber: execution.nextInstanceNumber,
 						events: {
 							...state.events,
-							scheduled: [...state.events.scheduled, ...justice!.scheduled, ...pledges.scheduled]
+							scheduled: [
+								...state.events.scheduled,
+								...justice!.scheduled,
+								...pledges.scheduled,
+								...team!.scheduled
+							]
 						},
 						world: reforms.parts.world,
 						characters: settled.entourage.characters,
@@ -363,7 +375,9 @@ function commitTurn(
 		staff: {
 			...production.record,
 			departures: team?.record.departures ?? [],
-			shortlisted: team?.record.shortlisted ?? []
+			shortlisted: team?.record.shortlisted ?? [],
+			searches: team?.record.searches ?? [],
+			raiseRequests: team?.record.raiseRequests ?? []
 		},
 		wellbeing: wellbeing.record,
 		characters: people?.record ?? null,
@@ -414,6 +428,8 @@ function commitTurn(
 			staff: frontier?.staff ?? settled?.entourage.staff ?? production.entourage.staff,
 			shortlists:
 				frontier?.shortlists ?? settled?.entourage.shortlists ?? production.entourage.shortlists,
+			searches:
+				settled?.entourage.searches ?? team?.entourage.searches ?? production.entourage.searches,
 			mandates: frontier?.career.mandates ?? settled?.career.mandates ?? production.career.mandates,
 			ballots: frontier?.career.ballots ?? settled?.career.ballots ?? production.career.ballots,
 			campaigns:

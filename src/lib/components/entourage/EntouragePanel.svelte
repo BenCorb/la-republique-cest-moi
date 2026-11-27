@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Coffee, Lock, UserMinus, UserPlus } from '@lucide/svelte';
+	import { Coffee, FileSearch, Lock, Search, UserMinus, UserPlus } from '@lucide/svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 
 	/**
@@ -8,6 +8,9 @@
 	 * présélectionnés (compétence, traits connus, salaire demandé), entretien
 	 * approfondi et trois offres avec l'intérêt estimé du candidat. Offres et
 	 * renvoi s'ajoutent au plan ; le candidat ne répond qu'en fin de trimestre.
+	 * Recrutement II (P3-21) : recherche à trois niveaux pour un poste vacant
+	 * (trait public facultatif), vérification de dossier (indices, jamais de
+	 * certitude), progression des collaborateurs et prétention actuelle.
 	 */
 	interface Props {
 		session: GameSession;
@@ -17,6 +20,13 @@
 	const entourage = $derived(session.snapshot.view?.entourage ?? null);
 	const planning = $derived(session.snapshot.view?.phase === 'planning');
 	const accelerating = $derived(session.snapshot.acceleration?.running === true);
+
+	/** Trait exigé par la prochaine recherche, par poste (brouillon d'interface). */
+	let soughtTrait = $state<Record<string, string>>({});
+	const searchTarget = (postId: string, traitAllowed: boolean): string => {
+		const trait = soughtTrait[postId] ?? '';
+		return traitAllowed && trait !== '' ? `${postId}/${trait}` : postId;
+	};
 
 	const toneClass = {
 		good: 'text-positive',
@@ -83,6 +93,15 @@
 									? ''
 									: ' · au travail dès le trimestre prochain'} · {occupant.salary}
 							</p>
+							{#if occupant.asked || occupant.progressing}
+								<p class="text-xs text-muted" data-testid="progression">
+									{occupant.progressing
+										? 'Progresse en poste'
+										: 'Au sommet de son art'}{occupant.asked
+										? ` · vaudrait désormais ${occupant.asked}`
+										: ''}
+								</p>
+							{/if}
 							<p class="text-sm">
 								Compétence : <span class="font-medium">{occupant.competence.label}</span>
 								{#if occupant.knownTraits.length > 0}· {occupant.knownTraits.join(' · ')}{/if}
@@ -166,6 +185,40 @@
 											: ''}
 									</p>
 									<p class="mt-1 text-xs">Salaire demandé : {candidate.asked}</p>
+									{#if candidate.hints !== null}
+										<p class="mt-1 text-xs" data-testid="hints">
+											<span class="font-semibold">Références :</span>
+											{candidate.hints.length > 0
+												? `on lui prête ${candidate.hints.map((hint) => hint.toLowerCase()).join(', ')} (indices, à confirmer)`
+												: 'rien de particulier à signaler, ce qui ne prouve rien'}
+										</p>
+									{:else if entourage.vetActionId}
+										<div class="mt-1 flex flex-wrap items-center justify-between gap-2">
+											<span class="text-xs text-muted">
+												{candidate.vetPlanned
+													? 'Vérification du dossier prévue ce trimestre'
+													: 'Dossier non vérifié'}
+											</span>
+											{#if !candidate.vetPlanned}
+												<button
+													type="button"
+													class="btn-secondary btn-small"
+													disabled={!candidate.vettable || accelerating}
+													title={candidate.vetReason ?? undefined}
+													aria-label="Vérifier le dossier de {candidate.name}"
+													onclick={() =>
+														entourage.vetActionId &&
+														session.controller.addStep({
+															kind: 'action',
+															id: entourage.vetActionId,
+															target: candidate.characterId
+														})}
+												>
+													<FileSearch class="size-3.5" aria-hidden="true" /> Vérifier
+												</button>
+											{/if}
+										</div>
+									{/if}
 									{#if entourage.interviewActionId}
 										<div class="mt-2 flex flex-wrap items-center justify-between gap-2">
 											<span class="text-xs text-muted">
@@ -235,6 +288,79 @@
 								</li>
 							{/each}
 						</ul>
+					{/if}
+					{#if post.search}
+						{@const search = post.search}
+						<section
+							class="rounded border border-dashed border-line p-3"
+							aria-label="Recherche de candidats : {post.label}"
+							data-testid="search-{post.id}"
+						>
+							<h3 class="flex items-center gap-1.5 text-xs font-semibold text-muted uppercase">
+								<Search class="size-3.5" aria-hidden="true" /> Rechercher des candidats
+							</h3>
+							{#if search.inProgress}
+								<p class="mt-1 text-sm">
+									{search.inProgress.label} en cours, {search.inProgress.due}.
+								</p>
+							{:else}
+								<label class="mt-2 flex flex-wrap items-center gap-2 text-xs">
+									<span>Trait recherché (recherche ciblée ou chasse de tête)</span>
+									<select
+										class="rounded border border-line bg-surface px-1.5 py-0.5"
+										bind:value={soughtTrait[post.id]}
+										disabled={!planning || accelerating}
+									>
+										<option value="">Aucun</option>
+										{#each search.traits as trait (trait.id)}
+											<option value={trait.id}>{trait.label}</option>
+										{/each}
+									</select>
+								</label>
+								<ul class="mt-2 grid gap-1.5">
+									{#each search.options as option (option.actionId)}
+										{@const withTrait = option.traitAllowed && (soughtTrait[post.id] ?? '') !== ''}
+										<li
+											class="flex flex-wrap items-center justify-between gap-2 rounded bg-sidebar px-2 py-1.5"
+											data-testid="search-{option.level}"
+										>
+											<span class="min-w-0 text-xs">
+												<span class="text-sm font-medium">{option.label}</span>
+												<span class="text-muted">
+													· {option.cost} · {option.time} pts de temps · {option.due}
+												</span>
+												<span class="block">
+													{withTrait ? option.chanceWithTrait : option.chance}{option.vetted
+														? ' · dossiers vérifiés'
+														: ''} · {option.refund}
+												</span>
+												{#if option.reason && !option.planned}
+													<span class="block text-warning">{option.reason}</span>
+												{/if}
+											</span>
+											{#if option.planned}
+												<span class="text-xs text-muted">Prévue ce trimestre.</span>
+											{:else}
+												<button
+													type="button"
+													class="btn-secondary btn-small"
+													disabled={!option.addable || accelerating}
+													aria-label="{option.label} pour le poste {post.label}"
+													onclick={() =>
+														session.controller.addStep({
+															kind: 'action',
+															id: option.actionId,
+															target: searchTarget(post.id, option.traitAllowed)
+														})}
+												>
+													<Search class="size-3.5" aria-hidden="true" /> Lancer
+												</button>
+											{/if}
+										</li>
+									{/each}
+								</ul>
+							{/if}
+						</section>
 					{/if}
 				</li>
 			{/each}

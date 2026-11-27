@@ -76,6 +76,12 @@ import {
 	type SupportsBalance,
 	type Balance,
 	type RecruitmentBalance,
+	type SearchBalance,
+	type SearchLevelBalance,
+	type VettingBalance,
+	type ProgressionBalance,
+	SEARCH_LEVELS,
+	VETTING_LEVELS,
 	type Condition,
 	type CastMember,
 	type Effect,
@@ -196,6 +202,12 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 	z.strictObject({ op: z.literal('declareCandidacy') }),
 	z.strictObject({ op: z.literal('hireStaff'), offer: z.enum(HIRE_OFFERS).optional() }),
 	z.strictObject({ op: z.literal('courtCandidate') }),
+	z.strictObject({ op: z.literal('orderSearch'), level: z.enum(SEARCH_LEVELS) }),
+	z.strictObject({ op: z.literal('vetCandidate') }),
+	z.strictObject({
+		op: z.literal('grantRaise'),
+		role: z.string().regex(/^[a-z][a-z0-9_]*$/, 'rôle en minuscules')
+	}),
 	z.strictObject({ op: z.literal('familyJoins'), relation: z.enum(['partner', 'child']) }),
 	z.strictObject({ op: z.literal('separate') }),
 	z.strictObject({ op: z.literal('familyAttitude'), value: nonZeroGaugeDelta }),
@@ -286,7 +298,8 @@ export const actionSchema: z.ZodType<ActionDefinition> = z
 				'promise',
 				'pledge',
 				'media',
-				'reform'
+				'reform',
+				'search'
 			])
 			.optional(),
 		fromEra: contentId.optional(),
@@ -515,7 +528,7 @@ const eventBaseShape = {
 				{ message: 'attitude minimale supérieure à la maximale', path: ['maxAttitude'] }
 			)
 	),
-	subject: z.enum(['promise', 'post']).optional()
+	subject: z.enum(['promise', 'post', 'staff']).optional()
 };
 
 export const eventSchema: z.ZodType<EventDefinition> = z
@@ -1032,6 +1045,45 @@ const recruitmentBalanceSchema: z.ZodType<RecruitmentBalance> = z
 		path: ['maxAcceptPercent']
 	});
 
+const searchLevelBalanceSchema: z.ZodType<SearchLevelBalance> = z.strictObject({
+	costCents: nonNegativeInt,
+	delayTurns: positiveInt.refine((value) => value <= 8, 'au plus 8 trimestres'),
+	candidates: positiveInt.refine((value) => value <= 6, 'au plus 6 candidats'),
+	findPercent: gaugeValue,
+	profile: contentId.nullable(),
+	traitAllowed: z.boolean(),
+	vetting: z.enum(VETTING_LEVELS).nullable()
+});
+
+const searchBalanceSchema: z.ZodType<SearchBalance> = z.strictObject({
+	levels: z.strictObject({
+		simple: searchLevelBalanceSchema,
+		targeted: searchLevelBalanceSchema,
+		headhunt: searchLevelBalanceSchema
+	}),
+	traitPenalty: gaugeValue,
+	failureRefundPercent: gaugeValue,
+	maxShortlist: positiveInt.refine((value) => value <= 8, 'au plus 8 candidats')
+});
+
+const vettingBalanceSchema: z.ZodType<VettingBalance> = z.strictObject({
+	truePercent: gaugeValue,
+	falsePercent: gaugeValue
+});
+
+const progressionBalanceSchema: z.ZodType<ProgressionBalance> = z
+	.strictObject({
+		curve: z.array(z.strictObject({ competence: gaugeValue, tenths: nonNegativeInt })).min(1),
+		seniorityAttitude: nonNegativeInt
+	})
+	.refine(
+		(balance) =>
+			balance.curve.every(
+				(point, index) => index === 0 || point.competence > balance.curve[index - 1]!.competence
+			),
+		{ message: 'courbe de progression par compétence strictement croissante', path: ['curve'] }
+	);
+
 export const entourageBalanceSchema: z.ZodType<EntourageBalance> = z
 	.strictObject({
 		candidatesPerPost: positiveInt.refine((value) => value <= 6, 'au plus 6 candidats'),
@@ -1044,7 +1096,15 @@ export const entourageBalanceSchema: z.ZodType<EntourageBalance> = z
 		preciseAdviceCompetence: gaugeValue,
 		fairAdviceCompetence: gaugeValue,
 		poorAdviceErrorChance: probability,
-		recruitment: recruitmentBalanceSchema
+		recruitment: recruitmentBalanceSchema,
+		search: searchBalanceSchema,
+		vetting: z.strictObject({ standard: vettingBalanceSchema, thorough: vettingBalanceSchema }),
+		progression: progressionBalanceSchema,
+		renegotiation: z.strictObject({
+			stepCompetence: positiveInt,
+			minTurns: positiveInt,
+			event: contentId
+		})
 	})
 	.refine((balance) => balance.fairAdviceCompetence <= balance.preciseAdviceCompetence, {
 		message: 'le seuil du conseil indicatif dépasse celui du conseil précis',
@@ -1085,7 +1145,8 @@ const candidateProfileSchema: z.ZodType<CandidateProfileDefinition> = z
 		maxCompetence: gaugeValue,
 		traits: z.array(contentId),
 		minAttractiveness: gaugeValue,
-		rareWeight: nonNegativeInt
+		rareWeight: nonNegativeInt,
+		searchOnly: z.boolean().optional()
 	})
 	.refine((profile) => profile.minCompetence <= profile.maxCompetence, {
 		message: 'compétence minimale supérieure à la maximale',

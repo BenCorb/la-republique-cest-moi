@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.36.0';
+export const RULES_VERSION = '0.37.0';
 
 export {
 	START_YEAR,
@@ -88,6 +88,8 @@ export {
 	type CampaignStatus,
 	type FamilyState,
 	type ShortlistEntry,
+	type RecruitmentSearch,
+	type SearchOutcomeRecord,
 	type StaffLeaveReason,
 	type StaffMember,
 	type StaffProductionRecord,
@@ -117,6 +119,12 @@ export {
 	offerBonusCents,
 	offeredSalaryCents,
 	payrollCents,
+	parseSearchTarget,
+	progressionTenths,
+	searchFindPercent,
+	searchRefundCents,
+	searchTarget,
+	vetHints,
 	type AttractivenessFactors
 } from './recruitment.ts';
 export {
@@ -164,6 +172,10 @@ export {
 	scaledValue,
 	staffLeavesByEvent,
 	staffTimeBonus,
+	grantRaise,
+	searchIssue,
+	vetIssue,
+	STAFF_ROLE,
 	type EntourageParts,
 	type HiringDecision,
 	type ProductionParts,

@@ -9,6 +9,8 @@
  */
 import {
 	type HireOffer,
+	SEARCH_LEVELS,
+	type SearchLevel,
 	INDICATOR_IDS,
 	RESOURCE_IDS,
 	type Content,
@@ -77,6 +79,11 @@ import {
 	offerBonusCents,
 	offeredSalaryCents,
 	payrollCents,
+	searchFindPercent,
+	searchRefundCents,
+	searchTarget,
+	parseSearchTarget,
+	progressionTenths,
 	ownedMedia,
 	type StaffLeaveReason,
 	activeMandates,
@@ -701,12 +708,49 @@ export interface PostView {
 				readonly producing: boolean;
 				/** Salaire convenu au contrat (P3-20). */
 				readonly salary: string;
+				/**
+				 * Prétention à sa compétence actuelle quand elle dépasse le salaire
+				 * convenu (P3-21) : une demande d'augmentation viendra au palier suivant.
+				 */
+				readonly asked: string | null;
+				/** Le collaborateur progresse encore en poste (P3-21). */
+				readonly progressing: boolean;
 				readonly dismissPlanned: boolean;
 				readonly dismissable: boolean;
 				readonly dismissReason: string | null;
 		  })
 		| null;
 	readonly candidates: readonly CandidateView[];
+	/** Recherche de candidats (P3-21) ; `null` si le poste est pourvu ou fermé. */
+	readonly search: PostSearchView | null;
+}
+
+/** Niveau de recherche proposé pour un poste vacant (P3-21). */
+export interface SearchOptionView {
+	readonly actionId: string;
+	readonly level: SearchLevel;
+	readonly label: string;
+	readonly cost: string;
+	readonly time: number;
+	/** « résultat au 2e trimestre 2001 ». */
+	readonly due: string;
+	/** Chance d'aboutir en mots, sans trait exigé puis avec. */
+	readonly chance: string;
+	readonly chanceWithTrait: string | null;
+	readonly refund: string;
+	readonly vetted: boolean;
+	readonly traitAllowed: boolean;
+	readonly planned: boolean;
+	readonly addable: boolean;
+	readonly reason: string | null;
+}
+
+export interface PostSearchView {
+	/** Recherche en cours : niveau, trait exigé et échéance. */
+	readonly inProgress: { readonly label: string; readonly due: string } | null;
+	readonly options: readonly SearchOptionView[];
+	/** Traits publics qu'une recherche ciblée peut exiger. */
+	readonly traits: readonly { readonly id: string; readonly label: string }[];
 }
 
 /** Offre d'embauche proposée à un candidat (P3-20). */
@@ -737,12 +781,21 @@ export interface CandidateView extends StaffPersonView {
 	readonly interviewPlanned: boolean;
 	readonly interviewable: boolean;
 	readonly interviewReason: string | null;
+	/**
+	 * Vérification du dossier (P3-21) : `null` tant qu'elle n'a pas eu lieu,
+	 * sinon les traits signalés par les références (indices, peut-être faux).
+	 */
+	readonly hints: readonly string[] | null;
+	readonly vetPlanned: boolean;
+	readonly vettable: boolean;
+	readonly vetReason: string | null;
 }
 
 export interface EntourageView {
 	readonly posts: readonly PostView[];
 	readonly hireActionId: string | null;
 	readonly interviewActionId: string | null;
+	readonly vetActionId: string | null;
 	readonly dismissActionId: string | null;
 	/**
 	 * Attractivité de la carrière (P3-20) : mot, valeur sur 100 et facteurs
@@ -1289,6 +1342,12 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 					return `le candidat décline le poste « ${content.posts[change.postId]?.label ?? change.postId} » : « votre projet est intéressant, mais pas encore à ce stade de ma carrière »`;
 				case 'interviewed':
 					return `entretien approfondi pour le poste « ${content.posts[change.postId]?.label ?? change.postId} »`;
+				case 'searchOrdered':
+					return `${SEARCH_LABELS[change.level].toLowerCase()} pour le poste « ${content.posts[change.postId]?.label ?? change.postId} », résultat au ${formatTurn(change.dueTurn)}`;
+				case 'vetted':
+					return `dossier vérifié pour le poste « ${content.posts[change.postId]?.label ?? change.postId} »`;
+				case 'raiseGranted':
+					return `salaire porté à ${formatResource('politicalBudgetCents', change.salaryCents)} par trimestre`;
 				case 'staffLeft':
 					return `départ du poste « ${content.posts[change.postId]?.label ?? change.postId} » (${STAFF_LEAVE_LABELS[change.reason]})`;
 				case 'earlyElection':
@@ -1477,7 +1536,10 @@ const STAFF_CHANGE_LABELS: Readonly<
 	shortlist: 'Candidature ajoutée à la présélection',
 	dismiss: 'Renvoi',
 	leave: 'Départ d’un collaborateur',
-	interview: 'Entretien approfondi : le candidat se laisse convaincre'
+	interview: 'Entretien approfondi : le candidat se laisse convaincre',
+	search: 'Recherche de candidats, résultat à l’échéance',
+	vet: 'Dossier vérifié : des indices, pas des certitudes',
+	raise: 'Salaire porté au niveau de sa compétence'
 };
 
 /** Liste française : « a, b et c ». */
@@ -1569,6 +1631,14 @@ function eventTitle(
 
 /** Libellé lisible de la cible d'une étape : parti, mandat exercé ou échéance électorale. */
 function targetLabel(target: string, state: GameState, content: Content): string {
+	// Recherche de candidats (P3-21) : poste, et trait recherché éventuel.
+	const sought = parseSearchTarget(target);
+	if (Object.hasOwn(content.posts, sought.postId)) {
+		const post = `« ${content.posts[sought.postId]?.label ?? sought.postId} »`;
+		return sought.trait === null
+			? post
+			: `${post}, profil « ${content.traits[sought.trait]?.label ?? sought.trait} »`;
+	}
 	if (Object.hasOwn(content.parties, target)) return content.parties[target]?.name ?? target;
 	if (Object.hasOwn(content.promises, target)) {
 		return `« ${content.promises[target]?.label ?? target} »`;
@@ -1616,8 +1686,43 @@ function staffLines(record: StaffRecord | null, state: GameState, content: Conte
 		...record.shortlisted.map((postId) => ({
 			kind: 'career' as const,
 			text: `Candidatures reçues pour le poste « ${post(postId)} ».`
-		}))
+		})),
+		...record.searches.map((search) => ({
+			kind: 'career' as const,
+			text:
+				search.outcome === 'found'
+					? `${SEARCH_LABELS[search.level]} aboutie pour le poste « ${post(search.postId)} » : ${search.candidates.length} candidat${search.candidates.length > 1 ? 's' : ''} ajouté${search.candidates.length > 1 ? 's' : ''} à la présélection.`
+					: `${SEARCH_LABELS[search.level]} ${search.outcome === 'failed' ? 'infructueuse' : 'sans objet'} pour le poste « ${post(search.postId)} » — ${RESOURCE_NAMES.politicalBudgetCents} ${formatDelta('politicalBudgetCents', search.refundCents)} rendus.`
+		})),
+		// Progression (P3-21) : seulement quand la compétence change de palier affiché.
+		...record.progress.flatMap((step) => {
+			const character = state.characters[step.characterId];
+			const name = character ? displayName(character) : step.characterId;
+			const after = describeCompetence(step.to).label;
+			if (describeCompetence(step.from).label === after) return [];
+			return [
+				{
+					kind: 'people' as const,
+					text: `${name} progresse : compétence désormais ${after.toLowerCase()}.`
+				}
+			];
+		})
 	];
+}
+
+/** Niveaux de recherche de candidats (P3-21). */
+const SEARCH_LABELS: Readonly<Record<SearchLevel, string>> = {
+	simple: 'Recherche simple',
+	targeted: 'Recherche ciblée',
+	headhunt: 'Chasse de tête'
+};
+
+/** Chance d'aboutir d'une recherche, en mots (valeur d'équilibrage, pas un tirage). */
+function findChanceLabel(percent: number): string {
+	if (percent >= 85) return 'Aboutit presque toujours';
+	if (percent >= 65) return 'Aboutit le plus souvent';
+	if (percent >= 45) return 'Issue incertaine';
+	return 'Rarement concluante';
 }
 
 /** Famille à la frontière (P2-08) : héritage, veuvage, dépenses et disponibilité. */
@@ -3428,6 +3533,22 @@ function buildEntourage(
 				content.actions[id]?.target === 'candidate' &&
 				content.actions[id]?.effects.some((effect) => effect.op === 'courtCandidate')
 		) ?? null;
+	const vetActionId =
+		content.actionIds.find((id) =>
+			content.actions[id]?.effects.some((effect) => effect.op === 'vetCandidate')
+		) ?? null;
+	const searchActions = SEARCH_LEVELS.flatMap((level) => {
+		const id = content.actionIds.find((actionId) =>
+			content.actions[actionId]?.effects.some(
+				(effect) => effect.op === 'orderSearch' && effect.level === level
+			)
+		);
+		return id === undefined ? [] : [{ level, id }];
+	});
+	const searchBalance = content.balance.entourage.search;
+	const publicTraits = content.traitIds
+		.filter((id) => content.traits[id]?.hidden === false)
+		.map((id) => ({ id, label: content.traits[id]!.label }));
 	const factors = attractivenessFactors(
 		state.player,
 		state.resources,
@@ -3469,6 +3590,18 @@ function buildEntourage(
 						})),
 						producing: member.hiredTurn < state.turn,
 						salary: `${formatResource('politicalBudgetCents', member.salaryCents)} par trimestre`,
+						asked: (() => {
+							const asked = askedSalaryCents(
+								postId,
+								state.characters[member.characterId]?.competence ?? 0,
+								content
+							);
+							return asked > member.salaryCents
+								? `${formatResource('politicalBudgetCents', asked)} par trimestre`
+								: null;
+						})(),
+						progressing:
+							progressionTenths(state.characters[member.characterId]?.competence ?? 0, content) > 0,
 						dismissPlanned: planned(dismissActionId, member.characterId),
 						dismissable: dismiss.addable,
 						dismissReason: dismiss.reason
@@ -3508,6 +3641,14 @@ function buildEntourage(
 							reason: add.reason
 						};
 					});
+					const vet = vetActionId
+						? addability(
+								state,
+								plan,
+								{ kind: 'action', id: vetActionId, target: entry.characterId },
+								content
+							)
+						: { addable: false, reason: null };
 					const interview = interviewActionId
 						? addability(
 								state,
@@ -3529,10 +3670,66 @@ function buildEntourage(
 							interviewPlanned:
 								interviewActionId !== null && planned(interviewActionId, entry.characterId),
 							interviewable: interview.addable,
-							interviewReason: interview.reason
+							interviewReason: interview.reason,
+							hints:
+								entry.hints === null
+									? null
+									: entry.hints.map((trait) => content.traits[trait]?.label ?? trait),
+							vetPlanned: vetActionId !== null && planned(vetActionId, entry.characterId),
+							vettable: vet.addable,
+							vetReason: vet.reason
 						}
 					];
 				});
+		const pending = state.searches.find((entry) => entry.postId === postId);
+		const plannedSearch = (actionId: string): boolean =>
+			plan.some(
+				(step) =>
+					step.kind === 'action' &&
+					step.id === actionId &&
+					step.target !== undefined &&
+					parseSearchTarget(step.target).postId === postId
+			);
+		const search: PostSearchView | null =
+			member || !unlocked
+				? null
+				: {
+						inProgress: pending
+							? {
+									label: `${SEARCH_LABELS[pending.level]}${pending.trait ? `, profil « ${content.traits[pending.trait]?.label ?? pending.trait} »` : ''}`,
+									due: `résultat attendu au ${formatTurn(pending.dueTurn)}`
+								}
+							: null,
+						options: searchActions.map(({ level, id }): SearchOptionView => {
+							const action = content.actions[id]!;
+							const balance = searchBalance.levels[level];
+							const add = addability(
+								state,
+								plan,
+								{ kind: 'action', id, target: searchTarget(postId, null) },
+								content
+							);
+							return {
+								actionId: id,
+								level,
+								label: action.label,
+								cost: formatResource('politicalBudgetCents', balance.costCents),
+								time: action.timeCost,
+								due: `résultat au ${formatTurn(state.turn + balance.delayTurns)}`,
+								chance: findChanceLabel(searchFindPercent(level, null, content)),
+								chanceWithTrait: balance.traitAllowed
+									? findChanceLabel(searchFindPercent(level, publicTraits[0]?.id ?? null, content))
+									: null,
+								refund: `${formatResource('politicalBudgetCents', searchRefundCents(level, content))} rendus en cas d’échec`,
+								vetted: balance.vetting !== null,
+								traitAllowed: balance.traitAllowed,
+								planned: plannedSearch(id),
+								addable: add.addable,
+								reason: add.reason
+							};
+						}),
+						traits: publicTraits
+					};
 		return {
 			id: postId,
 			label: post.label,
@@ -3540,7 +3737,8 @@ function buildEntourage(
 			salary: `Référence : ${formatResource('politicalBudgetCents', post.salaryCents)} par trimestre`,
 			lockedReason: unlocked ? null : (post.unavailableReason ?? 'Poste pas encore accessible.'),
 			occupant,
-			candidates
+			candidates,
+			search
 		};
 	});
 	const payroll = payrollCents(state.staff);
@@ -3548,6 +3746,7 @@ function buildEntourage(
 		posts,
 		hireActionId,
 		interviewActionId,
+		vetActionId,
 		dismissActionId,
 		attractiveness: {
 			label: ATTRACTIVENESS_LABELS.find((entry) => attraction >= entry.min)!.label,

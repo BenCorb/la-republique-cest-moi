@@ -22,7 +22,8 @@ import {
 	type Content,
 	type Effect,
 	type HireOffer,
-	type ResourceId
+	type ResourceId,
+	type SearchLevel
 } from '../content/types.ts';
 import {
 	acceptancePercent,
@@ -32,7 +33,12 @@ import {
 	askedSalaryCents,
 	offerBonusCents,
 	offeredSalaryCents,
-	payrollCents
+	parseSearchTarget,
+	payrollCents,
+	progressionTenths,
+	searchFindPercent,
+	searchRefundCents,
+	vetHints
 } from './recruitment.ts';
 import type { Turn } from './calendar.ts';
 import { applyCareerEffect, type CareerParts } from './career.ts';
@@ -44,8 +50,11 @@ import type {
 	Character,
 	PlayerState,
 	PoliticalChange,
+	RecruitmentSearch,
 	Relationship,
 	ResourceChange,
+	ScheduledEvent,
+	SearchOutcomeRecord,
 	ShortlistEntry,
 	StaffLeaveReason,
 	StaffMember,
@@ -62,6 +71,8 @@ export interface EntourageParts {
 	readonly shortlists: Readonly<Record<string, readonly ShortlistEntry[]>>;
 	readonly characters: Readonly<Record<string, Character>>;
 	readonly relationships: Readonly<Record<string, Relationship>>;
+	/** Recherches de candidats en cours (P3-21). */
+	readonly searches: readonly RecruitmentSearch[];
 }
 
 export function activeStaff(staff: readonly StaffMember[]): StaffMember[] {
@@ -227,6 +238,60 @@ export function candidateInterviewIssue(
 	return null;
 }
 
+/** Candidats encore disponibles de la présélection d'un poste. */
+function availableEntries(parts: EntourageParts, postId: string): readonly ShortlistEntry[] {
+	return (parts.shortlists[postId] ?? []).filter(
+		(entry) => parts.characters[entry.characterId]?.status === 'active'
+	);
+}
+
+/**
+ * Raison pour laquelle cette recherche ne peut être commandée, ou `null`
+ * (P3-21) : poste débloqué et vacant, aucune recherche en cours pour lui,
+ * présélection non complète, trait public permis à ce niveau.
+ */
+export function searchIssue(
+	target: string,
+	level: SearchLevel,
+	parts: EntourageParts,
+	context: ConditionContext | null,
+	content: Content
+): string | null {
+	const { postId, trait } = parseSearchTarget(target);
+	const post = Object.hasOwn(content.posts, postId) ? content.posts[postId] : undefined;
+	if (!post) return 'choisissez un poste';
+	if (context && !postUnlocked(postId, context, content)) {
+		return post.unavailableReason ?? `le poste « ${post.label} » n’est pas accessible`;
+	}
+	if (occupantOf(parts.staff, postId)) return `le poste « ${post.label} » est déjà pourvu`;
+	if (parts.searches.some((search) => search.postId === postId)) {
+		return 'une recherche est déjà en cours pour ce poste';
+	}
+	const search = content.balance.entourage.search;
+	if (availableEntries(parts, postId).length >= search.maxShortlist) {
+		return 'la présélection est déjà complète';
+	}
+	if (trait !== null) {
+		if (!search.levels[level].traitAllowed) return 'ce niveau de recherche ne cible aucun trait';
+		const definition = Object.hasOwn(content.traits, trait) ? content.traits[trait] : undefined;
+		// Seuls les traits publics se recherchent : un trait caché ne se lit pas sur un CV.
+		if (!definition || definition.hidden) return 'seul un trait visible peut être recherché';
+	}
+	return null;
+}
+
+/** Raison pour laquelle on ne peut vérifier le dossier de ce candidat, ou `null` (P3-21). */
+export function vetIssue(candidateId: string, parts: EntourageParts): string | null {
+	const postId = shortlistPostOf(candidateId, parts);
+	if (!postId) return 'Ce candidat ne figure dans aucune présélection.';
+	if (occupantOf(parts.staff, postId)) return 'Le poste est déjà pourvu.';
+	if (parts.characters[candidateId]?.status !== 'active')
+		return 'Ce candidat n’est plus disponible.';
+	const entry = parts.shortlists[postId]!.find((item) => item.characterId === candidateId)!;
+	if (entry.hints !== null) return 'Son dossier a déjà été vérifié.';
+	return null;
+}
+
 /** Raison pour laquelle ce collaborateur ne peut être renvoyé, ou `null`. */
 export function dismissIssue(characterId: string, parts: EntourageParts): string | null {
 	return activeStaff(parts.staff).some((member) => member.characterId === characterId)
@@ -255,11 +320,18 @@ function leave(
 	};
 }
 
-export type StaffEffect = Extract<Effect, { op: 'hireStaff' | 'dismissStaff' | 'courtCandidate' }>;
+export type StaffEffect = Extract<
+	Effect,
+	{ op: 'hireStaff' | 'dismissStaff' | 'courtCandidate' | 'orderSearch' | 'vetCandidate' }
+>;
 
 export function isStaffEffect(effect: Effect): effect is StaffEffect {
 	return (
-		effect.op === 'hireStaff' || effect.op === 'dismissStaff' || effect.op === 'courtCandidate'
+		effect.op === 'hireStaff' ||
+		effect.op === 'dismissStaff' ||
+		effect.op === 'courtCandidate' ||
+		effect.op === 'orderSearch' ||
+		effect.op === 'vetCandidate'
 	);
 }
 
@@ -277,6 +349,41 @@ export function applyStaffEffect(
 	decision: HiringDecision | null = null
 ): { parts: EntourageParts; changes: PoliticalChange[] } {
 	if (target === null) return { parts, changes: [] };
+	if (effect.op === 'orderSearch') {
+		if (searchIssue(target, effect.level, parts, context, content)) return { parts, changes: [] };
+		const { postId, trait } = parseSearchTarget(target);
+		const dueTurn = turn + content.balance.entourage.search.levels[effect.level].delayTurns;
+		return {
+			parts: {
+				...parts,
+				searches: [
+					...parts.searches,
+					{ postId, level: effect.level, trait, orderedTurn: turn, dueTurn }
+				]
+			},
+			changes: [{ kind: 'searchOrdered', postId, level: effect.level, dueTurn }]
+		};
+	}
+	if (effect.op === 'vetCandidate') {
+		if (vetIssue(target, parts)) return { parts, changes: [] };
+		const postId = shortlistPostOf(target, parts)!;
+		// Indices tirés à l'exécution seulement : la prévision ne révèle rien.
+		const hints = decision
+			? vetHints(decision.seed, turn, parts.characters[target]!, 'standard', content)
+			: [];
+		return {
+			parts: {
+				...parts,
+				shortlists: {
+					...parts.shortlists,
+					[postId]: parts.shortlists[postId]!.map((entry) =>
+						entry.characterId === target ? { ...entry, hints } : entry
+					)
+				}
+			},
+			changes: [{ kind: 'vetted', characterId: target, postId }]
+		};
+	}
 	if (effect.op === 'courtCandidate') {
 		if (candidateInterviewIssue(target, parts, content)) return { parts, changes: [] };
 		const postId = shortlistPostOf(target, parts)!;
@@ -370,6 +477,7 @@ export function applyStaffEffect(
 	);
 	return {
 		parts: {
+			...parts,
 			staff: [
 				...parts.staff,
 				{
@@ -381,7 +489,10 @@ export function applyStaffEffect(
 					leftTurn: null,
 					leaveReason: null,
 					salaryCents: terms.salaryCents,
-					bonusDueCents: terms.bonusCents
+					bonusDueCents: terms.bonusCents,
+					progressTenths: 0,
+					reviewedCompetence: candidate.competence,
+					reviewTurn: turn
 				}
 			],
 			shortlists,
@@ -447,11 +558,13 @@ export function resolveStaffProduction(
 	parts: ProductionParts,
 	turn: Turn,
 	content: Content
-): ProductionParts & { record: Pick<StaffRecord, 'payroll' | 'production'> } {
+): ProductionParts & { record: Pick<StaffRecord, 'payroll' | 'production' | 'progress'> } {
 	const resources: Record<ResourceId, number> = { ...parts.resources };
 	let { player, world, career, entourage } = parts;
 	const payroll = new Map<ResourceId, number>();
 	const production: StaffProductionRecord[] = [];
+	const progress: StaffRecord['progress'][number][] = [];
+	const { seniorityAttitude } = content.balance.entourage.progression;
 	for (const member of producing(entourage.staff, turn)) {
 		const post = content.posts[member.postId];
 		const mission = content.missions[member.missionId];
@@ -485,7 +598,9 @@ export function resolveStaffProduction(
 			entourage = {
 				...entourage,
 				staff: entourage.staff.map((entry) =>
-					entry === member ? { ...entry, bonusDueCents: 0 } : entry
+					entry.characterId === member.characterId && entry.status === 'active'
+						? { ...entry, bonusDueCents: 0 }
+						: entry
 				)
 			};
 		}
@@ -547,6 +662,46 @@ export function resolveStaffProduction(
 					break;
 			}
 		}
+		// Progression (P3-21) : un trimestre exercé fait gagner des dixièmes de
+		// compétence, d'autant plus que le collaborateur débute ; chaque
+		// anniversaire d'embauche resserre un peu les liens.
+		const gained = member.progressTenths + progressionTenths(character.competence, content);
+		const points = Math.min(GAUGE_MAX - character.competence, Math.floor(gained / 10));
+		const tenths = character.competence + points >= GAUGE_MAX ? 0 : gained - points * 10;
+		entourage = {
+			...entourage,
+			staff: entourage.staff.map((entry) =>
+				entry.characterId === member.characterId && entry.status === 'active'
+					? { ...entry, progressTenths: tenths }
+					: entry
+			)
+		};
+		if (points > 0) {
+			entourage = {
+				...entourage,
+				characters: {
+					...entourage.characters,
+					[character.id]: { ...character, competence: character.competence + points }
+				}
+			};
+			progress.push({
+				characterId: character.id,
+				from: character.competence,
+				to: character.competence + points
+			});
+		}
+		const service = turn - member.hiredTurn;
+		if (seniorityAttitude > 0 && service > 0 && service % 4 === 0) {
+			const relation = addRelation(
+				entourage.relationships,
+				character,
+				seniorityAttitude,
+				null,
+				turn,
+				content
+			);
+			entourage = { ...entourage, relationships: relation.relationships };
+		}
 		production.push({
 			characterId: member.characterId,
 			missionId: member.missionId,
@@ -569,7 +724,8 @@ export function resolveStaffProduction(
 				resource,
 				delta
 			})),
-			production
+			production,
+			progress
 		}
 	};
 }
@@ -598,10 +754,66 @@ function pickProfile(
 	return { profile: profiles.at(-1)!, rng: draw.rng };
 }
 
+/** Candidat généré pour un poste : profil, compétence et traits (le trait exigé se voit sur le CV). */
+function generateCandidate(
+	profile: CandidateProfileDefinition,
+	extraTrait: string | null,
+	turn: Turn,
+	parts: EntourageParts,
+	rng: RngState,
+	content: Content
+): { character: Character; parts: EntourageParts; rng: RngState } {
+	const generated = generatePerson(
+		{
+			tags: ['candidate'],
+			epithet: null,
+			renewal: null,
+			partyId: null,
+			minAge: 26,
+			maxAge: 55,
+			successorOf: null
+		},
+		turn,
+		parts.characters,
+		rng,
+		content
+	);
+	const competence = nextInt(generated.rng, profile.minCompetence, profile.maxCompetence);
+	// Les traits du profil (et le trait recherché) s'imposent et se voient sur le CV ;
+	// les autres restent à découvrir.
+	const forced = [...new Set([...profile.traits, ...(extraTrait === null ? [] : [extraTrait])])];
+	const traits = [...new Set([...forced, ...generated.character.traits])]
+		.slice(0, Math.max(forced.length, generated.character.traits.length))
+		.sort();
+	const knownTraits = [
+		...new Set([
+			...forced,
+			...generated.character.knownTraits.filter((trait) => traits.includes(trait))
+		])
+	].sort();
+	const character: Character = {
+		...generated.character,
+		competence: competence.value,
+		traits,
+		knownTraits
+	};
+	return {
+		character,
+		parts: {
+			...parts,
+			characters: { ...parts.characters, [character.id]: character },
+			relationships: meet(parts.relationships, character.id, turn).relationships
+		},
+		rng: competence.rng
+	};
+}
+
 /**
  * À la frontière (`turn` = T+1) : départ des collaborateurs partis de la vie
- * publique ou trop mal disposés, puis présélection de candidats pour chaque
- * poste débloqué, vacant et sans présélection, dans l'ordre du catalogue.
+ * publique ou trop mal disposés ; présélection de candidats pour chaque poste
+ * débloqué, vacant et sans présélection, dans l'ordre du catalogue ; puis
+ * recherches échues (P3-21, résolues une seule fois : retirées de l'état) et
+ * demande d'augmentation d'un collaborateur qui a franchi un palier.
  */
 export function resolveStaffFrontier(
 	entourage: EntourageParts,
@@ -612,7 +824,11 @@ export function resolveStaffFrontier(
 ): {
 	entourage: EntourageParts;
 	rng: RngState;
-	record: Pick<StaffRecord, 'departures' | 'shortlisted'>;
+	/** Part du prix des recherches échouées ou annulées, rendue au budget politique. */
+	refundCents: number;
+	/** Demande d'augmentation programmée pour ce trimestre. */
+	scheduled: readonly ScheduledEvent[];
+	record: Pick<StaffRecord, 'departures' | 'shortlisted' | 'searches' | 'raiseRequests'>;
 } {
 	let parts = entourage;
 	let current = rng;
@@ -636,72 +852,185 @@ export function resolveStaffFrontier(
 	const shortlisted: string[] = [];
 	const { candidatesPerPost } = content.balance.entourage;
 	// Vivier gradué (P3-20) : un profil se présente couramment si la carrière est
-	// assez attractive, rarement sinon (poids de rareté, éventuellement nul).
+	// assez attractive, rarement sinon (poids de rareté, éventuellement nul). Les
+	// profils de recherche (P3-21) ne se présentent jamais spontanément.
 	const attraction = attractiveness(
 		attractivenessFactors(context.player, context.resources, context.mandates, parts.staff, content)
 	);
+	const spontaneous = content.candidateProfiles.filter((profile) => !profile.searchOnly);
 	const profileWeight = (profile: CandidateProfileDefinition): number =>
 		attraction >= profile.minAttractiveness ? COMMON_PROFILE_WEIGHT : profile.rareWeight;
 	for (const postId of content.postIds) {
-		const existing = parts.shortlists[postId];
-		const stillAvailable = existing?.filter(
-			(entry) => parts.characters[entry.characterId]?.status === 'active'
-		);
 		if (occupantOf(parts.staff, postId) || !postUnlocked(postId, context, content)) continue;
-		if (stillAvailable && stillAvailable.length > 0) continue;
+		if (availableEntries(parts, postId).length > 0) continue;
 		const entries: ShortlistEntry[] = [];
-		let characters = parts.characters;
-		let relationships = parts.relationships;
 		for (let index = 0; index < candidatesPerPost; index += 1) {
-			const drawn = pickProfile(content.candidateProfiles, profileWeight, current);
-			current = drawn.rng;
-			const profile = drawn.profile;
-			const generated = generatePerson(
-				{
-					tags: ['candidate'],
-					epithet: null,
-					renewal: null,
-					partyId: null,
-					minAge: 26,
-					maxAge: 55,
-					successorOf: null
-				},
-				turn,
-				characters,
-				current,
-				content
-			);
-			const competence = nextInt(generated.rng, profile.minCompetence, profile.maxCompetence);
-			current = competence.rng;
-			// Les traits du profil s'imposent et se voient sur le CV ; les autres restent à découvrir.
-			const traits = [...new Set([...profile.traits, ...generated.character.traits])]
-				.slice(0, Math.max(profile.traits.length, generated.character.traits.length))
-				.sort();
-			const knownTraits = [
-				...new Set([
-					...profile.traits,
-					...generated.character.knownTraits.filter((trait) => traits.includes(trait))
-				])
-			].sort();
-			const character: Character = {
-				...generated.character,
-				competence: competence.value,
-				traits,
-				knownTraits
-			};
-			characters = { ...characters, [character.id]: character };
-			relationships = meet(relationships, character.id, turn).relationships;
-			entries.push({ characterId: character.id, profileId: profile.id, interviews: 0 });
+			const drawn = pickProfile(spontaneous, profileWeight, current);
+			const made = generateCandidate(drawn.profile, null, turn, parts, drawn.rng, content);
+			parts = made.parts;
+			current = made.rng;
+			entries.push({
+				characterId: made.character.id,
+				profileId: drawn.profile.id,
+				interviews: 0,
+				hints: null
+			});
+		}
+		parts = { ...parts, shortlists: { ...parts.shortlists, [postId]: entries } };
+		shortlisted.push(postId);
+	}
+
+	// Recherches échues, dans l'ordre de commande : le poste doit être encore
+	// vacant et accessible ; la chance de trouver est tirée une seule fois.
+	const searchBalance = content.balance.entourage.search;
+	const searches: SearchOutcomeRecord[] = [];
+	let refundCents = 0;
+	for (const search of parts.searches.filter((entry) => entry.dueTurn <= turn)) {
+		const level = searchBalance.levels[search.level];
+		const room = searchBalance.maxShortlist - availableEntries(parts, search.postId).length;
+		const closed =
+			occupantOf(parts.staff, search.postId) !== null ||
+			!postUnlocked(search.postId, context, content) ||
+			room <= 0;
+		const refund = searchRefundCents(search.level, content);
+		if (closed) {
+			refundCents += refund;
+			searches.push({
+				...outcomeOf(search),
+				outcome: 'cancelled',
+				candidates: [],
+				refundCents: refund
+			});
+			continue;
+		}
+		const roll = nextInt(current, 0, 99);
+		current = roll.rng;
+		if (roll.value >= searchFindPercent(search.level, search.trait, content)) {
+			refundCents += refund;
+			searches.push({
+				...outcomeOf(search),
+				outcome: 'failed',
+				candidates: [],
+				refundCents: refund
+			});
+			continue;
+		}
+		const found: string[] = [];
+		const entries: ShortlistEntry[] = [];
+		for (let index = 0; index < Math.min(level.candidates, room); index += 1) {
+			const profile =
+				level.profile === null
+					? (() => {
+							const drawn = pickProfile(spontaneous, profileWeight, current);
+							current = drawn.rng;
+							return drawn.profile;
+						})()
+					: content.candidateProfiles.find((entry) => entry.id === level.profile)!;
+			const made = generateCandidate(profile, search.trait, turn, parts, current, content);
+			parts = made.parts;
+			current = made.rng;
+			found.push(made.character.id);
+			entries.push({
+				characterId: made.character.id,
+				profileId: profile.id,
+				interviews: 0,
+				// Le chasseur de têtes livre un dossier vérifié : des indices, jamais une certitude.
+				hints:
+					level.vetting === null
+						? null
+						: vetHints(rng.seed, turn, made.character, level.vetting, content)
+			});
 		}
 		parts = {
 			...parts,
-			characters,
-			relationships,
-			shortlists: { ...parts.shortlists, [postId]: entries }
+			shortlists: {
+				...parts.shortlists,
+				[search.postId]: [...(parts.shortlists[search.postId] ?? []), ...entries]
+			}
 		};
-		shortlisted.push(postId);
+		searches.push({ ...outcomeOf(search), outcome: 'found', candidates: found, refundCents: 0 });
 	}
-	return { entourage: parts, rng: current, record: { departures, shortlisted } };
+	parts = { ...parts, searches: parts.searches.filter((entry) => entry.dueTurn > turn) };
+
+	// Renégociation : un collaborateur qui a gagné un palier de compétence depuis
+	// sa dernière demande (ou son embauche), dont le salaire est sous sa
+	// prétention, réclame ; au plus une demande par trimestre et une par période.
+	// La demande fixe la nouvelle référence : après un refus, il ne revient qu'au
+	// palier suivant, la relation entamée.
+	const renegotiation = content.balance.entourage.renegotiation;
+	const scheduled: ScheduledEvent[] = [];
+	const raiseRequests: string[] = [];
+	for (const member of activeStaff(parts.staff)) {
+		const character = parts.characters[member.characterId];
+		if (!character || character.status !== 'active') continue;
+		if (character.competence - member.reviewedCompetence < renegotiation.stepCompetence) continue;
+		if (turn - member.reviewTurn < renegotiation.minTurns) continue;
+		if (askedSalaryCents(member.postId, character.competence, content) <= member.salaryCents)
+			continue;
+		parts = {
+			...parts,
+			staff: parts.staff.map((entry) =>
+				entry === member
+					? { ...entry, reviewTurn: turn, reviewedCompetence: character.competence }
+					: entry
+			)
+		};
+		scheduled.push({
+			eventId: renegotiation.event,
+			dueTurn: turn,
+			sourceInstanceId: `staff:${member.characterId}`,
+			actors: { [STAFF_ROLE]: member.characterId }
+		});
+		raiseRequests.push(member.characterId);
+		break;
+	}
+
+	return {
+		entourage: parts,
+		rng: current,
+		refundCents,
+		scheduled,
+		record: { departures, shortlisted, searches, raiseRequests }
+	};
+}
+
+function outcomeOf(
+	search: RecruitmentSearch
+): Pick<SearchOutcomeRecord, 'postId' | 'level' | 'trait'> {
+	return { postId: search.postId, level: search.level, trait: search.trait };
+}
+
+/** Rôle du collaborateur concerné par un événement de sujet `staff` (P3-21). */
+export const STAFF_ROLE = 'collaborator';
+
+/**
+ * Augmentation accordée (P3-21) : le collaborateur passe au salaire demandé à
+ * sa compétence actuelle, qui devient la référence du prochain palier.
+ */
+export function grantRaise(
+	parts: EntourageParts,
+	characterId: string,
+	turn: Turn,
+	content: Content
+): { parts: EntourageParts; changes: PoliticalChange[] } {
+	const member = activeStaff(parts.staff).find((entry) => entry.characterId === characterId);
+	const character = parts.characters[characterId];
+	if (!member || !character) return { parts, changes: [] };
+	const salaryCents = Math.max(
+		member.salaryCents,
+		askedSalaryCents(member.postId, character.competence, content)
+	);
+	return {
+		parts: {
+			...parts,
+			staff: parts.staff.map((entry) =>
+				entry === member
+					? { ...entry, salaryCents, reviewedCompetence: character.competence, reviewTurn: turn }
+					: entry
+			)
+		},
+		changes: [{ kind: 'raiseGranted', characterId, salaryCents }]
+	};
 }
 
 // ---------------------------------------------------------------------------
@@ -819,7 +1148,7 @@ export function applyPostEffect(
 					...parts.shortlists,
 					[postId]: [
 						...(parts.shortlists[postId] ?? []).filter((entry) => entry.characterId !== actor.id),
-						{ characterId: actor.id, profileId: effect.profile, interviews: 0 }
+						{ characterId: actor.id, profileId: effect.profile, interviews: 0, hints: null }
 					]
 				}
 			},
@@ -871,7 +1200,10 @@ export function applyPostEffect(
 					leaveReason: null,
 					// Un proche demande le salaire de sa compétence, sans prime (P3-20).
 					salaryCents: askedSalaryCents(postId, actor.competence, content),
-					bonusDueCents: 0
+					bonusDueCents: 0,
+					progressTenths: 0,
+					reviewedCompetence: actor.competence,
+					reviewTurn: turn
 				}
 			]
 		},

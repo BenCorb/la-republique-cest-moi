@@ -270,6 +270,14 @@ export type Effect =
 	| { readonly op: 'hireStaff'; readonly offer?: HireOffer | undefined }
 	/** Entretien approfondi avec un candidat présélectionné (P3-20), avant l'offre. */
 	| { readonly op: 'courtCandidate' }
+	/**
+	 * Recherche de candidats pour le poste choisi dans le plan (`target` de type
+	 * `search` : `post.x` ou `post.x/trait.y`), à ce niveau (P3-21). Le prix est
+	 * le coût de l'action ; les candidats arrivent à l'échéance du niveau.
+	 */
+	| { readonly op: 'orderSearch'; readonly level: SearchLevel }
+	/** Vérification du dossier du candidat choisi (P3-21) : indices, jamais de certitude. */
+	| { readonly op: 'vetCandidate' }
 	/** Renvoi du collaborateur choisi dans le plan (`target`). */
 	| { readonly op: 'dismissStaff' }
 	/**
@@ -280,6 +288,11 @@ export type Effect =
 	| { readonly op: 'releaseUpgrade' }
 	/** Départ du collaborateur qui tient ce rôle d'événement (débauchage, démission). */
 	| { readonly op: 'staffLeaves'; readonly role: string }
+	/**
+	 * Le collaborateur de ce rôle obtient le salaire demandé à sa compétence
+	 * actuelle (renégociation, P3-21).
+	 */
+	| { readonly op: 'grantRaise'; readonly role: string }
 	/** Arrivée d'un membre de la famille proche, généré (événements seulement, P2-08). */
 	| { readonly op: 'familyJoins'; readonly relation: 'partner' | 'child' }
 	/** Séparation : la personne qui partage la vie du joueur s'en va. */
@@ -815,6 +828,7 @@ export interface ActionDefinition {
 		| 'pledge'
 		| 'media'
 		| 'reform'
+		| 'search'
 		| undefined;
 }
 
@@ -1099,6 +1113,74 @@ export interface EntourageBalance {
 	readonly poorAdviceErrorChance: number;
 	/** Recrutement : salaire, attractivité, acceptation (P3-20). */
 	readonly recruitment: RecruitmentBalance;
+	/** Recherche, vérification, progression et renégociations (P3-21). */
+	readonly search: SearchBalance;
+	readonly vetting: Readonly<Record<VettingLevel, VettingBalance>>;
+	readonly progression: ProgressionBalance;
+	readonly renegotiation: RenegotiationBalance;
+}
+
+/** Niveaux de recherche de candidats (P3-21). */
+export const SEARCH_LEVELS = ['simple', 'targeted', 'headhunt'] as const;
+export type SearchLevel = (typeof SEARCH_LEVELS)[number];
+
+/** Fiabilité d'une vérification de dossier (P3-21). */
+export const VETTING_LEVELS = ['standard', 'thorough'] as const;
+export type VettingLevel = (typeof VETTING_LEVELS)[number];
+
+export interface SearchLevelBalance {
+	/** Prix, égal au coût en budget politique de l'action qui la commande. */
+	readonly costCents: number;
+	/** Trimestres avant le résultat (1 : à la frontière suivante). */
+	readonly delayTurns: number;
+	/** Candidats trouvés en cas de succès (dans la limite de la présélection). */
+	readonly candidates: number;
+	/** Chance de trouver, en %, avant la pénalité d'un trait recherché. */
+	readonly findPercent: number;
+	/**
+	 * Compétence des candidats trouvés ; `profile` nul : profils du vivier
+	 * spontané (gradué par l'attractivité), sinon ce profil de recherche.
+	 */
+	readonly profile: string | null;
+	/** Un trait public peut être exigé à ce niveau. */
+	readonly traitAllowed: boolean;
+	/** Dossier des candidats vérifié d'office, à ce niveau de fiabilité. */
+	readonly vetting: VettingLevel | null;
+}
+
+export interface SearchBalance {
+	readonly levels: Readonly<Record<SearchLevel, SearchLevelBalance>>;
+	/** Points de % retirés à la chance de trouver quand un trait est exigé. */
+	readonly traitPenalty: number;
+	/** Part du prix rendue si la recherche échoue ou devient sans objet, en %. */
+	readonly failureRefundPercent: number;
+	/** Taille maximale d'une présélection (spontanés et recherches). */
+	readonly maxShortlist: number;
+}
+
+export interface VettingBalance {
+	/** Chance qu'un trait caché réel soit signalé, en %. */
+	readonly truePercent: number;
+	/** Chance qu'un trait caché absent soit signalé à tort, en %. */
+	readonly falsePercent: number;
+}
+
+/** Progression des collaborateurs (P3-21) : dixièmes de compétence par trimestre exercé. */
+export interface ProgressionBalance {
+	/** Gain selon la compétence actuelle, en dixièmes de point (interpolé). */
+	readonly curve: readonly { readonly competence: number; readonly tenths: number }[];
+	/** Attitude gagnée à chaque anniversaire d'embauche. */
+	readonly seniorityAttitude: number;
+}
+
+/** Renégociations (P3-21) : à chaque palier de compétence, au plus une fois par période. */
+export interface RenegotiationBalance {
+	/** Points de compétence gagnés depuis la dernière demande (ou l'embauche) pour réclamer. */
+	readonly stepCompetence: number;
+	/** Trimestres minimum entre deux demandes du même collaborateur. */
+	readonly minTurns: number;
+	/** Événement bloquant de la demande (rôle `collaborator`). */
+	readonly event: string;
 }
 
 /** Offre d'embauche (P3-20). */
@@ -1365,6 +1447,8 @@ export interface CandidateProfileDefinition {
 	 */
 	readonly minAttractiveness: number;
 	readonly rareWeight: number;
+	/** Profil réservé aux résultats d'une recherche (P3-21), jamais spontané. */
+	readonly searchOnly?: boolean | undefined;
 }
 
 /** Membre de la famille généré à la création selon l'origine (GDD §3.3). */
@@ -1595,8 +1679,10 @@ interface EventBase {
 	 * `post` : l'événement porte sur un poste d'entourage débloqué, lié à sa
 	 * création (vacant d'abord, dans l'ordre du catalogue ; sinon occupé, avec son
 	 * titulaire), cité par `{post}` et `{incumbent}` (P3-12).
+	 * `staff` : l'événement porte sur le collaborateur transmis par le moteur
+	 * (rôle `collaborator`, renégociation P3-21) ; annulé s'il n'est plus en poste.
 	 */
-	readonly subject?: 'promise' | 'post' | undefined;
+	readonly subject?: 'promise' | 'post' | 'staff' | undefined;
 }
 
 /** Événement bloquant : la progression attend un choix du joueur. */

@@ -132,6 +132,20 @@ function quarterAlerts(state: GameState, content: Content): AccelerationAlert[] 
 			message: caseStepMessage(step.caseId, step.kind, state, content)
 		});
 	}
+	// Recherches échues (P3-21) : résultat à examiner.
+	for (const search of entry.staff?.searches ?? []) {
+		const post = content.posts[search.postId]?.label ?? search.postId;
+		alerts.push({
+			id: `search:${search.postId}:${entry.turn}`,
+			kind: 'staff',
+			message:
+				search.outcome === 'found'
+					? `Recherche aboutie pour le poste « ${post} » : ${search.candidates.length} candidat${search.candidates.length > 1 ? 's' : ''} à examiner.`
+					: search.outcome === 'failed'
+						? `Recherche infructueuse pour le poste « ${post} ».`
+						: `Recherche sans objet pour le poste « ${post} » : poste pourvu ou présélection complète.`
+		});
+	}
 	for (const postId of entry.staff?.shortlisted ?? []) {
 		alerts.push({
 			id: `shortlist:${postId}:${entry.turn}`,
