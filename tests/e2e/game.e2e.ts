@@ -181,15 +181,21 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByTestId('opponent-campaign.1')).toContainText('Adversaire : ');
 		await expect(page.getByTestId('opponent-campaign.1')).not.toContainText('prochain trimestre');
 
-		// Engagement de campagne (P3-04) : ajouté au plan, puis inscrit au registre.
-		await page.getByRole('button', { name: 'Promettre : Baisser les impôts' }).click();
-		await expect(page.getByTestId('offer-promise.tax_cut')).toContainText(
-			'Engagement prévu ce trimestre.'
-		);
+		// Engagement de campagne (P3-04), propre au scrutin et rattaché à la candidature (P3-22).
+		const pledges = page.getByTestId('pledge-campaign-campaign.1');
+		await expect(pledges).toContainText('Élections municipales (');
+		await expect(pledges).toContainText('choisir jusqu’à 3 engagements');
+		await expect(pledges).toContainText('Fonction visée : ');
+		const offer = page.getByTestId('offer-campaign.1/promise.tax_cut.municipal');
+		await expect(offer).toContainText('Levier : Mairie (');
+		await expect(pledges).not.toContainText('Faire voter une baisse de l’impôt sur le revenu');
+		await offer.getByRole('button', { name: /^Promettre : Geler les impôts locaux/ }).click();
+		await expect(offer).toContainText('Engagement prévu ce trimestre.');
 		await nextQuarter(page);
 		await settleDecisions(page);
 		await page.getByRole('button', { name: 'Carrière', exact: true }).click();
-		await expect(page.getByTestId('pledge-pledge.1')).toContainText('Baisser les impôts');
+		await expect(page.getByTestId('pledge-pledge.1')).toContainText('Geler les impôts locaux');
+		await expect(page.getByTestId('pledge-pledge.1')).toContainText('Élections municipales (');
 		await expect(page.getByTestId('pledge-pledge.1')).toContainText('Annoncée');
 		await expect(page.getByTestId('pledge-pledge.1')).toContainText('À réaliser si vous êtes élu');
 

@@ -381,19 +381,46 @@ export type PromiseOutcome = Extract<PromiseStatus, 'kept' | 'partial' | 'abando
 export const PROMISE_PROGRESS_MAX = 100;
 
 /**
- * Promesse type (P3-04) : un engagement de campagne et ses conséquences selon
- * qu'il est tenu, partiellement tenu ou abandonné. Effets limités aux
- * ressources, jauges et soutiens ; aucune simulation de politique publique.
+ * Façon de tenir une promesse (P3-22) : `decide` pour un mandat exécutif qui
+ * décide (mairie), `carry` pour un mandat d'assemblée qui porte et vote un
+ * texte ou un budget (conseil régional, Assemblée, Sénat).
+ */
+export const PROMISE_MODES = ['decide', 'carry'] as const;
+export type PromiseMode = (typeof PROMISE_MODES)[number];
+
+/** Variable autorisée dans la description d'une promesse : le lieu du scrutin (P3-22). */
+export const PROMISE_PLACE_VARIABLE = 'place';
+
+/** Grand thème commun aux déclinaisons d'une promesse selon le scrutin (P3-22). */
+export interface PromiseThemeDefinition {
+	readonly id: string;
+	readonly label: string;
+}
+
+/**
+ * Promesse type (P3-04), déclinée par scrutin (P3-22) : un engagement de
+ * campagne propre à une élection, le levier institutionnel qui permet de le
+ * tenir, et ses conséquences selon qu'il est tenu, partiellement tenu ou
+ * abandonné. Effets limités aux ressources, jauges et soutiens ; aucune
+ * simulation de politique publique.
  */
 export interface PromiseDefinition {
 	readonly id: string;
-	/** Intitulé de la promesse, cité dans les textes (`{promise}`). */
+	/** Intitulé de la promesse, cité dans les textes (`{promise}`), sans variable. */
 	readonly label: string;
-	/** Thème (fiscalité, sécurité…). */
+	/** Thème commun (`theme.*`), partagé par les déclinaisons des autres scrutins. */
 	readonly theme: string;
+	/** Description ; `{place}` y désigne le lieu du scrutin (commune, région, département). */
 	readonly description: string;
-	/** Élections où l'engagement peut être pris. */
-	readonly elections: readonly string[];
+	/** Seule élection où l'engagement peut être pris (P3-22). */
+	readonly election: string;
+	/**
+	 * Mandats qui donnent le levier pour tenir la promesse, tous attribuables
+	 * par cette élection. Élu sans l'un d'eux, la promesse ne sera au mieux que
+	 * partiellement tenue.
+	 */
+	readonly lever: readonly string[];
+	readonly mode: PromiseMode;
 	/** Dilemme présenté une fois élu (événement bloquant de sujet `promise`). */
 	readonly dilemmaEvent: string;
 	/** Effets certains de l'annonce. */
@@ -420,14 +447,21 @@ export interface PromisesBalance {
 	readonly recallPercent: number;
 	/** Nombre maximal de rappels d'une même promesse. */
 	readonly maxRecalls: number;
-	/** Événements de rappel, par issue (sujet `promise`). */
+	/**
+	 * Événements de rappel, par issue (sujet `promise`) : `kept` et `abandoned`
+	 * pour une promesse de même échelle que la campagne en cours, `keptElsewhere`
+	 * et `abandonedElsewhere` pour une promesse d'une autre échelle (P3-22).
+	 */
 	readonly recallEvents: {
 		readonly kept: string;
 		readonly abandoned: string;
+		readonly keptElsewhere: string;
+		readonly abandonedElsewhere: string;
 	};
 }
 
 export interface PromisesDefinition {
+	readonly themes: readonly PromiseThemeDefinition[];
 	readonly promises: readonly PromiseDefinition[];
 	readonly balance: PromisesBalance;
 }
@@ -1903,6 +1937,8 @@ export interface Content {
 	/** Promesses types, par identifiant, dans l'ordre du catalogue (P3-04). */
 	readonly promises: Readonly<Record<string, PromiseDefinition>>;
 	readonly promiseIds: readonly string[];
+	/** Thèmes communs des promesses, par identifiant (P3-22). */
+	readonly promiseThemes: Readonly<Record<string, PromiseThemeDefinition>>;
 	readonly promiseRules: PromisesBalance;
 	/** Médias du catalogue, par identifiant, dans l'ordre du catalogue (P3-03). */
 	readonly media: Readonly<Record<string, MediaDefinition>>;

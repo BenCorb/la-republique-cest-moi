@@ -16,10 +16,13 @@ import {
 	RESOURCE_IDS,
 	type Content,
 	type Effect,
+	PROMISE_PLACE_VARIABLE,
 	PROMISE_PROGRESS_MAX,
 	type ActionDefinition,
 	type ActionFamilyDefinition,
 	type ActionFormat,
+	type PromiseDefinition,
+	type PromiseMode,
 	type PromiseStatus,
 	type GaugeId,
 	type ResourceAmount,
@@ -62,6 +65,8 @@ import {
 	type PromiseChange,
 	type PromiseRecord,
 	isOpenPledge,
+	parsePledgeTarget,
+	pledgeTarget,
 	type Article,
 	activationLabel,
 	adoptionPercent,
@@ -678,9 +683,14 @@ export interface PressItemView {
 /** Promesse type que le candidat peut annoncer (P3-04). */
 export interface PromiseOfferView {
 	readonly promiseId: string;
+	/** Cible de l'engagement : la campagne destinataire et la promesse (P3-22). */
+	readonly target: string;
 	readonly label: string;
 	readonly theme: string;
+	/** Description, lieu du scrutin compris. */
 	readonly description: string;
+	/** Pouvoir qui permet de tenir la promesse, en clair (P3-22). */
+	readonly lever: string;
 	/** Effets certains de l'annonce, en clair. */
 	readonly effects: readonly string[];
 	readonly planned: boolean;
@@ -699,6 +709,10 @@ export interface PledgeView {
 	readonly progress: number;
 	readonly inProgress: boolean;
 	readonly amended: boolean;
+	/** Élu sans le mandat qui donne le levier (P3-22) : au mieux partiellement tenue. */
+	readonly limited: boolean;
+	/** Pouvoir qui permet de tenir la promesse, en clair (P3-22). */
+	readonly lever: string;
 	/** Échéance (en cours), issue datée ou rappels. */
 	readonly detail: string;
 	readonly preparePlanned: boolean;
@@ -706,13 +720,25 @@ export interface PledgeView {
 	readonly prepareReason: string | null;
 }
 
+/** Candidature en cours et engagements qui lui sont propres (P3-22). */
+export interface PromiseCampaignView {
+	readonly campaignId: string;
+	/** Scrutin et territoire : « Élections municipales (Montvérel) ». */
+	readonly title: string;
+	/** Date du scrutin et fonction recherchée. */
+	readonly detail: string;
+	/** Engagements déjà inscrits au registre pour cette campagne. */
+	readonly made: number;
+	readonly offers: readonly PromiseOfferView[];
+}
+
 export interface PromisesView {
 	readonly pledgeActionId: string | null;
 	readonly prepareActionId: string | null;
 	readonly maxPerCampaign: number;
 	readonly partialProgress: number;
-	/** Engagements possibles pendant une campagne en cours (vide sinon). */
-	readonly offers: readonly PromiseOfferView[];
+	/** Candidatures en cours, chacune avec ses engagements possibles (vide hors campagne). */
+	readonly campaigns: readonly PromiseCampaignView[];
 	/** Promesses ouvertes d'abord, puis closes, des plus récentes aux plus anciennes. */
 	readonly pledges: readonly PledgeView[];
 }
@@ -1353,6 +1379,7 @@ function describeEffect(range: EffectRange, content: Content): string {
 const PROMISE_CHANGE_LABELS: { readonly [K in PromiseChange]: string } = {
 	made: 'engagement pris',
 	started: 'élu, place à la réalisation',
+	limited: 'élu sans le levier annoncé : au mieux partiellement tenue',
 	lapsed: 'élection perdue, promesse sans lendemain',
 	amended: 'compromis : au mieux partiellement tenue',
 	kept: 'promesse tenue',
@@ -1379,6 +1406,12 @@ function advanceLabel(campaign: GameState['campaigns'][number], content: Content
 	const repaid = campaign.status !== 'disqualified' && (campaign.playerPercent ?? 0) >= threshold;
 	return `Avance personnelle : ${amount}, ${repaid ? 'rendue après le scrutin' : 'perdue'}`;
 }
+
+/** Façons de tenir une promesse, en clair (P3-22). */
+const PROMISE_MODE_LABELS: { readonly [K in PromiseMode]: string } = {
+	decide: 'décider et réaliser',
+	carry: 'porter et voter'
+};
 
 /** États d'une promesse, en clair (registre). */
 export const PROMISE_STATUS_LABELS: { readonly [K in PromiseStatus]: string } = {
@@ -1762,8 +1795,12 @@ function targetLabel(target: string, state: GameState, content: Content): string
 			: `${post}, profil « ${content.traits[sought.trait]?.label ?? sought.trait} »`;
 	}
 	if (Object.hasOwn(content.parties, target)) return content.parties[target]?.name ?? target;
-	if (Object.hasOwn(content.promises, target)) {
-		return `« ${content.promises[target]?.label ?? target} »`;
+	// Engagement de campagne (P3-22) : promesse et campagne destinataire.
+	const pledged = parsePledgeTarget(target);
+	if (pledged && Object.hasOwn(content.promises, pledged.promiseId)) {
+		const campaign = state.campaigns.find((entry) => entry.campaignId === pledged.campaignId);
+		const label = `« ${content.promises[pledged.promiseId]?.label ?? pledged.promiseId} »`;
+		return campaign ? `${label}, ${electionName(campaign.electionId, state, content)}` : label;
 	}
 	if (Object.hasOwn(content.media, target)) return content.media[target]?.name ?? target;
 	if (Object.hasOwn(content.institutionLevels, target)) {
@@ -3452,6 +3489,23 @@ function buildPeople(state: GameState, content: Content): PersonView[] {
 		.map((entry) => entry.view);
 }
 
+/** Description d'une promesse, `{place}` remplacé par le lieu de son scrutin (P3-22). */
+function promiseDescription(
+	definition: PromiseDefinition,
+	state: GameState,
+	content: Content
+): string {
+	const scope = content.elections[definition.election]?.scope ?? 'local';
+	const place = placeOf(scope, state.player.territory, content);
+	return definition.description.replaceAll(`{${PROMISE_PLACE_VARIABLE}}`, place);
+}
+
+/** Pouvoir qui permet de tenir la promesse : « Levier : Mairie (Montvérel) — décider ». */
+function leverLabel(definition: PromiseDefinition, state: GameState, content: Content): string {
+	const seats = definition.lever.map((mandateId) => mandateName(mandateId, state, content));
+	return `Levier : ${seats.join(' ou ')} — ${PROMISE_MODE_LABELS[definition.mode]}`;
+}
+
 function buildPromises(
 	state: GameState,
 	plan: readonly PlanStep[],
@@ -3463,34 +3517,59 @@ function buildPromises(
 		content.actionIds.find((id) => content.actions[id]?.target === 'pledge') ?? null;
 	const planned = (id: string | null, target: string): boolean =>
 		plan.some((step) => step.kind === 'action' && step.id === id && step.target === target);
-	const campaigning = state.campaigns.some((campaign) => campaign.status === 'running');
-	const offers =
-		campaigning && pledgeActionId
-			? content.promiseIds.flatMap((promiseId) => {
-					const definition = content.promises[promiseId];
-					if (!definition) return [];
-					const add = addability(
-						state,
-						plan,
-						{ kind: 'action', id: pledgeActionId, target: promiseId },
-						content
-					);
-					return [
-						{
-							promiseId,
-							label: definition.label,
-							theme: definition.theme,
-							description: definition.description,
-							effects: definition.announce.map((effect) =>
-								describeEffect(effectRange(effect), content)
-							),
-							planned: planned(pledgeActionId, promiseId),
-							addable: add.addable,
-							reason: add.reason
-						}
-					];
+	const campaigns = pledgeActionId
+		? state.campaigns
+				.filter((campaign) => campaign.status === 'running')
+				.map((campaign): PromiseCampaignView => {
+					const election = content.elections[campaign.electionId];
+					const ballot = state.ballots.find((entry) => entry.ballotId === campaign.ballotId);
+					const seats = election
+						? [
+								mandateName(election.grants, state, content),
+								...(election.bonusGrant
+									? [
+											`${mandateName(election.bonusGrant.mandate, state, content)} à partir de ${election.bonusGrant.minPercent} %`
+										]
+									: [])
+							].join(' ; ')
+						: '';
+					const offers = content.promiseIds.flatMap((promiseId): PromiseOfferView[] => {
+						const definition = content.promises[promiseId];
+						if (!definition || definition.election !== campaign.electionId) return [];
+						const target = pledgeTarget(campaign.campaignId, promiseId);
+						const add = addability(
+							state,
+							plan,
+							{ kind: 'action', id: pledgeActionId, target },
+							content
+						);
+						return [
+							{
+								promiseId,
+								target,
+								label: definition.label,
+								theme: content.promiseThemes[definition.theme]?.label ?? definition.theme,
+								description: promiseDescription(definition, state, content),
+								lever: leverLabel(definition, state, content),
+								effects: definition.announce.map((effect) =>
+									describeEffect(effectRange(effect), content)
+								),
+								planned: planned(pledgeActionId, target),
+								addable: add.addable,
+								reason: add.reason
+							}
+						];
+					});
+					return {
+						campaignId: campaign.campaignId,
+						title: electionName(campaign.electionId, state, content),
+						detail: `Scrutin au ${formatTurn(ballot?.turn ?? state.turn)}${seats ? ` · Fonction visée : ${seats}` : ''}`,
+						made: state.promises.filter((pledge) => pledge.campaignId === campaign.campaignId)
+							.length,
+						offers
+					};
 				})
-			: [];
+		: [];
 	const order = (pledge: PromiseRecord): number => (isOpenPledge(pledge) ? 0 : 1);
 	const pledges = [...state.promises]
 		.reverse()
@@ -3498,7 +3577,7 @@ function buildPromises(
 		.map((pledge): PledgeView => {
 			const definition = content.promises[pledge.promiseId];
 			const campaign = state.campaigns.find((entry) => entry.campaignId === pledge.campaignId);
-			const election = campaign ? content.elections[campaign.electionId]?.label : undefined;
+			const election = campaign ? electionName(campaign.electionId, state, content) : undefined;
 			const inProgress = pledge.status === 'in_progress';
 			const prepare =
 				inProgress && prepareActionId
@@ -3521,12 +3600,16 @@ function buildPromises(
 			return {
 				pledgeId: pledge.pledgeId,
 				label: definition?.label ?? pledge.promiseId,
-				theme: definition?.theme ?? '',
+				theme: definition
+					? (content.promiseThemes[definition.theme]?.label ?? definition.theme)
+					: '',
 				status: lapsed ? 'Sans lendemain' : PROMISE_STATUS_LABELS[pledge.status],
 				origin: `${election ?? 'Campagne'} — annoncée au ${formatTurn(pledge.announcedTurn)}`,
 				progress: pledge.progress,
 				inProgress,
 				amended: pledge.amended,
+				limited: inProgress && !pledge.leverHeld,
+				lever: definition ? leverLabel(definition, state, content) : '',
 				detail,
 				preparePlanned: planned(prepareActionId, pledge.pledgeId),
 				prepareAddable: prepare.addable,
@@ -3538,7 +3621,7 @@ function buildPromises(
 		prepareActionId,
 		maxPerCampaign: content.promiseRules.maxPerCampaign,
 		partialProgress: content.promiseRules.partialProgress,
-		offers,
+		campaigns,
 		pledges
 	};
 }

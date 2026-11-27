@@ -35,6 +35,7 @@ import {
 	END_CAUSES,
 	PARTY_REFERENCES,
 	START_YEAR,
+	PROMISE_PLACE_VARIABLE,
 	PROMISE_VARIABLE,
 	POST_VARIABLE,
 	INCUMBENT_VARIABLE,
@@ -69,6 +70,7 @@ import {
 	type LifestyleDefinition,
 	type WealthDefinition,
 	type PromiseDefinition,
+	type PromiseThemeDefinition,
 	type PromisesDefinition,
 	type MediaCatalog,
 	type InstitutionParameter,
@@ -1811,8 +1813,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 				justiceCatalog.data.balance.revelationEvent,
 				justiceCatalog.data.balance.entourageRevelationEvent,
 				...promisesCatalog.data.promises.map((promise) => promise.dilemmaEvent),
-				promisesCatalog.data.balance.recallEvents.kept,
-				promisesCatalog.data.balance.recallEvents.abandoned,
+				...Object.values(promisesCatalog.data.balance.recallEvents),
 				balance.data.entourage.renegotiation.event
 			])
 		)
@@ -1863,7 +1864,9 @@ export function validateContent(raw: RawContent): ContentValidation {
 	issues.push(...crossCheckWealth(wealthCatalog.data, upgradeList, knownIds));
 	issues.push(...crossCheckJustice(justiceCatalog.data, refs, knownIds, sourcedEvents));
 	issues.push(...crossCheckPolitics(actionList, upgradeList, sourcedEvents, refs));
-	issues.push(...crossCheckPromises(promisesCatalog.data, refs, knownIds, sourcedEvents));
+	issues.push(
+		...crossCheckPromises(promisesCatalog.data, career.elections, refs, knownIds, sourcedEvents)
+	);
 	issues.push(
 		...crossCheckMedia(
 			mediaCatalog.data,
@@ -1956,6 +1959,8 @@ export function validateContent(raw: RawContent): ContentValidation {
 	for (const offense of justiceCatalog.data.offenses) offenses[offense.id] = offense;
 	const promises: Record<string, PromiseDefinition> = {};
 	for (const promise of promisesCatalog.data.promises) promises[promise.id] = promise;
+	const promiseThemes: Record<string, PromiseThemeDefinition> = {};
+	for (const theme of promisesCatalog.data.themes) promiseThemes[theme.id] = theme;
 	const institutionParameters: Record<string, InstitutionParameter> = {};
 	const institutionLevels: Record<string, { parameterId: string; index: number }> = {};
 	for (const parameter of reformsCatalog.data.parameters) {
@@ -2040,6 +2045,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 			},
 			promises,
 			promiseIds: promisesCatalog.data.promises.map((promise) => promise.id),
+			promiseThemes,
 			promiseRules: promisesCatalog.data.balance,
 			media,
 			mediaIds: mediaCatalog.data.media.map((entry) => entry.id),
@@ -2511,13 +2517,17 @@ function crossCheckActionFamilies(
 const PROMISE_EFFECT_OPS: ReadonlySet<string> = new Set(['addResource', 'addStat', 'addSupport']);
 
 /**
- * Promesses types (P3-04) : identifiants uniques, élections connues, effets
+ * Promesses types (P3-04, P3-22) : identifiants uniques, thème connu, une
+ * élection connue et au plus une déclinaison par thème et élection, levier
+ * attribuable par cette élection, intitulé sans variable et description avec
+ * `{place}` seulement, effets
  * certains (ressources, jauges, soutiens), dilemmes et rappels existants,
  * bloquants pour les dilemmes, de sujet `promise` et programmés par le moteur ;
  * dilemme présenté avant l'échéance de réalisation.
  */
 function crossCheckPromises(
 	catalog: PromisesDefinition,
+	elections: readonly ElectionDefinition[],
 	refs: Refs,
 	knownIds: Set<string>,
 	events: readonly SourcedEvent[]
@@ -2525,6 +2535,19 @@ function crossCheckPromises(
 	const source = 'promises.json';
 	const issues: ContentIssue[] = [];
 	const rules = catalog.balance;
+	const themes = new Set<string>();
+	catalog.themes.forEach((theme, index) => {
+		if (themes.has(theme.id) || knownIds.has(theme.id)) {
+			issues.push({
+				source,
+				path: `themes[${index}].id`,
+				message: `identifiant en double : ${theme.id}`
+			});
+		}
+		themes.add(theme.id);
+		knownIds.add(theme.id);
+	});
+	const variants = new Set<string>();
 	const checkEvent = (eventId: string, path: string, blocking: boolean): void => {
 		const event = events.find((entry) => entry.event.id === eventId)?.event;
 		if (!event) {
@@ -2545,17 +2568,56 @@ function crossCheckPromises(
 			issues.push({ source, path: `${path}.id`, message: `identifiant en double : ${promise.id}` });
 		}
 		knownIds.add(promise.id);
-		promise.elections.forEach((electionId, electionIndex) => {
-			if (!refs.elections.has(electionId)) {
+		if (!themes.has(promise.theme)) {
+			issues.push({ source, path: `${path}.theme`, message: `thème inconnu : ${promise.theme}` });
+		}
+		const election = elections.find((entry) => entry.id === promise.election);
+		if (!election) {
+			issues.push({
+				source,
+				path: `${path}.election`,
+				message: `élection inconnue : ${promise.election}`
+			});
+		} else {
+			// Levier vérifié (P3-22) : seul un mandat issu de cette élection peut tenir la promesse.
+			const granted = new Set([election.grants, election.bonusGrant?.mandate ?? election.grants]);
+			promise.lever.forEach((mandateId, leverIndex) => {
+				if (!granted.has(mandateId)) {
+					issues.push({
+						source,
+						path: `${path}.lever[${leverIndex}]`,
+						message: `levier non attribué par ${promise.election} : ${mandateId}`
+					});
+				}
+			});
+			const variant = `${promise.theme}/${promise.election}`;
+			if (variants.has(variant)) {
 				issues.push({
 					source,
-					path: `${path}.elections[${electionIndex}]`,
-					message: `élection inconnue : ${electionId}`
+					path,
+					message: `deux déclinaisons du thème ${promise.theme} pour ${promise.election}`
 				});
 			}
-		});
-		if (new Set(promise.elections).size !== promise.elections.length) {
-			issues.push({ source, path: `${path}.elections`, message: 'élection en double' });
+			variants.add(variant);
+		}
+		if (new Set(promise.lever).size !== promise.lever.length) {
+			issues.push({ source, path: `${path}.lever`, message: 'levier en double' });
+		}
+		if (/\{[^}]*\}/u.test(promise.label)) {
+			issues.push({
+				source,
+				path: `${path}.label`,
+				message: 'l’intitulé d’une promesse ne contient aucune variable'
+			});
+		}
+		for (const match of promise.description.matchAll(/\{([^}]*)\}/gu)) {
+			if (match[1] !== PROMISE_PLACE_VARIABLE) {
+				issues.push({
+					source,
+					path: `${path}.description`,
+					message: `variable inconnue dans la description : {${match[1]}}`
+				});
+			}
 		}
 		checkEvent(promise.dilemmaEvent, `${path}.dilemmaEvent`, true);
 		for (const key of ['announce', 'kept', 'partial', 'abandoned'] as const) {
@@ -2571,8 +2633,9 @@ function crossCheckPromises(
 			});
 		}
 	});
-	checkEvent(rules.recallEvents.kept, 'balance.recallEvents.kept', false);
-	checkEvent(rules.recallEvents.abandoned, 'balance.recallEvents.abandoned', false);
+	for (const key of ['kept', 'abandoned', 'keptElsewhere', 'abandonedElsewhere'] as const) {
+		checkEvent(rules.recallEvents[key], `balance.recallEvents.${key}`, false);
+	}
 	if (rules.dilemmaDelayTurns.min < 1 || rules.dilemmaDelayTurns.max >= rules.deliveryTurns) {
 		issues.push({
 			source,

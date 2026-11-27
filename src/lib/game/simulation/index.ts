@@ -34,6 +34,7 @@ import {
 	ownedMedia,
 	reformIssue,
 	previewPlan,
+	pledgeTarget,
 	promiseIssue,
 	transition,
 	validateSeed,
@@ -425,16 +426,29 @@ function promiseWish(
 	const pledgeId = content.actionIds.find((id) => content.actions[id]?.target === 'promise');
 	const running = state.campaigns.filter((campaign) => campaign.status === 'running');
 	const wanted = PROMISES_PER_CAMPAIGN[strategy];
-	if (pledgeId && wanted > 0 && running.length > 0) {
-		const made = state.promises.filter((pledge) =>
-			running.some((campaign) => campaign.campaignId === pledge.campaignId)
-		).length;
+	if (pledgeId && wanted > 0) {
 		const order = [...content.promiseIds].sort(
 			(left, right) => hashSeed(`${seed}:promesse:${left}`) - hashSeed(`${seed}:promesse:${right}`)
 		);
-		const available = order.filter((promiseId) => promiseIssue(promiseId, state, content) === null);
-		for (const promiseId of available.slice(0, Math.max(0, wanted - made))) {
-			steps.push({ kind: 'action', id: pledgeId, target: promiseId });
+		// Chaque campagne en cours reçoit ses engagements, nommée explicitement (P3-22).
+		const chosen = new Set<string>();
+		for (const campaign of running) {
+			const made = state.promises.filter(
+				(pledge) => pledge.campaignId === campaign.campaignId
+			).length;
+			const available = order.filter(
+				(promiseId) =>
+					!chosen.has(promiseId) &&
+					promiseIssue(pledgeTarget(campaign.campaignId, promiseId), state, content) === null
+			);
+			for (const promiseId of available.slice(0, Math.max(0, wanted - made))) {
+				chosen.add(promiseId);
+				steps.push({
+					kind: 'action',
+					id: pledgeId,
+					target: pledgeTarget(campaign.campaignId, promiseId)
+				});
+			}
 		}
 	}
 	return steps;

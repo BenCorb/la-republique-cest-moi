@@ -1001,6 +1001,36 @@ export const fixtureEvents = {
 				unique: false,
 				actors: [],
 				effects: [{ op: 'addSupport', group: 'support.workers', value: 2 }]
+			},
+			{
+				id: 'test.promise_recall_broken_elsewhere',
+				category: 'campaign',
+				subject: 'promise',
+				title: 'Rappel lointain',
+				text: 'On ressort « {promise} », d’un autre scrutin.',
+				blocking: true,
+				trigger: 'followUp',
+				weight: 0,
+				priority: 20,
+				cooldownTurns: 0,
+				unique: false,
+				actors: [],
+				choices: [{ id: 'ok', label: 'Expliquer', hints: [], costs: [], effects: [] }]
+			},
+			{
+				id: 'test.promise_recall_kept_elsewhere',
+				category: 'campaign',
+				subject: 'promise',
+				title: 'Promesse tenue ailleurs',
+				text: '« {promise} » a été tenue, sur un autre mandat.',
+				blocking: false,
+				trigger: 'followUp',
+				weight: 0,
+				priority: 0,
+				cooldownTurns: 0,
+				unique: false,
+				actors: [],
+				effects: [{ op: 'addSupport', group: 'support.workers', value: 1 }]
 			}
 		]
 	}
@@ -1230,15 +1260,27 @@ export const fixturePromises = {
 		partialProgress: 50,
 		recallPercent: 0,
 		maxRecalls: 2,
-		recallEvents: { kept: 'test.promise_recall_kept', abandoned: 'test.promise_recall_broken' }
+		recallEvents: {
+			kept: 'test.promise_recall_kept',
+			abandoned: 'test.promise_recall_broken',
+			keptElsewhere: 'test.promise_recall_kept_elsewhere',
+			abandonedElsewhere: 'test.promise_recall_broken_elsewhere'
+		}
 	},
+	themes: [
+		{ id: 'theme.test_taxes', label: 'Fiscalité' },
+		{ id: 'theme.test_services', label: 'Services publics' },
+		{ id: 'theme.test_institutions', label: 'Institutions' }
+	],
 	promises: [
 		{
 			id: 'promise.test_tax',
 			label: 'Baisser les impôts',
-			theme: 'Fiscalité',
-			description: 'Promesse de test.',
-			elections: ['election.local', 'election.national'],
+			theme: 'theme.test_taxes',
+			description: 'Promesse de test pour {place}.',
+			election: 'election.local',
+			lever: ['mandate.councillor', 'mandate.mayor'],
+			mode: 'decide',
 			dilemmaEvent: 'test.promise_dilemma',
 			announce: [{ op: 'addSupport', group: 'support.owners', value: 2 }],
 			kept: [{ op: 'addSupport', group: 'support.owners', value: 5 }],
@@ -1251,9 +1293,11 @@ export const fixturePromises = {
 		{
 			id: 'promise.test_school',
 			label: 'Rénover l’école',
-			theme: 'Services publics',
+			theme: 'theme.test_services',
 			description: 'Promesse de test.',
-			elections: ['election.local'],
+			election: 'election.local',
+			lever: ['mandate.mayor'],
+			mode: 'decide',
 			dilemmaEvent: 'test.promise_dilemma',
 			announce: [{ op: 'addSupport', group: 'support.workers', value: 2 }],
 			kept: [{ op: 'addSupport', group: 'support.workers', value: 4 }],
@@ -1261,11 +1305,41 @@ export const fixturePromises = {
 			abandoned: [{ op: 'addSupport', group: 'support.workers', value: -4 }]
 		},
 		{
+			id: 'promise.test_clean',
+			label: 'Ouvrir les comptes',
+			theme: 'theme.test_institutions',
+			description: 'Promesse de test.',
+			election: 'election.local',
+			lever: ['mandate.mayor'],
+			mode: 'decide',
+			dilemmaEvent: 'test.promise_dilemma',
+			announce: [],
+			kept: [],
+			partial: [],
+			abandoned: []
+		},
+		{
 			id: 'promise.test_national',
 			label: 'Réformer l’État',
-			theme: 'Institutions',
+			theme: 'theme.test_institutions',
 			description: 'Promesse de test.',
-			elections: ['election.national'],
+			election: 'election.national',
+			lever: ['mandate.deputy'],
+			mode: 'carry',
+			dilemmaEvent: 'test.promise_dilemma',
+			announce: [],
+			kept: [],
+			partial: [],
+			abandoned: []
+		},
+		{
+			id: 'promise.test_tax_national',
+			label: 'Voter une baisse d’impôt',
+			theme: 'theme.test_taxes',
+			description: 'Promesse de test.',
+			election: 'election.national',
+			lever: ['mandate.deputy'],
+			mode: 'carry',
 			dilemmaEvent: 'test.promise_dilemma',
 			announce: [],
 			kept: [],

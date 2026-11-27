@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.38.0';
+export const RULES_VERSION = '0.39.0';
 
 export {
 	START_YEAR,
@@ -336,7 +336,10 @@ export {
 	findPledge,
 	isOpenPledge,
 	isPromiseEffect,
+	holdsLever,
+	parsePledgeTarget,
 	pledgeCampaign,
+	pledgeTarget,
 	pledgeInstanceId,
 	pledgeIssue,
 	promiseCounts,

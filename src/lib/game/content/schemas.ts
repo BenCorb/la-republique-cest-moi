@@ -21,6 +21,7 @@ import {
 	AXIS_IDS,
 	AXIS_MAX,
 	MEDIA_KINDS,
+	PROMISE_MODES,
 	MEDIA_RELATION_MAX,
 	AXIS_MIN,
 	COMPARISON_OPS,
@@ -842,9 +843,11 @@ export const justiceCatalogSchema: z.ZodType<JusticeDefinition> = z.strictObject
 export const promiseSchema: z.ZodType<PromiseDefinition> = z.strictObject({
 	id: contentId,
 	label: frenchText,
-	theme: frenchText,
+	theme: contentId,
 	description: frenchText,
-	elections: z.array(contentId).min(1),
+	election: contentId,
+	lever: z.array(contentId).min(1),
+	mode: z.enum(PROMISE_MODES),
 	dilemmaEvent: contentId,
 	announce: z.array(effectSchema),
 	kept: z.array(effectSchema),
@@ -860,7 +863,12 @@ export const promisesBalanceSchema: z.ZodType<PromisesBalance> = z.strictObject(
 	partialProgress: safeInt.refine((value) => value >= 1 && value <= 99, 'avancement de 1 à 99'),
 	recallPercent: percent,
 	maxRecalls: nonNegativeInt,
-	recallEvents: z.strictObject({ kept: contentId, abandoned: contentId })
+	recallEvents: z.strictObject({
+		kept: contentId,
+		abandoned: contentId,
+		keptElsewhere: contentId,
+		abandonedElsewhere: contentId
+	})
 });
 
 const mediaCoverage = safeInt.refine((value) => value >= 0 && value <= 10, 'goût de 0 à 10');
@@ -1004,6 +1012,7 @@ export const mediaCatalogSchema: z.ZodType<MediaCatalog> = z.strictObject({
 
 /** Promesses types et règles du registre (`promises.json`, P3-04). */
 export const promisesCatalogSchema: z.ZodType<PromisesDefinition> = z.strictObject({
+	themes: z.array(z.strictObject({ id: contentId, label: frenchText })).min(1),
 	promises: z.array(promiseSchema).min(1),
 	balance: promisesBalanceSchema
 });
