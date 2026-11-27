@@ -74,7 +74,7 @@ export function legacyMetrics(state: GameState, content: Content): LegacyMetrics
 		netWorthCents: summary.netWorthCents,
 		promisesKept: summary.promises.kept,
 		promisesBroken: summary.promises.abandoned,
-		mediaOwned: ownedMedia(state.upgrades, content).size,
+		mediaOwned: ownedMedia(state.upgrades, state.player.territory.regionId, content).size,
 		reformsAdopted: state.institutions.reforms.filter(
 			(reform) =>
 				reform.origin === 'player' && (reform.status === 'scheduled' || reform.status === 'enacted')

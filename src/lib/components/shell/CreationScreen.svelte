@@ -4,25 +4,26 @@
 	import GameShell from './GameShell.svelte';
 
 	/**
-	 * Création du personnage (P2-08) : origine et profession, chacune avec ses
-	 * arbitrages de départ, puis région d'origine (P3-16) : le département et la
+	 * Création du personnage (P2-08, P3-17) : origine sociale et terrain
+	 * d'engagement (ce qui a mené à la politique), chacun avec ses arbitrages de
+	 * départ, puis région d'origine (P3-16) : le département et la
 	 * commune, fictive, sont tirés au lancement. L'âge reste fixé à 25 ans. Aucun
 	 * profil n'est présenté comme meilleur qu'un autre.
 	 */
 	interface Props {
 		origins: readonly ProfileOptionView[];
-		professions: readonly ProfileOptionView[];
+		engagements: readonly ProfileOptionView[];
 		regions: readonly RegionOptionView[];
-		defaults: { readonly origin: string; readonly profession: string; readonly region: string };
-		onStart: (origin: string, profession: string, region: string) => void;
+		defaults: { readonly origin: string; readonly engagement: string; readonly region: string };
+		onStart: (origin: string, engagement: string, region: string) => void;
 		onCancel: () => void;
 	}
 
-	let { origins, professions, regions, defaults, onStart, onCancel }: Props = $props();
+	let { origins, engagements, regions, defaults, onStart, onCancel }: Props = $props();
 	// Valeurs de départ figées à l'ouverture de l'écran ; le joueur les modifie ensuite.
 	const initial = (() => ({ ...defaults }))();
 	let origin = $state(initial.origin);
-	let profession = $state(initial.profession);
+	let engagement = $state(initial.engagement);
 	let region = $state(initial.region);
 	const regionDetail = $derived(regions.find((entry) => entry.id === region));
 </script>
@@ -32,8 +33,9 @@
 		<section class="card p-6" aria-labelledby="creation-titre">
 			<h2 id="creation-titre" class="text-2xl text-primary">Qui êtes-vous ?</h2>
 			<p class="mt-2 text-sm leading-relaxed">
-				Vous avez 25 ans au premier trimestre 2000. Votre milieu et votre métier vous donnent des
-				appuis et des handicaps : aucun parcours n’est meilleur qu’un autre, ils mènent ailleurs.
+				Vous avez 25 ans au premier trimestre 2000. Votre milieu et le terrain où vous avez pris
+				goût à la chose publique vous donnent des appuis et des handicaps : aucun parcours n’est
+				meilleur qu’un autre, ils mènent ailleurs.
 			</p>
 		</section>
 
@@ -60,20 +62,29 @@
 		</fieldset>
 
 		<fieldset class="card p-6">
-			<legend class="section-title px-1">Profession avant la politique</legend>
+			<legend class="section-title px-1">Terrain d’engagement</legend>
+			<p class="mt-1 text-sm text-muted">
+				Là où vous avez fait vos armes. Il vous laisse une activité modestement payée et des actions
+				propres dans l’agenda.
+			</p>
 			<div class="mt-2 grid gap-3 md:grid-cols-2">
-				{#each professions as option (option.id)}
+				{#each engagements as option (option.id)}
 					<label
-						class="flex cursor-pointer gap-3 rounded border p-3 {profession === option.id
+						class="flex cursor-pointer gap-3 rounded border p-3 {engagement === option.id
 							? 'border-primary bg-sidebar'
 							: 'border-line'}"
 					>
-						<input type="radio" name="profession" value={option.id} bind:group={profession} />
+						<input type="radio" name="engagement" value={option.id} bind:group={engagement} />
 						<span>
 							<span class="block font-semibold">{option.label}</span>
 							<span class="block text-sm text-muted">{option.description}</span>
 							{#if option.effects.length > 0}
 								<span class="mt-1 block text-xs">{option.effects.join(' · ')}</span>
+							{/if}
+							{#if option.actions.length > 0}
+								<span class="mt-1 block text-xs text-muted" data-testid="engagement-actions">
+									Actions : {option.actions.join(' · ')}
+								</span>
 							{/if}
 						</span>
 					</label>
@@ -106,7 +117,7 @@
 			<button type="button" class="btn-secondary" onclick={onCancel}>
 				<ArrowLeft class="size-4" aria-hidden="true" /> Retour
 			</button>
-			<button type="button" class="btn-primary" onclick={() => onStart(origin, profession, region)}>
+			<button type="button" class="btn-primary" onclick={() => onStart(origin, engagement, region)}>
 				<Play class="size-4" aria-hidden="true" /> Commencer la carrière
 			</button>
 		</div>

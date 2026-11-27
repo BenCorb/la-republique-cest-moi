@@ -155,8 +155,8 @@ export function evaluateCondition(context: ConditionContext, condition: Conditio
 			return context.player.partyId === condition.party;
 		case 'origin':
 			return context.player.origin === condition.origin;
-		case 'profession':
-			return context.player.profession === condition.profession;
+		case 'engagement':
+			return context.player.engagement === condition.engagement;
 		case 'lifestyle':
 			return context.player.lifestyle === condition.lifestyle;
 		case 'institution':

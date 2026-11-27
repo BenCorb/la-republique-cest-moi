@@ -33,7 +33,7 @@
 			"causes": ["natural_causes", "health_failure"],
 			"criteria": [{ "metric": "mandatesHeld", "cmp": "gte", "value": 1 }],
 			"headline": "Hommage unanime pour une personnalité de la vie locale",
-			"text": "Plus haute fonction : {office}. {years} ans de carrière, des milliers de mains serrées et autant de photos dans le Courrier du Bocage. Ses adversaires saluent « une loyauté de tous les instants », ce qui, dans leur bouche, est presque un compliment."
+			"text": "Plus haute fonction : {office}. {years} ans de carrière, des milliers de mains serrées et autant de photos dans le quotidien régional. Ses adversaires saluent « une loyauté de tous les instants », ce qui, dans leur bouche, est presque un compliment."
 		},
 		{
 			"id": "obituary.long_tenure",

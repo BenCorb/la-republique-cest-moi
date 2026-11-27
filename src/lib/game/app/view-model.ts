@@ -8,6 +8,7 @@
  * n'avance pas le PRNG et ne modifie rien.
  */
 import {
+	REGIONAL_ANCHOR,
 	INDICATOR_IDS,
 	RESOURCE_IDS,
 	type Content,
@@ -73,6 +74,9 @@ import {
 	activistTier,
 	fieldworkEffects,
 	nextActivistTier,
+	pressAudience,
+	regionalMedia,
+	resolveMediaRef,
 	ownedMedia,
 	type StaffLeaveReason,
 	activeMandates,
@@ -93,7 +97,8 @@ import {
 	type PlanPreview,
 	type FamilyRecord,
 	type ActivistsRecord,
-	type StaffRecord
+	type StaffRecord,
+	type EventRecord
 } from '../engine/index.ts';
 import {
 	GAUGE_NAMES,
@@ -208,7 +213,7 @@ export interface CatalogItemView {
 	/** Raison pour laquelle l'élément ne peut pas être ajouté au plan. */
 	readonly reason: string | null;
 	/**
-	 * Hors de portée : une condition n'est pas remplie (autre profession, pas
+	 * Hors de portée : une condition n'est pas remplie (autre terrain d’engagement, pas
 	 * d'adhésion, pas de campagne, influence insuffisante…), par opposition à un
 	 * blocage du trimestre (temps, argent, limite atteinte).
 	 */
@@ -940,6 +945,13 @@ export interface NoteHighlightView {
 	readonly chart: NoteChartView | null;
 	/** Bilan électoral de la carrière, joint au résultat d'une candidature. */
 	readonly record: { readonly won: number; readonly lost: number } | null;
+	/**
+	 * Effets observables propres au fait (PT-B1-003) : pastilles de l'événement
+	 * lui-même, jamais la variation nette du trimestre ; vide pour les autres faits.
+	 */
+	readonly chips: readonly ChipView[];
+	/** Autres conséquences de l'événement (mandats, partis, personnes…), repliées. */
+	readonly details: readonly string[];
 }
 
 /**
@@ -1005,10 +1017,10 @@ export interface PlayerView {
 	readonly world: WorldView;
 	/** Personnages rencontrés : actifs d'abord, puis par date de rencontre. */
 	readonly people: readonly PersonView[];
-	/** Profil du personnage : origine, profession et situation familiale. */
+	/** Profil du personnage : origine, engagement et situation familiale. */
 	readonly profile: {
 		readonly origin: string;
-		readonly profession: string;
+		readonly engagement: string;
 		readonly family: string;
 	};
 	readonly career: CareerView;
@@ -1573,7 +1585,7 @@ function targetLabel(target: string, state: GameState, content: Content): string
 				.flatMap((entry) => (entry.type === 'turn.resolved' ? entry.steps : []))
 				.find((step) => step.kind === 'purchase' && step.instanceId === target)?.id;
 		const definition = upgradeId ? content.upgrades[upgradeId] : undefined;
-		if (definition) return definition.ownedLabel ?? definition.label;
+		if (upgradeId && definition) return upgradeLabel(upgradeId, state, content, true);
 	}
 	const mandate = state.mandates.find((entry) => entry.instanceId === target);
 	if (mandate) return mandateName(mandate.mandateId, state, content);
@@ -1641,7 +1653,7 @@ function journalOfQuarter(entry: HistoryEntry, state: GameState, content: Conten
 		const label =
 			step.kind === 'action'
 				? `${content.actions[step.id]?.label ?? step.id}${target}`
-				: `Achat : ${content.upgrades[step.id]?.label ?? step.id}`;
+				: `Achat : ${upgradeLabel(step.id, state, content, false)}`;
 		const effects = joinParts(
 			changesText(step.changes),
 			gaugesText(step.gauges),
@@ -1650,7 +1662,7 @@ function journalOfQuarter(entry: HistoryEntry, state: GameState, content: Conten
 		lines.push({ kind: 'step', text: effects ? `${label} — ${effects}` : label });
 	}
 	for (const producer of entry.economy.producers) {
-		const label = content.upgrades[producer.upgradeId]?.label ?? producer.upgradeId;
+		const label = upgradeLabel(producer.upgradeId, state, content, true);
 		const count = (value: number): string => (value > 1 ? ` ×${value}` : '');
 		if (producer.active > 0) {
 			lines.push({
@@ -1858,6 +1870,31 @@ function buildOutcome(state: GameState, content: Content): OutcomeView | null {
 	const text = written
 		? render(variants[textHash(entry.instanceId) % variants.length]!)
 		: fallbackOutcome(entry, label);
+	const { chips, details } = effectChips(entry, state, content);
+	if (entry.deathCause) details.push('Fin de carrière.');
+	return {
+		instanceId: entry.instanceId,
+		dateLabel: formatTurn(entry.turn),
+		title: definition ? render(definition.title) : entry.eventId,
+		choice: label,
+		text,
+		written,
+		chips,
+		details
+	};
+}
+
+/**
+ * Pastilles des effets réellement appliqués par une décision ou un événement
+ * (P3-14, PT-B1-003) : ressources, jauges, soutiens, préparation et faits, puis
+ * phrases pour les autres conséquences. Lit uniquement l'entrée propre à la
+ * source : rien d'un autre poste du trimestre, rien de caché ni de différé.
+ */
+function effectChips(
+	entry: Pick<EventRecord, 'changes' | 'gauges' | 'politics' | 'people'>,
+	state: GameState,
+	content: Content
+): { chips: ChipView[]; details: string[] } {
 	const chips: ChipView[] = [
 		...resourceChips(entry.changes),
 		...entry.gauges.map((change) => gaugeChip(change.gauge, change.delta))
@@ -1892,17 +1929,7 @@ function buildOutcome(state: GameState, content: Content): OutcomeView | null {
 	}
 	const people = peopleText(entry.people, state, content);
 	if (people) details.push(lowerFirstUpper(people));
-	if (entry.deathCause) details.push('Fin de carrière.');
-	return {
-		instanceId: entry.instanceId,
-		dateLabel: formatTurn(entry.turn),
-		title: definition ? render(definition.title) : entry.eventId,
-		choice: label,
-		text,
-		written,
-		chips,
-		details
-	};
+	return { chips, details };
 }
 
 function lowerFirstUpper(text: string): string {
@@ -1975,7 +2002,9 @@ function noteHighlights(
 				title: `Candidature invalidée — ${label}`,
 				text: `Votre candidature n’a pas été retenue : ${result.reason ?? 'conditions non remplies'}.`,
 				chart: null,
-				record
+				record,
+				chips: [],
+				details: []
 			});
 			continue;
 		}
@@ -1991,7 +2020,9 @@ function noteHighlights(
 				playerPercent: result.playerPercent,
 				rival: rivalName || 'Adversaire'
 			},
-			record
+			record,
+			chips: [],
+			details: []
 		});
 	}
 	for (const result of deadlines?.ballots ?? []) {
@@ -2018,7 +2049,9 @@ function noteHighlights(
 						}))
 					}
 				: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	for (const change of deadlines?.mandates ?? []) {
@@ -2030,7 +2063,9 @@ function noteHighlights(
 			title: `Fin de mandat — ${mandateName(change.mandateId, state, content)}`,
 			text: 'Le mandat arrive à son terme ; le bureau se vide, les cartons se remplissent.',
 			chart: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	for (const step of entry.justice?.cases ?? []) {
@@ -2041,7 +2076,9 @@ function noteHighlights(
 			title: 'Justice',
 			text: caseStepMessage(step.caseId, step.kind, state, content),
 			chart: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	for (const line of worldLines(entry.world, state, content)) {
@@ -2052,7 +2089,9 @@ function noteHighlights(
 			title: 'Vie des partis',
 			text: line.text,
 			chart: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	for (const line of [
@@ -2068,7 +2107,9 @@ function noteHighlights(
 			title: 'Entourage',
 			text: line.text,
 			chart: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	const base = entry.activists;
@@ -2087,7 +2128,9 @@ function noteHighlights(
 				? `Votre base devient : ${label} (${activistsWord(base.total)}). Les tracts partent plus vite.`
 				: `Votre base retombe : ${label} (${activistsWord(base.total)}). Les permanences sonnent creux.`,
 			chart: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	if (entry.institutions && entry.institutions.politics.length > 0) {
@@ -2098,11 +2141,14 @@ function noteHighlights(
 			title: 'Institutions',
 			text: lowerFirstUpper(politicsText(entry.institutions.politics, content)) + '.',
 			chart: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	for (const event of entry.events) {
 		if (event.outcome !== 'applied') continue;
+		const { chips, details } = effectChips(event, state, content);
 		items.push({
 			key: `event:${event.instanceId}`,
 			kind: 'event',
@@ -2110,7 +2156,9 @@ function noteHighlights(
 			title: 'Événement',
 			text: `${eventTitle(event.eventId, event.actors, state, content)}.`,
 			chart: null,
-			record: null
+			record: null,
+			chips,
+			details
 		});
 	}
 	return items;
@@ -2395,6 +2443,25 @@ function buildActivists(state: GameState, content: Content): ActivistsView {
 	};
 }
 
+/**
+ * Libellé d'une amélioration ou d'un actif ; le rachat du quotidien régional
+ * (rôle `regional_anchor`, P3-18) prend le nom du titre de la région du joueur.
+ */
+function upgradeLabel(
+	upgradeId: string,
+	state: GameState,
+	content: Content,
+	owned: boolean
+): string {
+	const definition = content.upgrades[upgradeId];
+	if (!definition) return upgradeId;
+	if (definition.asset?.media === REGIONAL_ANCHOR) {
+		const name = regionalMedia(state.player.territory.regionId, content)?.name;
+		if (name) return owned ? name : `Racheter ${name}`;
+	}
+	return owned ? (definition.ownedLabel ?? definition.label) : definition.label;
+}
+
 /** Relation d'un média, en clair (aucun chiffre affiché). */
 export function mediaRelationLabel(relation: number): string {
 	if (relation >= 50) return 'Très bienveillant';
@@ -2406,10 +2473,14 @@ export function mediaRelationLabel(relation: number): string {
 
 function buildMedia(state: GameState, plan: readonly PlanStep[], content: Content): MediaView {
 	const actionIds = content.actionIds.filter((id) => content.actions[id]?.target === 'media');
-	const owned = ownedMedia(state.upgrades, content);
+	const regionId = state.player.territory.regionId;
+	const owned = ownedMedia(state.upgrades, regionId, content);
+	const audience = pressAudience(state.player, state.mandates, state.campaigns, content);
 	const outlets = content.mediaIds.flatMap((mediaId): MediaOutletView[] => {
 		const definition = content.media[mediaId];
-		if (!definition) return [];
+		// Presse nationale et quotidien de la région ; les titres des autres régions restent hors champ.
+		if (!definition || (definition.scope === 'regional' && definition.region !== regionId))
+			return [];
 		const isOwned = owned.has(mediaId);
 		return [
 			{
@@ -2423,7 +2494,7 @@ function buildMedia(state: GameState, plan: readonly PlanStep[], content: Conten
 					? 'Votre propriété'
 					: mediaRelationLabel(state.world.media[mediaId]?.relation ?? 0),
 				owned: isOwned,
-				follows: followsPlayer(definition, state.player.exposure, content),
+				follows: followsPlayer(definition, audience, content),
 				actions: isOwned
 					? []
 					: actionIds.map((actionId) => {
@@ -2487,7 +2558,7 @@ function buildWealth(
 		return [
 			{
 				instanceId: upgrade.instanceId,
-				label: definition.ownedLabel ?? definition.label,
+				label: upgradeLabel(upgrade.upgradeId, state, content, true),
 				acquired: formatTurn(upgrade.acquiredTurn),
 				value: formatMoney(upgrade.valueCents),
 				income: upgrade.acquiredTurn < state.turn ? formatMoney(income) : null,
@@ -2562,7 +2633,7 @@ function buildOrganisation(
 		return [
 			{
 				upgradeId,
-				label: definition.ownedLabel ?? definition.label,
+				label: upgradeLabel(upgradeId, state, content, true),
 				owned: owned.length,
 				active: count('active'),
 				pending: count('pending'),
@@ -2715,8 +2786,9 @@ function buildMoments(state: GameState, content: Content): SummaryView['moments'
 		});
 	}
 	for (const upgrade of state.upgrades) {
-		const mediaId = content.upgrades[upgrade.upgradeId]?.asset?.media;
-		if (mediaId === undefined) continue;
+		const ref = content.upgrades[upgrade.upgradeId]?.asset?.media;
+		if (ref === undefined) continue;
+		const mediaId = resolveMediaRef(ref, state.player.territory.regionId, content);
 		moments.push({
 			turn: upgrade.acquiredTurn,
 			weight: 5,
@@ -2772,11 +2844,11 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 	const parties = state.player.affiliations
 		.map((affiliation) => content.parties[affiliation.partyId]?.acronym ?? affiliation.partyId)
 		.join(', ');
+	// Le quotidien de la région d'origine signe l'article (P3-18).
+	const paper =
+		regionalMedia(state.player.territory.regionId, content)?.name ?? 'La presse régionale';
 	return {
-		masthead:
-			cause === 'prison'
-				? 'Le Courrier du Bocage · Chronique judiciaire'
-				: 'Le Courrier du Bocage · Nécrologie',
+		masthead: `${paper} · ${cause === 'prison' ? 'Chronique judiciaire' : 'Nécrologie'}`,
 		title: obituary ? fill(obituary.headline) : `Fin de carrière à ${summary.age} ans`,
 		text: obituary ? fill(obituary.text) : '',
 		cause: CAUSE_LABELS[cause],
@@ -2839,8 +2911,8 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 						})()
 					},
 					{
-						label: 'Profession',
-						value: content.professions[state.player.profession]?.label ?? state.player.profession
+						label: 'Terrain d’engagement',
+						value: content.engagements[state.player.engagement]?.label ?? state.player.engagement
 					},
 					{ label: 'Enfants', value: String(metrics.children) },
 					{ label: 'Plus fidèle soutien', value: ally },
@@ -3661,6 +3733,8 @@ export interface ProfileOptionView {
 	readonly label: string;
 	readonly description: string;
 	readonly effects: readonly string[];
+	/** Actions propres ouvertes par ce choix (terrain d'engagement, P3-17). */
+	readonly actions: readonly string[];
 }
 
 /** Choix proposés à la création d'un personnage (P2-08). */
@@ -3750,7 +3824,7 @@ export interface RegionOptionView {
 
 export function creationOptions(content: Content): {
 	readonly origins: readonly ProfileOptionView[];
-	readonly professions: readonly ProfileOptionView[];
+	readonly engagements: readonly ProfileOptionView[];
 	readonly regions: readonly RegionOptionView[];
 	readonly defaults: Content['defaultProfile'];
 } {
@@ -3763,11 +3837,17 @@ export function creationOptions(content: Content): {
 		id: entry.id,
 		label: entry.label,
 		description: entry.description,
-		effects: entry.effects.map((effect) => describeEffect(effectRange(effect), content))
+		effects: entry.effects.map((effect) => describeEffect(effectRange(effect), content)),
+		actions: content.actionIds
+			.map((id) => content.actions[id]!)
+			.filter(
+				(action) => action.requires?.op === 'engagement' && action.requires.engagement === entry.id
+			)
+			.map((action) => action.label)
 	});
 	return {
 		origins: content.originIds.map((id) => option(content.origins[id]!)),
-		professions: content.professionIds.map((id) => option(content.professions[id]!)),
+		engagements: content.engagementIds.map((id) => option(content.engagements[id]!)),
 		regions: content.regionIds.map((id) => {
 			const region = content.regions[id]!;
 			return {
@@ -3875,7 +3955,7 @@ export function projectView(
 		return {
 			kind: 'purchase',
 			id,
-			label: upgrade.label,
+			label: upgradeLabel(id, state, content, false),
 			description: upgrade.description,
 			family: FAMILY_LABELS[upgrade.family] ?? upgrade.family,
 			treasury: RESOURCE_NAMES[upgrade.treasury],
@@ -3920,10 +4000,7 @@ export function projectView(
 		.map((producer) => ({
 			instanceId: producer.instanceId,
 			upgradeId: producer.upgradeId,
-			label:
-				content.upgrades[producer.upgradeId]?.ownedLabel ??
-				content.upgrades[producer.upgradeId]?.label ??
-				producer.upgradeId,
+			label: upgradeLabel(producer.upgradeId, state, content, true),
 			status: producer.status,
 			statusLabel:
 				producer.status === 'active'
@@ -4084,7 +4161,7 @@ export function projectView(
 		entourage: buildEntourage(state, plan, content),
 		profile: {
 			origin: content.origins[state.player.origin]?.label ?? state.player.origin,
-			profession: content.professions[state.player.profession]?.label ?? state.player.profession,
+			engagement: content.engagements[state.player.engagement]?.label ?? state.player.engagement,
 			family: describeFamily(state)
 		}
 	};

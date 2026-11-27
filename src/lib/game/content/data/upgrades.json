@@ -234,9 +234,9 @@
 		{
 			"id": "wealth.local_media",
 			"family": "personal",
-			"ownedLabel": "Le Courrier du Bocage",
-			"label": "Racheter le Courrier du Bocage",
-			"description": "Le quotidien du département et sa radio, Radio Bocage FM, en mal de repreneur. Les annonces légales rapportent un peu ; la rédaction, elle, a des principes et une mémoire.",
+			"ownedLabel": "Votre quotidien régional",
+			"label": "Racheter le quotidien régional",
+			"description": "Le quotidien de votre région, en mal de repreneur. Les annonces légales rapportent un peu ; la rédaction, elle, a des principes et une mémoire.",
 			"treasury": "personalCashCents",
 			"timeCost": 15,
 			"maxOwned": 1,
@@ -251,7 +251,7 @@
 				"failurePerMille": 3,
 				"salePercent": 80,
 				"stressPerTurn": 1,
-				"media": "media.bocage"
+				"media": "regional_anchor"
 			}
 		}
 	]

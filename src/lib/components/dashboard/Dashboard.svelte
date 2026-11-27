@@ -236,7 +236,7 @@
 		<section class="card flex flex-col gap-2 lg:col-span-2" aria-labelledby="profil-title">
 			{@render title('profil-title', 'Profil', IdCard)}
 			<p class="text-sm" data-testid="profile">
-				{view.profile.origin} · {view.profile.profession} · {view.profile.family}
+				{view.profile.origin} · {view.profile.engagement} · {view.profile.family}
 			</p>
 			<p class="text-sm" data-testid="territory">
 				<span class="text-muted">Votre terre d’élection :</span>

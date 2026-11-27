@@ -124,6 +124,8 @@ export {
 	generateTownName,
 	localRivalModifier,
 	placeOf,
+	regionalMedia,
+	resolveMediaRef,
 	territoryEffects,
 	type HomeTown,
 	type TerritoryState
@@ -356,7 +358,9 @@ export {
 	interviewIssue,
 	mediaIssue,
 	ownedMedia,
+	pressAudience,
 	resolvePress,
+	type PressAudience,
 	type HeadlinePool,
 	type PressInputs,
 	type PressParts,

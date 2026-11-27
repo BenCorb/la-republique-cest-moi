@@ -294,6 +294,7 @@ function commitTurn(
 				{
 					turn: resolvedTurn,
 					upgrades: wealth!.upgrades,
+					mandates: pledges.parts.career.mandates,
 					campaigns: pledges.parts.career.campaigns,
 					ballots: pledges.parts.career.ballots,
 					cases: settled!.cases,

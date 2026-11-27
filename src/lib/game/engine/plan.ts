@@ -45,7 +45,7 @@ import type {
 	WorldState
 } from './state.ts';
 import { applyPoliticalEffect, isPoliticalEffect } from './world.ts';
-import { interviewIssue, mediaIssue } from './press.ts';
+import { interviewIssue, mediaIssue, pressAudience } from './press.ts';
 import { eraReached } from './eras.ts';
 import { applyReformEffect, effectiveContent, isReformEffect, reformIssue } from './reforms.ts';
 import {
@@ -527,7 +527,17 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 				const issue =
 					target === null
 						? 'choisissez un média'
-						: (mediaIssue(target, workingPlayer, upgrades, content) ??
+						: (mediaIssue(
+								target,
+								pressAudience(
+									workingPlayer,
+									workingCareer.mandates,
+									workingCareer.campaigns,
+									content
+								),
+								upgrades,
+								content
+							) ??
 							(definition.effects.some((effect) => effect.op === 'giveInterview')
 								? interviewIssue(workingWorld, target, state.turn, content)
 								: null));

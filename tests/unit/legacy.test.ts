@@ -138,7 +138,8 @@ describe('bilan de fin de carrière (P3-08)', () => {
 		const base = createGame({ seed: 'une' }, fixtureContent);
 		const state = ended({ ...base, mandates: [mandate('term.1', 'mandate.deputy', 4, null)] }, 40);
 		const summary = projectView(state, [], fixtureContent).summary!;
-		expect(summary.masthead).toBe('Le Courrier du Bocage · Nécrologie');
+		// Le quotidien de la région d'origine signe l'article (P3-18).
+		expect(summary.masthead).toBe('La Feuille locale · Nécrologie');
 		expect(summary.title).toMatch(/^Hommage à \d+ ans$/);
 		expect(summary.text).toBe('Plus haute fonction : Siège national.');
 		expect(summary.distinctions.map((entry) => entry.label)).toEqual(['L’Intègre']);
@@ -156,7 +157,7 @@ describe('bilan de fin de carrière (P3-08)', () => {
 			'Vie et relations'
 		]);
 		const prison = projectView(ended(base, 12, 'prison'), [], fixtureContent).summary!;
-		expect(prison.masthead).toBe('Le Courrier du Bocage · Chronique judiciaire');
+		expect(prison.masthead).toBe('La Feuille locale · Chronique judiciaire');
 		expect(prison.distinctions.map((entry) => entry.label)).toEqual(['La Vie à côté']);
 	});
 

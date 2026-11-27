@@ -115,12 +115,12 @@ function career(
 	turns: number,
 	choicePolicy = 0
 ): GameState {
-	// Origines, professions et régions variées d'une carrière à l'autre (P2-08, P3-16).
+	// Origines, engagements et régions variées d'une carrière à l'autre (P2-08, P3-16).
 	let state = createGame(
 		{
 			seed,
 			origin: content.originIds[choicePolicy % content.originIds.length]!,
-			profession: content.professionIds[choicePolicy % content.professionIds.length]!,
+			engagement: content.engagementIds[choicePolicy % content.engagementIds.length]!,
 			// Territoires variés (P3-16).
 			region: content.regionIds[choicePolicy % content.regionIds.length]!
 		},

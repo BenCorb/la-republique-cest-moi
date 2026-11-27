@@ -81,8 +81,9 @@
 			"name": "Le Courrier du Bocage",
 			"kind": "regional",
 			"line": "Presse régionale, avec Radio Bocage FM : comices, conseils municipaux et chiens écrasés",
-			"description": "Le quotidien du département et sa radio, Radio Bocage FM. Tout le monde le lit, ne serait-ce que pour les avis d’obsèques ; il suit les élus locaux de très près, faute d’en avoir d’autres.",
-			"scope": "local",
+			"description": "Le quotidien normand et sa radio, Radio Bocage FM. Tout le monde le lit, ne serait-ce que pour les avis d’obsèques ; il suit les élus locaux de très près, faute d’en avoir d’autres.",
+			"scope": "regional",
+			"region": "region.normandie",
 			"audience": 30,
 			"baseRelation": 10,
 			"groups": ["support.working_class", "support.middle_class", "support.business"],
@@ -92,6 +93,246 @@
 				"election": 5,
 				"lifestyle": 2,
 				"ownership": 1
+			},
+			"amplifyPercent": 100
+		},
+		{
+			"id": "media.reveil_des_monts",
+			"name": "Le Réveil des Monts",
+			"kind": "regional",
+			"line": "Presse régionale des vallées et des stations : neige, industrie et conseils municipaux",
+			"description": "Des Alpes au Velay, une édition par vallée et une rubrique météo lue comme un oracle. Il soutient volontiers les élus qui savent ce qu’est un col fermé.",
+			"scope": "regional",
+			"region": "region.auvergne_rhone_alpes",
+			"audience": 32,
+			"baseRelation": 10,
+			"groups": ["support.working_class", "support.middle_class", "support.business"],
+			"coverage": {
+				"justice": 3,
+				"promise": 4,
+				"election": 5,
+				"lifestyle": 2,
+				"ownership": 1
+			},
+			"amplifyPercent": 100
+		},
+		{
+			"id": "media.courrier_des_coteaux",
+			"name": "Le Courrier des Coteaux",
+			"kind": "regional",
+			"line": "Presse régionale entre vignes et forêts : vendanges, horlogerie et comices",
+			"description": "On y lit les cours du vin, les fermetures d’usines et les résultats du concours de bûcherons. La rédaction tutoie la moitié des maires et vouvoie l’autre.",
+			"scope": "regional",
+			"region": "region.bourgogne_franche_comte",
+			"audience": 26,
+			"baseRelation": 10,
+			"groups": ["support.working_class", "support.middle_class", "support.wealthy"],
+			"coverage": {
+				"justice": 3,
+				"promise": 4,
+				"election": 5,
+				"lifestyle": 2,
+				"ownership": 1
+			},
+			"amplifyPercent": 100
+		},
+		{
+			"id": "media.vigie_armoricaine",
+			"name": "La Vigie armoricaine",
+			"kind": "regional",
+			"line": "Presse régionale : ports, remembrement et festoù-noz",
+			"description": "Une rédaction par pays, des correspondants dans chaque bourg et un éditorial qui commence toujours par la météo marine. Fidèle, mais rancunier.",
+			"scope": "regional",
+			"region": "region.bretagne",
+			"audience": 36,
+			"baseRelation": 10,
+			"groups": ["support.working_class", "support.middle_class", "support.activists"],
+			"coverage": {
+				"justice": 3,
+				"promise": 4,
+				"election": 5,
+				"lifestyle": 2,
+				"ownership": 1
+			},
+			"amplifyPercent": 100
+		},
+		{
+			"id": "media.messager_du_val",
+			"name": "Le Messager du Val",
+			"kind": "regional",
+			"line": "Presse régionale des châteaux et des plaines : céréales, tourisme et préfectures",
+			"description": "Un quotidien posé, qui préfère les inaugurations aux polémiques et consacre une page entière aux crues de la Loire. Ses lecteurs votent tôt et lisent jusqu’au bout.",
+			"scope": "regional",
+			"region": "region.centre_val_de_loire",
+			"audience": 24,
+			"baseRelation": 10,
+			"groups": ["support.middle_class", "support.wealthy", "support.business"],
+			"coverage": {
+				"justice": 3,
+				"promise": 4,
+				"election": 5,
+				"lifestyle": 2,
+				"ownership": 1
+			},
+			"amplifyPercent": 100
+		},
+		{
+			"id": "media.fanal_insulaire",
+			"name": "Le Fanal insulaire",
+			"kind": "regional",
+			"line": "Presse régionale de l’île : villages, port et conseils municipaux tendus",
+			"description": "Un seul quotidien pour toute l’île, donc un seul avis qui compte. Il connaît chaque famille, chaque querelle de village et chaque permis de construire.",
+			"scope": "regional",
+			"region": "region.corse",
+			"audience": 28,
+			"baseRelation": 10,
+			"groups": ["support.working_class", "support.middle_class", "support.apparatus"],
+			"coverage": {
+				"justice": 4,
+				"promise": 4,
+				"election": 5,
+				"lifestyle": 2,
+				"ownership": 2
+			},
+			"amplifyPercent": 100
+		},
+		{
+			"id": "media.guetteur_de_l_est",
+			"name": "Le Guetteur de l’Est",
+			"kind": "regional",
+			"line": "Presse régionale des frontières : sidérurgie, champagne et travailleurs frontaliers",
+			"description": "Trois éditions, deux langues dans les petites annonces et une grande nostalgie des hauts fourneaux. Il surveille les élus comme on surveillait la frontière.",
+			"scope": "regional",
+			"region": "region.grand_est",
+			"audience": 32,
+			"baseRelation": 10,
+			"groups": ["support.working_class", "support.middle_class", "support.business"],
+			"coverage": {
+				"justice": 3,
+				"promise": 4,
+				"election": 5,
+				"lifestyle": 2,
+				"ownership": 1
+			},
+			"amplifyPercent": 100
+		},
+		{
+			"id": "media.beffroi",
+			"name": "Le Beffroi",
+			"kind": "regional",
+			"line": "Presse régionale : bassin minier, ducasses et conseils municipaux",
+			"description": "Le quotidien qu’on lit au comptoir avant le travail, avec la page des sports en premier. Il pardonne beaucoup à qui serre les mains au marché, rien à qui l’oublie.",
+			"scope": "regional",
+			"region": "region.hauts_de_france",
+			"audience": 38,
+			"baseRelation": 10,
+			"groups": ["support.working_class", "support.middle_class", "support.activists"],
+			"coverage": {
+				"justice": 3,
+				"promise": 4,
+				"election": 5,
+				"lifestyle": 2,
+				"ownership": 1
+			},
+			"amplifyPercent": 100
+		},
+		{
+			"id": "media.faubourien",
+			"name": "Le Faubourien",
+			"kind": "regional",
+			"line": "Presse régionale de la banlieue : transports, logement et maires bâtisseurs",
+			"description": "Coincé entre la presse nationale et le RER, il raconte la région autrement : grèves de trains, chantiers interminables et maires qui inaugurent des ronds-points.",
+			"scope": "regional",
+			"region": "region.ile_de_france",
+			"audience": 30,
+			"baseRelation": 10,
+			"groups": ["support.working_class", "support.middle_class", "support.activists"],
+			"coverage": {
+				"justice": 3,
+				"promise": 4,
+				"election": 5,
+				"lifestyle": 2,
+				"ownership": 1
+			},
+			"amplifyPercent": 100
+		},
+		{
+			"id": "media.phare_de_l_estuaire",
+			"name": "Le Phare de l’Estuaire",
+			"kind": "regional",
+			"line": "Presse régionale des vignobles à l’océan : rugby, ostréiculture et chais",
+			"description": "Le plus grand territoire du pays, couvert par une armée de correspondants et une page de rugby sacrée. On y respecte les notables, on y adore les dynasties.",
+			"scope": "regional",
+			"region": "region.nouvelle_aquitaine",
+			"audience": 36,
+			"baseRelation": 10,
+			"groups": ["support.middle_class", "support.wealthy", "support.business"],
+			"coverage": {
+				"justice": 3,
+				"promise": 4,
+				"election": 5,
+				"lifestyle": 2,
+				"ownership": 1
+			},
+			"amplifyPercent": 100
+		},
+		{
+			"id": "media.midi_des_vallees",
+			"name": "Le Midi des Vallées",
+			"kind": "regional",
+			"line": "Presse régionale du Sud-Ouest : rugby, viticulture et passions locales",
+			"description": "Un quotidien qui prend parti, aime les tribuns et ne pardonne pas une absence au match de la fête du village. Ses éditoriaux sentent la garrigue et la poudre.",
+			"scope": "regional",
+			"region": "region.occitanie",
+			"audience": 36,
+			"baseRelation": 10,
+			"groups": ["support.working_class", "support.middle_class", "support.activists"],
+			"coverage": {
+				"justice": 3,
+				"promise": 4,
+				"election": 5,
+				"lifestyle": 2,
+				"ownership": 1
+			},
+			"amplifyPercent": 100
+		},
+		{
+			"id": "media.echo_des_marches",
+			"name": "L’Écho des Marches",
+			"kind": "regional",
+			"line": "Presse régionale de l’Ouest : chantiers navals, maraîchage et vie paroissiale",
+			"description": "Sérieux, catholique de tradition et désormais un peu moins, il couvre chaque kermesse et chaque fermeture de classe. Il se méfie des beaux parleurs venus d’ailleurs.",
+			"scope": "regional",
+			"region": "region.pays_de_la_loire",
+			"audience": 34,
+			"baseRelation": 10,
+			"groups": ["support.middle_class", "support.wealthy", "support.business"],
+			"coverage": {
+				"justice": 3,
+				"promise": 4,
+				"election": 5,
+				"lifestyle": 2,
+				"ownership": 1
+			},
+			"amplifyPercent": 100
+		},
+		{
+			"id": "media.mistral",
+			"name": "Le Mistral",
+			"kind": "regional",
+			"line": "Presse régionale du littoral et de l’arrière-pays : faits divers, foot et marchés publics",
+			"description": "Un quotidien qui souffle fort : une une sur l’incendie de la veille, une autre sur le stade, et des enquêtes sur les marchés publics dont les maires se souviennent.",
+			"scope": "regional",
+			"region": "region.provence_alpes_cote_d_azur",
+			"audience": 36,
+			"baseRelation": 10,
+			"groups": ["support.working_class", "support.middle_class", "support.wealthy"],
+			"coverage": {
+				"justice": 4,
+				"promise": 3,
+				"election": 5,
+				"lifestyle": 3,
+				"ownership": 2
 			},
 			"amplifyPercent": 100
 		}
@@ -331,7 +572,7 @@
 			"topic": "interview",
 			"tone": "favorable",
 			"kinds": ["regional"],
-			"text": "Au micro de Radio Bocage FM : « Le Bocage, c’est d’abord des gens »"
+			"text": "Dans nos colonnes : « Notre région, c’est d’abord des gens »"
 		},
 		{
 			"id": "headline.ownership_critical",
@@ -380,7 +621,7 @@
 			"id": "headline.ambient_roundabout",
 			"topic": "ambient",
 			"tone": "neutral",
-			"text": "Le rond-point du Bocage remporte le prix du rond-point le plus inutile de l’année"
+			"text": "Un rond-point de la région remporte le prix du rond-point le plus inutile de l’année"
 		},
 		{
 			"id": "headline.ambient_reform",
@@ -438,6 +679,8 @@
 	"balance": {
 		"maxArticlesPerTurn": 3,
 		"nationalExposure": 30,
+		"nationalMandateRank": 40,
+		"regionalNationalPercent": 50,
 		"toneThreshold": 30,
 		"toneEffects": {
 			"critical": -3,

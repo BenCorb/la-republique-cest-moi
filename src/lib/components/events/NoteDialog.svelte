@@ -17,6 +17,7 @@
 	import Donut from '#lib/components/common/Donut.svelte';
 	import ScoreBars from '#lib/components/common/ScoreBars.svelte';
 	import CalendarDate from '#lib/components/common/CalendarDate.svelte';
+	import EffectChip from '#lib/components/common/EffectChip.svelte';
 	import ResourceIcon from '#lib/components/common/ResourceIcon.svelte';
 	import { identityOf } from '#lib/components/common/identity.ts';
 	import Stamp from '#lib/components/common/Stamp.svelte';
@@ -79,6 +80,9 @@
 		event: { icon: Sparkles, color: 'var(--color-cat-media)' },
 		institution: { icon: Scale, color: 'var(--color-cat-institution)' }
 	};
+
+	/** Pastilles d'un fait visibles d'emblée ; le reste sous « Détail » (PT-B1-003). */
+	const VISIBLE_CHIPS = 4;
 
 	const prepareLabel = $derived(decisionPending ? 'Voir la décision' : 'Préparer ce trimestre');
 </script>
@@ -166,6 +170,39 @@
 									<div class="min-w-0 flex-1">
 										<p class="text-sm font-bold {SENSE_TITLE[fact.tone]}">{fact.title}</p>
 										<p class="mt-0.5 text-sm">{fact.text}</p>
+										{#if fact.chips.length > 0}
+											<div
+												class="mt-1.5 flex flex-wrap gap-1"
+												aria-label="Effets de l’événement"
+												data-testid="note-fact-chips"
+											>
+												{#each fact.chips.slice(0, VISIBLE_CHIPS) as chip, index (index)}
+													<EffectChip {chip} />
+												{/each}
+											</div>
+										{/if}
+										{#if fact.chips.length > VISIBLE_CHIPS || fact.details.length > 0}
+											<details class="mt-1 text-sm">
+												<summary class="cursor-pointer text-primary underline">
+													Détail ({Math.max(0, fact.chips.length - VISIBLE_CHIPS) +
+														fact.details.length})
+												</summary>
+												{#if fact.chips.length > VISIBLE_CHIPS}
+													<div class="mt-1 flex flex-wrap gap-1">
+														{#each fact.chips.slice(VISIBLE_CHIPS) as chip, index (index)}
+															<EffectChip {chip} />
+														{/each}
+													</div>
+												{/if}
+												{#if fact.details.length > 0}
+													<ul class="mt-1 flex list-disc flex-col gap-0.5 pl-5 text-muted">
+														{#each fact.details as detail, index (index)}
+															<li>{detail}</li>
+														{/each}
+													</ul>
+												{/if}
+											</details>
+										{/if}
 										{#if fact.chart?.kind === 'shares'}
 											<div class="mt-2">
 												<ScoreBars

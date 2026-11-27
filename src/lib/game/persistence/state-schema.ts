@@ -343,7 +343,7 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 		supports: z.record(id, int),
 		popularity: int,
 		origin: id,
-		profession: id,
+		engagement: id,
 		territory: z.strictObject({
 			regionId: id,
 			departmentCode: z.string().regex(/^(\d{2}|2[AB])$/u),

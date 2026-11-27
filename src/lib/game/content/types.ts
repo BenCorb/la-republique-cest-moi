@@ -71,7 +71,9 @@ export const WORLD_TEMPLATE_VARIABLES = [
 	'opposition_party',
 	'opposition_leader',
 	'player_party',
-	'player_party_leader'
+	'player_party_leader',
+	/** Quotidien de la région du joueur (P3-18). */
+	'regional_media'
 ] as const;
 export type WorldTemplateVariable = (typeof WORLD_TEMPLATE_VARIABLES)[number];
 
@@ -184,9 +186,9 @@ export type Condition =
 	| { readonly op: 'holdsMandate'; readonly mandate: string }
 	/** Le joueur pourrait recevoir ce mandat sans en quitter aucun (cumul et incompatibilités). */
 	| { readonly op: 'canHoldMandate'; readonly mandate: string }
-	/** Origine ou profession du joueur (P2-08). */
+	/** Origine ou engagement du joueur (P2-08). */
 	| { readonly op: 'origin'; readonly origin: string }
-	| { readonly op: 'profession'; readonly profession: string }
+	| { readonly op: 'engagement'; readonly engagement: string }
 	/** Train de vie en cours du joueur (P3-02). */
 	| { readonly op: 'lifestyle'; readonly lifestyle: string }
 	/** Le joueur possède au moins un exemplaire de cette amélioration (P3-03). */
@@ -590,9 +592,17 @@ export const ARTICLE_TONES = ['critical', 'neutral', 'favorable'] as const;
 export type ArticleTone = (typeof ARTICLE_TONES)[number];
 
 /**
+ * Rôle stable du quotidien de la région du joueur (P3-18) : utilisable à la
+ * place d'un identifiant de média dans `addMediaRelation` et `asset.media`.
+ */
+export const REGIONAL_ANCHOR = 'regional_anchor';
+
+/**
  * Média fictif (P3-03, GDD §9.1) : ligne éditoriale, audience, groupes qui le
  * lisent et goût pour chaque sujet. Un média national ne s'intéresse au joueur
- * qu'au-delà d'un seuil d'exposition (sauf affaires judiciaires et rachat).
+ * qu'à partir d'une portée nationale ou d'un seuil d'exposition (sauf affaires
+ * judiciaires et rachat) ; un quotidien régional (P3-18) ne suit que les
+ * personnages de sa région.
  */
 export interface MediaDefinition {
 	readonly id: string;
@@ -601,7 +611,9 @@ export interface MediaDefinition {
 	/** Ligne éditoriale, en quelques mots. */
 	readonly line: string;
 	readonly description: string;
-	readonly scope: 'national' | 'local';
+	readonly scope: 'national' | 'regional';
+	/** Région couverte, pour un quotidien régional (un seul par région). */
+	readonly region?: string | undefined;
 	/** Audience, de 1 à 100 : pondère le choix du média et l'effet de ses articles. */
 	readonly audience: number;
 	/** Relation de départ et de référence envers le joueur. */
@@ -638,6 +650,10 @@ export interface PressBalance {
 	readonly maxArticlesPerTurn: number;
 	/** Exposition à partir de laquelle les médias nationaux suivent le joueur. */
 	readonly nationalExposure: number;
+	/** Rang de mandat à partir duquel la presse nationale suit le joueur (P3-18). */
+	readonly nationalMandateRank: number;
+	/** Poids du quotidien régional dans une carrière de portée nationale, en % (P3-18). */
+	readonly regionalNationalPercent: number;
 	/** Relation au-delà de laquelle un média adoucit sa tonalité (et en deçà de l'opposé, la durcit). */
 	readonly toneThreshold: number;
 	/** Effet de base d'un article sur chaque groupe touché, par tonalité. */
@@ -1485,9 +1501,9 @@ export interface TerritoryDefinition {
 	readonly toponymy: ToponymyDefinition;
 }
 
-/** Profession avant la politique : effets de départ et action propre éventuelle. */
-export interface ProfessionDefinition {
-	/** Identifiant stable, par exemple `profession.lawyer`. */
+/** Terrain d’engagement (P3-17) : ce qui a mené à la politique ; effets de départ, actions propres. */
+export interface EngagementDefinition {
+	/** Identifiant stable, par exemple `engagement.union`. */
 	readonly id: string;
 	readonly label: string;
 	readonly description: string;
@@ -1659,12 +1675,12 @@ export interface Content {
 	readonly institutions: InstitutionsDefinition;
 	readonly origins: Readonly<Record<string, OriginDefinition>>;
 	readonly originIds: readonly string[];
-	readonly professions: Readonly<Record<string, ProfessionDefinition>>;
-	readonly professionIds: readonly string[];
+	readonly engagements: Readonly<Record<string, EngagementDefinition>>;
+	readonly engagementIds: readonly string[];
 	/** Profil retenu quand la création n'en précise pas (tests, simulateur). */
 	readonly defaultProfile: {
 		readonly origin: string;
-		readonly profession: string;
+		readonly engagement: string;
 		readonly region: string;
 	};
 	/** Territoire d'origine (P3-16) : régions, tailles et traits de commune, toponymie. */

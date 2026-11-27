@@ -1,7 +1,7 @@
 /**
- * Origine, profession et famille (GDD §3.1, §3.3) — P2-08.
+ * Origine, engagement et famille (GDD §3.1, §3.3) — P2-08.
  *
- * - Création : l'origine et la profession appliquent leurs effets de départ
+ * - Création : l'origine et le terrain d’engagement appliquent leurs effets de départ
  *   (ressources, soutiens, stress) ; l'origine génère parents et fratrie, avec
  *   une attitude de départ. L'âge reste fixé à 25 ans.
  * - Vie de famille légère, par relations et événements : rencontre, naissance,

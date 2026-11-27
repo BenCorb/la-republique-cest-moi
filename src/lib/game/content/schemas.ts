@@ -12,6 +12,7 @@
 import { z } from 'zod';
 import {
 	ARTICLE_TONES,
+	REGIONAL_ANCHOR,
 	END_CAUSES,
 	LEGACY_METRICS,
 	ARTICLE_TOPICS,
@@ -39,7 +40,7 @@ import {
 	type FamilyBalance,
 	type FamilyTemplate,
 	type OriginDefinition,
-	type ProfessionDefinition,
+	type EngagementDefinition,
 	type TerritoryDefinition,
 	type MissionDefinition,
 	type PostDefinition,
@@ -111,7 +112,7 @@ export const conditionSchema: z.ZodType<Condition> = z.lazy(() =>
 		z.strictObject({ op: z.literal('holdsMandate'), mandate: contentId }),
 		z.strictObject({ op: z.literal('canHoldMandate'), mandate: contentId }),
 		z.strictObject({ op: z.literal('origin'), origin: contentId }),
-		z.strictObject({ op: z.literal('profession'), profession: contentId }),
+		z.strictObject({ op: z.literal('engagement'), engagement: contentId }),
 		z.strictObject({ op: z.literal('lifestyle'), lifestyle: contentId }),
 		z.strictObject({ op: z.literal('ownsUpgrade'), upgrade: contentId }),
 		z.strictObject({ op: z.literal('institution'), parameter: contentId, level: contentId }),
@@ -246,7 +247,7 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 	z.strictObject({ op: z.literal('abandonPromise') }),
 	z.strictObject({
 		op: z.literal('addMediaRelation'),
-		media: z.union([contentId, z.literal('target')]),
+		media: z.union([contentId, z.literal('target'), z.literal(REGIONAL_ANCHOR)]),
 		value: safeInt.refine(
 			(value) => value !== 0 && Math.abs(value) <= MEDIA_RELATION_MAX,
 			'variation non nulle de -100 à 100'
@@ -330,7 +331,7 @@ export const assetSchema: z.ZodType<AssetDefinition> = z.strictObject({
 	failurePerMille: safeInt.refine((value) => value >= 0 && value <= 1000, 'de 0 à 1000'),
 	salePercent: smallPercent.refine((value) => value >= 0, 'part positive ou nulle'),
 	stressPerTurn: smallPercent,
-	media: contentId.optional()
+	media: z.union([contentId, z.literal(REGIONAL_ANCHOR)]).optional()
 });
 
 export const lifestyleSchema: z.ZodType<LifestyleDefinition> = z.strictObject({
@@ -839,7 +840,8 @@ export const mediaSchema: z.ZodType<MediaDefinition> = z.strictObject({
 	kind: z.enum(MEDIA_KINDS),
 	line: frenchText,
 	description: frenchText,
-	scope: z.enum(['national', 'local']),
+	scope: z.enum(['national', 'regional']),
+	region: contentId.optional(),
 	audience: safeInt.refine((value) => value >= 1 && value <= 100, 'audience de 1 à 100'),
 	baseRelation: smallPercent,
 	groups: z.array(contentId).min(1),
@@ -871,6 +873,8 @@ const toneEffect = safeInt.refine((value) => Math.abs(value) <= 20, 'effet de -2
 export const pressBalanceSchema: z.ZodType<PressBalance> = z.strictObject({
 	maxArticlesPerTurn: positiveInt,
 	nationalExposure: safeInt.refine((value) => value >= 0 && value <= 100, 'de 0 à 100'),
+	nationalMandateRank: positiveInt,
+	regionalNationalPercent: percent,
 	toneThreshold: safeInt.refine((value) => value >= 1 && value <= 100, 'de 1 à 100'),
 	toneEffects: z.strictObject({ critical: toneEffect, neutral: toneEffect, favorable: toneEffect }),
 	maxEffect: positiveInt,
@@ -1161,10 +1165,10 @@ const territorySchema: z.ZodType<TerritoryDefinition> = z.strictObject({
 	})
 });
 
-export const professionSchema: z.ZodType<ProfessionDefinition> = z.strictObject({
+export const engagementSchema: z.ZodType<EngagementDefinition> = z.strictObject({
 	id: contentId.refine(
-		(value) => value.startsWith('profession.'),
-		'identifiant « profession.nom »'
+		(value) => value.startsWith('engagement.'),
+		'identifiant « engagement.nom »'
 	),
 	label: frenchText,
 	description: frenchText,
@@ -1173,8 +1177,8 @@ export const professionSchema: z.ZodType<ProfessionDefinition> = z.strictObject(
 
 export const profileCatalogSchema = z.strictObject({
 	origins: z.array(originSchema).min(1),
-	professions: z.array(professionSchema).min(1),
-	defaults: z.strictObject({ origin: contentId, profession: contentId, region: contentId }),
+	engagements: z.array(engagementSchema).min(1),
+	defaults: z.strictObject({ origin: contentId, engagement: contentId, region: contentId }),
 	territory: territorySchema
 });
 
