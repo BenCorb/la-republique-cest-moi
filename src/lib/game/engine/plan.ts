@@ -17,7 +17,7 @@
  * PRNG et n'expose aucune probabilité.
  */
 import { attractiveness, attractivenessFactors } from './recruitment.ts';
-import { fieldworkEffects } from './activists.ts';
+import { fieldworkEffects, resolveActivists } from './activists.ts';
 import {
 	RESOURCE_IDS,
 	type Condition,
@@ -62,7 +62,7 @@ import {
 	reservedTime,
 	type CareerParts
 } from './career.ts';
-import { shiftFamily } from './family.ts';
+import { dependantsCostCents, shiftFamily } from './family.ts';
 import {
 	applyPromiseEffect,
 	expandPromiseEffects,
@@ -78,6 +78,7 @@ import {
 	vetIssue,
 	hireIssue,
 	isStaffEffect,
+	resolveStaffProduction,
 	staffTimeBonus,
 	type EntourageParts,
 	type HiringDecision
@@ -108,7 +109,7 @@ export interface PlanIssue {
 
 /** Avertissement non bloquant : le plan reste valide. */
 export interface PlanWarning {
-	readonly code: 'upkeep_at_risk' | 'stress_high' | 'lifestyle_unpaid';
+	readonly code: 'upkeep_at_risk' | 'stress_high' | 'lifestyle_unpaid' | 'salary_unpaid';
 	/** Exemplaire concerné (`upkeep_at_risk`), sinon `null`. */
 	readonly instanceId: string | null;
 	readonly upgradeId: string | null;
@@ -806,10 +807,60 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 	}
 	const stressed = applyGaugeEffect(workingPlayer, 'player.stress', mandates.stress).player;
 
+	// Charges et recettes certaines de la frontière, dans l'ordre et avec les
+	// fonctions de la résolution (ARCHITECTURE.md §8.4) : salaires et missions des
+	// collaborateurs, enfants à charge, cotisations et frais de la base militante.
+	// Les montants aléatoires ou conditionnels (scrutins, événements, justice,
+	// héritages, remboursements de recherche) restent hors de la prévision.
+	const frontier: Record<ResourceId, number> = { ...economy.resources };
+	for (const amount of mandates.income) frontier[amount.resource] += amount.amount;
+	const staffed = resolveStaffProduction(
+		{
+			resources: frontier,
+			player: stressed,
+			world: workingWorld,
+			career: workingCareer,
+			entourage: workingEntourage
+		},
+		state.turn,
+		content
+	);
+	const withFamily: Record<ResourceId, number> = { ...staffed.resources };
+	withFamily.personalCashCents -= Math.min(
+		withFamily.personalCashCents,
+		dependantsCostCents(staffed.player, workingEntourage.characters, state.turn + 1, content)
+	);
+	const settledResources = resolveActivists(
+		staffed.player,
+		withFamily,
+		{
+			turn: state.turn,
+			upgrades,
+			mandates: staffed.career.mandates,
+			campaigns: staffed.career.campaigns,
+			deadlines: null
+		},
+		content
+	).resources;
+	for (const unpaid of staffed.record.production.filter((entry) => entry.status === 'unpaid')) {
+		const name = workingEntourage.characters[unpaid.characterId]?.name ?? unpaid.characterId;
+		warnings.push({
+			code: 'salary_unpaid',
+			instanceId: null,
+			upgradeId: null,
+			message: `Salaire de ${name} non couvert par le budget politique : sa mission sera suspendue ce trimestre et sa relation avec vous en pâtira.`
+		});
+	}
+	for (const resource of RESOURCE_IDS) {
+		const delta = settledResources[resource] - frontier[resource];
+		totals[resource].min += delta;
+		totals[resource].max += delta;
+	}
+
 	// Santé et stress à la frontière du trimestre (partie certaine uniquement).
 	// Le temps réservé par les mandats compte dans la charge de travail.
 	const wellbeing = forecastWellbeing(
-		stressed,
+		staffed.player,
 		timeUsed + reserved,
 		state.turn,
 		content.balance.wellbeing,

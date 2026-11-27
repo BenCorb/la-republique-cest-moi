@@ -9,6 +9,7 @@ import {
 	createGame,
 	describePendingEvent,
 	evaluateCondition,
+	previewPlan,
 	readStat,
 	resolveFamily,
 	transition,
@@ -287,6 +288,28 @@ describe('frontière familiale', () => {
 		// La négligence entame l'attitude ; elle reste assez haute pour apaiser.
 		expect(result.parts.relationships[partner.id]!.attitude).toBeLessThan(20);
 		expect(result.parts.player.stress).toBe(49);
+	});
+
+	it('annonce le coût des enfants à charge dans la prévision (PT-B2-001)', () => {
+		const child = {
+			...base.characters[parentId]!,
+			id: 'character.901',
+			tags: ['kin', 'child'],
+			birthTurn: 0
+		};
+		const parent: GameState = {
+			...base,
+			characters: { ...base.characters, [child.id]: child },
+			relationships: {
+				...base.relationships,
+				[child.id]: { metTurn: 0, attitude: 10, memories: [] }
+			},
+			player: { ...base.player, family: { ...base.player.family, childrenIds: [child.id] } }
+		};
+		const without = previewPlan(base, { steps: [] }, catalog).resourceChanges.personalCashCents;
+		const preview = previewPlan(parent, { steps: [] }, catalog).resourceChanges.personalCashCents;
+		expect(preview.min - without.min).toBe(-10_000);
+		expect(preview.max - without.max).toBe(-10_000);
 	});
 
 	it('constate le veuvage quand le partenaire décède', () => {

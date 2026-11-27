@@ -1023,6 +1023,15 @@ Retour PT-B1-006. Projection seulement : ni état, ni règle, ni `RULES_VERSION`
 - Interface : détail repliable « Faire grandir la base militante » dans le panneau « Base militante », à la place de la phrase d'aide.
 - Tests : `tests/unit/activists.test.ts` (leviers favorables et défavorables, options de capacité, aucune formule affichée, carte de local) ; E2E de l'onglet Organisation.
 
+### 8.4 octovicies Correction PT-B2-001 : charges de la frontière dans la prévision (27 novembre 2026)
+
+Retour du playtest B2 : l'en-tête annonçait 0 € de budget politique alors que la masse salariale de l'entourage coûtait 600 € par trimestre. `previewPlan` ne comptait que les étapes, l'économie de l'organisation, le train de vie et les revenus des mandats ; les charges calculées plus tard dans la résolution lui échappaient. Prévision seulement : ni état, ni règle, ni `RULES_VERSION` modifiés.
+
+- La prévision rejoue désormais, dans l'ordre de `commitTurn` et avec les mêmes fonctions, les montants **certains** de la frontière : salaires, primes d'arrivée et missions des collaborateurs (`resolveStaffProduction`), coût des enfants à charge (`dependantsCostCents`, extrait de `resolveFamily`), cotisations et frais du palier militant (`resolveActivists`, sans résultats de scrutin). Le bien-être prévu part du joueur après les missions (stress des collaborateurs compris), comme la résolution.
+- Nouvel avertissement `salary_unpaid` : un salaire que le budget politique ne couvrira pas (mission suspendue, relation entamée).
+- Restent hors de la prévision, car aléatoires ou conditionnels : influence et remboursements des scrutins, avances rendues ou perdues, héritages, amendes et peines, remboursements des recherches de candidats, événements et leurs suites.
+- Tests : `tests/unit/staff.test.ts` (salaire et production annoncés, égalité avec la résolution, avertissement), `tests/unit/activists.test.ts` (cotisations et frais, égalité avec la résolution), `tests/unit/family.test.ts` (enfants à charge).
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.

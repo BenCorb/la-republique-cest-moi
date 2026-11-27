@@ -273,6 +273,23 @@ export interface FamilyRecord {
  * sous zéro), famille délaissée si `workload` dépasse le seuil, puis stress ou
  * apaisement selon l'attitude du partenaire.
  */
+/**
+ * Coût trimestriel des enfants encore à charge à `turn` (avant plafonnement par
+ * l'argent personnel). Partagé par la résolution et la prévision du plan.
+ */
+export function dependantsCostCents(
+	player: PlayerState,
+	characters: FamilyParts['characters'],
+	turn: Turn,
+	content: Content
+): number {
+	const balance = content.balance.family;
+	const dependants = livingChildren(player, characters).filter(
+		(id) => ageAt(characters[id]!.birthTurn, turn) < balance.childIndependenceAge
+	).length;
+	return dependants * balance.childCostCents;
+}
+
 export function resolveFamily(
 	parts: FamilyParts,
 	resources: Resources,
@@ -313,10 +330,10 @@ export function resolveFamily(
 	}
 
 	// Enfants à charge.
-	const dependants = livingChildren(player, characters).filter(
-		(id) => ageAt(characters[id]!.birthTurn, turn) < balance.childIndependenceAge
-	).length;
-	const cost = Math.min(current.personalCashCents, dependants * balance.childCostCents);
+	const cost = Math.min(
+		current.personalCashCents,
+		dependantsCostCents(player, characters, turn, content)
+	);
 	current.personalCashCents -= cost;
 
 	// Famille délaissée.

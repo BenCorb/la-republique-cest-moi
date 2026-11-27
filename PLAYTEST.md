@@ -1734,3 +1734,35 @@ territoire, équipe et militants jugés lisibles.
 Consigner chaque retour sous la forme **PT-B2-NNN — titre (date, gravité, sujets)**, suivie de
 l’observation, de l’impact et d’une proposition éventuelle, comme pour B1. Une proposition reste à
 l’étude tant que le créateur ne l’a pas validée.
+
+- **PT-B2-001 — Prévoir toutes les dépenses du trimestre dans l’en-tête
+  (27 novembre 2026, gênant, économie et prévision).**
+
+  **Observation :** l’en-tête annonce une variation de 0 € du budget politique pour le trimestre
+  suivant, alors que l’onglet Entourage affiche une masse salariale de 600 € par trimestre. Le salaire
+  des collaborateurs n’entre pas dans la prévision.
+
+  **Impact :** la prévision ne permet pas d’anticiper l’état réel du trimestre suivant ; le joueur ne
+  peut pas se fier à l’en-tête pour décider de ses dépenses. Le défaut pouvait toucher d’autres
+  charges que les salaires.
+
+  **Suite donnée :** corrigé sur la branche `fix/playtest-b2-retours` (ARCHITECTURE.md §8.4
+  octovicies). Vérification faite : d’autres montants certains manquaient aussi. La prévision compte
+  désormais les salaires, primes et missions des collaborateurs, le coût des enfants à charge, ainsi
+  que les cotisations et les frais de la base militante. Elle avertit aussi quand un salaire ne
+  pourra pas être payé. Les montants aléatoires (scrutins, événements, justice, héritages) restent
+  hors de la prévision.
+
+- **PT-B2-002 — Élargir l’éventail des actions possibles à chaque trimestre
+  (27 novembre 2026, gênant, agenda et contenu).**
+
+  **Observation :** le nombre d’actions disponibles pendant un trimestre paraît assez limité.
+
+  **Impact :** d’un trimestre à l’autre, le joueur a l’impression de refaire les mêmes choix ; la
+  variété des décisions et la rejouabilité en pâtissent.
+
+  **Proposition à étudier :** ajouter un nouveau paquet d’actions faisables, de préférence
+  contextuelles (liées au mandat exercé, au territoire, à l’actualité, à une campagne en cours ou à
+  la situation de l’entourage), pour donner davantage de choix différents entre deux trimestres. Le
+  périmètre et les actions retenues restent à définir avec le créateur ; ce chantier peut rejoindre
+  la vague de contenu P3-24.
