@@ -201,3 +201,31 @@ Taille : S (quelques heures), M (une tâche), L (plusieurs sessions).
   [New Game Network 2020](https://www.newgamenetwork.com/article/2281/the-political-machine-2020-review).
 - Prise en main : [Roblox, onboarding](https://create.roblox.com/docs/production/game-design/onboarding),
   [Wayline](https://www.wayline.io/blog/tutorials-onboarding-funnel-not-faq).
+
+## 7. Suites données (27 novembre 2026)
+
+Décisions du créateur, consignées dans `ROADMAP.md` §5.2 et `GAME_DESIGN.md` :
+
+1. **Sommet de carrière :** Premier ministre au plus en V1, avec 6 à 8 portefeuilles ministériels
+   typés et un poste de secrétaire d'État en entrée (P3-35, P3-36). Un président fictif, joué par le
+   monde, nomme le Premier ministre. La présidentielle fera l'objet d'une mise à jour après la V1.
+2. **Scrutins réalistes (P3-29) :** toutes les candidatures comptent dans le calcul. Les règles
+   s'inspirent du droit électoral français :
+   - deux tours, avec des seuils de maintien et de fusion ;
+   - prime majoritaire et répartition à la plus forte moyenne pour les scrutins de liste ;
+   - sièges d'opposition pour une liste battue au-dessus du seuil ;
+   - le joueur décide entre les deux tours, et peut être colistier plutôt que tête de liste.
+3. **Recommandations :** tout ce qui était indispensable ou souhaitable entre dans le rush, sous
+   forme de nouvelles tâches (P3-35 à P3-42) ou de critères ajoutés à P3-24, P3-09 et P3-10.
+4. **Durée cible :** 60 à 90 minutes au lieu de 45 à 60.
+5. **Premiers pas :** des objectifs guidés dans une vraie carrière.
+6. **Ambition de départ :** rappelée au dossier et jugée au bilan, sans bonus.
+7. **GDD :** mis en cohérence (version 0.2).
+
+Sources des règles électorales :
+[municipales, vie-publique.fr](https://vie-publique.fr/fiches/20204-municipales-mode-de-scrutin-communes-de-plus-de-1000-habitants),
+[municipales 2026, ministère de l'Intérieur](https://www.interieur.gouv.fr/actualites/actualites-du-ministere/municipales-2026-mode-de-scrutin-change-pour-communes-de-moins-de-1-000-habitants),
+[législatives, Public Sénat](https://www.publicsenat.fr/actualites/politique/legislatives-pourquoi-une-forte-abstention-au-premier-tour-aurait-de-grandes),
+[législatives, Sénat](https://www.senat.fr/questions/base/2018/qSEQ180102815.html),
+[régionales, Weka](https://www.weka.fr/actualite/elus/article/le-mode-de-scrutin-des-elections-regionales-et-des-departementales-126713/),
+[sénatoriales, vie-publique.fr](https://www.vie-publique.fr/fiches/19586-lelection-des-senateurs-senatoriales).

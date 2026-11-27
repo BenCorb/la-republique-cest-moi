@@ -1,8 +1,8 @@
 # La République, c’est moi !
 
-**Game Design Document — version 0.1**  
-**Date :** 24 novembre 2026  
-**Statut :** cadrage initial, avant prototype  
+**Game Design Document — version 0.2**  
+**Date :** 24 novembre 2026, mis en cohérence le 27 novembre 2026  
+**Statut :** référence de la V1 en cours (phase 3, rush V1) ; prototype et alpha livrés  
 **Titre de travail :** La République, c’est moi ! (sans sous-titre)
 
 > Ce document constitue la référence de conception du jeu. Il rassemble les décisions du brainstorming et les traduit en règles de gameplay exploitables par Codex. Les valeurs numériques proposées sont des hypothèses de prototypage, et non des engagements d’équilibrage. Les décisions encore ouvertes sont signalées en fin de document. En cas de doute, privilégier la simplicité, la qualité des histoires et la rejouabilité plutôt que la multiplication des systèmes.
@@ -13,7 +13,9 @@
 
 La République, c’est moi ! est un jeu web solo de gestion narrative de carrière politique au tour par tour, comportant une dimension incrémentale. Le joueur incarne un personnage qui tente de se faire une place dans une France alternative, à partir de l’année 2000. Il peut briguer des mandats, servir ses convictions, s’enrichir, constituer un réseau, déléguer à son entourage, gouverner ou renoncer à la politique. Le monde politique continue à évoluer indépendamment de lui.
 
-La partie raconte une vie entière plutôt qu’une course vers une victoire prédéfinie. Un personnage peut devenir président, tomber dans l’oubli, finir riche sans jamais être élu, connaître la prison ou mourir avant d’avoir atteint ses ambitions. L’intérêt est de découvrir les conséquences de ses choix et de recommencer une carrière différente.
+La partie raconte une vie entière plutôt qu’une course vers une victoire prédéfinie. Un personnage peut devenir Premier ministre, tomber dans l’oubli, finir riche sans jamais être élu, connaître la prison ou mourir avant d’avoir atteint ses ambitions. L’intérêt est de découvrir les conséquences de ses choix et de recommencer une carrière différente.
+
+**Sommet de carrière (décision du créateur, 27 novembre 2026) :** en V1, la plus haute fonction accessible est Premier ministre. Un président fictif existe dans le monde, sans élection jouable ; la présidentielle fera l’objet d’une mise à jour après la V1, avec ses propres mécaniques.
 
 ### 1.2 Fiche d’identité
 
@@ -21,7 +23,7 @@ La partie raconte une vie entière plutôt qu’une course vers une victoire pr�
 |---|---|
 | Genre | Gestion de carrière, simulation narrative, progression incrémentale |
 | Structure | Solo, tour par tour, un trimestre par tour |
-| Durée cible | Environ 45 à 60 minutes par carrière typique, à confirmer en test ; certaines seront plus courtes ou plus longues |
+| Durée cible | Environ 60 à 90 minutes par carrière typique (décision du créateur du 27 novembre 2026, au lieu de 45 à 60), à confirmer en test ; certaines seront plus courtes ou plus longues, et le joueur peut se retirer quand il le souhaite |
 | Plateforme | Navigateur web sur ordinateur, interface desktop-first |
 | Univers | France alternative, reconnaissable mais fictive, à partir de 2000 |
 | Ton | Satire politique, humour absurde, critique des mécanismes de pouvoir |
@@ -112,6 +114,8 @@ Exemples d’origines : milieu populaire, classe moyenne, grande bourgeoisie, dy
 
 Le joueur peut partir avec des convictions initiales, rejoindre un parti fictif, le quitter, changer de camp, rester indépendant ou fonder un mouvement. Les décisions modifient progressivement le profil idéologique et la cohérence perçue par les autres acteurs.
 
+**Périmètre V1 (27 novembre 2026) :** adhérer, quitter, changer de parti et rester indépendant sont possibles ; au sein du parti, la carrière partisane mène de militant à cadre puis chef du parti (P3-34). Fonder un mouvement, provoquer une scission ou fusionner des partis passent après la V1.
+
 Axes proposés, à retenir en nombre limité pour la V1 : économie (interventionnisme/libéralisme), société (progressisme/conservatisme), environnement (productivisme/écologie), institutions (concentration du pouvoir/démocratie participative), international (souverainisme/internationalisme). Ces axes décrivent la compatibilité politique, pas la moralité. Il n’est pas nécessaire d’exposer des scores numériques pour chacun.
 
 **Décision du 24 novembre 2026 (alpha, déléguée par le créateur) :** trois axes retenus — économie (interventionnisme/libéralisme), société (progressisme/conservatisme), souveraineté (construction européenne et ouverture/souverainisme). L’environnement et les institutions passent par les sujets d’actualité et les événements plutôt que par des axes. Les positions sont internes et affichées seulement en termes qualitatifs.
@@ -182,7 +186,7 @@ L’arbitrage recherché : travailler plus peut accélérer la carrière, mais r
 
 Les chiffres ci-dessus sont purement indicatifs. Les actions sont disponibles selon l’âge, la fonction, l’époque, les ressources et le contexte. Elles peuvent être limitées en fréquence si nécessaire ; la répétition ne doit pas créer une stratégie dominante triviale.
 
-**Montée en échelle des actions (P3-23, 27 novembre 2026, décisions déléguées de ROADMAP §5.2 ; retour PT-P3-09-013) :** certaines actions se déclinent en trois formats lisibles — modeste, soutenu, majeur — sous une seule ligne d’agenda, plutôt qu’en curseur au centime. Un seul format par trimestre ; chaque format a son coût, son temps, ses effets et son prérequis ; les formats supérieurs exigent une capacité (palier militant ou collaborateur), jamais la seule fortune ; les rendements sont décroissants (dépenser cinq fois plus économise du temps mais ne rapporte pas cinq fois plus de soutien). Première famille, l’argent personnel : **don à son organisation** de 500 € (sans prérequis), 3 000 € (comité local de 25 militants ou un collaborateur ; appareil + 1) ou 15 000 € (section implantée de 100 militants ou deux collaborateurs ; appareil + 2, exposition + 2), plafonné à 30 000 € par année civile tous formats confondus ; **avance de campagne** de 5 000 €, 20 000 € (comité ou collaborateur) ou 60 000 € (section et collaborateur), versée au budget politique d’une candidature choisie explicitement, une par campagne, rendue à l’argent personnel si le score atteint 10 %, perdue sinon. Collecte et meeting suivront. Chiffres provisoires (ARCHITECTURE §8.4 quinvicies).
+**Montée en échelle des actions (P3-23, 27 novembre 2026, décisions déléguées de ROADMAP §5.2 ; retour PT-P3-09-013) :** certaines actions se déclinent en trois formats lisibles — modeste, soutenu, majeur — sous une seule ligne d’agenda, plutôt qu’en curseur au centime. Un seul format par trimestre ; chaque format a son coût, son temps, ses effets et son prérequis ; les formats supérieurs exigent une capacité (palier militant ou collaborateur), jamais la seule fortune ; les rendements sont décroissants (dépenser cinq fois plus économise du temps mais ne rapporte pas cinq fois plus de soutien). Première famille, l’argent personnel : **don à son organisation** de 500 € (sans prérequis), 3 000 € (comité local de 25 militants ou un collaborateur ; appareil + 1) ou 15 000 € (section implantée de 100 militants ou deux collaborateurs ; appareil + 2, exposition + 2), plafonné à 30 000 € par année civile tous formats confondus ; **avance de campagne** de 5 000 €, 20 000 € (comité ou collaborateur) ou 60 000 € (section et collaborateur), versée au budget politique d’une candidature choisie explicitement, une par campagne, rendue à l’argent personnel si le score atteint 10 %, perdue sinon. Collecte et meeting suivront en V1, avec d’autres débouchés pour l’argent (mécénat ou fondation, rachat de média élargi : P3-39). Chiffres provisoires (ARCHITECTURE §8.4 quinvicies).
 
 ### 5.2 Améliorations et organisation
 
@@ -203,6 +207,8 @@ Mobilisation : chaque scrutin a un besoin de militants — sénatoriales 5, muni
 Les employés ordinaires sont gérés comme des effectifs agrégés ; les collaborateurs clés sont des personnages. L’organisation peut produire passivement des ressources et prendre en charge des actions récurrentes. Le joueur définit les missions et les priorités, qui persistent entre les tours jusqu’à modification.
 
 Certaines actions déléguées peuvent générer des conséquences inattendues en fonction des personnalités, des consignes et des décisions passées. Un collaborateur efficace mais opportuniste peut engager l’organisation dans une initiative que le joueur n’aurait pas approuvée. La délégation libère du temps sans supprimer le risque ni la responsabilité narrative.
+
+**Périmètre V1 :** la délégation passe par les missions des collaborateurs (P2-05, P3-20 et P3-21), qui produisent des ressources, du soutien ou de la préparation de campagne. La délégation complète des actions récurrentes de l’organisation passe après la V1.
 
 ## 6. Personnages, entourage et relations
 
@@ -238,6 +244,8 @@ Les choix narratifs affichent par défaut des tendances prévisibles, pas les co
 
 Exemples de fonctions : citoyen, militant, cadre ou dirigeant de parti, conseiller municipal, maire, député, sénateur, ministre, Premier ministre, président. Les postes électifs, nominations et responsabilités partisanes ont des modes d’accès distincts. Des activités parallèles sont possibles : consultant, administrateur, auteur, chroniqueur ou entrepreneur.
 
+**Fonctions de la V1 (27 novembre 2026) :** conseiller municipal (majorité ou opposition), maire, conseiller régional, député, sénateur, secrétaire d’État, ministre de l’un des 6 à 8 portefeuilles typés, Premier ministre (P3-35 et P3-36), ainsi que les statuts du parti (militant, cadre, chef : P3-34). Le président de la République est un personnage du monde, non jouable en V1. Les activités parallèles (consultant, auteur, chroniqueur) passent après la V1 ; le terrain d’engagement en tient lieu.
+
 La progression n’est pas un arbre d’améliorations imposé. Un personnage peut rester durablement élu local, obtenir une nomination, perdre son siège, changer de camp, sortir de la politique ou revenir après une absence. Les mandats donnent accès à des actions, des revenus, du réseau, des responsabilités et des événements propres.
 
 ### 7.2 Cumul des mandats
@@ -252,15 +260,19 @@ Les élections régulières sont annoncées longtemps à l’avance dans un cale
 
 Le moment de l’annonce est stratégique : une candidature précoce laisse le temps de préparer la campagne, mais augmente la durée d’exposition médiatique ; une candidature tardive réduit la période de préparation. Il n’existe pas de niveau d’influence universel qui attribue automatiquement un mandat. Les conditions d’éligibilité et de clôture des candidatures doivent être visibles.
 
+**Droit de se présenter et droit à l’étiquette (décision du créateur, 27 novembre 2026, P3-30) :** la liberté de candidature est celle du droit de se présenter. L’étiquette d’un parti, son poids électoral et ses moyens dépendent de son accord : aux législatives et sénatoriales, un joueur affilié demande l’investiture, dont la décision est seedée et présentée par une appréciation qualitative ; un refus ouvre le choix entre renoncer et une candidature dissidente. Aux scrutins de liste, le joueur peut conduire sa liste ou demander une place sur celle d’un parti ou d’un sortant.
+
 ### 7.4 Campagne et scrutin
 
-La campagne utilise les ressources et le budget de temps existants : recherche d’investiture, candidature indépendante, financement, organisation, meetings, promesses, débats et événements. Les adversaires ont un nom, des caractéristiques et un parcours, et peuvent réapparaître au fil des décennies.
+La campagne utilise les ressources et le budget de temps existants : recherche d’investiture, candidature indépendante, financement, organisation, meetings, promesses, débats (sous forme d’événements de campagne) et événements. Les adversaires ont un nom, des caractéristiques et un parcours, et peuvent réapparaître au fil des décennies.
 
 Le scrutin fictif combine le soutien électoral, la position du parti, la préparation de campagne, le contexte national, les adversaires, les événements récents et une part d’incertitude bornée. Les estimations doivent informer sans garantir le résultat. La modélisation des tours de scrutin sera simplifiée pour rester jouable ; aucune simulation de chaque électeur n’est prévue.
 
 Une défaite peut entraîner une perte de ressources, mais aussi apporter de la notoriété, de l’expérience, des relations ou de nouvelles opportunités.
 
-**Hypothèses provisoires de l’alpha (P2-03, 24 novembre 2026, choix délégués) :** âge minimal par élection (18, 23 ou 30 ans), un siège local exigé pour les sénatoriales, investiture accordée selon le soutien de l’appareil du parti (sinon candidature dissidente sans l’apport du parti), sondage publié en fourchette, scrutin simplifié à un seul tour face à un adversaire principal : popularité, poids du parti si investi, préparation de campagne plafonnée, prime du sortant et part de hasard bornée. La tête de liste municipale bien élue devient maire. Le personnage poursuit sa carrière sauf condition de fin explicite.
+**Hypothèses provisoires de l’alpha (P2-03, 24 novembre 2026, choix délégués) :** âge minimal par élection (18, 23 ou 30 ans), un siège local exigé pour les sénatoriales, investiture accordée selon le soutien de l’appareil du parti (sinon candidature dissidente sans l’apport du parti), sondage publié en fourchette, scrutin simplifié à un seul tour face à un adversaire principal : popularité, poids du parti si investi, préparation de campagne plafonnée, prime du sortant et part de hasard bornée. La tête de liste municipale bien élue devient maire. Le personnage poursuit sa carrière sauf condition de fin explicite. *Remplacé en V1 par les scrutins réalistes ci-dessous.*
+
+**Scrutins réalistes (V1, P3-29, décision du créateur du 27 novembre 2026) :** toutes les candidatures et listes comptent dans le calcul, selon des règles inspirées du droit électoral français, simplifiées sans le trahir. Municipales : scrutin de liste dans toutes les communes, deux tours (maintien à 10 %, fusion à 5 %), prime de la moitié des sièges à la liste en tête, le reste à la plus forte moyenne entre les listes d’au moins 5 %, puis élection du maire par le conseil. Régionales : même principe avec une prime de 25 %, sans sections départementales. Législatives : uninominal à deux tours (élu au premier tour avec la majorité absolue et 25 % des inscrits, second tour à 12,5 % des inscrits ou entre les deux premiers). Sénatoriales : grands électeurs, proportionnelle ou majoritaire selon le nombre de sièges du département. Entre les tours, le joueur décide de se maintenir, de fusionner ou de se désister. Une liste battue au-dessus du seuil obtient des sièges d’opposition, et un colistier bien placé peut être élu sans conduire la liste. Le procès-verbal complet de chaque scrutin n’est connu qu’après le vote.
 
 ### 7.5 Gouverner et tenir ses promesses
 
@@ -293,7 +305,7 @@ Le paysage politique initial est globalement le même à chaque partie : mêmes 
 | Chasse, Pêche, Nature et Apéro | CPNA | Ruralistes | Défend les traditions, surtout celle de 18 h |
 | Front du Non | FN | Extrême droite | Contre, par principe, et contre le principe aussi |
 
-En 2000, le Parti des Synthèses conduit le gouvernement. Les dirigeants sont générés à chaque partie ; aucun personnage réel n’est représenté. Les fusions, scissions et créations de partis passeront par des événements.
+En 2000, le Parti des Synthèses conduit le gouvernement. Les dirigeants sont générés à chaque partie ; aucun personnage réel n’est représenté. Les fusions, scissions et créations de partis passeront par des événements, après la V1 : en V1, les huit partis restent fixes et seules leurs forces et leurs dirigeants évoluent.
 
 ### 8.2 Évolution du monde
 
@@ -384,6 +396,8 @@ La partie se termine lorsque le personnage meurt ou lorsqu’un événement term
 
 La fin présente une nécrologie satirique pour un décès, ou un article de bilan adapté à une autre cause. Elle résume l’âge, les mandats, la plus haute fonction, la fortune, les fonds détournés cumulés, les affaires judiciaires, les promesses, les relations et moments marquants. Des distinctions narratives non exclusives peuvent refléter le parcours (L’Intègre, Le Rentier, L’Indéboulonnable, Le Déchu, etc.). Il n’y a pas de score moral unique ni de victoire conventionnelle.
 
+**V1 (décisions du créateur, 27 novembre 2026) :** le joueur peut se retirer de la vie politique quand il le souhaite, ce qui mène au bilan (P3-37). Une ambition facultative, choisie à la création, est rappelée au dossier et jugée au bilan, sans bonus ni fin de partie (P3-38). Un carnet local des carrières terminées et des distinctions obtenues s’affiche sur l’accueil, sans aucun avantage de jeu (P3-41).
+
 Chaque carrière est indépendante. Pas de déblocages entre les parties, de bonus, de monnaies permanentes ou de continuité dynastique en V1. Un archivage consultable des anciennes carrières est optionnel et reportable ; le bilan de fin de carrière, lui, est prévu. La rejouabilité doit être intéressante dès la première version sans aucun mécanisme de récompense externe.
 
 ## 13. Interface et direction artistique
@@ -417,8 +431,8 @@ Les détails seront développés dans ARCHITECTURE.md ; les contraintes ci-desso
 |---|---|---|
 | Prototype | Profil fixe de 25 ans ; calendrier ; temps trimestriel ; ressources ; actions ; production récurrente élémentaire ; stress/santé ; événements (20–30) ; vieillissement ; fin et bilan minimal | Une carrière complète peut être jouée et comprise ; le rythme et les arbitrages sont testables |
 | Alpha | Élections et mandats ; cumul ; partis et monde autonome simplifiés ; entourage nommé et délégation ; relations ; adversaires ; origine, profession et famille ; accélération fiable | Plusieurs parcours divergent réellement ; les systèmes partagent le même moteur de tour |
-| V1 | Justice à dossiers ; patrimoine et médias ; promesses et décisions de gouvernement ; évolution des institutions ; terrain d’engagement et territoire d’origine ; catalogue enrichi ; UI et bilan final aboutis | Jeu stable, compréhensible, rejouable, cohérent avec la cible de durée et déployable statiquement |
-| V2 éventuelle | Méta-progression narrative, archives enrichies, mobile ou autres extensions après tests | Hors périmètre actuel ; aucune dépendance de la V1 à ces fonctionnalités |
+| V1 | Justice à dossiers ; patrimoine et médias ; promesses et décisions de gouvernement ; évolution des institutions ; terrain d’engagement et territoire d’origine ; scrutins réalistes ; ministères typés et Premier ministre ; carrière partisane ; premiers pas guidés ; catalogue enrichi ; UI et bilan final aboutis | Jeu stable, compréhensible, rejouable, cohérent avec la cible de durée et déployable statiquement |
+| Après la V1 | Présidentielle et ses mécaniques ; scission et création de parti ; délégation complète ; méta-progression narrative, archives enrichies, mobile ou autres extensions après tests | Hors périmètre actuel ; aucune dépendance de la V1 à ces fonctionnalités |
 
 Le prototype peut utiliser une seule trajectoire politique simplifiée ou un mandat minimal pour tester l’accumulation sans développer tout le système électoral. La priorité est une boucle verticale jouable de bout en bout, pas un ensemble de modules incomplets.
 
@@ -428,13 +442,13 @@ Le jeu vise la tension entre la tentation et les conséquences, non une punition
 
 À mesurer pendant les tests : durée réelle des carrières, nombre de tours nécessitant une intervention, fréquence et répétition des événements, progression des ressources, diversité des plus hauts mandats, fortunes extrêmes, causes de fin, trajectoires honnêtes/opportunistes, fréquence des blocages financiers, délai de résolution des affaires et lisibilité des effets. Comparer des stratégies automatisées (prudente, ambitieuse, patrimoniale, mixte) et compléter par des playtests humains.
 
-Exemple de contrainte de rythme : une carrière de 25 à 80 ans représente 220 trimestres. Pour tenir environ une heure, il est indispensable que de nombreux tours soient traités rapidement ou automatiquement, avec des pauses réservées aux décisions significatives. Ce calcul n’impose pas une espérance de vie fixe.
+Exemple de contrainte de rythme : une carrière de 25 à 80 ans représente 220 trimestres. Pour tenir 60 à 90 minutes, il est indispensable que de nombreux tours soient traités rapidement ou automatiquement, avec des pauses réservées aux décisions significatives. Ce calcul n’impose pas une espérance de vie fixe.
 
 Critères de qualité pour le prototype : aucune ressource incohérente, aucun mandat incompatible, aucune résolution dupliquée, aucun événement concernant un acteur inéligible, sauvegarde/reprise fidèle, fin de partie atteignable, et diversité visible entre plusieurs seeds. Un scénario honnête doit être testé explicitement, même si son équilibrage définitif intervient plus tard.
 
 ## 17. Décisions encore ouvertes
 
-Les orientations de jeu précédentes sont retenues comme base de travail. Les éléments ci-dessous doivent être tranchés lors du prototypage, de l’équilibrage ou de la rédaction des documents suivants ; Codex ne doit pas les présenter comme des règles déjà validées.
+Les orientations de jeu précédentes sont retenues comme base de travail. Beaucoup de questions ci-dessous ont reçu depuis des réponses provisoires, consignées dans les sections concernées et dans `ROADMAP.md` §5.2 ; le tableau rappelle ce qui reste à confirmer à l’équilibrage. Les éléments ci-dessous doivent être tranchés lors du prototypage, de l’équilibrage ou de la rédaction des documents suivants ; Codex ne doit pas les présenter comme des règles déjà validées.
 
 | Sujet | Question à résoudre |
 |---|---|

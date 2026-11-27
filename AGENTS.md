@@ -40,7 +40,7 @@ Le dépôt Git et les documents constituent la mémoire commune. Ne pas dépendr
 - Exception décidée par le créateur pour la phase 1 : une branche de phase unique `feat/p1-prototype`, un commit par tâche (`Refs: P1-0x`) poussé sur cette branche, et une seule pull request vers `main` à la fin de la phase. La reprise se fait sur cette branche ; ROADMAP.md indique les tâches terminées.
 - Même exception reconduite par le créateur pour la phase 2 (24 novembre 2026) : branche de phase `feat/p2-alpha`, un commit par tâche (`Refs: P2-0x`), une seule pull request vers `main` en fin de phase.
 - Phase 3 (décision du créateur, 25 novembre 2026) : retour à la règle générale, une branche et une pull request par tâche (`feat/p3-01-justice`…, pied `Refs: P3-0x`), sans branche de phase.
-- Rush V1 (décision du créateur, 27 novembre 2026) : les tâches restantes de la phase 3 (P3-29, P3-30, P3-33, P3-34, P3-24, P3-25, P3-27, P3-09, P3-10) et les corrections déjà identifiées avancent sur une branche unique `feat/v1-rush`, avec un ou plusieurs commits par tâche (pied `Refs: P3-xx`) et une seule pull request vers `main` à la fin du rush. Pas de playtest intermédiaire : le grand playtest est celui de P3-09.
+- Rush V1 (décision du créateur, 27 novembre 2026) : les tâches restantes de la phase 3 (P3-29, P3-30, P3-33 à P3-42, P3-24, P3-25, P3-27, P3-09, P3-10) et les corrections déjà identifiées avancent sur une branche unique `feat/v1-rush`, avec un ou plusieurs commits par tâche (pied `Refs: P3-xx`) et une seule pull request vers `main` à la fin du rush. Pas de playtest intermédiaire : le grand playtest est celui de P3-09.
 - Intégration par pull request vers `main` après CI verte ; fusion « squash » avec un titre au format Conventional Commits. Pas de push forcé sur `main`, pas de réécriture d’un historique publié.
 - Le déploiement GitHub Pages est manuel (workflow « CI et GitHub Pages », option `deploy`) et n’est lancé que sur demande explicite du créateur.
 
@@ -55,4 +55,4 @@ Le dépôt Git et les documents constituent la mémoire commune. Ne pas dépendr
 
 ## Priorité produit
 
-Livrer d’abord une carrière jouable de bout en bout avec un personnage de 25 ans. Ne pas surconcevoir les élections, la justice, les médias et les institutions avant validation du moteur de base. Favoriser la satire, les choix intéressants, la lisibilité et la rejouabilité ; durée cible V1 : 45–60 minutes, à vérifier par playtests.
+Livrer d’abord une carrière jouable de bout en bout avec un personnage de 25 ans. Ne pas surconcevoir les élections, la justice, les médias et les institutions avant validation du moteur de base. Favoriser la satire, les choix intéressants, la lisibilité et la rejouabilité ; durée cible V1 : 60–90 minutes (décision du créateur du 27 novembre 2026), à vérifier par playtests.
