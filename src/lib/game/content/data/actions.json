@@ -665,8 +665,8 @@
 		{
 			"id": "campaign.declare",
 			"category": "campaign",
-			"label": "Déclarer sa candidature",
-			"description": "Une conférence de presse, un slogan testé auprès de trois cousins et un dépôt de candidature en préfecture. Plus tôt on se déclare, plus longtemps on est exposé.",
+			"label": "Conduire sa liste ou se présenter",
+			"description": "Une conférence de presse, un slogan testé auprès de trois cousins et un dépôt en préfecture : tête de liste aux municipales et aux régionales, candidat aux législatives et aux sénatoriales. Plus tôt on se déclare, plus longtemps on est exposé.",
 			"timeCost": 10,
 			"maxPerTurn": 1,
 			"costs": [
@@ -685,6 +685,17 @@
 					"value": 1
 				}
 			],
+			"target": "ballot"
+		},
+		{
+			"id": "campaign.join_list",
+			"category": "campaign",
+			"label": "Demander une place sur une liste",
+			"description": "Un café avec la tête de liste de votre parti, ou de la liste la plus solide si vous n’en avez pas. Votre rang dépend de l’appareil, de votre influence et de votre popularité : assez haut, vous êtes élu sans porter la liste.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [],
+			"effects": [{ "op": "declareCandidacy", "role": "colistier" }],
 			"target": "ballot"
 		},
 		{

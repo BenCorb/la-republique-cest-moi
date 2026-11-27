@@ -203,7 +203,14 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 		op: z.literal('endMandate'),
 		mandate: z.union([contentId, z.literal('target')])
 	}),
-	z.strictObject({ op: z.literal('declareCandidacy') }),
+	z.strictObject({
+		op: z.literal('declareCandidacy'),
+		role: z.enum(['head', 'colistier']).optional()
+	}),
+	z.strictObject({
+		op: z.literal('runoffDecision'),
+		decision: z.enum(['maintain', 'merge', 'withdraw'])
+	}),
 	z.strictObject({ op: z.literal('hireStaff'), offer: z.enum(HIRE_OFFERS).optional() }),
 	z.strictObject({ op: z.literal('courtCandidate') }),
 	z.strictObject({ op: z.literal('orderSearch'), level: z.enum(SEARCH_LEVELS) }),
@@ -649,7 +656,8 @@ export const partySchema: z.ZodType<PartyDefinition> = z.strictObject({
 		society: axisPosition,
 		sovereignty: axisPosition
 	}),
-	baseStrength: positiveInt
+	baseStrength: positiveInt,
+	cordon: z.boolean().optional()
 });
 
 const axisSchema: z.ZodType<AxisDefinition> = z.strictObject({
@@ -697,6 +705,20 @@ export const charactersBalanceSchema: z.ZodType<CharactersBalance> = z
 
 export const electionsBalanceSchema: z.ZodType<ElectionsBalance> = z.strictObject({
 	voteVolatility: nonNegativeInt,
+	contests: z.strictObject({
+		minPartyPerMille: z.number().int().min(0).max(1000),
+		maxPartyContestants: positiveInt,
+		partyStrengthPercent: z.number().int().min(0).max(200),
+		transferPercent: z.number().int().min(0).max(100),
+		mergeRetentionPercent: z.number().int().min(0).max(100),
+		allyDistance: z.number().int().min(0).max(200),
+		runoffSwing: nonNegativeInt,
+		colistierPreparationPercent: z.number().int().min(0).max(100),
+		grandElectorBonus: nonNegativeInt,
+		rankSpreadPercent: z.number().int().min(0).max(100),
+		outsiderRankPenalty: z.number().int().min(0).max(100),
+		runoffEvent: contentId
+	}),
 	momentum: nonNegativeInt,
 	newGovernmentStability: gaugeValue,
 	alertLeadTurns: nonNegativeInt
@@ -713,7 +735,20 @@ export const electionSchema: z.ZodType<ElectionDefinition> = z
 		decidesGovernment: z.boolean(),
 		minAge: positiveInt,
 		grants: contentId,
-		bonusGrant: z.strictObject({ mandate: contentId, minPercent: gaugeValue }).optional(),
+		headGrant: contentId.optional(),
+		system: z.enum(['list', 'single', 'senate']),
+		turnout: z.strictObject({
+			min: z.number().int().min(1).max(100),
+			max: z.number().int().min(1).max(100)
+		}),
+		maintainPerMille: z.number().int().min(0).max(1000),
+		mergePerMille: z.number().int().min(0).max(1000),
+		seatMinPerMille: z.number().int().min(0).max(1000),
+		bonusSeatsPercent: z.number().int().min(0).max(100),
+		firstRoundRegisteredPerMille: z.number().int().min(0).max(1000),
+		senate: z
+			.strictObject({ defaultSeats: positiveInt, proportionalMinSeats: positiveInt })
+			.optional(),
 		requiresAnyMandate: z.array(contentId),
 		rivalStrength: gaugeValue,
 		campaignRefundCents: nonNegativeInt.optional(),
@@ -722,6 +757,14 @@ export const electionSchema: z.ZodType<ElectionDefinition> = z
 	.refine((election) => election.filingLeadTurns < election.cycleTurns, {
 		message: 'la clôture des candidatures doit précéder le scrutin dans le cycle',
 		path: ['filingLeadTurns']
+	})
+	.refine((election) => election.turnout.min <= election.turnout.max, {
+		message: 'participation minimale supérieure à la maximale',
+		path: ['turnout']
+	})
+	.refine((election) => (election.system === 'senate') === (election.senate !== undefined), {
+		message: 'paramètres sénatoriaux exigés pour le seul mode « senate »',
+		path: ['senate']
 	});
 
 export const mandateSchema: z.ZodType<MandateDefinition> = z.strictObject({
@@ -1258,10 +1301,12 @@ const territorySchema: z.ZodType<TerritoryDefinition> = z.strictObject({
 						z.strictObject({
 							code: z.string().regex(/^(\d{2}|2[AB])$/u, 'code de département'),
 							name: frenchText,
-							startable: z.boolean()
+							startable: z.boolean(),
+							senators: positiveInt.optional()
 						})
 					)
 					.min(1),
+				councilSeats: positiveInt,
 				toponymy: z.strictObject({
 					roots: z.array(toponym).min(3),
 					rivers: z.array(toponym).min(1),
@@ -1282,6 +1327,7 @@ const territorySchema: z.ZodType<TerritoryDefinition> = z.strictObject({
 				description: frenchText,
 				weight: positiveInt,
 				rivalStrengthModifier: safeInt,
+				councilSeats: positiveInt,
 				effects: z.array(effectSchema)
 			})
 		)

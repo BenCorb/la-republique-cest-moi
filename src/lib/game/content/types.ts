@@ -266,7 +266,8 @@ export type Effect =
 	/** Élection anticipée : remplace l'échéance régulière prévue de ce type. */
 	| { readonly op: 'callEarlyElection'; readonly election: string; readonly delayTurns: number }
 	/** Candidature à l'échéance choisie dans le plan (`target`), sous conditions d'éligibilité. */
-	| { readonly op: 'declareCandidacy' }
+	| { readonly op: 'declareCandidacy'; readonly role?: 'head' | 'colistier' | undefined }
+	| { readonly op: 'runoffDecision'; readonly decision: RunoffDecision }
 	/** Préparation ajoutée à chaque campagne en cours. */
 	| { readonly op: 'prepareCampaign'; readonly value: number }
 	/**
@@ -1200,6 +1201,39 @@ export interface ElectionsBalance {
 	readonly newGovernmentStability: number;
 	/** Trimestres avant une échéance où une alerte est affichée. */
 	readonly alertLeadTurns: number;
+	/** Scrutins réalistes (P3-29) : candidatures locales, tours et sièges. */
+	readonly contests: ContestsBalance;
+}
+
+/**
+ * Scrutins réalistes (P3-29, décisions déléguées provisoires) : qui se
+ * présente, avec quelle force, et comment les voix se reportent au second tour.
+ */
+export interface ContestsBalance {
+	/** Part nationale minimale (‰) pour qu'un parti présente une liste ou un candidat. */
+	readonly minPartyPerMille: number;
+	/** Candidatures ou listes de partis au plus, hors joueur et adversaire nommé. */
+	readonly maxPartyContestants: number;
+	/** Force de la liste du premier parti, en % de la force de base de l'élection. */
+	readonly partyStrengthPercent: number;
+	/** Part des voix d'un éliminé qui se reporte au second tour, en %. */
+	readonly transferPercent: number;
+	/** Part des voix conservée par une liste qui fusionne, en %. */
+	readonly mergeRetentionPercent: number;
+	/** Écart moyen de positions (0 à 200) en deçà duquel deux forces sont alliées. */
+	readonly allyDistance: number;
+	/** Aléa maximal ajouté à chaque candidature au second tour. */
+	readonly runoffSwing: number;
+	/** Part de la préparation du joueur colistier qui renforce sa liste, en %. */
+	readonly colistierPreparationPercent: number;
+	/** Prime des grands électeurs par mandat local exercé (sénatoriales). */
+	readonly grandElectorBonus: number;
+	/** Étendue des rangs possibles d'un colistier, en % des sièges. */
+	readonly rankSpreadPercent: number;
+	/** Points d'appui retirés à un colistier sans carte du parti de la liste. */
+	readonly outsiderRankPenalty: number;
+	/** Événement bloquant de la décision d'entre-deux-tours (`followUp`). */
+	readonly runoffEvent: string;
 }
 
 /** Évolution des soutiens à chaque frontière (hypothèses de tuning, P2-07). */
@@ -1452,6 +1486,11 @@ export interface PartyDefinition {
 	readonly positions: { readonly [K in AxisId]: number };
 	/** Force électorale de référence (poids relatif, entier). */
 	readonly baseStrength: number;
+	/**
+	 * Tenu à l'écart des alliances d'entre-deux-tours (P3-29) : ni fusion ni
+	 * désistement avec lui, de part et d'autre.
+	 */
+	readonly cordon?: boolean | undefined;
 }
 
 export interface AxisDefinition {
@@ -1466,6 +1505,9 @@ export interface AxisDefinition {
  * Type d'élection (GDD §7.3) : calendrier régulier fictif, échelle et effet sur
  * le gouvernement. Le scrutin d'une échéance a lieu à la fin de son trimestre.
  */
+/** Décision du joueur entre les deux tours (P3-29). */
+export type RunoffDecision = 'maintain' | 'merge' | 'withdraw';
+
 export interface ElectionDefinition {
 	/** Identifiant stable, par exemple `election.legislative`. */
 	readonly id: string;
@@ -1483,8 +1525,32 @@ export interface ElectionDefinition {
 	readonly minAge: number;
 	/** Mandat obtenu par le joueur élu. */
 	readonly grants: string;
-	/** Mandat supplémentaire au-delà d'un score (la tête de liste municipale devient maire). */
-	readonly bonusGrant?: { readonly mandate: string; readonly minPercent: number } | undefined;
+	/** Mandat de la tête de la liste victorieuse (le maire, élu par le conseil), sinon absent. */
+	readonly headGrant?: string | undefined;
+	/**
+	 * Mode de scrutin (P3-29) : liste à deux tours avec prime majoritaire,
+	 * uninominal à deux tours, ou sénatoriales (grands électeurs, liste à la
+	 * proportionnelle ou majoritaire selon le nombre de sièges du département).
+	 */
+	readonly system: 'list' | 'single' | 'senate';
+	/** Participation tirée au scrutin, en % des inscrits. */
+	readonly turnout: { readonly min: number; readonly max: number };
+	/**
+	 * Seuil de maintien au second tour, en ‰ : des suffrages exprimés pour une
+	 * liste, des inscrits pour un scrutin uninominal.
+	 */
+	readonly maintainPerMille: number;
+	/** Seuil de fusion d'une liste, en ‰ des exprimés ; 0 : aucune fusion. */
+	readonly mergePerMille: number;
+	/** Seuil de répartition des sièges d'une liste, en ‰ des exprimés. */
+	readonly seatMinPerMille: number;
+	/** Prime majoritaire de la liste en tête, en % des sièges. */
+	readonly bonusSeatsPercent: number;
+	/** Uninominal : part des inscrits exigée pour l'emporter au premier tour, en ‰ ; 0 : aucune. */
+	readonly firstRoundRegisteredPerMille: number;
+	/** Sénatoriales : sièges d'un département sans valeur propre, et seuil de la proportionnelle. */
+	readonly senate?:
+		{ readonly defaultSeats: number; readonly proportionalMinSeats: number } | undefined;
 	/** Mandats dont l'un au moins est exigé pour se présenter (grands électeurs), vide sinon. */
 	readonly requiresAnyMandate: readonly string[];
 	/** Score de l'adversaire principal, avant aléa. */
@@ -1654,6 +1720,8 @@ export interface DepartmentDefinition {
 	readonly name: string;
 	/** Peut accueillir une commune de départ fictive (Paris : non). */
 	readonly startable: boolean;
+	/** Sénateurs élus par le département (P3-29), sinon la valeur par défaut de l'élection. */
+	readonly senators?: number | undefined;
 }
 
 /** Région métropolitaine réelle, avec ses fragments toponymiques fictifs (P3-16). */
@@ -1662,6 +1730,8 @@ export interface RegionDefinition {
 	readonly id: string;
 	readonly name: string;
 	readonly departments: readonly DepartmentDefinition[];
+	/** Sièges du conseil régional (P3-29). */
+	readonly councilSeats: number;
 	/** Fragments propres à la région : racines inventées, rivières et pays réels. */
 	readonly toponymy: {
 		readonly roots: readonly string[];
@@ -1681,6 +1751,8 @@ export interface TownSizeDefinition {
 	readonly weight: number;
 	/** Ajouté à la force de l'adversaire aux scrutins locaux (municipales). */
 	readonly rivalStrengthModifier: number;
+	/** Sièges du conseil municipal (P3-29). */
+	readonly councilSeats: number;
 	/** Effets de départ (ressources, soutiens, jauges). */
 	readonly effects: readonly Effect[];
 }

@@ -240,7 +240,8 @@ describe('exposition médiatique', () => {
 		access: 'election',
 		status,
 		endTurn: status === 'ended' ? 1 : null,
-		endReason: status === 'ended' ? 'term' : null
+		endReason: status === 'ended' ? 'term' : null,
+		side: null
 	});
 
 	it('a pour référence la fonction la plus exposée, plus la campagne en cours', () => {

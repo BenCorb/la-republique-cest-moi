@@ -46,7 +46,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 21;
+export const SIMULATION_REPORT_VERSION = 22;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -122,6 +122,12 @@ export interface SimulationRun {
 	readonly campaigns: number;
 	readonly campaignsWon: number;
 	readonly campaignsLost: number;
+	/** Candidatures et élections par type de scrutin (P3-29). */
+	readonly campaignsByElection: Readonly<
+		Record<string, { readonly ran: number; readonly won: number }>
+	>;
+	/** Scrutins du joueur tranchés au second tour (P3-29). */
+	readonly runoffs: number;
 	/** Adversaires différents affrontés et plus grand nombre d'affrontements avec le même. */
 	readonly distinctOpponents: number;
 	/** Profil de départ et famille en fin de carrière (P2-08). */
@@ -962,6 +968,17 @@ export function chooseSimulationDecision(
 ): EventChoiceView | null {
 	const available = view.choices.filter((choice) => choice.available);
 	if (available.length === 0) return null;
+	// Entre les deux tours (P3-29) : se maintenir si possible, sinon fusionner, sinon se désister.
+	const runoff = ['maintain', 'merge', 'withdraw'].map((id) =>
+		available.find((choice) => choice.id === id)
+	);
+	const isRunoff = ['maintain', 'merge', 'withdraw'].every((id) =>
+		view.choices.some((choice) => choice.id === id)
+	);
+	if (strategy !== 'random-valid' && isRunoff) {
+		const preferred = runoff.find((choice) => choice !== undefined);
+		if (preferred) return preferred;
+	}
 	if (strategy === 'prudent' || strategy === 'patrimonial') {
 		const safe = strategy === 'prudent' ? available.filter((choice) => !isRiskyChoice(choice)) : [];
 		const pool = safe.length > 0 ? safe : available;
@@ -1102,6 +1119,22 @@ function finalizeRun(
 		campaigns: state.campaigns.length,
 		campaignsWon: state.campaigns.filter((campaign) => campaign.status === 'won').length,
 		campaignsLost: state.campaigns.filter((campaign) => campaign.status === 'lost').length,
+		campaignsByElection: Object.fromEntries(
+			content.electionIds.map((electionId) => {
+				const ran = state.campaigns.filter(
+					(campaign) => campaign.electionId === electionId && campaign.status !== 'running'
+				);
+				return [
+					electionId,
+					{ ran: ran.length, won: ran.filter((campaign) => campaign.status === 'won').length }
+				];
+			})
+		),
+		runoffs: state.campaigns.filter(
+			(campaign) =>
+				state.ballots.find((ballot) => ballot.ballotId === campaign.ballotId)?.report
+					?.secondRound === true
+		).length,
 		distinctOpponents: new Set(
 			state.campaigns.flatMap((campaign) => (campaign.opponentId ? [campaign.opponentId] : []))
 		).size,

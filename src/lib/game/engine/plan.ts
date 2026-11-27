@@ -256,6 +256,14 @@ function searchLevelOf(effects: readonly Effect[]): SearchLevel | null {
 	return null;
 }
 
+/** Rôle d'une candidature déclarée (P3-29) : tête de liste ou candidat par défaut. */
+export function candidacyRoleOf(effects: readonly Effect[]): 'head' | 'colistier' {
+	for (const effect of effects) {
+		if (effect.op === 'declareCandidacy') return effect.role ?? 'head';
+	}
+	return 'head';
+}
+
 /** Offre portée par une action d'embauche (P3-20), standard par défaut. */
 function hireOfferOf(effects: readonly Effect[]): HireOffer {
 	for (const effect of effects) if (effect.op === 'hireStaff') return effect.offer ?? 'standard';
@@ -280,7 +288,8 @@ function applyStateEffects(
 	turn: number,
 	target: string | null,
 	content: Content,
-	decision: HiringDecision | null = null
+	decision: HiringDecision | null = null,
+	influence = 0
 ): StateParts & { changes: PoliticalChange[] } {
 	let { player, world, career, entourage } = parts;
 	const changes: PoliticalChange[] = [];
@@ -291,7 +300,16 @@ function applyStateEffects(
 			world = outcome.world;
 			changes.push(...outcome.changes);
 		} else if (isCareerEffect(effect)) {
-			const outcome = applyCareerEffect(effect, career, turn, target, content, player);
+			const outcome = applyCareerEffect(
+				effect,
+				career,
+				turn,
+				target,
+				content,
+				player,
+				world,
+				influence
+			);
 			career = outcome.parts;
 			changes.push(...outcome.changes);
 		} else if (isStaffEffect(effect)) {
@@ -513,7 +531,14 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 				const issue =
 					target === null
 						? 'choisissez une élection'
-						: candidacyIssue(target, workingCareer, workingPlayer, state.turn, content);
+						: candidacyIssue(
+								target,
+								workingCareer,
+								workingPlayer,
+								state.turn,
+								content,
+								candidacyRoleOf(definition.effects)
+							);
 				if (issue) fail('invalid_target', `« ${label} » : ${issue}`);
 			} else if (definition.target === 'search') {
 				const level = searchLevelOf(definition.effects);
@@ -762,7 +787,9 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 			},
 			state.turn,
 			target,
-			content
+			content,
+			null,
+			working.influence
 		));
 		if (instanceId !== null) {
 			upgrades.push(newInstance(instanceId, step.id, state.turn, content));
@@ -997,7 +1024,8 @@ export function executePlan(
 						state.turn,
 						target,
 						content,
-						decision
+						decision,
+						current.influence
 					);
 					({ player, world, career, entourage } = applied);
 					politics.push(...applied.changes);

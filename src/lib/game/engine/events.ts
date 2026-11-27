@@ -57,7 +57,7 @@ import {
 } from './characters.ts';
 import { applyPoliticalEffect, oppositionPartyId } from './world.ts';
 import { inEras } from './eras.ts';
-import { applyCareerEffect, careerEffectIssue, type CareerParts } from './career.ts';
+import { applyCareerEffect, careerEffectIssue, resolveRunoff, type CareerParts } from './career.ts';
 import {
 	applyPostEffect,
 	bindEventPost,
@@ -374,6 +374,28 @@ function applyAutomaticEffects(
 			politics.push(...outcome.changes);
 		} else if (resolved.kind === 'reform') {
 			throw new Error('Proposition de réforme hors du plan.');
+		} else if (resolved.kind === 'runoff') {
+			// Second tour après la décision du joueur (P3-29), jugé au trimestre courant.
+			const outcome = resolveRunoff(
+				{ player, resources: current, career, characters, relationships },
+				resolved.effect.decision,
+				null,
+				turn,
+				rng,
+				content
+			);
+			for (const resource of RESOURCE_IDS) {
+				const delta = outcome.parts.resources[resource] - current[resource];
+				if (delta !== 0) addResource(resource, delta);
+			}
+			const stress = outcome.parts.player.stress - player.stress;
+			if (stress !== 0) {
+				gaugeDeltas.set('player.stress', (gaugeDeltas.get('player.stress') ?? 0) + stress);
+			}
+			({ player, career, relationships } = outcome.parts);
+			rng = outcome.rng;
+			politics.push(...outcome.politics);
+			people.push(...outcome.people);
 		} else {
 			const key = gaugeKey(resolved.gauge);
 			const { value, applied } = applyGauge(player[key], resolved.delta);

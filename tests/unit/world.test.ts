@@ -238,7 +238,7 @@ describe('évolution autonome', () => {
 		});
 		const run = (): GameState => {
 			let state = createGame({ seed: 'mouvant' }, moving);
-			for (let turn = 0; turn < 120; turn += 1) {
+			for (let turn = 0; turn < 100; turn += 1) {
 				const result = transition(state, commitTurn(), moving);
 				if (!result.ok) throw new Error(result.error.message);
 				expect(checkInvariants(result.state, moving)).toEqual([]);

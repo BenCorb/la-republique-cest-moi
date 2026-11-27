@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.39.0';
+export const RULES_VERSION = '0.40.0';
 
 export {
 	START_YEAR,
@@ -85,6 +85,8 @@ export {
 	type Ballot,
 	type BallotShare,
 	type Campaign,
+	type BallotReport,
+	type BallotContestant,
 	type CampaignStatus,
 	type FamilyState,
 	type ShortlistEntry,

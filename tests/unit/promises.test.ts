@@ -38,7 +38,8 @@ import {
 	fixtureUpgrades,
 	fixtureWealth,
 	fixtureWorld,
-	quarterLog
+	quarterLog,
+	settleDecisions
 } from '../fixtures/content.ts';
 
 const promiseActions = [
@@ -307,10 +308,14 @@ describe('après le scrutin', () => {
 	it('reste sans lendemain après une défaite', () => {
 		const weak = commit(createGame({ seed: 'promesses' }, catalog), [declare]).state;
 		const promised = commit(weak, [pledge('promise.test_school')]).state;
-		const result = commit(advanceTo(promised, 40));
-		expect(result.state.campaigns[0]?.status).toBe('lost');
-		expect(result.state.promises[0]).toMatchObject({ status: 'announced', closedTurn: 40 });
-		expect(result.state.events.scheduled).toEqual([]);
+		// Un second tour éventuel est tranché au trimestre suivant, puis réglé à sa frontière (P3-29).
+		// Battue, la liste obtiendrait un siège d'opposition : le joueur se désiste.
+		let state = settleDecisions(commit(advanceTo(promised, 40)).state, catalog, 'withdraw');
+		const judged = state.campaigns[0]!;
+		expect(judged.status).toBe('withdrawn');
+		if (judged.resultTurn === state.turn) state = commit(state).state;
+		expect(state.promises[0]).toMatchObject({ status: 'announced', closedTurn: judged.resultTurn });
+		expect(state.events.scheduled).toEqual([]);
 	});
 
 	it('présente le dilemme en nommant la promesse et le tranche une seule fois', () => {
@@ -419,7 +424,7 @@ describe('projection', () => {
 		// Scrutin, territoire et fonction visée nommés ; seules les promesses de ce scrutin (P3-22).
 		expect(campaigns[0]?.title).toBe(`Élection locale (${town})`);
 		expect(campaigns[0]?.detail).toMatch(/^Scrutin au T1 2010 · Fonction visée : /);
-		expect(campaigns[0]?.detail).toContain('à partir de 60 %');
+		expect(campaigns[0]?.detail).toContain('pour la tête de la liste victorieuse');
 		const offers = campaigns[0]!.offers;
 		expect(offers.map((offer) => [offer.target, offer.addable])).toEqual([
 			['campaign.1/promise.test_tax', true],

@@ -79,7 +79,7 @@ describe('scénario : passage du temps', () => {
 				characters: { departures: [], arrivals: [] },
 				world: { indicators: [], parties: [], leaderChanges: [] },
 				supports: [],
-				deadlines: { mandates: [], ballots: [], campaigns: [], people: [] },
+				deadlines: { mandates: [], ballots: [], campaigns: [], people: [], runoffs: [] },
 				exposure: 0,
 				justice: { cases: [], changes: [], gauges: [], politics: [] },
 				wealth: { valueChange: 0, failed: [] },

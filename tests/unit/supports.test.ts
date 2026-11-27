@@ -183,7 +183,8 @@ describe('référence et évolution', () => {
 			access: 'election',
 			status: 'active',
 			endTurn: null,
-			endReason: null
+			endReason: null,
+			side: null
 		};
 		// Mandat (+2) et notoriété plafonnée (influence 500 : +20 au lieu de +50).
 		expect(supportReference('support.workers', base.player, [mandate], 500, moving)).toBe(42);

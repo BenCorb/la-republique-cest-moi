@@ -329,7 +329,8 @@
 					{
 						"code": "01",
 						"name": "Ain",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "03",
@@ -349,17 +350,20 @@
 					{
 						"code": "26",
 						"name": "Drôme",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "38",
 						"name": "Isère",
-						"startable": true
+						"startable": true,
+						"senators": 5
 					},
 					{
 						"code": "42",
 						"name": "Loire",
-						"startable": true
+						"startable": true,
+						"senators": 4
 					},
 					{
 						"code": "43",
@@ -369,12 +373,14 @@
 					{
 						"code": "63",
 						"name": "Puy-de-Dôme",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "69",
 						"name": "Rhône",
-						"startable": true
+						"startable": true,
+						"senators": 7
 					},
 					{
 						"code": "73",
@@ -384,9 +390,11 @@
 					{
 						"code": "74",
 						"name": "Haute-Savoie",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					}
 				],
+				"councilSeats": 204,
 				"toponymy": {
 					"roots": [
 						"Montvérel",
@@ -407,12 +415,14 @@
 					{
 						"code": "21",
 						"name": "Côte-d’Or",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "25",
 						"name": "Doubs",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "39",
@@ -432,7 +442,8 @@
 					{
 						"code": "71",
 						"name": "Saône-et-Loire",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "89",
@@ -445,6 +456,7 @@
 						"startable": true
 					}
 				],
+				"councilSeats": 100,
 				"toponymy": {
 					"roots": ["Vaurenay", "Montchanot", "Gevrolles", "Chassignet", "Vellerot", "Brévilly"],
 					"rivers": ["Saône", "Doubs", "Yonne", "Ouche", "Loue"],
@@ -458,24 +470,29 @@
 					{
 						"code": "22",
 						"name": "Côtes-d’Armor",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "29",
 						"name": "Finistère",
-						"startable": true
+						"startable": true,
+						"senators": 4
 					},
 					{
 						"code": "35",
 						"name": "Ille-et-Vilaine",
-						"startable": true
+						"startable": true,
+						"senators": 4
 					},
 					{
 						"code": "56",
 						"name": "Morbihan",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					}
 				],
+				"councilSeats": 83,
 				"toponymy": {
 					"roots": ["Ploumarzec", "Kerlévan", "Tréguvel", "Lannévez", "Pleuzennec", "Locmaréven"],
 					"rivers": ["Aulne", "Blavet", "Odet", "Rance", "Élorn"],
@@ -504,7 +521,8 @@
 					{
 						"code": "37",
 						"name": "Indre-et-Loire",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "41",
@@ -514,9 +532,11 @@
 					{
 						"code": "45",
 						"name": "Loiret",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					}
 				],
+				"councilSeats": 77,
 				"toponymy": {
 					"roots": [
 						"Vaudrion-le-Haut",
@@ -545,6 +565,7 @@
 						"startable": true
 					}
 				],
+				"councilSeats": 63,
 				"toponymy": {
 					"roots": [
 						"Santa-Lucciana",
@@ -585,7 +606,8 @@
 					{
 						"code": "51",
 						"name": "Marne",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "52",
@@ -595,7 +617,8 @@
 					{
 						"code": "54",
 						"name": "Meurthe-et-Moselle",
-						"startable": true
+						"startable": true,
+						"senators": 4
 					},
 					{
 						"code": "55",
@@ -605,17 +628,20 @@
 					{
 						"code": "57",
 						"name": "Moselle",
-						"startable": true
+						"startable": true,
+						"senators": 5
 					},
 					{
 						"code": "67",
 						"name": "Bas-Rhin",
-						"startable": true
+						"startable": true,
+						"senators": 5
 					},
 					{
 						"code": "68",
 						"name": "Haut-Rhin",
-						"startable": true
+						"startable": true,
+						"senators": 4
 					},
 					{
 						"code": "88",
@@ -623,6 +649,7 @@
 						"startable": true
 					}
 				],
+				"councilSeats": 169,
 				"toponymy": {
 					"roots": [
 						"Wendelsheim",
@@ -643,29 +670,35 @@
 					{
 						"code": "02",
 						"name": "Aisne",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "59",
 						"name": "Nord",
-						"startable": true
+						"startable": true,
+						"senators": 11
 					},
 					{
 						"code": "60",
 						"name": "Oise",
-						"startable": true
+						"startable": true,
+						"senators": 4
 					},
 					{
 						"code": "62",
 						"name": "Pas-de-Calais",
-						"startable": true
+						"startable": true,
+						"senators": 7
 					},
 					{
 						"code": "80",
 						"name": "Somme",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					}
 				],
+				"councilSeats": 170,
 				"toponymy": {
 					"roots": [
 						"Wavringhem",
@@ -686,44 +719,53 @@
 					{
 						"code": "75",
 						"name": "Paris",
-						"startable": false
+						"startable": false,
+						"senators": 12
 					},
 					{
 						"code": "77",
 						"name": "Seine-et-Marne",
-						"startable": true
+						"startable": true,
+						"senators": 6
 					},
 					{
 						"code": "78",
 						"name": "Yvelines",
-						"startable": true
+						"startable": true,
+						"senators": 6
 					},
 					{
 						"code": "91",
 						"name": "Essonne",
-						"startable": true
+						"startable": true,
+						"senators": 5
 					},
 					{
 						"code": "92",
 						"name": "Hauts-de-Seine",
-						"startable": true
+						"startable": true,
+						"senators": 7
 					},
 					{
 						"code": "93",
 						"name": "Seine-Saint-Denis",
-						"startable": true
+						"startable": true,
+						"senators": 6
 					},
 					{
 						"code": "94",
 						"name": "Val-de-Marne",
-						"startable": true
+						"startable": true,
+						"senators": 6
 					},
 					{
 						"code": "95",
 						"name": "Val-d’Oise",
-						"startable": true
+						"startable": true,
+						"senators": 5
 					}
 				],
+				"councilSeats": 209,
 				"toponymy": {
 					"roots": [
 						"Montrelay-la-Garenne",
@@ -744,17 +786,20 @@
 					{
 						"code": "14",
 						"name": "Calvados",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "27",
 						"name": "Eure",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "50",
 						"name": "Manche",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "61",
@@ -764,9 +809,11 @@
 					{
 						"code": "76",
 						"name": "Seine-Maritime",
-						"startable": true
+						"startable": true,
+						"senators": 6
 					}
 				],
+				"councilSeats": 102,
 				"toponymy": {
 					"roots": [
 						"Bocqueville",
@@ -792,7 +839,8 @@
 					{
 						"code": "17",
 						"name": "Charente-Maritime",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "19",
@@ -812,7 +860,8 @@
 					{
 						"code": "33",
 						"name": "Gironde",
-						"startable": true
+						"startable": true,
+						"senators": 6
 					},
 					{
 						"code": "40",
@@ -827,7 +876,8 @@
 					{
 						"code": "64",
 						"name": "Pyrénées-Atlantiques",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "79",
@@ -837,7 +887,8 @@
 					{
 						"code": "86",
 						"name": "Vienne",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "87",
@@ -845,6 +896,7 @@
 						"startable": true
 					}
 				],
+				"councilSeats": 183,
 				"toponymy": {
 					"roots": [
 						"Sauvignac",
@@ -880,12 +932,14 @@
 					{
 						"code": "30",
 						"name": "Gard",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "31",
 						"name": "Haute-Garonne",
-						"startable": true
+						"startable": true,
+						"senators": 5
 					},
 					{
 						"code": "32",
@@ -895,7 +949,8 @@
 					{
 						"code": "34",
 						"name": "Hérault",
-						"startable": true
+						"startable": true,
+						"senators": 4
 					},
 					{
 						"code": "46",
@@ -915,7 +970,8 @@
 					{
 						"code": "66",
 						"name": "Pyrénées-Orientales",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "81",
@@ -928,6 +984,7 @@
 						"startable": true
 					}
 				],
+				"councilSeats": 158,
 				"toponymy": {
 					"roots": [
 						"Castelnaudel",
@@ -948,12 +1005,14 @@
 					{
 						"code": "44",
 						"name": "Loire-Atlantique",
-						"startable": true
+						"startable": true,
+						"senators": 5
 					},
 					{
 						"code": "49",
 						"name": "Maine-et-Loire",
-						"startable": true
+						"startable": true,
+						"senators": 4
 					},
 					{
 						"code": "53",
@@ -963,14 +1022,17 @@
 					{
 						"code": "72",
 						"name": "Sarthe",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					},
 					{
 						"code": "85",
 						"name": "Vendée",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					}
 				],
+				"councilSeats": 93,
 				"toponymy": {
 					"roots": [
 						"Brissonnet-le-Vieux",
@@ -1001,24 +1063,29 @@
 					{
 						"code": "06",
 						"name": "Alpes-Maritimes",
-						"startable": true
+						"startable": true,
+						"senators": 5
 					},
 					{
 						"code": "13",
 						"name": "Bouches-du-Rhône",
-						"startable": true
+						"startable": true,
+						"senators": 8
 					},
 					{
 						"code": "83",
 						"name": "Var",
-						"startable": true
+						"startable": true,
+						"senators": 4
 					},
 					{
 						"code": "84",
 						"name": "Vaucluse",
-						"startable": true
+						"startable": true,
+						"senators": 3
 					}
 				],
+				"councilSeats": 123,
 				"toponymy": {
 					"roots": [
 						"Roquebelle",
@@ -1040,6 +1107,7 @@
 				"description": "Tout le monde se connaît : l’implantation est rapide, les relais nationaux rares.",
 				"weight": 3,
 				"rivalStrengthModifier": -2,
+				"councilSeats": 15,
 				"effects": [
 					{
 						"op": "addSupport",
@@ -1054,6 +1122,7 @@
 				"description": "Assez grande pour une permanence, assez petite pour être reconnu au marché.",
 				"weight": 4,
 				"rivalStrengthModifier": 0,
+				"councilSeats": 27,
 				"effects": []
 			},
 			{
@@ -1062,6 +1131,7 @@
 				"description": "Plus de presse, de réseaux et d’ambitions concurrentes.",
 				"weight": 2,
 				"rivalStrengthModifier": 2,
+				"councilSeats": 35,
 				"effects": [
 					{
 						"op": "addResource",

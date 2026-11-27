@@ -505,7 +505,8 @@ describe('presse régionale (P3-18)', () => {
 		access: 'election',
 		status: 'active',
 		endTurn: null,
-		endReason: null
+		endReason: null,
+		side: null
 	};
 	const running = (electionId: string): Campaign => ({
 		campaignId: 'campaign.1',
@@ -519,7 +520,10 @@ describe('presse régionale (P3-18)', () => {
 		opponentId: null,
 		status: 'running',
 		playerPercent: null,
-		reason: null
+		reason: null,
+		role: 'head',
+		listRank: 1,
+		resultTurn: null
 	});
 
 	it('suit le joueur par son quotidien régional, jamais par celui d’une autre région', () => {

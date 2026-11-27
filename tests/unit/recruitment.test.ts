@@ -99,7 +99,8 @@ describe('attractivité de la carrière', () => {
 					access: 'nomination',
 					status: 'active',
 					endTurn: null,
-					endReason: null
+					endReason: null,
+					side: null
 				}
 			],
 			[],

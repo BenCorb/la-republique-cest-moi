@@ -13,7 +13,8 @@ import {
 	type Effect,
 	type GaugeId,
 	type IndicatorId,
-	type ResourceId
+	type ResourceId,
+	type RunoffDecision
 } from '../content/types.ts';
 import { nextInt, type RngState } from './random.ts';
 import type { CareerEffect } from './career.ts';
@@ -46,6 +47,8 @@ export type EffectRange =
 	| { readonly kind: 'mandate'; readonly change: 'grant' | 'end'; readonly mandate: string }
 	| { readonly kind: 'earlyElection'; readonly election: string; readonly delayTurns: number }
 	| { readonly kind: 'candidacy' }
+	/** Décision d'entre-deux-tours (P3-29). */
+	| { readonly kind: 'runoff'; readonly decision: RunoffDecision }
 	| {
 			readonly kind: 'staff';
 			readonly change:
@@ -122,7 +125,12 @@ export type ResolvedEffect =
 	/** Promesse du registre, appliquée par `applyPromiseEffect` (P3-04). */
 	| { readonly kind: 'promise'; readonly effect: PromiseEffect; readonly rng: RngState }
 	/** Proposition de réforme, appliquée par `applyReformEffect` (P3-05, actions seulement). */
-	| { readonly kind: 'reform'; readonly effect: ReformEffect; readonly rng: RngState };
+	| { readonly kind: 'reform'; readonly effect: ReformEffect; readonly rng: RngState }
+	| {
+			readonly kind: 'runoff';
+			readonly effect: Extract<Effect, { op: 'runoffDecision' }>;
+			readonly rng: RngState;
+	  };
 
 export type LifestyleEffect = Extract<Effect, { op: 'setLifestyle' }>;
 
@@ -190,6 +198,8 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'earlyElection', election: effect.election, delayTurns: effect.delayTurns };
 		case 'declareCandidacy':
 			return { kind: 'candidacy' };
+		case 'runoffDecision':
+			return { kind: 'runoff', decision: effect.decision };
 		case 'hireStaff':
 			return { kind: 'staff', change: 'hire' };
 		case 'courtCandidate':
@@ -265,6 +275,8 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 			return { kind: 'politics', effect, rng };
 		case 'proposeReform':
 			return { kind: 'reform', effect, rng };
+		case 'runoffDecision':
+			return { kind: 'runoff', effect, rng };
 		case 'addRelation':
 		case 'revealTraits':
 			return { kind: 'people', effect, rng };

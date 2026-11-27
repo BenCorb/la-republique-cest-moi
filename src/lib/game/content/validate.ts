@@ -577,6 +577,15 @@ function effectIssues(
 					});
 				}
 				break;
+			case 'runoffDecision':
+				if (roles === null) {
+					issues.push({
+						source,
+						path: at,
+						message: 'décision d’entre-deux-tours réservée aux événements'
+					});
+				}
+				break;
 			case 'addSupport':
 				if (!refs.groups.has(effect.group)) {
 					issues.push({
@@ -1370,7 +1379,7 @@ function crossCheckCareer(
 	});
 	elections.forEach((election, index) => {
 		const path = `elections[${index}]`;
-		const grants = [election.grants, ...(election.bonusGrant ? [election.bonusGrant.mandate] : [])];
+		const grants = [election.grants, ...(election.headGrant ? [election.headGrant] : [])];
 		for (const mandateId of [...grants, ...election.requiresAnyMandate]) {
 			if (!mandateIds.has(mandateId)) {
 				issues.push({ source, path, message: `mandat inconnu : ${mandateId}` });
@@ -1814,7 +1823,8 @@ export function validateContent(raw: RawContent): ContentValidation {
 				justiceCatalog.data.balance.entourageRevelationEvent,
 				...promisesCatalog.data.promises.map((promise) => promise.dilemmaEvent),
 				...Object.values(promisesCatalog.data.balance.recallEvents),
-				balance.data.entourage.renegotiation.event
+				balance.data.entourage.renegotiation.event,
+				balance.data.elections.contests.runoffEvent
 			])
 		)
 	);
@@ -2580,7 +2590,7 @@ function crossCheckPromises(
 			});
 		} else {
 			// Levier vérifié (P3-22) : seul un mandat issu de cette élection peut tenir la promesse.
-			const granted = new Set([election.grants, election.bonusGrant?.mandate ?? election.grants]);
+			const granted = new Set([election.grants, election.headGrant ?? election.grants]);
 			promise.lever.forEach((mandateId, leverIndex) => {
 				if (!granted.has(mandateId)) {
 					issues.push({

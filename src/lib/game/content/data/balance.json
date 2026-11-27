@@ -99,7 +99,21 @@
 		"voteVolatility": 3,
 		"momentum": 1,
 		"newGovernmentStability": 62,
-		"alertLeadTurns": 4
+		"alertLeadTurns": 4,
+		"contests": {
+			"minPartyPerMille": 50,
+			"maxPartyContestants": 5,
+			"partyStrengthPercent": 70,
+			"transferPercent": 80,
+			"mergeRetentionPercent": 90,
+			"allyDistance": 55,
+			"runoffSwing": 3,
+			"colistierPreparationPercent": 50,
+			"grandElectorBonus": 6,
+			"rankSpreadPercent": 40,
+			"outsiderRankPenalty": 20,
+			"runoffEvent": "election.runoff"
+		}
 	},
 	"supports": {
 		"reversionPercent": 6,

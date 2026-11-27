@@ -98,7 +98,8 @@ const mandate = (mandateId: string): MandateInstance => ({
 	access: 'election',
 	status: 'active',
 	endTurn: null,
-	endReason: null
+	endReason: null,
+	side: null
 });
 
 function campaign(overrides: Partial<Campaign> = {}): Campaign {
@@ -115,6 +116,9 @@ function campaign(overrides: Partial<Campaign> = {}): Campaign {
 		status: 'running',
 		playerPercent: null,
 		reason: null,
+		role: 'head',
+		listRank: 1,
+		resultTurn: null,
 		...overrides
 	};
 }
@@ -235,6 +239,7 @@ describe('croissance et attrition', () => {
 			mandates: [],
 			ballots: [],
 			people: [],
+			runoffs: [],
 			campaigns: [
 				{
 					campaignId: 'campaign.1',

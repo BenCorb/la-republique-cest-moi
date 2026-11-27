@@ -180,12 +180,16 @@ describe('faits marquants de la note', () => {
 			opponentId: null,
 			status,
 			playerPercent: percent,
-			reason: null
+			reason: null,
+			role: 'head',
+			listRank: 1,
+			resultTurn: null
 		};
 		const deadlines: DeadlinesRecord = {
 			mandates: [],
 			ballots: [],
 			people: [],
+			runoffs: [],
 			campaigns: [
 				{
 					campaignId: 'campaign.1',

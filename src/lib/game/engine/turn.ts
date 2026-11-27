@@ -361,7 +361,14 @@ function commitTurn(
 								...state.events.scheduled,
 								...justice!.scheduled,
 								...pledges.scheduled,
-								...team!.scheduled
+								...team!.scheduled,
+								// Second tour en attente (P3-29) : décision au début de T+1.
+								...(deadlines?.record.runoffs ?? []).map((campaignIdValue) => ({
+									eventId: content.balance.elections.contests.runoffEvent,
+									dueTurn: nextTurn,
+									sourceInstanceId: campaignIdValue,
+									actors: {}
+								}))
 							]
 						},
 						world: reforms.parts.world,

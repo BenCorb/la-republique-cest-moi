@@ -26,7 +26,8 @@ import {
 	type PromiseStatus,
 	type GaugeId,
 	type ResourceAmount,
-	type ResourceId
+	type ResourceId,
+	type RunoffDecision
 } from '../content/types.ts';
 import {
 	accelerationAlerts,
@@ -123,7 +124,8 @@ import {
 	type FamilyRecord,
 	type ActivistsRecord,
 	type StaffRecord,
-	type EventRecord
+	type EventRecord,
+	type CampaignStatus
 } from '../engine/index.ts';
 import {
 	GAUGE_NAMES,
@@ -1311,6 +1313,21 @@ const PARTY_REFERENCE_LABELS: Readonly<Record<string, string>> = {
 	target: 'parti choisi'
 };
 
+/** Issue d'une candidature après le second tour (P3-29). */
+const RUNOFF_OUTCOMES: Readonly<Record<Exclude<CampaignStatus, 'running'>, string>> = {
+	won: 'élu',
+	lost: 'battu',
+	withdrawn: 'retrait',
+	disqualified: 'candidature invalidée'
+};
+
+/** Décisions d'entre-deux-tours (P3-29). */
+const RUNOFF_LABELS: Readonly<Record<RunoffDecision, string>> = {
+	maintain: 'Maintien au second tour',
+	merge: 'Fusion des listes',
+	withdraw: 'Retrait au profit d’un autre'
+};
+
 function partyLabel(party: string | null, content: Content): string {
 	if (party === null) return 'votre parti';
 	return content.parties[party]?.name ?? PARTY_REFERENCE_LABELS[party] ?? party;
@@ -1344,6 +1361,8 @@ function describeEffect(range: EffectRange, content: Content): string {
 			return `Élection anticipée : ${content.elections[range.election]?.label ?? range.election}`;
 		case 'candidacy':
 			return 'Candidature déposée';
+		case 'runoff':
+			return RUNOFF_LABELS[range.decision];
 		case 'fact':
 			return `Fait inscrit au registre : ${content.offenses[range.offense]?.label ?? range.offense}`;
 		case 'lifestyle':
@@ -1446,6 +1465,8 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 					return change.invested
 						? 'candidature déposée avec l’investiture du parti'
 						: 'candidature déposée sans investiture';
+				case 'runoff':
+					return `second tour : ${RUNOFF_OUTCOMES[change.status]}${change.playerPercent === null ? '' : ` (${change.playerPercent} %)`}`;
 				case 'preparation':
 					return `préparation de campagne + ${change.delta}`;
 				case 'campaignAdvance':
@@ -3673,9 +3694,9 @@ function buildPromises(
 					const seats = election
 						? [
 								mandateName(election.grants, state, content),
-								...(election.bonusGrant
+								...(election.headGrant
 									? [
-											`${mandateName(election.bonusGrant.mandate, state, content)} à partir de ${election.bonusGrant.minPercent} %`
+											`${mandateName(election.headGrant, state, content)} pour la tête de la liste victorieuse`
 										]
 									: [])
 							].join(' ; ')

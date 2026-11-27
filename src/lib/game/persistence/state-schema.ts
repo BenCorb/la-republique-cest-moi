@@ -30,6 +30,34 @@ const gaugeChange = z.strictObject({ gauge, delta: int });
 const indicator = z.enum(INDICATOR_IDS);
 const mandateEndReason = z.enum(['term', 'resigned', 'government_change', 'replaced', 'removed']);
 const staffLeaveReason = z.enum(['resigned', 'dismissed', 'poached', 'retired', 'died']);
+/** Procès-verbal d'un scrutin (P3-29). */
+const ballotReport = z.strictObject({
+	place: text,
+	system: z.enum(['list', 'single', 'senate_list', 'senate_majority']),
+	seats: int,
+	turnout: int,
+	contestants: z.array(
+		z.strictObject({
+			contestantId: id,
+			partyId: id.nullable(),
+			leaderId: id.nullable(),
+			player: z.boolean(),
+			dissident: z.boolean(),
+			firstRound: int,
+			secondRound: int.nullable(),
+			seats: int,
+			status: z.enum(['won', 'lost', 'qualified', 'merged', 'withdrawn', 'eliminated']),
+			mergedInto: id.nullable()
+		})
+	),
+	stage: z.enum(['runoff_pending', 'final']),
+	secondRound: z.boolean(),
+	winnerId: id.nullable(),
+	playerContestantId: id.nullable(),
+	playerRank: int.nullable(),
+	playerElected: z.boolean().nullable()
+});
+
 const politicalChange = z.discriminatedUnion('kind', [
 	z.strictObject({ kind: z.literal('indicator'), indicator, delta: int }),
 	z.strictObject({ kind: z.literal('partyStrength'), partyId: id, delta: int }),
@@ -49,6 +77,13 @@ const politicalChange = z.discriminatedUnion('kind', [
 		campaignId: id,
 		ballotId: id,
 		invested: z.boolean()
+	}),
+	z.strictObject({
+		kind: z.literal('runoff'),
+		campaignId: id,
+		decision: z.enum(['maintain', 'merge', 'withdraw']),
+		status: z.enum(['won', 'lost', 'disqualified', 'withdrawn']),
+		playerPercent: int.nullable()
 	}),
 	z.strictObject({ kind: z.literal('preparation'), delta: int }),
 	z.strictObject({ kind: z.literal('campaignAdvance'), campaignId: id, cents: int }),
@@ -239,13 +274,14 @@ const turnEntry = z.strictObject({
 				z.strictObject({
 					campaignId: id,
 					opponentId: id.nullable(),
-					status: z.enum(['won', 'lost', 'disqualified']),
+					status: z.enum(['won', 'lost', 'disqualified', 'withdrawn']),
 					playerPercent: int.nullable(),
 					reason: text.nullable(),
 					advance: z.strictObject({ cents: int, repaid: z.boolean() }).nullable()
 				})
 			),
-			people: z.array(peopleChange)
+			people: z.array(peopleChange),
+			runoffs: z.array(id)
 		})
 		.nullable(),
 	exposure: int.nullable(),
@@ -442,7 +478,8 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 			access: z.enum(['election', 'nomination']),
 			status: z.enum(['active', 'ended']),
 			endTurn: int.nullable(),
-			endReason: mandateEndReason.nullable()
+			endReason: mandateEndReason.nullable(),
+			side: z.enum(['majority', 'opposition']).nullable()
 		})
 	),
 	ballots: z.array(
@@ -455,7 +492,8 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 			status: z.enum(['scheduled', 'held', 'cancelled']),
 			shares: z.array(z.strictObject({ partyId: id, percent: int })).nullable(),
 			winnerPartyId: id.nullable(),
-			cancelReason: text.nullable()
+			cancelReason: text.nullable(),
+			report: ballotReport.nullable()
 		})
 	),
 	campaigns: z.array(
@@ -469,9 +507,12 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 			preparation: int,
 			advanceCents: int,
 			opponentId: id.nullable(),
-			status: z.enum(['running', 'won', 'lost', 'disqualified']),
+			status: z.enum(['running', 'won', 'lost', 'disqualified', 'withdrawn']),
 			playerPercent: int.nullable(),
-			reason: text.nullable()
+			reason: text.nullable(),
+			role: z.enum(['head', 'colistier']),
+			listRank: int,
+			resultTurn: int.nullable()
 		})
 	),
 	staff: z.array(

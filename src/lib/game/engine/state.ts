@@ -220,6 +220,11 @@ export interface MandateInstance {
 	/** Trimestre de fin, `null` tant que le mandat est en cours. */
 	readonly endTurn: Turn | null;
 	readonly endReason: MandateEndReason | null;
+	/**
+	 * Siège d'assemblée (P3-29) : majorité (liste victorieuse) ou opposition ;
+	 * `null` hors scrutin de liste.
+	 */
+	readonly side: 'majority' | 'opposition' | null;
 }
 
 export interface BallotShare {
@@ -242,9 +247,77 @@ export interface Ballot {
 	readonly winnerPartyId: string | null;
 	/** Motif d'annulation (élection anticipée), sinon `null`. */
 	readonly cancelReason: string | null;
+	/**
+	 * Procès-verbal du scrutin sur le territoire du joueur (P3-29), établi au
+	 * vote, avec ou sans candidature du joueur ; `null` avant le vote.
+	 */
+	readonly report: BallotReport | null;
 }
 
-export type CampaignStatus = 'running' | 'won' | 'lost' | 'disqualified';
+/** Issue d'une candidature ou d'une liste au procès-verbal (P3-29). */
+export type ContestantStatus =
+	/** Élue au premier tour, ou arrivée en tête au second. */
+	| 'won'
+	/** Battue au dernier tour auquel elle a pris part. */
+	| 'lost'
+	/** Qualifiée, en attente du second tour (décision du joueur). */
+	| 'qualified'
+	/** Fusionnée dans une autre liste entre les deux tours. */
+	| 'merged'
+	/** Retirée entre les deux tours. */
+	| 'withdrawn'
+	/** Sous le seuil de maintien, éliminée au premier tour. */
+	| 'eliminated';
+
+/** Candidature ou liste d'un procès-verbal (P3-29). */
+export interface BallotContestant {
+	/** `c.N`, rang de création dans le procès-verbal. */
+	readonly contestantId: string;
+	/** Parti de l'étiquette, `null` pour une candidature sans étiquette. */
+	readonly partyId: string | null;
+	/** Tête de liste ou candidat nommé ; `null` pour le joueur ou une tête anonyme. */
+	readonly leaderId: string | null;
+	/** Conduite par le joueur. */
+	readonly player: boolean;
+	/** Candidature dissidente (joueur sans investiture de son parti). */
+	readonly dissident: boolean;
+	/** Part des suffrages exprimés au premier tour, en ‰ (total 1000). */
+	readonly firstRound: number;
+	/** Part au second tour, en ‰ (total 1000 entre les présents) ; `null` sinon. */
+	readonly secondRound: number | null;
+	/** Sièges obtenus (1 pour l'élu d'un scrutin uninominal). */
+	readonly seats: number;
+	readonly status: ContestantStatus;
+	/** Liste d'accueil d'une fusion, sinon `null`. */
+	readonly mergedInto: string | null;
+}
+
+/** Procès-verbal d'un scrutin (P3-29), commun à toutes les vues. */
+export interface BallotReport {
+	/** Lieu du scrutin : commune, région, circonscription ou département. */
+	readonly place: string;
+	/** Mode effectif : liste, uninominal, ou liste/majoritaire des sénatoriales. */
+	readonly system: 'list' | 'single' | 'senate_list' | 'senate_majority';
+	/** Sièges à pourvoir. */
+	readonly seats: number;
+	/** Participation, en % des inscrits. */
+	readonly turnout: number;
+	readonly contestants: readonly BallotContestant[];
+	/** `runoff_pending` : premier tour connu, second tour suspendu à la décision du joueur. */
+	readonly stage: 'runoff_pending' | 'final';
+	/** Un second tour a eu (ou aura) lieu. */
+	readonly secondRound: boolean;
+	/** Candidature ou liste victorieuse, `null` tant que le second tour attend. */
+	readonly winnerId: string | null;
+	/** Liste ou candidature où figure le joueur, `null` s'il n'est pas candidat. */
+	readonly playerContestantId: string | null;
+	/** Rang du joueur sur sa liste (1 : tête de liste ou candidat). */
+	readonly playerRank: number | null;
+	/** Le joueur est élu ; `null` s'il n'est pas candidat ou tant que le second tour attend. */
+	readonly playerElected: boolean | null;
+}
+
+export type CampaignStatus = 'running' | 'won' | 'lost' | 'disqualified' | 'withdrawn';
 
 /** Candidature du joueur à une échéance (instance `campaign.N`, P2-03). */
 export interface Campaign {
@@ -273,6 +346,12 @@ export interface Campaign {
 	readonly playerPercent: number | null;
 	/** Motif d'une disqualification, sinon `null`. */
 	readonly reason: string | null;
+	/** Tête de liste (ou candidat) ou colistier sur la liste d'un parti (P3-29). */
+	readonly role: 'head' | 'colistier';
+	/** Rang sur la liste, fixé à la déclaration (1 pour une tête de liste). */
+	readonly listRank: number;
+	/** Trimestre où le résultat est connu (fin du second tour), `null` en campagne. */
+	readonly resultTurn: Turn | null;
 }
 
 export type StaffLeaveReason = 'resigned' | 'dismissed' | 'poached' | 'retired' | 'died';
@@ -461,6 +540,14 @@ export type PoliticalChange =
 			readonly characterId: string;
 			readonly postId: string;
 			readonly reason: StaffLeaveReason;
+	  }
+	/** Second tour tranché après la décision du joueur (P3-29). */
+	| {
+			readonly kind: 'runoff';
+			readonly campaignId: string;
+			readonly decision: 'maintain' | 'merge' | 'withdraw';
+			readonly status: Exclude<CampaignStatus, 'running'>;
+			readonly playerPercent: number | null;
 	  }
 	| {
 			readonly kind: 'earlyElection';
@@ -683,6 +770,8 @@ export interface DeadlinesRecord {
 		/** Avance personnelle de la campagne et sort (P3-23), `null` sans avance. */
 		readonly advance: { readonly cents: number; readonly repaid: boolean } | null;
 	}[];
+	/** Campagnes du joueur qualifiées pour un second tour qui attend sa décision (P3-29). */
+	readonly runoffs: readonly string[];
 }
 
 export interface LeaderChange {

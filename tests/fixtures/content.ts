@@ -4,10 +4,14 @@
  */
 import { validateContent } from '../../src/lib/game/content/validate.ts';
 import type { Content, EventsBalance } from '../../src/lib/game/content/types.ts';
-import type {
-	HistoryEntry,
-	JournalEntry,
-	TransitionSuccess
+import {
+	chooseEventCommand,
+	describePendingEvent,
+	transition,
+	type GameState,
+	type HistoryEntry,
+	type JournalEntry,
+	type TransitionSuccess
 } from '../../src/lib/game/engine/index.ts';
 
 /**
@@ -55,7 +59,26 @@ export const fixtureBalance = {
 		maxMemories: 3
 	},
 	// Scrutins sans aléa par défaut : le parti le plus fort l'emporte.
-	elections: { voteVolatility: 0, momentum: 1, newGovernmentStability: 60, alertLeadTurns: 2 },
+	elections: {
+		voteVolatility: 0,
+		momentum: 1,
+		newGovernmentStability: 60,
+		alertLeadTurns: 2,
+		contests: {
+			minPartyPerMille: 50,
+			maxPartyContestants: 5,
+			partyStrengthPercent: 70,
+			transferPercent: 80,
+			mergeRetentionPercent: 90,
+			allyDistance: 55,
+			runoffSwing: 0,
+			colistierPreparationPercent: 50,
+			grandElectorBonus: 6,
+			rankSpreadPercent: 40,
+			outsiderRankPenalty: 20,
+			runoffEvent: 'test.runoff'
+		}
+	},
 	// Soutiens immobiles par défaut : les tests de soutiens activent le retour à la référence.
 	supports: { reversionPercent: 0, partyAlignmentMax: 10, influencePerPoint: 10, notorietyMax: 20 },
 	// Scrutin du joueur sans aléa par défaut ; préparation passive et stress de campagne nuls.
@@ -274,12 +297,14 @@ export const fixtureProfiles = {
 					{ code: '75', name: 'Capitale de test', startable: false },
 					{ code: '14', name: 'Département de test', startable: true }
 				],
+				councilSeats: 50,
 				toponymy: { roots: ['Testville', 'Montessai', 'Brouillon'], rivers: ['Essai'], pays: [] }
 			},
 			{
 				id: 'region.other',
 				name: 'Autre région',
 				departments: [{ code: '29', name: 'Autre département', startable: true }],
+				councilSeats: 40,
 				toponymy: { roots: ['Ailleurs', 'Autrefois', 'Lointain'], rivers: ['Rive'], pays: ['Pays'] }
 			}
 		],
@@ -290,6 +315,7 @@ export const fixtureProfiles = {
 				description: 'Taille de test.',
 				weight: 1,
 				rivalStrengthModifier: 0,
+				councilSeats: 15,
 				effects: []
 			}
 		],
@@ -456,10 +482,17 @@ export const fixtureCareer = {
 			decidesGovernment: false,
 			minAge: 18,
 			grants: 'mandate.councillor',
-			bonusGrant: { mandate: 'mandate.mayor', minPercent: 60 },
+			headGrant: 'mandate.mayor',
 			requiresAnyMandate: [],
 			rivalStrength: 30,
-			mobilizationNeed: 0
+			mobilizationNeed: 0,
+			system: 'list',
+			turnout: { min: 60, max: 60 },
+			maintainPerMille: 100,
+			mergePerMille: 50,
+			seatMinPerMille: 50,
+			bonusSeatsPercent: 50,
+			firstRoundRegisteredPerMille: 0
 		},
 		{
 			id: 'election.national',
@@ -473,7 +506,14 @@ export const fixtureCareer = {
 			grants: 'mandate.deputy',
 			requiresAnyMandate: ['mandate.councillor'],
 			rivalStrength: 40,
-			mobilizationNeed: 0
+			mobilizationNeed: 0,
+			system: 'single',
+			turnout: { min: 60, max: 60 },
+			maintainPerMille: 125,
+			mergePerMille: 0,
+			seatMinPerMille: 0,
+			bonusSeatsPercent: 0,
+			firstRoundRegisteredPerMille: 250
 		}
 	],
 	mandates: [
@@ -671,6 +711,42 @@ export const fixtureCast = {
 export const fixtureEvents = {
 	'events/test.json': {
 		events: [
+			{
+				id: 'test.runoff',
+				category: 'campaign',
+				title: 'Entre les deux tours',
+				text: 'Le second tour approche.',
+				blocking: true,
+				trigger: 'followUp',
+				weight: 0,
+				priority: 50,
+				cooldownTurns: 0,
+				unique: false,
+				actors: [],
+				choices: [
+					{
+						id: 'maintain',
+						label: 'Se maintenir',
+						hints: [],
+						costs: [],
+						effects: [{ op: 'runoffDecision', decision: 'maintain' }]
+					},
+					{
+						id: 'merge',
+						label: 'Fusionner',
+						hints: [],
+						costs: [],
+						effects: [{ op: 'runoffDecision', decision: 'merge' }]
+					},
+					{
+						id: 'withdraw',
+						label: 'Se désister',
+						hints: [],
+						costs: [],
+						effects: [{ op: 'runoffDecision', decision: 'withdraw' }]
+					}
+				]
+			},
 			{
 				id: 'test.raise_request',
 				category: 'entourage',
@@ -1763,4 +1839,29 @@ export function quarterLog(result: TransitionSuccess): HistoryEntry {
 /** Trimestres résolus d'un journal. */
 export function quarters(history: readonly JournalEntry[]): HistoryEntry[] {
 	return history.filter((entry): entry is HistoryEntry => entry.type === 'turn.resolved');
+}
+
+/**
+ * Tranche les décisions en attente (P3-29) : au second tour, le choix demandé
+ * s'il est possible, sinon le premier choix disponible ; ailleurs, le premier
+ * choix disponible.
+ */
+export function settleDecisions(
+	state: GameState,
+	content: Content,
+	runoff: 'maintain' | 'merge' | 'withdraw' = 'maintain'
+): GameState {
+	let current = state;
+	while (current.phase === 'decision') {
+		const view = describePendingEvent(current, content);
+		if (!view) break;
+		const choice =
+			view.choices.find((entry) => entry.id === runoff && entry.available) ??
+			view.choices.find((entry) => entry.available);
+		if (!choice) throw new Error(`Aucun choix disponible : ${view.eventId}`);
+		const result = transition(current, chooseEventCommand(view.instanceId, choice.id), content);
+		if (!result.ok) throw new Error(result.error.message);
+		current = result.state;
+	}
+	return current;
 }
