@@ -80,6 +80,8 @@ export function readStat(context: ConditionContext, stat: StatId): number {
 			return context.campaigns.filter((campaign) => campaign.status === 'running').length;
 		case 'player.exposure':
 			return context.player.exposure;
+		case 'player.activists':
+			return context.player.activists;
 		case 'player.facts':
 			return context.facts.length;
 		case 'player.openCases':

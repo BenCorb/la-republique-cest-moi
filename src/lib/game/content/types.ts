@@ -149,6 +149,8 @@ export const STAT_IDS = [
 	'player.children',
 	/** Exposition médiatique, de 0 à 100 (P3-01). */
 	'player.exposure',
+	/** Base militante active, en nombre de personnes (P3-19). */
+	'player.activists',
 	/** Nombre de faits du registre impliquant le joueur, comme auteur ou complice (P3-01). */
 	'player.facts',
 	/** Dossiers judiciaires en cours visant le joueur (P3-01). */
@@ -794,6 +796,11 @@ export interface ActionDefinition {
 	readonly fromEra?: string | undefined;
 	readonly effects: readonly Effect[];
 	/**
+	 * Action de terrain (P3-19) : effet unitaire ajouté une fois par cran du
+	 * palier militant atteint (bonus annoncé dans la prévision, aucun tirage).
+	 */
+	readonly fieldwork?: FieldworkBonus | undefined;
+	/**
 	 * Cible à choisir dans le plan : `party` (identifiant de parti), `mandate`
 	 * (exemplaire de mandat en cours) ou `ballot` (échéance électorale).
 	 */
@@ -850,6 +857,11 @@ export interface UpgradeDefinition {
 	 * revenu proportionnel à cette valeur et se revend au lieu d'être abandonné.
 	 */
 	readonly asset?: AssetDefinition | undefined;
+	/**
+	 * Accueil des militants (P3-19) : capacité ajoutée par exemplaire actif et
+	 * départs trimestriels évités, en points de pourcentage.
+	 */
+	readonly activists?: { readonly capacity: number; readonly retentionPercent: number } | undefined;
 }
 
 /** Règles d'un actif patrimonial ; hypothèses provisoires d'équilibrage. */
@@ -1009,6 +1021,69 @@ export interface Balance {
 	readonly campaigns: CampaignsBalance;
 	readonly entourage: EntourageBalance;
 	readonly family: FamilyBalance;
+	readonly activists: ActivistsBalance;
+}
+
+/** Bonus de terrain d'une action (P3-19) : ressource ou préparation de campagne. */
+export type FieldworkBonus =
+	| { readonly op: 'addResource'; readonly resource: ResourceId; readonly value: number }
+	| { readonly op: 'prepareCampaign'; readonly value: number };
+
+/** Palier de la base militante (P3-19), du noyau à l'organisation nationale. */
+export interface ActivistTierDefinition {
+	readonly id: string;
+	readonly label: string;
+	/** Effectif minimal du palier. */
+	readonly min: number;
+	/** Nombre de fois que le bonus de terrain d'une action s'ajoute. */
+	readonly fieldMultiplier: number;
+	/** Frais logistiques (locaux, impressions, déplacements), en centimes par trimestre. */
+	readonly upkeepCents: number;
+}
+
+/**
+ * Base militante organique (P3-19, PT-P3-09-014 ; hypothèses de tuning). Chaque
+ * trimestre, la notoriété fait connaître le joueur, le soutien militant décide
+ * qui reste ; la capacité d'accueil plafonne la croissance, l'attrition et le
+ * mécontentement font partir.
+ */
+export interface ActivistsBalance {
+	/** Effectif au départ (amis, collègues, premiers sympathisants). */
+	readonly start: number;
+	/** Capacité d'accueil sans local ni parti. */
+	readonly baseCapacity: number;
+	/** Capacité ajoutée par l'adhésion à un parti (relais de la section). */
+	readonly partyCapacity: number;
+	/** Capacité ajoutée par point de rang de chaque mandat en cours. */
+	readonly mandateCapacityPerRank: number;
+	/** Audience : √influence × ce facteur… */
+	readonly reachInfluenceFactor: number;
+	/** … plus l'exposition divisée par cette valeur… */
+	readonly reachExposureDivisor: number;
+	/** … plus ce bonus par campagne en cours. */
+	readonly campaignReach: number;
+	/** Soutien militant en deçà duquel personne ne s'engage. */
+	readonly attractionThreshold: number;
+	/** Taux d'engagement de l'audience par point de soutien au-delà du seuil, en %. */
+	readonly attractionPercentPerPoint: number;
+	/** Départs naturels par trimestre, en % de l'effectif. */
+	readonly baseAttritionPercent: number;
+	/** Soutien militant en deçà duquel la base se démobilise davantage. */
+	readonly discontentThreshold: number;
+	/** Départs supplémentaires : un point de % par tranche de cette taille sous le seuil. */
+	readonly discontentDivisor: number;
+	/** Départs supplémentaires au-delà de la capacité d'accueil, en %. */
+	readonly overCapacityAttritionPercent: number;
+	/** Recrues après un scrutin disputé : tant de personnes par point de % des voix, en dixièmes. */
+	readonly recruitsPerVoteTenths: number;
+	/** Cotisations reversées par militant et par trimestre, en centimes (budget politique). */
+	readonly duesCents: number;
+	/** Part du besoin de mobilisation couverte par la machine du parti en cas d'investiture, en %. */
+	readonly partyMachinePercent: number;
+	/** Pénalité de score maximale d'une campagne sans aucune mobilisation. */
+	readonly mobilizationWeight: number;
+	/** Paliers, par effectif minimal croissant (le premier commence à 0). */
+	readonly tiers: readonly ActivistTierDefinition[];
 }
 
 /** Paramètres des scrutins et du gouvernement (hypothèses de tuning, P2-02). */
@@ -1191,6 +1266,11 @@ export interface ElectionDefinition {
 	 * versé après le scrutin à partir de `refundMinPercent` des voix ; absent : aucun.
 	 */
 	readonly campaignRefundCents?: number | undefined;
+	/**
+	 * Besoin de mobilisation (P3-19) : militants nécessaires pour couvrir le
+	 * territoire du scrutin ; en deçà, le score baisse (jamais l'éligibilité).
+	 */
+	readonly mobilizationNeed: number;
 }
 
 /**

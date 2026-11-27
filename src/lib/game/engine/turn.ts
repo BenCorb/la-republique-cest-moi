@@ -42,6 +42,7 @@ import { comfortStress, revalueAssets } from './wealth.ts';
 import { resolvePromises } from './promises.ts';
 import { resolvePress } from './press.ts';
 import { effectiveContent, resolveReforms } from './reforms.ts';
+import { resolveActivists } from './activists.ts';
 import { resolveStaffFrontier, resolveStaffProduction } from './staff.ts';
 import { resolveFamily } from './family.ts';
 import type {
@@ -319,14 +320,30 @@ function commitTurn(
 				)
 			: null;
 
+	// 5 septies. Base militante : arrivées, recrues d'un scrutin, départs, cotisations et frais.
+	const activists = reforms
+		? resolveActivists(
+				reforms.parts.player,
+				reforms.parts.resources,
+				{
+					turn: resolvedTurn,
+					upgrades: wealth!.upgrades,
+					mandates: reforms.parts.career.mandates,
+					campaigns: reforms.parts.career.campaigns,
+					deadlines: deadlines?.record ?? null
+				},
+				content
+			)
+		: null;
+
 	// 6. Passage à T+1, puis suites dues et tirage des événements (sauf fin de carrière).
 	const frontier =
-		settled && pledges && reforms
+		settled && pledges && reforms && activists
 			? resolveEventFrontier(
 					{
 						turn: nextTurn,
-						player: reforms.parts.player,
-						resources: reforms.parts.resources,
+						player: activists.player,
+						resources: activists.resources,
 						upgrades: wealth!.upgrades,
 						rng: reforms.parts.rng,
 						nextInstanceNumber: execution.nextInstanceNumber,
@@ -376,13 +393,15 @@ function commitTurn(
 		promises: pledges?.record ?? null,
 		press: press?.record ?? null,
 		institutions: reforms?.record ?? null,
+		activists: activists?.record ?? null,
 		events: frontier?.records ?? [],
 		snapshot: {
 			...finalResources,
 			popularity: finalPlayer.popularity,
 			health: finalPlayer.health,
 			stress: finalPlayer.stress,
-			exposure: finalPlayer.exposure
+			exposure: finalPlayer.exposure,
+			activists: finalPlayer.activists
 		}
 	};
 

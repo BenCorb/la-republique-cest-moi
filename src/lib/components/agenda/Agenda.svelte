@@ -87,6 +87,11 @@
 			{#if open}
 				<p class="mt-1 text-sm text-muted">{action.description}</p>
 			{/if}
+			{#if action.fieldBonus}
+				<p class="mt-0.5 text-xs text-primary" data-testid="field-bonus-{action.id}">
+					{action.fieldBonus}
+				</p>
+			{/if}
 			{#if action.reason}
 				<p class="mt-0.5 flex items-center gap-1 text-xs text-warning" id="reason-{action.id}">
 					<Lock class="size-3 shrink-0" aria-hidden="true" />

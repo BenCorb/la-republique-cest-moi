@@ -77,7 +77,7 @@ Les informations cachées restent cachées dans les données de vue : aucune jau
 | Création | Profil fixe de 25 ans ; puis origine, terrain d’engagement (remplace la profession en V1), territoire, famille et aperçu du bagage ; âge toujours fixe | Prototype puis alpha/V1 |
 | Tableau de bord | Situation, flux par trimestre, santé/stress, popularité, bilan du dernier tour | Prototype |
 | Agenda | Catalogue d’actions, coûts, plan modifiable, prévisions et validation | Prototype |
-| Organisation | Producteurs, achats, charges, date d’activation, missions | Prototype puis alpha |
+| Organisation | Base militante (effectif, palier, capacité d’accueil, effets du palier, P3-19), producteurs, achats, charges, date d’activation, missions | Prototype puis alpha |
 | Carrière | Mandats, affiliations, échéances, candidatures, campagne et promesses | Alpha puis V1 |
 | Entourage | Postes, candidats, profils connus, relations, conseils, famille | Alpha |
 | Patrimoine | Argent personnel, actifs, confort, revenus et charges | V1 |

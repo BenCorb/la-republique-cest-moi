@@ -39,7 +39,8 @@
 					"group": "support.working_class",
 					"value": 1
 				}
-			]
+			],
+			"fieldwork": { "op": "addResource", "resource": "influence", "value": 1 }
 		},
 		{
 			"id": "network.meet_officials",
@@ -148,7 +149,8 @@
 					"value": 1
 				},
 				{ "op": "addStat", "stat": "player.exposure", "value": 3 }
-			]
+			],
+			"fieldwork": { "op": "addResource", "resource": "influence", "value": 1 }
 		},
 		{
 			"id": "organization.fundraising",
@@ -181,7 +183,8 @@
 					"group": "support.business",
 					"value": 1
 				}
-			]
+			],
+			"fieldwork": { "op": "addResource", "resource": "politicalBudgetCents", "value": 5000 }
 		},
 		{
 			"id": "organization.gala",
@@ -569,7 +572,8 @@
 					"group": "support.working_class",
 					"value": 1
 				}
-			]
+			],
+			"fieldwork": { "op": "prepareCampaign", "value": 1 }
 		},
 		{
 			"id": "campaign.rally",

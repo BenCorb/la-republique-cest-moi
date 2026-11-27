@@ -36,7 +36,8 @@ const context: ConditionContext = {
 			parentIds: [],
 			siblingIds: [],
 			formerPartnerIds: []
-		}
+		},
+		activists: 0
 	},
 	world: createGame({ seed: 'conditions' }, fixtureContent).world,
 	mandates: [],

@@ -183,7 +183,6 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 	// Organisation : bénévoles et fichier de donateurs, puis actions de terrain.
 	const organisateur = [
 		buy('organization.donor_file'),
-		buy('organization.volunteer'),
 		act('organization.fundraising'),
 		act('network.meet_officials'),
 		act('personal.freelance')
@@ -191,7 +190,7 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 
 	it('fait tourner une organisation qui produit à partir du trimestre suivant', () => {
 		const state = career('organisateur', organisateur, 40);
-		expect(state.upgrades.length).toBeGreaterThan(1);
+		expect(state.upgrades.length).toBeGreaterThan(0);
 		expect(state.upgrades.every((upgrade) => upgrade.acquiredTurn < state.turn)).toBe(true);
 		const firstPurchaseTurn = Math.min(...state.upgrades.map((upgrade) => upgrade.acquiredTurn));
 		const productive = quarters(state.history).filter((entry) =>
@@ -252,7 +251,6 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 				HIRE,
 				buy('communication.ai_assistant'),
 				buy('organization.donor_file'),
-				buy('organization.volunteer'),
 				buy('organization.local_office'),
 				act('organization.fundraising'),
 				act('network.meet_officials'),

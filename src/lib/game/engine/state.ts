@@ -77,6 +77,8 @@ export interface PlayerState {
 	/** Territoire d'origine : région choisie, département et commune tirés (P3-16). */
 	readonly territory: TerritoryState;
 	readonly family: FamilyState;
+	/** Base militante active, en nombre de personnes (P3-19). */
+	readonly activists: number;
 }
 
 /** Liens familiaux du joueur : identifiants de personnages (P2-08). */
@@ -778,6 +780,8 @@ export interface HistoryEntry {
 	readonly press: PressRecord | null;
 	/** Réformes institutionnelles, `null` si la carrière s'est terminée avant. */
 	readonly institutions: InstitutionsRecord | null;
+	/** Base militante (arrivées, départs, cotisations), `null` si la carrière s'est terminée avant. */
+	readonly activists: ActivistsRecord | null;
 	/** Événements créés (ou suites annulées) au passage à T+1. */
 	readonly events: readonly EventRecord[];
 	/** Situation à l'issue du trimestre, pour les tendances du tableau de bord (P3-08). */
@@ -790,6 +794,27 @@ export interface QuarterSnapshot extends Resources {
 	readonly health: number;
 	readonly stress: number;
 	readonly exposure: number;
+	/** Base militante (P3-19). */
+	readonly activists: number;
+}
+
+/** Évolution de la base militante à la frontière (P3-19). */
+export interface ActivistsRecord {
+	/** Sympathisants qui s'engagent (notoriété × soutien militant, dans la capacité d'accueil). */
+	readonly arrivals: number;
+	/** Recrues après un scrutin disputé. */
+	readonly recruits: number;
+	/** Départs (usure, mécontentement, manque de place). */
+	readonly departures: number;
+	/** Effectif après la frontière. */
+	readonly total: number;
+	readonly capacity: number;
+	/** Palier avant et après (identifiants du catalogue). */
+	readonly tierBefore: string;
+	readonly tierAfter: string;
+	/** Cotisations reçues et frais logistiques payés (budget politique), en centimes. */
+	readonly duesCents: number;
+	readonly upkeepCents: number;
 }
 
 /** Choix appliqué pour un événement bloquant, exactement une fois. */
@@ -896,6 +921,7 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		health: content.balance.wellbeing.startingHealth,
 		stress: content.balance.wellbeing.startingStress,
 		exposure: content.justice.baseExposure,
+		activists: content.balance.activists.start,
 		defense: 0,
 		ineligibleUntil: null,
 		lifestyle: content.wealth.defaultLifestyle,

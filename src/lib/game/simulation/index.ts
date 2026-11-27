@@ -24,6 +24,7 @@ import {
 	describePendingEvent,
 	hashSeed,
 	followsPlayer,
+	activistTier,
 	interviewIssue,
 	distinctionsOf,
 	divertedFunds,
@@ -42,7 +43,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 18;
+export const SIMULATION_REPORT_VERSION = 19;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -139,6 +140,10 @@ export interface SimulationRun {
 	readonly favorableArticles: number;
 	readonly interviews: number;
 	readonly mediaOwned: number;
+	/** Base militante en fin de carrière et au plus haut, palier le plus haut atteint (P3-19). */
+	readonly activistsFinal: number;
+	readonly activistsPeak: number;
+	readonly activistTierPeak: string;
 	/** Réformes proposées et adoptées par le joueur, réformes du gouvernement seul (P3-05). */
 	readonly reformsProposed: number;
 	readonly reformsAdopted: number;
@@ -558,7 +563,9 @@ const STRATEGY_WISHES: Readonly<
 		action('network.meet_officials'),
 		action('personal.donate'),
 		action('activism.leaflets'),
-		action('activism.leaflets')
+		action('activism.leaflets'),
+		purchase('organization.local_office'),
+		purchase('organization.federation')
 	],
 	// Le patrimonial investit (P3-02), puis s'offre du confort quand il en a les moyens.
 	patrimonial: [
@@ -572,7 +579,6 @@ const STRATEGY_WISHES: Readonly<
 		purchase('organization.donor_file'),
 		purchase('organization.local_office'),
 		purchase('communication.press_officer'),
-		purchase('organization.volunteer'),
 		action('personal.freelance'),
 		action('organization.gala'),
 		action('organization.fundraising'),
@@ -581,7 +587,7 @@ const STRATEGY_WISHES: Readonly<
 	mixed: [
 		action('personal.rest'),
 		purchase('organization.donor_file'),
-		purchase('organization.volunteer'),
+		purchase('organization.local_office'),
 		action('network.meet_officials'),
 		action('organization.gala'),
 		action('organization.fundraising'),
@@ -616,6 +622,22 @@ function pressCounts(
 		favorableArticles: articles.filter((article) => article.tone === 'favorable').length,
 		interviews: articles.filter((article) => article.topic === 'interview').length,
 		mediaOwned: ownedMedia(state.upgrades, content).size
+	};
+}
+
+function activistCounts(
+	state: GameState,
+	content: Content
+): Pick<SimulationRun, 'activistsFinal' | 'activistsPeak' | 'activistTierPeak'> {
+	const peak = state.history.reduce(
+		(best, entry) =>
+			entry.type === 'turn.resolved' ? Math.max(best, entry.snapshot.activists) : best,
+		state.player.activists
+	);
+	return {
+		activistsFinal: state.player.activists,
+		activistsPeak: peak,
+		activistTierPeak: activistTier(peak, content).id
 	};
 }
 
@@ -872,6 +894,7 @@ function finalizeRun(
 		promisesPartial: state.promises.filter((pledge) => pledge.status === 'partial').length,
 		promisesAbandoned: state.promises.filter((pledge) => pledge.status === 'abandoned').length,
 		...pressCounts(state, content),
+		...activistCounts(state, content),
 		reformsProposed: state.institutions.reforms.filter((reform) => reform.origin === 'player')
 			.length,
 		reformsAdopted: state.institutions.reforms.filter(
@@ -1356,6 +1379,9 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'favorableArticles',
 		'interviews',
 		'mediaOwned',
+		'activistsFinal',
+		'activistsPeak',
+		'activistTierPeak',
 		'reformsProposed',
 		'reformsAdopted',
 		'governmentReforms',
@@ -1429,6 +1455,9 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.favorableArticles,
 		run.interviews,
 		run.mediaOwned,
+		run.activistsFinal,
+		run.activistsPeak,
+		run.activistTierPeak,
 		run.reformsProposed,
 		run.reformsAdopted,
 		run.governmentReforms,

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Minus, Plus } from '@lucide/svelte';
+	import { Megaphone, Minus, Plus } from '@lucide/svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 
 	/**
@@ -26,6 +26,61 @@
 {#if view}
 	<div class="grid gap-5">
 		<div class="flex flex-col gap-6">
+			<!-- Base militante (P3-19) : effectif organique, ni acheté ni affecté tâche par tâche. -->
+			<section
+				class="card flex flex-col gap-3"
+				aria-labelledby="activists-title"
+				data-testid="activists"
+			>
+				<div class="flex flex-wrap items-baseline justify-between gap-2">
+					<h2 id="activists-title" class="section-title flex items-center gap-2">
+						<Megaphone class="size-4" aria-hidden="true" /> Base militante
+					</h2>
+					<span
+						class="rounded border border-primary px-2 py-0.5 text-xs font-semibold text-primary"
+					>
+						{view.activists.tierLabel}
+					</span>
+				</div>
+				<p class="flex flex-wrap items-baseline gap-x-3">
+					<span class="font-display text-3xl font-bold tabular-nums" data-testid="activists-count">
+						{view.activists.countLabel}
+					</span>
+					<span class="text-sm text-muted">
+						sur {view.activists.capacity} places d’accueil
+						{#if view.activists.next}
+							· encore {view.activists.next.missing} pour « {view.activists.next.label} »
+						{/if}
+					</span>
+				</p>
+				<div
+					class="h-2 overflow-hidden rounded-full bg-sidebar"
+					role="meter"
+					aria-label="Remplissage de la capacité d’accueil"
+					aria-valuemin="0"
+					aria-valuemax="100"
+					aria-valuenow={view.activists.fillPercent}
+				>
+					<div
+						class="h-full rounded-full bg-primary"
+						style:width="{view.activists.fillPercent}%"
+					></div>
+				</div>
+				<p class="text-xs text-muted">Capacité : {view.activists.capacityParts.join(' · ')}</p>
+				<ul class="flex flex-col gap-0.5 text-sm">
+					{#each view.activists.perks as perk (perk)}
+						<li>{perk}</li>
+					{/each}
+				</ul>
+				{#if view.activists.lastMove}
+					<p class="text-xs text-muted">{view.activists.lastMove}</p>
+				{/if}
+				<p class="text-xs text-muted">
+					La notoriété fait connaître votre nom ; le soutien des militants décide qui reste. Un
+					local accueille et retient, les campagnes attirent, les reniements font partir.
+				</p>
+			</section>
+
 			<section aria-labelledby="producers-title">
 				<h2 id="producers-title" class="section-title">Votre organisation</h2>
 				{#if view.organisation.length === 0}

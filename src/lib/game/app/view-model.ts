@@ -69,6 +69,10 @@ import {
 	type CareerParts,
 	type QuarterSnapshot,
 	followsPlayer,
+	activistCapacity,
+	activistTier,
+	fieldworkEffects,
+	nextActivistTier,
 	ownedMedia,
 	type StaffLeaveReason,
 	activeMandates,
@@ -88,6 +92,7 @@ import {
 	type WorldRecord,
 	type PlanPreview,
 	type FamilyRecord,
+	type ActivistsRecord,
 	type StaffRecord
 } from '../engine/index.ts';
 import {
@@ -191,8 +196,10 @@ export interface CatalogItemView {
 	readonly effects: readonly string[];
 	/** Coûts en pastilles (P3-26), dans l'ordre de `costs`. */
 	readonly costChips: readonly ChipView[];
-	/** Effets en pastilles (P3-26), dans l'ordre de `effects`. */
+	/** Effets en pastilles (P3-26), dans l'ordre de `effects`, puis le bonus de terrain. */
 	readonly effectChips: readonly ChipView[];
+	/** Bonus de la base militante pour une action de terrain (P3-19), en clair. */
+	readonly fieldBonus?: string | null;
 	/** Thème de l'agenda (catégorie du catalogue), pour l'icône et la couleur. */
 	readonly category: string | null;
 	/** Occurrences déjà dans le plan. */
@@ -981,6 +988,8 @@ export interface PlayerView {
 	readonly wealth: WealthView;
 	readonly producers: readonly ProducerView[];
 	readonly organisation: readonly OrganisationGroupView[];
+	/** Base militante (P3-19). */
+	readonly activists: ActivistsView;
 	readonly decision: DecisionView | null;
 	readonly journal: readonly JournalTurnView[];
 	/** Fil de presse : articles des derniers trimestres, du plus récent au plus ancien. */
@@ -1380,6 +1389,34 @@ function peopleText(changes: readonly PeopleChange[], state: GameState, content:
 		.join(', ');
 }
 
+/** Pluriel simple d'un effectif (« 1 militant », « 12 militants »). */
+function activistsWord(count: number): string {
+	return `${count} militant${count > 1 ? 's' : ''}`;
+}
+
+/** Ligne de journal de la base militante (P3-19), absente si rien n'a bougé. */
+function activistsJournalLine(
+	record: ActivistsRecord | null,
+	content: Content
+): JournalLine | null {
+	if (!record) return null;
+	const moves = [
+		record.arrivals > 0 ? `${record.arrivals} arrivée${record.arrivals > 1 ? 's' : ''}` : '',
+		record.recruits > 0
+			? `${record.recruits} recrue${record.recruits > 1 ? 's' : ''} de campagne`
+			: '',
+		record.departures > 0 ? `${record.departures} départ${record.departures > 1 ? 's' : ''}` : '',
+		record.duesCents > 0 ? `cotisations ${formatMoney(record.duesCents)}` : '',
+		record.upkeepCents > 0 ? `frais ${formatMoney(record.upkeepCents)}` : ''
+	].filter(Boolean);
+	if (moves.length === 0) return null;
+	const tier = activistTier(record.total, content).label;
+	return {
+		kind: 'people',
+		text: `Base militante — ${moves.join(', ')} : ${activistsWord(record.total)} (${tier})`
+	};
+}
+
 function worldLines(record: WorldRecord | null, state: GameState, content: Content): JournalLine[] {
 	if (!record) return [];
 	return record.leaderChanges.map((change) => {
@@ -1684,6 +1721,8 @@ function journalOfQuarter(entry: HistoryEntry, state: GameState, content: Conten
 			text: `Indemnités et moyens des mandats — ${changesText(entry.mandates.changes)}`
 		});
 	}
+	const activistsLine = activistsJournalLine(entry.activists, content);
+	if (activistsLine) lines.push(activistsLine);
 	for (const event of entry.events) {
 		const title = eventTitle(event.eventId, event.actors, state, content);
 		if (event.outcome === 'queued')
@@ -2032,6 +2071,25 @@ function noteHighlights(
 			record: null
 		});
 	}
+	const base = entry.activists;
+	if (base && base.tierAfter !== base.tierBefore) {
+		const tiers = content.balance.activists.tiers;
+		const rise =
+			tiers.findIndex((tier) => tier.id === base.tierAfter) >
+			tiers.findIndex((tier) => tier.id === base.tierBefore);
+		const label = tiers.find((tier) => tier.id === base.tierAfter)?.label ?? base.tierAfter;
+		items.push({
+			key: 'activists',
+			kind: 'people',
+			tone: rise ? 'gain' : 'cost',
+			title: 'Base militante',
+			text: rise
+				? `Votre base devient : ${label} (${activistsWord(base.total)}). Les tracts partent plus vite.`
+				: `Votre base retombe : ${label} (${activistsWord(base.total)}). Les permanences sonnent creux.`,
+			chart: null,
+			record: null
+		});
+	}
 	if (entry.institutions && entry.institutions.politics.length > 0) {
 		items.push({
 			key: 'institutions',
@@ -2250,6 +2308,91 @@ function audienceLabel(audience: number): string {
 		: audience >= 30
 			? 'Audience moyenne'
 			: 'Audience confidentielle';
+}
+
+/**
+ * Base militante (P3-19) : effectif, palier, prochain palier, capacité
+ * d'accueil et ce qui la compose, dernier mouvement, effets du palier. Aucune
+ * information cachée : tout se déduit de l'état public.
+ */
+export interface ActivistsView {
+	readonly count: number;
+	readonly countLabel: string;
+	readonly tierLabel: string;
+	/** Prochain palier et militants manquants, `null` au sommet. */
+	readonly next: { readonly label: string; readonly missing: number } | null;
+	/** Remplissage de la capacité, de 0 à 100. */
+	readonly fillPercent: number;
+	readonly capacity: number;
+	/** Composantes de la capacité (« Base 15 », « Permanence 120 »…). */
+	readonly capacityParts: readonly string[];
+	/** Dernier trimestre (« +6 arrivées, −2 départs »), `null` avant le premier. */
+	readonly lastMove: string | null;
+	/** Effets du palier : bonus de terrain, cotisations, frais. */
+	readonly perks: readonly string[];
+}
+
+function buildActivists(state: GameState, content: Content): ActivistsView {
+	const balance = content.balance.activists;
+	const count = state.player.activists;
+	const tier = activistTier(count, content);
+	const next = nextActivistTier(count, content);
+	const capacity = activistCapacity(
+		state.player,
+		state.upgrades,
+		state.mandates,
+		state.turn,
+		content
+	);
+	const premises = new Map<string, number>();
+	for (const upgrade of state.upgrades) {
+		const definition = content.upgrades[upgrade.upgradeId];
+		if (!definition?.activists || upgrade.acquiredTurn >= state.turn) continue;
+		const label = definition.ownedLabel ?? definition.label;
+		premises.set(label, (premises.get(label) ?? 0) + definition.activists.capacity);
+	}
+	const offices = activeMandates(state.mandates).reduce(
+		(total, mandate) =>
+			total + (content.mandates[mandate.mandateId]?.rank ?? 0) * balance.mandateCapacityPerRank,
+		0
+	);
+	const capacityParts = [
+		`Accueil de base ${balance.baseCapacity}`,
+		...(state.player.partyId !== null ? [`Section du parti ${balance.partyCapacity}`] : []),
+		...[...premises].map(([label, value]) => `${label} ${value}`),
+		...(offices > 0 ? [`Mandats ${offices}`] : [])
+	];
+	const last = state.history.findLast(
+		(entry): entry is HistoryEntry => entry.type === 'turn.resolved'
+	)?.activists;
+	const gained = last ? last.arrivals + last.recruits : 0;
+	const lastMove = last
+		? gained === 0 && last.departures === 0
+			? 'Aucun mouvement au dernier trimestre'
+			: `Dernier trimestre : +${gained}, −${last.departures}`
+		: null;
+	const perks = [
+		tier.fieldMultiplier > 0
+			? `Actions de terrain : bonus × ${tier.fieldMultiplier}`
+			: 'Actions de terrain : aucun bonus (il faut un noyau de 5 militants)',
+		...(balance.duesCents > 0 && count > 0
+			? [`Cotisations : ${formatMoney(count * balance.duesCents)} par trimestre`]
+			: []),
+		...(tier.upkeepCents > 0
+			? [`Frais logistiques : ${formatMoney(tier.upkeepCents)} par trimestre`]
+			: [])
+	];
+	return {
+		count,
+		countLabel: activistsWord(count),
+		tierLabel: tier.label,
+		next: next ? { label: next.label, missing: next.min - count } : null,
+		fillPercent: capacity > 0 ? Math.min(100, Math.round((count * 100) / capacity)) : 100,
+		capacity,
+		capacityParts,
+		lastMove,
+		perks
+	};
 }
 
 /** Relation d'un média, en clair (aucun chiffre affiché). */
@@ -3697,6 +3840,8 @@ export function projectView(
 		const action = content.actions[id]!;
 		// Une action d'une époque à venir reste invisible (P3-07).
 		if (action.target || !eraReached(action.fromEra, state.turn, content)) return [];
+		// Bonus de terrain du palier militant (P3-19), annoncé dans la prévision.
+		const bonus = fieldworkEffects(action, state.player.activists, content);
 		return {
 			kind: 'action',
 			id,
@@ -3706,7 +3851,19 @@ export function projectView(
 			costs: amounts(action.costs, -1),
 			effects: action.effects.map((effect) => describeEffect(effectRange(effect), content)),
 			costChips: amountChips(action.costs, -1),
-			effectChips: action.effects.map((effect) => effectChip(effectRange(effect), content)),
+			effectChips: [
+				...action.effects.map((effect) => effectChip(effectRange(effect), content)),
+				...bonus.map((effect) => ({
+					...effectChip(effectRange(effect), content),
+					text: `Base militante : ${describeEffect(effectRange(effect), content)}`
+				}))
+			],
+			fieldBonus:
+				bonus.length > 0
+					? `Base militante (${activistTier(state.player.activists, content).label}) : ${bonus.map((effect) => describeEffect(effectRange(effect), content)).join(', ')}`
+					: action.fieldwork
+						? `Action de terrain : bonus à partir du palier « ${content.balance.activists.tiers.find((tier) => tier.fieldMultiplier > 0)?.label ?? 'Noyau'} »`
+						: null,
 			category: action.category ?? null,
 			planned: planned('action', id),
 			...addability(state, plan, { kind: 'action', id }, content)
@@ -3910,6 +4067,7 @@ export function projectView(
 		upgrades,
 		producers,
 		organisation: buildOrganisation(state, plan, preview, content),
+		activists: buildActivists(state, content),
 		decision,
 		journal: buildJournal(state, content, adjustments),
 		press: buildPress(state, content),
