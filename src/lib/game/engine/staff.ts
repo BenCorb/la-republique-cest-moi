@@ -18,10 +18,22 @@
 import {
 	GAUGE_MAX,
 	GAUGE_MIN,
+	type CandidateProfileDefinition,
 	type Content,
 	type Effect,
+	type HireOffer,
 	type ResourceId
 } from '../content/types.ts';
+import {
+	acceptancePercent,
+	acceptanceRoll,
+	attractiveness,
+	attractivenessFactors,
+	askedSalaryCents,
+	offerBonusCents,
+	offeredSalaryCents,
+	payrollCents
+} from './recruitment.ts';
 import type { Turn } from './calendar.ts';
 import { applyCareerEffect, type CareerParts } from './career.ts';
 import { addRelation, generatePerson, meet } from './characters.ts';
@@ -118,18 +130,51 @@ function euros(cents: number): string {
 
 /**
  * Réserve exigée pour recruter : `hireReserveQuarters` trimestres de la masse
- * salariale de l'entourage en poste, augmentée du salaire du nouveau venu.
+ * salariale convenue de l'entourage en poste, augmentée du salaire offert au
+ * nouveau venu (P3-20), plus sa prime éventuelle.
  */
 export function hireReserveCents(
 	staff: readonly StaffMember[],
 	salaryCents: number,
-	content: Content
+	content: Content,
+	bonusCents = 0
 ): number {
-	const payroll = activeStaff(staff).reduce(
-		(total, member) => total + (content.posts[member.postId]?.salaryCents ?? 0),
-		0
+	return (
+		(payrollCents(staff) + salaryCents) * content.balance.entourage.hireReserveQuarters + bonusCents
 	);
-	return (payroll + salaryCents) * content.balance.entourage.hireReserveQuarters;
+}
+
+/** Poste pour lequel ce personnage est présélectionné, ou `null`. */
+export function shortlistPostOf(candidateId: string, parts: EntourageParts): string | null {
+	return (
+		Object.keys(parts.shortlists).find((id) =>
+			parts.shortlists[id]?.some((entry) => entry.characterId === candidateId)
+		) ?? null
+	);
+}
+
+/** Conditions d'une offre d'embauche (P3-20) : salaire convenu et prime. */
+export function hireTerms(
+	candidateId: string,
+	parts: EntourageParts,
+	offer: HireOffer,
+	content: Content
+): { postId: string; salaryCents: number; bonusCents: number } | null {
+	const postId = shortlistPostOf(candidateId, parts);
+	const candidate = parts.characters[candidateId];
+	if (!postId || !candidate) return null;
+	const salaryCents = offeredSalaryCents(postId, candidate.competence, offer, content);
+	return { postId, salaryCents, bonusCents: offerBonusCents(salaryCents, offer, content) };
+}
+
+/**
+ * Décision du candidat à l'exécution du plan (P3-20) : seed de la partie et
+ * attractivité de la carrière au moment de l'offre. Absente (prévision,
+ * événements) : l'offre est supposée acceptée, sans rien révéler du tirage.
+ */
+export interface HiringDecision {
+	readonly seed: string;
+	readonly attraction: number;
 }
 
 /** Raison pour laquelle ce candidat ne peut être embauché, ou `null`. */
@@ -137,7 +182,8 @@ export function hireIssue(
 	candidateId: string,
 	parts: EntourageParts,
 	context: ConditionContext | null,
-	content: Content
+	content: Content,
+	offer: HireOffer = 'standard'
 ): string | null {
 	const postId = Object.keys(parts.shortlists).find((id) =>
 		parts.shortlists[id]?.some((entry) => entry.characterId === candidateId)
@@ -151,15 +197,33 @@ export function hireIssue(
 	}
 	// On ne recrute pas sans réserve : les salaires de toute l'équipe, nouveau venu
 	// compris, doivent être couverts plusieurs trimestres (P3-09).
-	if (context) {
-		const reserve = hireReserveCents(parts.staff, post.salaryCents, content);
-		if (context.resources.politicalBudgetCents < reserve) {
-			const quarters = content.balance.entourage.hireReserveQuarters;
-			return `Budget politique insuffisant : il faut ${euros(reserve)} pour couvrir ${quarters} trimestre${quarters > 1 ? 's' : ''} de salaires de l’entourage.`;
-		}
-	}
 	if (parts.characters[candidateId]?.status !== 'active')
 		return 'Ce candidat n’est plus disponible.';
+	if (context) {
+		const terms = hireTerms(candidateId, parts, offer, content)!;
+		const reserve = hireReserveCents(parts.staff, terms.salaryCents, content, terms.bonusCents);
+		if (context.resources.politicalBudgetCents < reserve) {
+			const quarters = content.balance.entourage.hireReserveQuarters;
+			return `Budget politique insuffisant : il faut ${euros(reserve)} pour couvrir ${quarters} trimestre${quarters > 1 ? 's' : ''} de salaires de l’entourage${terms.bonusCents > 0 ? ' et la prime' : ''}.`;
+		}
+	}
+	return null;
+}
+
+/** Raison pour laquelle on ne peut plus s'entretenir avec ce candidat, ou `null`. */
+export function candidateInterviewIssue(
+	candidateId: string,
+	parts: EntourageParts,
+	content: Content
+): string | null {
+	const postId = shortlistPostOf(candidateId, parts);
+	if (!postId) return 'Ce candidat ne figure dans aucune présélection.';
+	if (occupantOf(parts.staff, postId)) return 'Le poste est déjà pourvu.';
+	if (parts.characters[candidateId]?.status !== 'active')
+		return 'Ce candidat n’est plus disponible.';
+	const entry = parts.shortlists[postId]!.find((item) => item.characterId === candidateId)!;
+	if (entry.interviews >= content.balance.entourage.recruitment.maxInterviews)
+		return 'Vous l’avez déjà longuement reçu : un entretien de plus n’y changerait rien.';
 	return null;
 }
 
@@ -191,10 +255,12 @@ function leave(
 	};
 }
 
-export type StaffEffect = Extract<Effect, { op: 'hireStaff' | 'dismissStaff' }>;
+export type StaffEffect = Extract<Effect, { op: 'hireStaff' | 'dismissStaff' | 'courtCandidate' }>;
 
 export function isStaffEffect(effect: Effect): effect is StaffEffect {
-	return effect.op === 'hireStaff' || effect.op === 'dismissStaff';
+	return (
+		effect.op === 'hireStaff' || effect.op === 'dismissStaff' || effect.op === 'courtCandidate'
+	);
 }
 
 /**
@@ -207,9 +273,26 @@ export function applyStaffEffect(
 	turn: Turn,
 	target: string | null,
 	context: ConditionContext | null,
-	content: Content
+	content: Content,
+	decision: HiringDecision | null = null
 ): { parts: EntourageParts; changes: PoliticalChange[] } {
 	if (target === null) return { parts, changes: [] };
+	if (effect.op === 'courtCandidate') {
+		if (candidateInterviewIssue(target, parts, content)) return { parts, changes: [] };
+		const postId = shortlistPostOf(target, parts)!;
+		return {
+			parts: {
+				...parts,
+				shortlists: {
+					...parts.shortlists,
+					[postId]: parts.shortlists[postId]!.map((entry) =>
+						entry.characterId === target ? { ...entry, interviews: entry.interviews + 1 } : entry
+					)
+				}
+			},
+			changes: [{ kind: 'interviewed', characterId: target, postId }]
+		};
+	}
 	if (effect.op === 'dismissStaff') {
 		if (dismissIssue(target, parts)) return { parts, changes: [] };
 		const left = leave(parts, target, 'dismissed', turn);
@@ -228,12 +311,49 @@ export function applyStaffEffect(
 			changes: left.changes
 		};
 	}
-	if (hireIssue(target, parts, context, content)) return { parts, changes: [] };
-	const postId = Object.keys(parts.shortlists).find((id) =>
-		parts.shortlists[id]?.some((entry) => entry.characterId === target)
-	)!;
+	const offer = effect.offer ?? 'standard';
+	if (hireIssue(target, parts, context, content, offer)) return { parts, changes: [] };
+	const terms = hireTerms(target, parts, offer, content)!;
+	const postId = terms.postId;
 	const post = content.posts[postId]!;
 	const candidate = parts.characters[target]!;
+	const recruitment = content.balance.entourage.recruitment;
+	// Le candidat décide à l'exécution seulement ; un refus le retire de la présélection.
+	if (decision) {
+		const entry = parts.shortlists[postId]!.find((item) => item.characterId === target)!;
+		const chance = acceptancePercent(
+			decision.attraction,
+			candidate.competence,
+			offer,
+			entry.interviews,
+			content
+		);
+		if (acceptanceRoll(decision.seed, turn, target) >= chance) {
+			const relation = addRelation(
+				parts.relationships,
+				candidate,
+				recruitment.refusalAttitude,
+				`A décliné votre offre pour le poste : ${post.label}.`,
+				turn,
+				content
+			);
+			return {
+				parts: {
+					...parts,
+					shortlists: {
+						...parts.shortlists,
+						[postId]: parts.shortlists[postId]!.filter((item) => item.characterId !== target)
+					},
+					characters: {
+						...parts.characters,
+						[target]: { ...candidate, tags: candidate.tags.filter((tag) => tag !== 'candidate') }
+					},
+					relationships: relation.relationships
+				},
+				changes: [{ kind: 'hireRefused', characterId: target, postId }]
+			};
+		}
+	}
 	const hired: Character = {
 		...candidate,
 		tags: [...candidate.tags.filter((tag) => tag !== 'candidate'), 'staff', post.tag]
@@ -243,7 +363,7 @@ export function applyStaffEffect(
 	const relation = addRelation(
 		parts.relationships,
 		hired,
-		content.balance.entourage.hireAttitude,
+		content.balance.entourage.hireAttitude + recruitment.offers[offer].attitude,
 		`Recrutement au poste : ${post.label}.`,
 		turn,
 		content
@@ -259,7 +379,9 @@ export function applyStaffEffect(
 					missionId: post.missions[0]!.id,
 					status: 'active',
 					leftTurn: null,
-					leaveReason: null
+					leaveReason: null,
+					salaryCents: terms.salaryCents,
+					bonusDueCents: terms.bonusCents
 				}
 			],
 			shortlists,
@@ -335,7 +457,9 @@ export function resolveStaffProduction(
 		const mission = content.missions[member.missionId];
 		const character = entourage.characters[member.characterId];
 		if (!post || !mission || !character) continue;
-		if (resources.politicalBudgetCents < post.salaryCents) {
+		// Salaire convenu, et prime d'arrivée avec le premier salaire (P3-20).
+		const due = member.salaryCents + member.bonusDueCents;
+		if (resources.politicalBudgetCents < due) {
 			const relation = addRelation(
 				entourage.relationships,
 				character,
@@ -355,11 +479,16 @@ export function resolveStaffProduction(
 			});
 			continue;
 		}
-		resources.politicalBudgetCents -= post.salaryCents;
-		payroll.set(
-			'politicalBudgetCents',
-			(payroll.get('politicalBudgetCents') ?? 0) - post.salaryCents
-		);
+		resources.politicalBudgetCents -= due;
+		payroll.set('politicalBudgetCents', (payroll.get('politicalBudgetCents') ?? 0) - due);
+		if (member.bonusDueCents > 0) {
+			entourage = {
+				...entourage,
+				staff: entourage.staff.map((entry) =>
+					entry === member ? { ...entry, bonusDueCents: 0 } : entry
+				)
+			};
+		}
 		const changes = new Map<ResourceId, number>();
 		const politics: PoliticalChange[] = [];
 		let stress = 0;
@@ -449,6 +578,26 @@ export function resolveStaffProduction(
 // Frontière : départs et présélections
 // ---------------------------------------------------------------------------
 
+/** Poids d'un profil qui se présente couramment (le poids de rareté s'y compare). */
+const COMMON_PROFILE_WEIGHT = 10;
+
+/** Tirage pondéré d'un profil de candidat ; le premier profil si aucun poids n'est positif. */
+function pickProfile(
+	profiles: readonly CandidateProfileDefinition[],
+	weight: (profile: CandidateProfileDefinition) => number,
+	rng: RngState
+): { profile: CandidateProfileDefinition; rng: RngState } {
+	const total = profiles.reduce((sum, profile) => sum + weight(profile), 0);
+	if (total <= 0) return { profile: profiles[0]!, rng };
+	const draw = nextInt(rng, 1, total);
+	let cumulative = 0;
+	for (const profile of profiles) {
+		cumulative += weight(profile);
+		if (draw.value <= cumulative) return { profile, rng: draw.rng };
+	}
+	return { profile: profiles.at(-1)!, rng: draw.rng };
+}
+
 /**
  * À la frontière (`turn` = T+1) : départ des collaborateurs partis de la vie
  * publique ou trop mal disposés, puis présélection de candidats pour chaque
@@ -486,6 +635,13 @@ export function resolveStaffFrontier(
 
 	const shortlisted: string[] = [];
 	const { candidatesPerPost } = content.balance.entourage;
+	// Vivier gradué (P3-20) : un profil se présente couramment si la carrière est
+	// assez attractive, rarement sinon (poids de rareté, éventuellement nul).
+	const attraction = attractiveness(
+		attractivenessFactors(context.player, context.resources, context.mandates, parts.staff, content)
+	);
+	const profileWeight = (profile: CandidateProfileDefinition): number =>
+		attraction >= profile.minAttractiveness ? COMMON_PROFILE_WEIGHT : profile.rareWeight;
 	for (const postId of content.postIds) {
 		const existing = parts.shortlists[postId];
 		const stillAvailable = existing?.filter(
@@ -497,7 +653,9 @@ export function resolveStaffFrontier(
 		let characters = parts.characters;
 		let relationships = parts.relationships;
 		for (let index = 0; index < candidatesPerPost; index += 1) {
-			const profile = content.candidateProfiles[index % content.candidateProfiles.length]!;
+			const drawn = pickProfile(content.candidateProfiles, profileWeight, current);
+			current = drawn.rng;
+			const profile = drawn.profile;
 			const generated = generatePerson(
 				{
 					tags: ['candidate'],
@@ -533,7 +691,7 @@ export function resolveStaffFrontier(
 			};
 			characters = { ...characters, [character.id]: character };
 			relationships = meet(relationships, character.id, turn).relationships;
-			entries.push({ characterId: character.id, profileId: profile.id });
+			entries.push({ characterId: character.id, profileId: profile.id, interviews: 0 });
 		}
 		parts = {
 			...parts,
@@ -614,7 +772,11 @@ export function postEffectIssue(
 		const remaining = effect.replace
 			? parts.staff.filter((member) => member.characterId !== occupant?.characterId)
 			: parts.staff;
-		const reserve = hireReserveCents(remaining, post.salaryCents, content);
+		const reserve = hireReserveCents(
+			remaining,
+			askedSalaryCents(binding.postId, actor.competence, content),
+			content
+		);
 		if (context.resources.politicalBudgetCents < reserve) {
 			const quarters = content.balance.entourage.hireReserveQuarters;
 			return `Budget politique insuffisant : il faut ${euros(reserve)} pour couvrir ${quarters} trimestre${quarters > 1 ? 's' : ''} de salaires de l’entourage.`;
@@ -657,7 +819,7 @@ export function applyPostEffect(
 					...parts.shortlists,
 					[postId]: [
 						...(parts.shortlists[postId] ?? []).filter((entry) => entry.characterId !== actor.id),
-						{ characterId: actor.id, profileId: effect.profile }
+						{ characterId: actor.id, profileId: effect.profile, interviews: 0 }
 					]
 				}
 			},
@@ -706,7 +868,10 @@ export function applyPostEffect(
 					missionId: post.missions[0]!.id,
 					status: 'active',
 					leftTurn: null,
-					leaveReason: null
+					leaveReason: null,
+					// Un proche demande le salaire de sa compétence, sans prime (P3-20).
+					salaryCents: askedSalaryCents(postId, actor.competence, content),
+					bonusDueCents: 0
 				}
 			]
 		},

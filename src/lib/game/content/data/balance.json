@@ -137,7 +137,38 @@
 		"resignAttitude": -30,
 		"preciseAdviceCompetence": 70,
 		"fairAdviceCompetence": 45,
-		"poorAdviceErrorChance": 0.35
+		"poorAdviceErrorChance": 0.35,
+		"recruitment": {
+			"salaryCurve": [
+				{ "competence": 0, "percent": 40 },
+				{ "competence": 20, "percent": 50 },
+				{ "competence": 60, "percent": 130 },
+				{ "competence": 90, "percent": 250 },
+				{ "competence": 100, "percent": 290 }
+			],
+			"salaryRoundingCents": 1000,
+			"offers": {
+				"low": { "salaryPercent": 80, "interest": -15, "attitude": -5, "bonusPercent": 0 },
+				"standard": { "salaryPercent": 100, "interest": 0, "attitude": 0, "bonusPercent": 0 },
+				"generous": { "salaryPercent": 125, "interest": 15, "attitude": 5, "bonusPercent": 100 }
+			},
+			"influenceMax": 30,
+			"influencePerRoot": 2,
+			"popularityMax": 20,
+			"mandateRankForMax": 60,
+			"mandateMax": 20,
+			"apparatusMax": 10,
+			"coveredQuartersForMax": 4,
+			"payrollMax": 20,
+			"demandPercent": 60,
+			"baseAcceptPercent": 70,
+			"acceptPerPoint": 2,
+			"minAcceptPercent": 5,
+			"maxAcceptPercent": 98,
+			"interviewInterest": 6,
+			"maxInterviews": 2,
+			"refusalAttitude": -5
+		}
 	},
 	"family": {
 		"childCostCents": 40000,

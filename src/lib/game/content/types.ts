@@ -266,7 +266,10 @@ export type Effect =
 	/** Préparation ajoutée à chaque campagne en cours. */
 	| { readonly op: 'prepareCampaign'; readonly value: number }
 	/** Embauche du candidat choisi dans le plan (`target`), sur son poste (P2-05). */
-	| { readonly op: 'hireStaff' }
+	/** Offre faite au candidat (P3-20) : réduite, standard (par défaut) ou généreuse. */
+	| { readonly op: 'hireStaff'; readonly offer?: HireOffer | undefined }
+	/** Entretien approfondi avec un candidat présélectionné (P3-20), avant l'offre. */
+	| { readonly op: 'courtCandidate' }
 	/** Renvoi du collaborateur choisi dans le plan (`target`). */
 	| { readonly op: 'dismissStaff' }
 	/**
@@ -1094,6 +1097,60 @@ export interface EntourageBalance {
 	readonly fairAdviceCompetence: number;
 	/** Probabilité (déterministe par décision) qu'un conseil médiocre se trompe de sens. */
 	readonly poorAdviceErrorChance: number;
+	/** Recrutement : salaire, attractivité, acceptation (P3-20). */
+	readonly recruitment: RecruitmentBalance;
+}
+
+/** Offre d'embauche (P3-20). */
+export const HIRE_OFFERS = ['low', 'standard', 'generous'] as const;
+export type HireOffer = (typeof HIRE_OFFERS)[number];
+
+/** Paramètres d'une offre : salaire, intérêt du candidat, attitude, prime. */
+export interface HireOfferBalance {
+	/** Salaire convenu, en % de la prétention du candidat. */
+	readonly salaryPercent: number;
+	/** Points d'intérêt ajoutés (ou retirés) à l'estimation du candidat. */
+	readonly interest: number;
+	/** Attitude ajoutée à celle de l'embauche. */
+	readonly attitude: number;
+	/** Prime à l'acceptation, en % du salaire trimestriel convenu (payée avec le premier salaire). */
+	readonly bonusPercent: number;
+}
+
+/**
+ * Recrutement (P3-20, PT-P3-09-005/006 ; hypothèses de tuning) : salaire selon
+ * la compétence, attractivité de la carrière, intérêt du candidat et offres.
+ */
+export interface RecruitmentBalance {
+	/** Courbe du salaire demandé : % du salaire de référence du poste, par compétence (interpolée). */
+	readonly salaryCurve: readonly { readonly competence: number; readonly percent: number }[];
+	/** Arrondi du salaire demandé, en centimes. */
+	readonly salaryRoundingCents: number;
+	readonly offers: Readonly<Record<HireOffer, HireOfferBalance>>;
+	/** Attractivité : plafonds de chaque facteur (somme ≤ 100). */
+	readonly influenceMax: number;
+	/** Points d'attractivité par √influence. */
+	readonly influencePerRoot: number;
+	readonly popularityMax: number;
+	/** Rang de mandat pour le plafond de ce facteur. */
+	readonly mandateRankForMax: number;
+	readonly mandateMax: number;
+	readonly apparatusMax: number;
+	/** Trimestres de masse salariale (nouveau venu compris) couverts pour le plafond. */
+	readonly coveredQuartersForMax: number;
+	readonly payrollMax: number;
+	/** Exigence du candidat : % de sa compétence que l'attractivité doit atteindre. */
+	readonly demandPercent: number;
+	/** Chance d'accepter à marge nulle, points de % par point de marge, bornes. */
+	readonly baseAcceptPercent: number;
+	readonly acceptPerPoint: number;
+	readonly minAcceptPercent: number;
+	readonly maxAcceptPercent: number;
+	/** Intérêt gagné par entretien approfondi, et nombre maximal d'entretiens utiles. */
+	readonly interviewInterest: number;
+	readonly maxInterviews: number;
+	/** Attitude d'un candidat qui décline. */
+	readonly refusalAttitude: number;
 }
 
 /** Vie de famille (hypothèses de tuning, P2-08). */
@@ -1302,6 +1359,12 @@ export interface CandidateProfileDefinition {
 	readonly minCompetence: number;
 	readonly maxCompetence: number;
 	readonly traits: readonly string[];
+	/**
+	 * Vivier gradué (P3-20) : attractivité à partir de laquelle le profil se
+	 * présente couramment (poids 10) ; en deçà, poids de rareté (0 : jamais).
+	 */
+	readonly minAttractiveness: number;
+	readonly rareWeight: number;
 }
 
 /** Membre de la famille généré à la création selon l'origine (GDD §3.3). */

@@ -8,6 +8,7 @@
  * n'avance pas le PRNG et ne modifie rien.
  */
 import {
+	type HireOffer,
 	INDICATOR_IDS,
 	RESOURCE_IDS,
 	type Content,
@@ -69,6 +70,13 @@ import {
 	type CareerParts,
 	type QuarterSnapshot,
 	followsPlayer,
+	acceptancePercent,
+	askedSalaryCents,
+	attractiveness,
+	attractivenessFactors,
+	offerBonusCents,
+	offeredSalaryCents,
+	payrollCents,
 	ownedMedia,
 	type StaffLeaveReason,
 	activeMandates,
@@ -691,23 +699,62 @@ export interface PostView {
 					readonly active: boolean;
 				}[];
 				readonly producing: boolean;
+				/** Salaire convenu au contrat (P3-20). */
+				readonly salary: string;
 				readonly dismissPlanned: boolean;
 				readonly dismissable: boolean;
 				readonly dismissReason: string | null;
 		  })
 		| null;
-	readonly candidates: readonly (StaffPersonView & {
-		readonly profile: string;
-		readonly planned: boolean;
-		readonly hireable: boolean;
-		readonly reason: string | null;
-	})[];
+	readonly candidates: readonly CandidateView[];
+}
+
+/** Offre d'embauche proposée à un candidat (P3-20). */
+export interface HireOfferView {
+	readonly actionId: string;
+	readonly offer: HireOffer;
+	readonly label: string;
+	/** « 1 040 € par trimestre », prime éventuelle comprise en mention. */
+	readonly salary: string;
+	readonly bonus: string | null;
+	/** Intérêt estimé du candidat pour cette offre, en mots. */
+	readonly interest: string;
+	readonly interestTone: 'good' | 'neutral' | 'warning' | 'danger';
+	readonly planned: boolean;
+	readonly addable: boolean;
+	readonly reason: string | null;
+}
+
+export interface CandidateView extends StaffPersonView {
+	readonly profile: string;
+	/** Prétention salariale (P3-20). */
+	readonly asked: string;
+	/** Une offre est déjà prévue au plan. */
+	readonly planned: boolean;
+	readonly offers: readonly HireOfferView[];
+	/** Entretien approfondi : déjà menés, prévu, possible. */
+	readonly interviews: number;
+	readonly interviewPlanned: boolean;
+	readonly interviewable: boolean;
+	readonly interviewReason: string | null;
 }
 
 export interface EntourageView {
 	readonly posts: readonly PostView[];
 	readonly hireActionId: string | null;
+	readonly interviewActionId: string | null;
 	readonly dismissActionId: string | null;
+	/**
+	 * Attractivité de la carrière (P3-20) : mot, valeur sur 100 et facteurs
+	 * publics. Ce n'est pas une jauge morale.
+	 */
+	readonly attractiveness: {
+		readonly label: string;
+		readonly value: number;
+		readonly factors: readonly string[];
+	};
+	/** Masse salariale convenue et trimestres couverts par le budget politique. */
+	readonly payroll: { readonly total: string; readonly covered: string | null };
 	/** Temps rendu ce trimestre par les missions qui tiennent l'agenda. */
 	readonly timeBonus: number;
 	readonly former: readonly {
@@ -1238,6 +1285,10 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 					return 'une séparation';
 				case 'hired':
 					return `embauche au poste « ${content.posts[change.postId]?.label ?? change.postId} »`;
+				case 'hireRefused':
+					return `le candidat décline le poste « ${content.posts[change.postId]?.label ?? change.postId} » : « votre projet est intéressant, mais pas encore à ce stade de ma carrière »`;
+				case 'interviewed':
+					return `entretien approfondi pour le poste « ${content.posts[change.postId]?.label ?? change.postId} »`;
 				case 'staffLeft':
 					return `départ du poste « ${content.posts[change.postId]?.label ?? change.postId} » (${STAFF_LEAVE_LABELS[change.reason]})`;
 				case 'earlyElection':
@@ -1425,7 +1476,8 @@ const STAFF_CHANGE_LABELS: Readonly<
 	replace: 'Embauche à la place du titulaire, renvoyé',
 	shortlist: 'Candidature ajoutée à la présélection',
 	dismiss: 'Renvoi',
-	leave: 'Départ d’un collaborateur'
+	leave: 'Départ d’un collaborateur',
+	interview: 'Entretien approfondi : le candidat se laisse convaincre'
 };
 
 /** Liste française : « a, b et c ». */
@@ -3330,13 +3382,61 @@ function personOf(state: GameState, characterId: string, content: Content): Staf
 	};
 }
 
+/** Attractivité de la carrière, en mots (P3-20), du plus haut seuil au plus bas. */
+const ATTRACTIVENESS_LABELS: readonly { readonly min: number; readonly label: string }[] = [
+	{ min: 75, label: 'Cabinet très recherché' },
+	{ min: 50, label: 'Équipe reconnue' },
+	{ min: 25, label: 'Équipe en construction' },
+	{ min: 0, label: 'Structure émergente' }
+];
+
+const OFFER_LABELS: Readonly<Record<HireOffer, string>> = {
+	low: 'Offre réduite',
+	standard: 'Salaire demandé',
+	generous: 'Offre généreuse'
+};
+
+/** Intérêt estimé d'un candidat, en mots (aucun chiffre, aucun trait caché). */
+function interestOf(percent: number): {
+	interest: string;
+	interestTone: HireOfferView['interestTone'];
+} {
+	if (percent >= 80) return { interest: 'Très intéressé', interestTone: 'good' };
+	if (percent >= 55) return { interest: 'Intéressé', interestTone: 'neutral' };
+	if (percent >= 30) return { interest: 'Hésitant', interestTone: 'warning' };
+	return { interest: 'Peu intéressé', interestTone: 'danger' };
+}
+
 function buildEntourage(
 	state: GameState,
 	plan: readonly PlanStep[],
 	content: Content
 ): EntourageView {
+	const offerOf = (id: string): HireOffer | null => {
+		for (const effect of content.actions[id]?.effects ?? [])
+			if (effect.op === 'hireStaff') return effect.offer ?? 'standard';
+		return null;
+	};
+	const offerActions = content.actionIds.filter(
+		(id) => content.actions[id]?.target === 'candidate' && offerOf(id) !== null
+	);
 	const hireActionId =
-		content.actionIds.find((id) => content.actions[id]?.target === 'candidate') ?? null;
+		offerActions.find((id) => offerOf(id) === 'standard') ?? offerActions[0] ?? null;
+	const interviewActionId =
+		content.actionIds.find(
+			(id) =>
+				content.actions[id]?.target === 'candidate' &&
+				content.actions[id]?.effects.some((effect) => effect.op === 'courtCandidate')
+		) ?? null;
+	const factors = attractivenessFactors(
+		state.player,
+		state.resources,
+		state.mandates,
+		state.staff,
+		content
+	);
+	const attraction = attractiveness(factors);
+	const recruitment = content.balance.entourage.recruitment;
 	const dismissActionId =
 		content.actionIds.find((id) => content.actions[id]?.target === 'staff') ?? null;
 	const planned = (actionId: string | null, target: string): boolean =>
@@ -3368,6 +3468,7 @@ function buildEntourage(
 							active: mission.id === member.missionId
 						})),
 						producing: member.hiredTurn < state.turn,
+						salary: `${formatResource('politicalBudgetCents', member.salaryCents)} par trimestre`,
 						dismissPlanned: planned(dismissActionId, member.characterId),
 						dismissable: dismiss.addable,
 						dismissReason: dismiss.reason
@@ -3379,11 +3480,39 @@ function buildEntourage(
 			: (state.shortlists[postId] ?? []).flatMap((entry) => {
 					const character = state.characters[entry.characterId];
 					if (!character || character.status !== 'active') return [];
-					const hire = hireActionId
+					const offers = offerActions.map((actionId): HireOfferView => {
+						const offer = offerOf(actionId)!;
+						const salary = offeredSalaryCents(postId, character.competence, offer, content);
+						const bonus = offerBonusCents(salary, offer, content);
+						const add = addability(
+							state,
+							plan,
+							{ kind: 'action', id: actionId, target: entry.characterId },
+							content
+						);
+						const interest = interestOf(
+							acceptancePercent(attraction, character.competence, offer, entry.interviews, content)
+						);
+						return {
+							actionId,
+							offer,
+							label: OFFER_LABELS[offer],
+							salary: `${formatResource('politicalBudgetCents', salary)} par trimestre`,
+							bonus:
+								bonus > 0
+									? `prime de ${formatResource('politicalBudgetCents', bonus)} à l’arrivée`
+									: null,
+							...interest,
+							planned: planned(actionId, entry.characterId),
+							addable: add.addable,
+							reason: add.reason
+						};
+					});
+					const interview = interviewActionId
 						? addability(
 								state,
 								plan,
-								{ kind: 'action', id: hireActionId, target: entry.characterId },
+								{ kind: 'action', id: interviewActionId, target: entry.characterId },
 								content
 							)
 						: { addable: false, reason: null };
@@ -3393,9 +3522,14 @@ function buildEntourage(
 							profile:
 								content.candidateProfiles.find((profile) => profile.id === entry.profileId)
 									?.label ?? '',
-							planned: planned(hireActionId, entry.characterId),
-							hireable: hire.addable,
-							reason: hire.reason
+							asked: `${formatResource('politicalBudgetCents', askedSalaryCents(postId, character.competence, content))} par trimestre`,
+							planned: offers.some((offer) => offer.planned),
+							offers,
+							interviews: entry.interviews,
+							interviewPlanned:
+								interviewActionId !== null && planned(interviewActionId, entry.characterId),
+							interviewable: interview.addable,
+							interviewReason: interview.reason
 						}
 					];
 				});
@@ -3403,16 +3537,36 @@ function buildEntourage(
 			id: postId,
 			label: post.label,
 			description: post.description,
-			salary: `${formatResource('politicalBudgetCents', post.salaryCents)} par trimestre`,
+			salary: `Référence : ${formatResource('politicalBudgetCents', post.salaryCents)} par trimestre`,
 			lockedReason: unlocked ? null : (post.unavailableReason ?? 'Poste pas encore accessible.'),
 			occupant,
 			candidates
 		};
 	});
+	const payroll = payrollCents(state.staff);
 	return {
 		posts,
 		hireActionId,
+		interviewActionId,
 		dismissActionId,
+		attractiveness: {
+			label: ATTRACTIVENESS_LABELS.find((entry) => attraction >= entry.min)!.label,
+			value: attraction,
+			factors: [
+				`Influence ${factors.influence}/${recruitment.influenceMax}`,
+				`Popularité ${factors.popularity}/${recruitment.popularityMax}`,
+				`Mandat ${factors.mandate}/${recruitment.mandateMax}`,
+				`Appareil ${factors.apparatus}/${recruitment.apparatusMax}`,
+				`Budget ${factors.payroll}/${recruitment.payrollMax}`
+			]
+		},
+		payroll: {
+			total: `${formatResource('politicalBudgetCents', payroll)} par trimestre`,
+			covered:
+				payroll > 0
+					? `${Math.floor(state.resources.politicalBudgetCents / payroll)} trimestre(s) couvert(s) par le budget politique`
+					: null
+		},
 		timeBonus: staffTimeBonus(state.staff, state.characters, state.turn, content),
 		former: state.staff
 			.filter((member) => member.status === 'left')

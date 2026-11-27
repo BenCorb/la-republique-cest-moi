@@ -48,7 +48,7 @@ export type EffectRange =
 	| { readonly kind: 'candidacy' }
 	| {
 			readonly kind: 'staff';
-			readonly change: 'hire' | 'dismiss' | 'leave' | 'replace' | 'shortlist';
+			readonly change: 'hire' | 'dismiss' | 'leave' | 'replace' | 'shortlist' | 'interview';
 	  }
 	/** Départ d'un exemplaire de l'organisation ; ses effets propres sont ajoutés par le plan. */
 	| { readonly kind: 'release' }
@@ -178,6 +178,8 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'candidacy' };
 		case 'hireStaff':
 			return { kind: 'staff', change: 'hire' };
+		case 'courtCandidate':
+			return { kind: 'staff', change: 'interview' };
 		case 'dismissStaff':
 			return { kind: 'staff', change: 'dismiss' };
 		case 'releaseUpgrade':
@@ -252,6 +254,7 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 			return { kind: 'career', effect, rng };
 		case 'hireStaff':
 		case 'dismissStaff':
+		case 'courtCandidate':
 			return { kind: 'staffAction', effect, rng };
 		case 'releaseUpgrade':
 			return { kind: 'release', rng };

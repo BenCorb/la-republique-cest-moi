@@ -51,6 +51,8 @@ const politicalChange = z.discriminatedUnion('kind', [
 	}),
 	z.strictObject({ kind: z.literal('preparation'), delta: int }),
 	z.strictObject({ kind: z.literal('hired'), characterId: id, postId: id }),
+	z.strictObject({ kind: z.literal('hireRefused'), characterId: id, postId: id }),
+	z.strictObject({ kind: z.literal('interviewed'), characterId: id, postId: id }),
 	z.strictObject({
 		kind: z.literal('familyJoined'),
 		characterId: id,
@@ -440,10 +442,15 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 			missionId: id,
 			status: z.enum(['active', 'left']),
 			leftTurn: int.nullable(),
-			leaveReason: staffLeaveReason.nullable()
+			leaveReason: staffLeaveReason.nullable(),
+			salaryCents: int,
+			bonusDueCents: int
 		})
 	),
-	shortlists: z.record(id, z.array(z.strictObject({ characterId: id, profileId: id }))),
+	shortlists: z.record(
+		id,
+		z.array(z.strictObject({ characterId: id, profileId: id, interviews: int }))
+	),
 	institutions: z.strictObject({
 		incompatibilities: z.array(z.tuple([id, id])),
 		maxMandates: int,

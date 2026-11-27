@@ -176,7 +176,9 @@ describe('embauche et production', () => {
 				missionId: 'mission.aide.budget',
 				status: 'active',
 				leftTurn: null,
-				leaveReason: null
+				leaveReason: null,
+				salaryCents: catalog.posts['post.aide']!.salaryCents,
+				bonusDueCents: 0
 			}
 		]);
 		expect(hired.state.shortlists['post.aide']).toBeUndefined();

@@ -496,6 +496,7 @@ function effectIssues(
 				}
 				break;
 			case 'hireStaff':
+			case 'courtCandidate':
 				if (targetKind !== 'candidate') {
 					issues.push({
 						source,
@@ -821,6 +822,7 @@ function crossCheckPolitics(
 				(effect.op === 'endMandate' && effect.mandate === 'target') ||
 				effect.op === 'declareCandidacy' ||
 				effect.op === 'hireStaff' ||
+				effect.op === 'courtCandidate' ||
 				effect.op === 'dismissStaff' ||
 				effect.op === 'releaseUpgrade' ||
 				effect.op === 'makePromise' ||

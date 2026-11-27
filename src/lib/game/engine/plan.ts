@@ -16,12 +16,14 @@
  * stress certain et une fourchette de santé. Elle ne lit ni ne fait avancer le
  * PRNG et n'expose aucune probabilité.
  */
+import { attractiveness, attractivenessFactors } from './recruitment.ts';
 import {
 	RESOURCE_IDS,
 	type Condition,
 	type Content,
 	type Effect,
 	type GaugeId,
+	type HireOffer,
 	type ResourceAmount,
 	type ResourceId,
 	type Resources
@@ -67,10 +69,12 @@ import {
 import {
 	applyStaffEffect,
 	dismissIssue,
+	candidateInterviewIssue,
 	hireIssue,
 	isStaffEffect,
 	staffTimeBonus,
-	type EntourageParts
+	type EntourageParts,
+	type HiringDecision
 } from './staff.ts';
 
 export type PlanIssueCode =
@@ -237,6 +241,12 @@ function releaseIssue(
 	return null;
 }
 
+/** Offre portée par une action d'embauche (P3-20), standard par défaut. */
+function hireOfferOf(effects: readonly Effect[]): HireOffer {
+	for (const effect of effects) if (effect.op === 'hireStaff') return effect.offer ?? 'standard';
+	return 'standard';
+}
+
 /** Parties de l'état modifiées par les effets politiques et de carrière d'une action. */
 interface StateParts {
 	readonly player: PlayerState;
@@ -254,7 +264,8 @@ function applyStateEffects(
 	parts: StateParts,
 	turn: number,
 	target: string | null,
-	content: Content
+	content: Content,
+	decision: HiringDecision | null = null
 ): StateParts & { changes: PoliticalChange[] } {
 	let { player, world, career, entourage } = parts;
 	const changes: PoliticalChange[] = [];
@@ -269,7 +280,7 @@ function applyStateEffects(
 			career = outcome.parts;
 			changes.push(...outcome.changes);
 		} else if (isStaffEffect(effect)) {
-			const outcome = applyStaffEffect(effect, entourage, turn, target, null, content);
+			const outcome = applyStaffEffect(effect, entourage, turn, target, null, content, decision);
 			entourage = outcome.parts;
 			changes.push(...outcome.changes);
 		} else if (isPromiseEffect(effect)) {
@@ -467,27 +478,30 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 				const issue =
 					target === null
 						? 'choisissez une personne'
-						: definition.target === 'candidate'
-							? hireIssue(
-									target,
-									workingEntourage,
-									{
-										turn: state.turn,
-										player: workingPlayer,
-										resources: working,
-										upgrades,
-										world: workingWorld,
-										mandates: workingCareer.mandates,
-										campaigns: workingCareer.campaigns,
-										staff: workingEntourage.staff,
-										institutions: workingCareer.institutions,
-										facts: state.facts,
-										cases: state.cases,
-										promises: workingCareer.promises
-									},
-									content
-								)
-							: dismissIssue(target, workingEntourage);
+						: definition.effects.some((effect) => effect.op === 'courtCandidate')
+							? candidateInterviewIssue(target, workingEntourage, content)
+							: definition.target === 'candidate'
+								? hireIssue(
+										target,
+										workingEntourage,
+										{
+											turn: state.turn,
+											player: workingPlayer,
+											resources: working,
+											upgrades,
+											world: workingWorld,
+											mandates: workingCareer.mandates,
+											campaigns: workingCareer.campaigns,
+											staff: workingEntourage.staff,
+											institutions: workingCareer.institutions,
+											facts: state.facts,
+											cases: state.cases,
+											promises: workingCareer.promises
+										},
+										content,
+										hireOfferOf(definition.effects)
+									)
+								: dismissIssue(target, workingEntourage);
 				if (issue) fail('invalid_target', `« ${label} » : ${issue}`);
 			} else if (definition.target === 'promise') {
 				const issue =
@@ -823,12 +837,29 @@ export function executePlan(
 				} else if (resolved.kind === 'fact') {
 					throw new Error(`Fait hors événement : ${step.id}`);
 				} else {
+					// Le candidat décide à l'exécution, selon l'attractivité du moment (P3-20).
+					const decision: HiringDecision | null =
+						resolved.effect.op === 'hireStaff'
+							? {
+									seed: state.rng.seed,
+									attraction: attractiveness(
+										attractivenessFactors(
+											player,
+											current,
+											career.mandates,
+											entourage.staff,
+											content
+										)
+									)
+								}
+							: null;
 					const applied = applyStateEffects(
 						[resolved.effect],
 						{ player, world, career, entourage },
 						state.turn,
 						target,
-						content
+						content,
+						decision
 					);
 					({ player, world, career, entourage } = applied);
 					politics.push(...applied.changes);

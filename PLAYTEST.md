@@ -493,6 +493,11 @@ parties réelles.
   seulement pour les experts en début de carrière ; leviers de négociation retenus ; départ immédiat
   ou maintien temporaire dans la liste après un refus ; progression ou non de la compétence en poste.
 
+  **Correction (P3-20, 26 novembre 2026) :** vivier gradué par l’attractivité, intérêt estimé en mots,
+  trois offres, entretien approfondi, prime seulement en cas d’accord, refus seedé qui retire le candidat
+  de la présélection ; voir GDD §6.2 et ARCHITECTURE §8.4 duovicies. Recherche ciblée, vérification et
+  progression des juniors : P3-21.
+
 - **PT-P3-09-006 — Lier le salaire à la compétence et faire évoluer la masse salariale (26 novembre
   2026, direction souhaitée par le créateur, entourage, économie et progression).** Les candidats peu
   compétents doivent pouvoir former une équipe de départ imparfaite mais abordable. À mesure que le
@@ -554,6 +559,10 @@ parties réelles.
   politique récurrent sensiblement supérieur. **Décisions restant à prendre :** formule et amplitudes ;
   négociation libre ou trois offres prédéfinies ; rythme de progression des juniors ; conditions et
   fréquence des demandes d’augmentation.
+
+  **Correction (P3-20, 26 novembre 2026) :** salaire demandé selon la compétence, salaire convenu au
+  contrat pour la réserve, la paie, les alertes et la masse salariale affichée ; trois offres
+  prédéfinies. Progression et renégociations : P3-21.
 
 - **PT-P3-09-007 — Retirer automatiquement du plan les activités devenues impossibles (26 novembre
   2026, décision souhaitée par le créateur, agenda et accélération).** Lorsqu’une activité déjà

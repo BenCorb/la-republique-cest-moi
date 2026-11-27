@@ -89,7 +89,39 @@ export const fixtureBalance = {
 		resignAttitude: -30,
 		preciseAdviceCompetence: 70,
 		fairAdviceCompetence: 40,
-		poorAdviceErrorChance: 0.5
+		poorAdviceErrorChance: 0.5,
+		/**
+		 * Recrutement de test (P3-20) : salaire égal à la référence du poste et
+		 * acceptation certaine ; `tests/unit/recruitment.test.ts` fixe ses valeurs.
+		 */
+		recruitment: {
+			salaryCurve: [
+				{ competence: 0, percent: 100 },
+				{ competence: 100, percent: 100 }
+			],
+			salaryRoundingCents: 100,
+			offers: {
+				low: { salaryPercent: 80, interest: -15, attitude: -5, bonusPercent: 0 },
+				standard: { salaryPercent: 100, interest: 0, attitude: 0, bonusPercent: 0 },
+				generous: { salaryPercent: 125, interest: 15, attitude: 5, bonusPercent: 100 }
+			},
+			influenceMax: 30,
+			influencePerRoot: 2,
+			popularityMax: 20,
+			mandateRankForMax: 60,
+			mandateMax: 20,
+			apparatusMax: 10,
+			coveredQuartersForMax: 4,
+			payrollMax: 20,
+			demandPercent: 60,
+			baseAcceptPercent: 70,
+			acceptPerPoint: 2,
+			minAcceptPercent: 100,
+			maxAcceptPercent: 100,
+			interviewInterest: 6,
+			maxInterviews: 2,
+			refusalAttitude: -5
+		}
 	},
 	family: {
 		childCostCents: 10_000,
@@ -273,9 +305,19 @@ export const fixtureEntourage = {
 			label: 'Expert',
 			minCompetence: 80,
 			maxCompetence: 90,
-			traits: ['trait.open']
+			traits: ['trait.open'],
+			minAttractiveness: 0,
+			rareWeight: 0
 		},
-		{ id: 'profile.novice', label: 'Novice', minCompetence: 10, maxCompetence: 20, traits: [] }
+		{
+			id: 'profile.novice',
+			label: 'Novice',
+			minCompetence: 10,
+			maxCompetence: 20,
+			traits: [],
+			minAttractiveness: 0,
+			rareWeight: 0
+		}
 	]
 };
 

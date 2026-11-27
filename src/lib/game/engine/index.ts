@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.32.0';
+export const RULES_VERSION = '0.36.0';
 
 export {
 	START_YEAR,
@@ -109,6 +109,17 @@ export {
 	type WorldState
 } from './state.ts';
 export {
+	acceptancePercent,
+	acceptanceRoll,
+	askedSalaryCents,
+	attractiveness,
+	attractivenessFactors,
+	offerBonusCents,
+	offeredSalaryCents,
+	payrollCents,
+	type AttractivenessFactors
+} from './recruitment.ts';
+export {
 	createTerritory,
 	departmentOf,
 	generateTownName,
@@ -136,9 +147,12 @@ export {
 	applyPostEffect,
 	applyStaffEffect,
 	bindEventPost,
+	candidateInterviewIssue,
 	dismissIssue,
 	hireIssue,
 	hireReserveCents,
+	hireTerms,
+	shortlistPostOf,
 	isStaffEffect,
 	missionIssue,
 	occupantOf,
@@ -151,6 +165,7 @@ export {
 	staffLeavesByEvent,
 	staffTimeBonus,
 	type EntourageParts,
+	type HiringDecision,
 	type ProductionParts,
 	type StaffEffect
 } from './staff.ts';

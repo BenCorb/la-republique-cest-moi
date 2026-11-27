@@ -12,7 +12,8 @@ import {
 	transition,
 	type GameState,
 	type MandateInstance,
-	type TurnPlan
+	type TurnPlan,
+	askedSalaryCents
 } from '../../src/lib/game/engine/index.ts';
 import { createEnvelope, exportSave, importSave } from '../../src/lib/game/persistence/index.ts';
 import { withEvents } from '../fixtures/content.ts';
@@ -279,7 +280,14 @@ describe('un poste pour la famille (P3-12)', () => {
 			missionId: content.posts['post.chief_of_staff']!.missions[0]!.id,
 			status: 'active',
 			leftTurn: null,
-			leaveReason: null
+			leaveReason: null,
+			// Un proche demande le salaire de sa compétence, sans prime (P3-20).
+			salaryCents: askedSalaryCents(
+				'post.chief_of_staff',
+				state.characters[relativeId]!.competence,
+				content
+			),
+			bonusDueCents: 0
 		});
 		// Le même personnage : famille, relations et entourage.
 		const relative = hired.characters[relativeId]!;
@@ -328,7 +336,19 @@ describe('un poste pour la famille (P3-12)', () => {
 		// Seule la direction de cabinet est débloquée ; un premier collaborateur l'occupe.
 		let state = commit(influent(16), quiet);
 		const candidate = state.shortlists['post.chief_of_staff']![0]!.characterId;
-		state = commit(state, quiet, {
+		// Le candidat accepte à coup sûr (P3-20) : ce test porte sur le remplacement.
+		const recruitment = quiet.balance.entourage.recruitment;
+		const certain: Content = {
+			...quiet,
+			balance: {
+				...quiet.balance,
+				entourage: {
+					...quiet.balance.entourage,
+					recruitment: { ...recruitment, minAcceptPercent: 100, maxAcceptPercent: 100 }
+				}
+			}
+		};
+		state = commit(state, certain, {
 			steps: [{ kind: 'action', id: 'staff.hire', target: candidate }]
 		});
 		state = commit(settle(state, quiet), family);
@@ -364,7 +384,8 @@ describe('un poste pour la famille (P3-12)', () => {
 		const selected = choose(state, 'open_selection', family);
 		expect(selected.shortlists['post.chief_of_staff']).toContainEqual({
 			characterId: relativeId,
-			profileId: 'profile.connected'
+			profileId: 'profile.connected',
+			interviews: 0
 		});
 		expect(selected.characters[relativeId]!.tags).toContain('candidate');
 		expect(selected.staff).toEqual(state.staff);

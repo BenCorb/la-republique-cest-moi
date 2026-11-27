@@ -250,7 +250,7 @@ describe('instrumentation du contenu (P3-15)', () => {
 			content
 		);
 		const { aggregate } = report;
-		expect(report.reportVersion).toBe(18);
+		expect(report.reportVersion).toBe(19);
 		expect(aggregate.repeatedEvents.max).toBeGreaterThanOrEqual(0);
 		expect(aggregate.headlines.length).toBeGreaterThan(0);
 		const categories = aggregate.coverage.categories;
@@ -297,7 +297,9 @@ describe('événement rare du catalogue (P3-15)', () => {
 					missionId: content.posts['post.chief_of_staff']!.missions[0]!.id,
 					status: 'active',
 					leftTurn: null,
-					leaveReason: null
+					leaveReason: null,
+					salaryCents: 150_000,
+					bonusDueCents: 0
 				}
 			]
 		};
