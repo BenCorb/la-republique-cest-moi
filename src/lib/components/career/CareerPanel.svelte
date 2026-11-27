@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BallotReport from './BallotReport.svelte';
 	import { CalendarClock, LogOut, Megaphone, Vote } from '@lucide/svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 	import SupportsCard from './SupportsCard.svelte';
@@ -244,6 +245,24 @@
 									>
 										<Megaphone class="size-3.5" aria-hidden="true" /> Se présenter
 									</button>
+									{#if ballot.listPlace}
+										{@const place = ballot.listPlace}
+										<button
+											type="button"
+											class="btn-secondary btn-small"
+											disabled={!place.addable || place.planned || accelerating}
+											title={place.reason ?? undefined}
+											aria-label="Demander une place sur une liste : {ballot.label} du {ballot.dateLabel}"
+											onclick={() =>
+												session.controller.addStep({
+													kind: 'action',
+													id: place.actionId,
+													target: ballot.ballotId
+												})}
+										>
+											{place.planned ? 'Place demandée' : 'Demander une place sur une liste'}
+										</button>
+									{/if}
 								{/if}
 							</div>
 						{/if}
@@ -282,6 +301,14 @@
 							</span>
 							— en tête : {result.winner}
 							<span class="block text-xs text-muted">{result.shares}</span>
+							{#if result.report}
+								<details class="mt-1">
+									<summary class="cursor-pointer text-xs text-primary">
+										Procès-verbal — {result.report.title}
+									</summary>
+									<div class="mt-1"><BallotReport report={result.report} /></div>
+								</details>
+							{/if}
 						</li>
 					{/each}
 				</ul>

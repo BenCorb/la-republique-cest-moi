@@ -12,6 +12,8 @@
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
 export const RULES_VERSION = '0.40.0';
 
+export { candidacyRoleOf } from './plan.ts';
+export { effectiveSystem, listSystem, seatsFor } from './ballots.ts';
 export {
 	START_YEAR,
 	TURNS_PER_YEAR,
@@ -213,6 +215,10 @@ export {
 	campaignId,
 	campaignPoll,
 	campaignRefund,
+	campaignRefundFor,
+	pendingRunoff,
+	resolveRunoff,
+	settleCampaign,
 	campaignScore,
 	mobilizationPenalty,
 	mobilizationPercent,

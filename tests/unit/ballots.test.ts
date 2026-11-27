@@ -20,6 +20,7 @@ import {
 	type ContestInput
 } from '../../src/lib/game/engine/ballots.ts';
 import { createRng } from '../../src/lib/game/engine/random.ts';
+import { ballotReportView } from '../../src/lib/game/app/view-model.ts';
 import { validateContent } from '../../src/lib/game/content/validate.ts';
 import type { Content } from '../../src/lib/game/content/types.ts';
 import {
@@ -245,6 +246,12 @@ describe('second tour en partie', () => {
 		expect(state.campaigns[0]?.status).not.toBe('running');
 		expect(state.campaigns[0]?.resultTurn).toBe(state.turn);
 		expect(checkInvariants(state, catalog)).toEqual([]);
+		// Procès-verbal public : deux tours, sièges, issue du joueur.
+		const pv = ballotReportView(state.ballots[0]!, state, catalog)!;
+		expect(pv.secondRound).toBe(true);
+		expect(pv.pending).toBe(false);
+		expect(pv.rows.some((row) => row.player)).toBe(true);
+		expect(pv.verdict).not.toBeNull();
 		// Rejouer la même décision est refusé : aucune double résolution.
 		expect(transition(state, chooseEventCommand(view.instanceId, 'maintain'), catalog).ok).toBe(
 			false

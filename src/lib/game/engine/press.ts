@@ -269,8 +269,8 @@ function subjectsOf(
 	}
 	for (const campaign of inputs.campaigns) {
 		if (campaign.status !== 'won' && campaign.status !== 'lost') continue;
-		const ballot = inputs.ballots.find((item) => item.ballotId === campaign.ballotId);
-		if (ballot?.turn !== inputs.turn) continue;
+		// Résultat connu ce trimestre : au scrutin, ou après la décision du second tour (P3-29).
+		if (campaign.resultTurn !== inputs.turn) continue;
 		subjects.push({
 			topic: 'election',
 			subjectId: campaign.campaignId,

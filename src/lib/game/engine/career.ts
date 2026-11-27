@@ -938,6 +938,22 @@ export function campaignRefund(
 }
 
 /**
+ * Remboursement d'une candidature jugée, d'après son procès-verbal : premier
+ * tour du joueur, rien pour un colistier (P3-29). Sert aussi au journal.
+ */
+export function campaignRefundFor(
+	campaign: Campaign,
+	status: CampaignStatus,
+	ballots: readonly Ballot[],
+	content: Content
+): number {
+	const definition = content.elections[campaign.electionId];
+	const report = ballots.find((entry) => entry.ballotId === campaign.ballotId)?.report;
+	if (!definition || !report || campaign.role === 'colistier') return 0;
+	return campaignRefund(definition, status, playerFirstRoundPercent(report), content);
+}
+
+/**
  * Échéances de la fin du trimestre `turn` (T), dans un ordre fixe : préparation
  * passive et stress des campagnes en cours, fins de mandats liées aux scrutins
  * du trimestre, puis scrutins dans l'ordre du catalogue — parts des partis,
@@ -1375,7 +1391,7 @@ export function settleCampaign(
 		)
 	};
 	// Avance personnelle (P3-23) : rendue à partir d'un score minimal, perdue sinon.
-	const scored = playerFirstRoundPercent(report ?? EMPTY_REPORT) ?? 0;
+	const scored = playerPercent ?? 0;
 	const repaid =
 		campaign.advanceCents > 0 &&
 		status !== 'disqualified' &&
@@ -1395,20 +1411,6 @@ export function settleCampaign(
 		}
 	};
 }
-
-const EMPTY_REPORT: BallotReport = {
-	place: '',
-	system: 'single',
-	seats: 0,
-	turnout: 0,
-	contestants: [],
-	stage: 'final',
-	secondRound: false,
-	winnerId: null,
-	playerContestantId: null,
-	playerRank: null,
-	playerElected: null
-};
 
 /** Candidature dont le second tour attend la décision du joueur, la plus ancienne d'abord. */
 export function pendingRunoff(

@@ -1099,7 +1099,10 @@ test.describe('résultats et note de cabinet (P3-14)', () => {
 		const fact = page.getByTestId('note-fact').first();
 		await expect(fact).toHaveAttribute('data-kind', /^(victory|defeat)$/u);
 		await expect(fact).toContainText(/(Victoire|Défaite) — Élections municipales/u);
-		await expect(fact.getByRole('img', { name: /^Vous \d+ %/u })).toBeVisible();
+		// Procès-verbal commun (P3-29) : candidatures, tours et issue du joueur.
+		const report = fact.getByTestId('ballot-report');
+		await expect(report).toBeVisible();
+		await expect(report.getByRole('row', { name: /Votre liste/u })).toBeVisible();
 		await expect(fact.getByTestId('note-record')).toContainText(
 			'Bilan électoral de votre carrière'
 		);
