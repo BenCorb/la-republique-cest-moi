@@ -256,6 +256,8 @@ Les écrans créés par P3-13 à P3-23 utilisent d’emblée les composants de P
   - entre les deux tours, le joueur qualifié ou fusionnable décide : se maintenir, fusionner (places et soutiens négociés) ou se désister ; les autres listes suivent leurs affinités ; les deux tours se jouent dans le même trimestre ;
   - scrutins de liste : le joueur conduit sa liste ou demande une place sur celle d’un parti ou d’un sortant ; son rang dépend de l’appareil et de l’influence et décide de son élection ; une liste battue au-dessus du seuil obtient des sièges d’opposition.
 - *Durée* : la cible d’une carrière typique passe de 45–60 à 60–90 minutes ; la fin choisie permet des parties plus courtes.
+- *Portefeuilles (P3-35)* : huit ministères jouables — Intérieur, Justice, Économie et Finances, Travail, Éducation, Santé, Écologie, Agriculture — plus le secrétariat d’État en entrée ; les autres ministères existent dans le monde sans être jouables.
+- *Conduite du rush* : un détail non tranché (chiffre, libellé, nombre de sièges, choix secondaire) est décidé par l’assistant et consigné comme « décision déléguée, provisoire » ; seule une contradiction avec une décision validée arrête le rush. Le créateur relit le ton de tout le contenu écrit au grand playtest de P3-09. Une fois la pull request du rush fusionnée, l’assistant est autorisé à lancer le déploiement GitHub Pages (autorisation explicite du créateur, valable pour cette fusion).
 - *Premiers pas* : objectifs guidés dans une vraie carrière, pas de scénario séparé.
 - *Ambition de départ* : rappel au dossier et jugement au bilan, sans fin de partie ni bonus.
 
