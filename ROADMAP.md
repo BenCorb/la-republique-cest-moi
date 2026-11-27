@@ -227,6 +227,8 @@ Plan établi à partir des seize retours PT-P3-09-001 à 016 de `PLAYTEST.md`, c
 
 Les écrans créés par P3-13 à P3-23 utilisent d’emblée les composants de P3-26. Les tâches de même priorité sans dépendance entre elles et sans fichiers communs peuvent avancer en parallèle sur des branches distinctes (par exemple P3-11 et P3-12, puis P3-16 et P3-19). Chaque tâche qui change l’état incrémente la version des règles ; les sauvegardes de l’alpha restent refusées comme obsolètes jusqu’à P3-10.
 
+**Retours du playtest B1 en attente (27 novembre 2026) :** PT-B1-004 (contre-proposition après un refus d’embauche) et PT-B1-007 (carrière interne au parti, direction et scission) demandent des décisions du créateur ; ils sont examinés après le playtest B2.
+
 **Après la V1 :** déménagement, parachutage, grandes villes réelles et départementales ; outre-mer ; plusieurs médias par région ; trafic d’influence ; délégation complète des tâches de l’organisation ; débauchage par un rival et réputation d’employeur.
 
 
