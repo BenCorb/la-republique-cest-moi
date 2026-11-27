@@ -871,7 +871,7 @@ export interface PostSearchView {
 /** Offre d'embauche proposée à un candidat (P3-20). */
 export interface HireOfferView {
 	readonly actionId: string;
-	readonly offer: HireOffer;
+	readonly offer: HireOffer | 'counter';
 	readonly label: string;
 	/** « 1 040 € par trimestre », prime éventuelle comprise en mention. */
 	readonly salary: string;
@@ -886,6 +886,8 @@ export interface HireOfferView {
 
 export interface CandidateView extends StaffPersonView {
 	readonly profile: string;
+	/** Contre-proposition en cours (P3-33), en clair, sinon `null`. */
+	readonly counter: string | null;
 	/** Prétention salariale (P3-20). */
 	readonly asked: string;
 	/** Une offre est déjà prévue au plan. */
@@ -1562,7 +1564,9 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 				case 'hired':
 					return `embauche au poste « ${content.posts[change.postId]?.label ?? change.postId} »`;
 				case 'hireRefused':
-					return `le candidat décline le poste « ${content.posts[change.postId]?.label ?? change.postId} » : « votre projet est intéressant, mais pas encore à ce stade de ma carrière »`;
+					return change.counterCents === null
+						? `le candidat décline le poste « ${content.posts[change.postId]?.label ?? change.postId} » et quitte la présélection`
+						: `le candidat décline le poste « ${content.posts[change.postId]?.label ?? change.postId} », mais accepterait ${formatResource('politicalBudgetCents', change.counterCents)} par trimestre`;
 				case 'interviewed':
 					return `entretien approfondi pour le poste « ${content.posts[change.postId]?.label ?? change.postId} »`;
 				case 'searchOrdered':
@@ -2074,6 +2078,14 @@ function staffLines(record: StaffRecord | null, state: GameState, content: Conte
 			kind: 'career' as const,
 			text: `Candidatures reçues pour le poste « ${post(postId)} ».`
 		})),
+		// Contre-propositions sans réponse (P3-33).
+		...(record.counterLapsed ?? []).map((characterId) => {
+			const character = state.characters[characterId];
+			return {
+				kind: 'people' as const,
+				text: `${character ? displayName(character) : 'Un candidat'} n’a pas reçu de réponse à sa contre-proposition et retire sa candidature.`
+			};
+		}),
 		...record.searches.map((search) => ({
 			kind: 'career' as const,
 			text:
@@ -2660,7 +2672,9 @@ function noteHighlights(
 			text:
 				change.kind === 'hired'
 					? `${name} accepte le poste « ${post} »${member ? ` pour ${formatResource('politicalBudgetCents', member.salaryCents)} par trimestre` : ''} et se met au travail dès ce trimestre.`
-					: `${name} décline le poste « ${post} » et quitte la présélection. Aucune prime n’a été versée ; le poste reste à pourvoir.`,
+					: change.counterCents === null
+						? `${name} décline le poste « ${post} » et quitte la présélection. Aucune prime n’a été versée ; le poste reste à pourvoir.`
+						: `${name} décline le poste « ${post} », mais fait savoir qu’il accepterait ${formatResource('politicalBudgetCents', change.counterCents)} par trimestre. La proposition tient un trimestre ; sans réponse, il partira.`,
 			chart: null,
 			record: null,
 			chips: [],
@@ -4443,7 +4457,7 @@ function buildEntourage(
 	plan: readonly PlanStep[],
 	content: Content
 ): EntourageView {
-	const offerOf = (id: string): HireOffer | null => {
+	const offerOf = (id: string): HireOffer | 'counter' | null => {
 		for (const effect of content.actions[id]?.effects ?? [])
 			if (effect.op === 'hireStaff') return effect.offer ?? 'standard';
 		return null;
@@ -4539,33 +4553,49 @@ function buildEntourage(
 			: (state.shortlists[postId] ?? []).flatMap((entry) => {
 					const character = state.characters[entry.characterId];
 					if (!character || character.status !== 'active') return [];
-					const offers = offerActions.map((actionId): HireOfferView => {
+					// Contre-proposition (P3-33) : l'offre à son montant n'existe que pendant sa validité.
+					const offers = offerActions.flatMap((actionId): HireOfferView[] => {
 						const offer = offerOf(actionId)!;
-						const salary = offeredSalaryCents(postId, character.competence, offer, content);
-						const bonus = offerBonusCents(salary, offer, content);
+						if (offer === 'counter' && entry.counterOffer === null) return [];
+						const salary =
+							offer === 'counter'
+								? entry.counterOffer!.salaryCents
+								: offeredSalaryCents(postId, character.competence, offer, content);
+						const bonus = offer === 'counter' ? 0 : offerBonusCents(salary, offer, content);
 						const add = addability(
 							state,
 							plan,
 							{ kind: 'action', id: actionId, target: entry.characterId },
 							content
 						);
-						const interest = interestOf(
-							acceptancePercent(attraction, character.competence, offer, entry.interviews, content)
-						);
-						return {
-							actionId,
-							offer,
-							label: OFFER_LABELS[offer],
-							salary: `${formatResource('politicalBudgetCents', salary)} par trimestre`,
-							bonus:
-								bonus > 0
-									? `prime de ${formatResource('politicalBudgetCents', bonus)} à l’arrivée`
-									: null,
-							...interest,
-							planned: planned(actionId, entry.characterId),
-							addable: add.addable,
-							reason: add.reason
-						};
+						const interest =
+							offer === 'counter'
+								? { interest: 'acceptée à coup sûr', interestTone: 'good' as const }
+								: interestOf(
+										acceptancePercent(
+											attraction,
+											character.competence,
+											offer,
+											entry.interviews,
+											content
+										)
+									);
+						return [
+							{
+								actionId,
+								offer,
+								label: offer === 'counter' ? 'Accepter sa contre-proposition' : OFFER_LABELS[offer],
+								salary: `${formatResource('politicalBudgetCents', salary)} par trimestre`,
+								bonus:
+									bonus > 0
+										? `prime de ${formatResource('politicalBudgetCents', bonus)} à l’arrivée`
+										: null,
+								...interest,
+								planned: planned(actionId, entry.characterId),
+								addable: add.addable,
+								reason: add.reason
+							}
+						];
 					});
 					const vet = vetActionId
 						? addability(
@@ -4590,6 +4620,9 @@ function buildEntourage(
 								content.candidateProfiles.find((profile) => profile.id === entry.profileId)
 									?.label ?? '',
 							asked: `${formatResource('politicalBudgetCents', askedSalaryCents(postId, character.competence, content))} par trimestre`,
+							counter: entry.counterOffer
+								? `A décliné votre offre ; accepterait ${formatResource('politicalBudgetCents', entry.counterOffer.salaryCents)} par trimestre, réponse attendue avant la fin du ${formatTurn(entry.counterOffer.untilTurn)}.`
+								: null,
 							planned: offers.some((offer) => offer.planned),
 							offers,
 							interviews: entry.interviews,

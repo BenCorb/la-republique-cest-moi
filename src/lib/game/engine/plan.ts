@@ -266,7 +266,7 @@ export function candidacyRoleOf(effects: readonly Effect[]): 'head' | 'colistier
 }
 
 /** Offre portée par une action d'embauche (P3-20), standard par défaut. */
-function hireOfferOf(effects: readonly Effect[]): HireOffer {
+function hireOfferOf(effects: readonly Effect[]): HireOffer | 'counter' {
 	for (const effect of effects) if (effect.op === 'hireStaff') return effect.offer ?? 'standard';
 	return 'standard';
 }

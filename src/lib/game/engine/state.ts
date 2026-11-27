@@ -408,6 +408,11 @@ export interface ShortlistEntry {
 	 * références, peut-être à tort ; `null` tant que rien n'a été vérifié.
 	 */
 	readonly hints: readonly string[] | null;
+	/**
+	 * Contre-proposition après un premier refus (P3-33) : salaire qu'il
+	 * accepterait, valable jusqu'au trimestre indiqué inclus ; sinon `null`.
+	 */
+	readonly counterOffer: { readonly salaryCents: number; readonly untilTurn: Turn } | null;
 }
 
 /** Recherche de candidats commandée, en attente de son échéance (P3-21). */
@@ -465,6 +470,8 @@ export interface StaffRecord {
 	}[];
 	/** Demandes d'augmentation adressées ce trimestre (P3-21). */
 	readonly raiseRequests: readonly string[];
+	/** Candidats partis faute de réponse à leur contre-proposition (P3-33). */
+	readonly counterLapsed: readonly string[];
 }
 
 /** Règles du cumul en vigueur, copiées du catalogue (modifiables par réforme, P3-05). */
@@ -529,7 +536,13 @@ export type PoliticalChange =
 	| { readonly kind: 'campaignAdvance'; readonly campaignId: string; readonly cents: number }
 	| { readonly kind: 'hired'; readonly characterId: string; readonly postId: string }
 	/** Candidat qui décline l'offre (P3-20) : il quitte la présélection. */
-	| { readonly kind: 'hireRefused'; readonly characterId: string; readonly postId: string }
+	| {
+			readonly kind: 'hireRefused';
+			readonly characterId: string;
+			readonly postId: string;
+			/** Salaire de la contre-proposition (P3-33), `null` quand le candidat s'en va. */
+			readonly counterCents: number | null;
+	  }
 	/** Entretien approfondi avec un candidat (P3-20). */
 	| { readonly kind: 'interviewed'; readonly characterId: string; readonly postId: string }
 	/** Recherche de candidats commandée (P3-21). */

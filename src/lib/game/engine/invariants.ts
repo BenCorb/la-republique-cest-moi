@@ -734,8 +734,12 @@ function checkCareerInvariants(state: GameState): string[] {
 		}
 		if (
 			request.status === 'granted' &&
+			// Une élection anticipée reporte la candidature sur la nouvelle échéance.
 			!state.campaigns.some(
-				(campaign) => campaign.ballotId === request.ballotId && campaign.invested
+				(campaign) =>
+					campaign.electionId === request.electionId &&
+					campaign.declaredTurn === request.requestedTurn &&
+					campaign.invested
 			)
 		) {
 			violations.push(`investiture accordée sans candidature : ${request.requestId}`);

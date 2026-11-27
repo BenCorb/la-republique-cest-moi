@@ -216,7 +216,10 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 		op: z.literal('runoffDecision'),
 		decision: z.enum(['maintain', 'merge', 'withdraw'])
 	}),
-	z.strictObject({ op: z.literal('hireStaff'), offer: z.enum(HIRE_OFFERS).optional() }),
+	z.strictObject({
+		op: z.literal('hireStaff'),
+		offer: z.enum([...HIRE_OFFERS, 'counter']).optional()
+	}),
 	z.strictObject({ op: z.literal('courtCandidate') }),
 	z.strictObject({ op: z.literal('orderSearch'), level: z.enum(SEARCH_LEVELS) }),
 	z.strictObject({ op: z.literal('vetCandidate') }),
@@ -1135,7 +1138,8 @@ const recruitmentBalanceSchema: z.ZodType<RecruitmentBalance> = z
 		maxAcceptPercent: gaugeValue,
 		interviewInterest: nonNegativeInt,
 		maxInterviews: nonNegativeInt,
-		refusalAttitude: safeInt.refine((value) => Math.abs(value) <= 100, 'de -100 à 100')
+		refusalAttitude: safeInt.refine((value) => Math.abs(value) <= 100, 'de -100 à 100'),
+		counterOfferPercent: positiveInt
 	})
 	.refine(
 		(balance) =>

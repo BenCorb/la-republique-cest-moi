@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.41.0';
+export const RULES_VERSION = '0.42.0';
 
 export { candidacyRoleOf } from './plan.ts';
 export { effectiveSystem, listSystem, seatsFor } from './ballots.ts';

@@ -151,7 +151,8 @@ describe('alertes d’entourage et de budget', () => {
 				shortlisted: ['post.aide'],
 				searches: [],
 				progress: [],
-				raiseRequests: []
+				raiseRequests: [],
+				counterLapsed: []
 			}
 		});
 		const alerts = accelerationAlerts(state, EMPTY, catalog);

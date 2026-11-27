@@ -198,7 +198,8 @@
 			"maxAcceptPercent": 98,
 			"interviewInterest": 6,
 			"maxInterviews": 2,
-			"refusalAttitude": -5
+			"refusalAttitude": -5,
+			"counterOfferPercent": 140
 		},
 		"search": {
 			"levels": {

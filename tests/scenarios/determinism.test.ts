@@ -72,7 +72,8 @@ describe('scénario : passage du temps', () => {
 					shortlisted: [],
 					searches: [],
 					progress: [],
-					raiseRequests: []
+					raiseRequests: [],
+					counterLapsed: []
 				},
 				family: { inheritance: 0, childCosts: 0, stress: 0, neglected: false, widowed: null },
 				wellbeing: { contributions: [], deathCause: null },

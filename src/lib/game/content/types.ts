@@ -281,7 +281,7 @@ export type Effect =
 	| { readonly op: 'advanceCampaign'; readonly valueCents: number }
 	/** Embauche du candidat choisi dans le plan (`target`), sur son poste (P2-05). */
 	/** Offre faite au candidat (P3-20) : réduite, standard (par défaut) ou généreuse. */
-	| { readonly op: 'hireStaff'; readonly offer?: HireOffer | undefined }
+	| { readonly op: 'hireStaff'; readonly offer?: HireOffer | 'counter' | undefined }
 	/** Entretien approfondi avec un candidat présélectionné (P3-20), avant l'offre. */
 	| { readonly op: 'courtCandidate' }
 	/**
@@ -1464,6 +1464,8 @@ export interface RecruitmentBalance {
 	readonly maxInterviews: number;
 	/** Attitude d'un candidat qui décline. */
 	readonly refusalAttitude: number;
+	/** Salaire réclamé après un premier refus (P3-33), en % du salaire demandé. */
+	readonly counterOfferPercent: number;
 }
 
 /** Vie de famille (hypothèses de tuning, P2-08). */

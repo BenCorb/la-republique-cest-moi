@@ -390,7 +390,8 @@ describe('un poste pour la famille (P3-12)', () => {
 			characterId: relativeId,
 			profileId: 'profile.connected',
 			interviews: 0,
-			hints: null
+			hints: null,
+			counterOffer: null
 		});
 		expect(selected.characters[relativeId]!.tags).toContain('candidate');
 		expect(selected.staff).toEqual(state.staff);

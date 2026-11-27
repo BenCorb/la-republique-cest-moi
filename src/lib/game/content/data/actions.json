@@ -1184,6 +1184,17 @@
 			"target": "candidate"
 		},
 		{
+			"id": "staff.hire_counter",
+			"category": "organisation",
+			"label": "Accepter sa contre-proposition",
+			"description": "Il avait dit non, puis donné son prix. Le voici accepté : pas de prime, pas de négociation, juste un contrat signé dans la foulée.",
+			"timeCost": 5,
+			"maxPerTurn": 2,
+			"costs": [],
+			"effects": [{ "op": "hireStaff", "offer": "counter" }],
+			"target": "candidate"
+		},
+		{
 			"id": "staff.dismiss",
 			"category": "organisation",
 			"label": "Se séparer d’un collaborateur",

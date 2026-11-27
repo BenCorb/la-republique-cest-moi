@@ -410,6 +410,7 @@ function commitTurn(
 			...production.record,
 			departures: team?.record.departures ?? [],
 			shortlisted: team?.record.shortlisted ?? [],
+			counterLapsed: team?.record.counterLapsed ?? [],
 			searches: team?.record.searches ?? [],
 			raiseRequests: team?.record.raiseRequests ?? []
 		},

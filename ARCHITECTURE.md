@@ -1064,6 +1064,17 @@ Règles du créateur (ROADMAP §5.2, GDD §7.3) ; chiffres et détails : **déci
 - **Simulation** : les politiques encartées demandent l'investiture là où elle est exigée ; après un refus, chaque politique choisit selon sa règle habituelle (l'ambitieuse se présente en dissident). Mesure (100 carrières par stratégie, seed `p3-30`) : aucune erreur ni violation ; législatives gagnées 14 fois sur 66 (ambitieuse, souvent dissidente) et 74 sur 157 (mixte). `RULES_VERSION = '0.41.0'`.
 - **Tests** : `tests/unit/investiture.test.ts` (candidature bloquée, appréciation sans chiffre, accord unique, refus motivé puis dissidence ou renoncement, invariants) ; scénario du catalogue réel avec demande d'investiture.
 
+### 8.4 untrigesies Décisions de P3-33 : contre-proposition d’un candidat (27 novembre 2026)
+
+Décision du créateur (ROADMAP §5.2, PT-B1-004) ; montants : **décisions déléguées, provisoires**.
+
+- **Premier refus** : le candidat reste dans la présélection avec une contre-proposition (`ShortlistEntry.counterOffer` : salaire, valable jusqu'au trimestre suivant inclus). Montant : 140 % du salaire demandé (`recruitment.counterOfferPercent`), arrondi, et toujours au-dessus de l'offre refusée. Le refus reste annoncé (journal, note : « … mais accepterait X € par trimestre »), sans prime ni salaire versés ; l'attitude baisse comme avant.
+- **Réponse** : action « Accepter sa contre-proposition » (`staff.hire_counter`, effet `hireStaff` avec l'offre `counter`, 5 points de temps), acceptée à coup sûr, sans prime ni bonus d'attitude ; elle exige la même réserve de budget que les autres offres. Une autre offre reste possible, avec le tirage habituel.
+- **Départ** : sans réponse, le candidat quitte la présélection à la frontière qui suit le trimestre de validité (`StaffRecord.counterLapsed`, ligne de journal) ; un second refus le fait partir aussitôt (`hireRefused` avec `counterCents: null`). Décision tirée à l'exécution seulement, jamais rejouée après reprise.
+- **Interface** : la fiche du candidat annonce la contre-proposition et sa date limite ; l'offre « Accepter sa contre-proposition » s'affiche avec « acceptée à coup sûr ».
+- **Correctif P3-30** : l'invariant « investiture accordée sans candidature » suit la candidature reportée sur une élection anticipée (même élection, même trimestre de dépôt).
+- `RULES_VERSION = '0.42.0'`. Tests : `tests/unit/recruitment.test.ts` (refus et contre-proposition, acceptation certaine, départ sans réponse ou au second refus, note du trimestre).
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.

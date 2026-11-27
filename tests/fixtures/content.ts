@@ -160,7 +160,8 @@ export const fixtureBalance = {
 			maxAcceptPercent: 100,
 			interviewInterest: 6,
 			maxInterviews: 2,
-			refusalAttitude: -5
+			refusalAttitude: -5,
+			counterOfferPercent: 140
 		},
 		/**
 		 * Recrutement II de test (P3-21) : recherches certaines, aucune progression
