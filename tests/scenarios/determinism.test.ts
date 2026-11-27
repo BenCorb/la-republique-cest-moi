@@ -86,13 +86,25 @@ describe('scénario : passage du temps', () => {
 				promises: { changes: [], gauges: [], politics: [] },
 				press: { articles: [], relations: [] },
 				institutions: { changes: [], gauges: [], politics: [] },
+				activists: {
+					arrivals: 0,
+					recruits: 0,
+					departures: 0,
+					total: 0,
+					capacity: 15,
+					tierBefore: 'tier.isolated',
+					tierAfter: 'tier.isolated',
+					duesCents: 0,
+					upkeepCents: 0
+				},
 				events: [],
 				snapshot: {
 					...result.state.resources,
 					popularity: result.state.player.popularity,
 					health: result.state.player.health,
 					stress: result.state.player.stress,
-					exposure: result.state.player.exposure
+					exposure: result.state.player.exposure,
+					activists: 0
 				}
 			}
 		]);

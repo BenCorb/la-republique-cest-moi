@@ -134,6 +134,22 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByTestId('territory')).toContainText('Votre terre d’élection');
 	});
 
+	test('choisit le terrain d’engagement et en reçoit les actions (P3-17)', async ({ page }) => {
+		await page.goto('./?seed=e2e-terrain');
+		await page.getByRole('button', { name: 'Nouvelle carrière' }).click();
+		await expect(page.getByRole('group', { name: 'Terrain d’engagement' })).toBeVisible();
+		await expect(page.getByRole('radio', { name: /Vie associative/u })).toBeChecked();
+		await page.getByRole('radio', { name: /Syndicalisme/u }).check();
+		await expect(page.getByTestId('engagement-actions').first()).toContainText(
+			'Tenir la permanence syndicale'
+		);
+		await page.getByRole('button', { name: 'Commencer la carrière' }).click();
+		await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
+		await expect(page.getByText(/· Syndicalisme ·/u)).toBeVisible();
+		await page.getByRole('button', { name: 'Agenda', exact: true }).click();
+		await expect(page.getByText('Tenir la permanence syndicale').first()).toBeVisible();
+	});
+
 	test('affiche le calendrier électoral et la fonction principale', async ({ page }) => {
 		await startCareer(page, 'e2e-carriere');
 		await expect(page.getByTestId('header-function')).toHaveText('Fonction Sans mandat');
@@ -187,6 +203,19 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByTestId('recruitment-summary')).toContainText('Influence');
 		await expect(page.getByTestId('payroll')).toContainText('par trimestre');
 		await expect(page.getByTestId('post-post.chief_of_staff')).toContainText('Référence :');
+	});
+
+	test('présente le quotidien de la région d’origine et lui seul (P3-18)', async ({ page }) => {
+		await page.goto('./?seed=e2e-beffroi');
+		await page.getByRole('button', { name: 'Nouvelle carrière' }).click();
+		await page.getByRole('combobox', { name: 'Région' }).selectOption({ label: 'Hauts-de-France' });
+		await page.getByRole('button', { name: 'Commencer la carrière' }).click();
+		await page.getByRole('button', { name: 'Carrière', exact: true }).click();
+		await expect(page.getByTestId('media-media.beffroi')).toContainText('Le Beffroi');
+		await expect(page.getByTestId('media-media.beffroi')).toContainText('Presse régionale');
+		await expect(page.getByTestId('media-media.bocage')).toHaveCount(0);
+		await page.getByRole('button', { name: 'Patrimoine', exact: true }).click();
+		await expect(page.getByText('Racheter Le Beffroi')).toBeVisible();
 	});
 
 	test('accorde une interview et la retrouve dans le fil de presse', async ({ page }) => {
@@ -318,24 +347,41 @@ test.describe('parcours de jeu', () => {
 	test('planifie un achat qui ne produit qu’au trimestre suivant', async ({ page }) => {
 		await startCareer(page, 'e2e-achat');
 		await page.getByRole('button', { name: 'Organisation', exact: true }).click();
+		// Base militante organique (P3-19) : plus de militant acheté.
+		await expect(page.getByTestId('activists')).toContainText('Base militante');
+		await expect(page.getByTestId('activists-count')).toHaveText('3 militants');
+		await expect(
+			page.getByRole('button', { name: 'Planifier l’achat « Recruter un militant bénévole »' })
+		).toHaveCount(0);
 		await page
-			.getByRole('button', { name: 'Planifier l’achat « Recruter un militant bénévole »' })
+			.getByRole('button', { name: 'Planifier l’achat « Adhérer à un cercle de réflexion »' })
 			.click();
-		await expect(page.getByText('Actif à partir du trimestre prochain.').first()).toBeVisible();
+		await expect(page.getByTestId('group-network.think_tank')).toContainText(
+			'Actif à partir du trimestre prochain'
+		);
 		await nextQuarter(page);
 		await page.getByRole('button', { name: 'Organisation', exact: true }).click();
-		const group = page.getByTestId('group-organization.volunteer');
-		await expect(group).toContainText('Militant bénévole');
+		const group = page.getByTestId('group-network.think_tank');
+		await expect(group).toContainText('Cercle de réflexion');
 		await expect(group).toContainText('Actif ce trimestre');
-		await expect(group).toContainText('Au départ : Soutien : Militants − 2');
 
 		// Départ gratuit, effectif dès ce trimestre, annulable dans le plan.
-		await page.getByRole('button', { name: 'Prévoir un départ : Militant bénévole' }).click();
+		await page.getByRole('button', { name: 'Prévoir un départ : Cercle de réflexion' }).click();
 		await expect(group).toContainText('1 départ prévu ce trimestre');
 		await nextQuarter(page);
 		await page.getByRole('button', { name: 'Organisation', exact: true }).click();
 		await expect(group).toHaveCount(0);
 		await expect(page.getByText('Personne ne travaille encore pour vous.')).toBeVisible();
+	});
+
+	test('annonce le bonus de la base militante sur les actions de terrain (P3-19)', async ({
+		page
+	}) => {
+		await startCareer(page, 'e2e-terrain-militant');
+		await page.getByRole('button', { name: 'Agenda', exact: true }).click();
+		await expect(page.getByTestId('field-bonus-activism.leaflets')).toContainText(
+			'Action de terrain : bonus à partir du palier « Noyau »'
+		);
 	});
 
 	test('refuse explicitement une sauvegarde d’une ancienne version, sans l’effacer', async ({
@@ -592,7 +638,7 @@ test.describe('parcours de jeu', () => {
 		await page.getByTestId('import-input').setInputFiles(file);
 		await page.getByRole('button', { name: 'Relations', exact: true }).click();
 		const card = page.getByTestId('person-cast.sophie_roux');
-		await expect(card).toContainText('Sophie Roux, du Courrier du Bocage');
+		await expect(card).toContainText('Sophie Roux, du quotidien régional');
 		await expect(card).toContainText('Attitude : favorable');
 		await expect(card).toContainText('Vous lui avez accordé un entretien.');
 		for (const trait of hidden) {

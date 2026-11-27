@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GameController } from '../../src/lib/game/app/controller.ts';
 import type { Content, EventChoice } from '../../src/lib/game/content/types.ts';
 import type { KeyValueStorage } from '../../src/lib/game/persistence/index.ts';
-import { projectView } from '../../src/lib/game/app/view-model.ts';
+import { projectView, type NoteHighlightView } from '../../src/lib/game/app/view-model.ts';
 import {
 	commitTurn,
 	createGame,
@@ -213,5 +213,41 @@ describe('faits marquants de la note', () => {
 		expect(fact).toMatchObject({ kind: 'defeat', tone: 'cost' });
 		expect(fact?.text).toMatch(/^Défaite d’un souffle : 48 %/u);
 		expect(fact?.record).toEqual({ won: 0, lost: 1 });
+	});
+});
+
+describe('effets des événements dans la note (PT-B1-003)', () => {
+	it('affiche les effets propres à l’événement, identiques après reprise', () => {
+		const storage = new MemoryStorage();
+		const content = withEvents(['test.windfall']);
+		const game = controller(storage, content);
+		game.newCareer();
+		let fact: NoteHighlightView | undefined;
+		for (let guard = 0; !fact && guard < 20; guard += 1) {
+			game.addStep({ kind: 'action', id: 'test.fixed' });
+			game.commitTurn();
+			fact = game.snapshot().view?.quarterNote?.highlights.find((item) => item.kind === 'event');
+			game.dismissNote();
+		}
+		expect(fact?.text).toMatch(/^Aubaine/u);
+		// Seul le cadeau de l'événement : ni l'action du plan, ni les revenus du trimestre.
+		expect(fact?.chips).toEqual([
+			expect.objectContaining({ identity: 'personalCashCents', sense: 'gain', variable: false })
+		]);
+		expect(fact?.chips[0]?.text).toMatch(/\+\s?10\s?€/u);
+		// Les autres faits ne portent pas de pastilles.
+		const note = game.snapshot().view?.quarterNote;
+		expect(
+			note?.highlights
+				.filter((item) => item.kind !== 'event')
+				.every((item) => item.chips.length === 0)
+		).toBe(true);
+
+		const resumed = controller(storage, content);
+		expect(resumed.resume()).toBe(true);
+		const again = resumed
+			.snapshot()
+			.view?.quarterNote?.highlights.find((item) => item.key === fact?.key);
+		expect(again?.chips).toEqual(fact?.chips);
 	});
 });

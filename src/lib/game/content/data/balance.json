@@ -232,5 +232,62 @@
 		"hostileAttitude": -15,
 		"partnerStress": 1,
 		"partnerAgeSpread": 5
+	},
+	"activists": {
+		"start": 3,
+		"baseCapacity": 15,
+		"partyCapacity": 40,
+		"mandateCapacityPerRank": 4,
+		"reachInfluenceFactor": 2,
+		"reachExposureDivisor": 5,
+		"campaignReach": 10,
+		"attractionThreshold": 0,
+		"attractionPercentPerPoint": 4,
+		"baseAttritionPercent": 4,
+		"discontentThreshold": 10,
+		"discontentDivisor": 2,
+		"overCapacityAttritionPercent": 10,
+		"recruitsPerVoteTenths": 3,
+		"duesCents": 150,
+		"partyMachinePercent": 40,
+		"mobilizationWeight": 15,
+		"tiers": [
+			{
+				"id": "tier.isolated",
+				"label": "Quelques fidèles",
+				"min": 0,
+				"fieldMultiplier": 0,
+				"upkeepCents": 0
+			},
+			{ "id": "tier.core", "label": "Noyau", "min": 5, "fieldMultiplier": 1, "upkeepCents": 0 },
+			{
+				"id": "tier.committee",
+				"label": "Comité local",
+				"min": 25,
+				"fieldMultiplier": 2,
+				"upkeepCents": 3000
+			},
+			{
+				"id": "tier.section",
+				"label": "Section implantée",
+				"min": 100,
+				"fieldMultiplier": 3,
+				"upkeepCents": 15000
+			},
+			{
+				"id": "tier.regional",
+				"label": "Réseau régional",
+				"min": 400,
+				"fieldMultiplier": 4,
+				"upkeepCents": 60000
+			},
+			{
+				"id": "tier.national",
+				"label": "Organisation nationale",
+				"min": 1500,
+				"fieldMultiplier": 5,
+				"upkeepCents": 200000
+			}
+		]
 	}
 }

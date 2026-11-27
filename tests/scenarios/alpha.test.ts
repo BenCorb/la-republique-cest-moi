@@ -112,7 +112,7 @@ describe('alpha : cumul légal à chaque trimestre', { timeout: LONG_SCENARIO_TI
 			{
 				seed,
 				origin: content.originIds[seed.length % content.originIds.length]!,
-				profession: content.professionIds[seed.length % content.professionIds.length]!
+				engagement: content.engagementIds[seed.length % content.engagementIds.length]!
 			},
 			content
 		);
@@ -190,7 +190,7 @@ describe('alpha : sauvegardes', () => {
 			'staff',
 			'shortlists'
 		]);
-		const player = without(game.player, ['origin', 'profession', 'family']);
+		const player = without(game.player, ['origin', 'engagement', 'family']);
 		const old = {
 			...envelope,
 			rulesVersion: '0.7.0',

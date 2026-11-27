@@ -39,7 +39,8 @@
 					"group": "support.working_class",
 					"value": 1
 				}
-			]
+			],
+			"fieldwork": { "op": "addResource", "resource": "influence", "value": 1 }
 		},
 		{
 			"id": "network.meet_officials",
@@ -148,7 +149,8 @@
 					"value": 1
 				},
 				{ "op": "addStat", "stat": "player.exposure", "value": 3 }
-			]
+			],
+			"fieldwork": { "op": "addResource", "resource": "influence", "value": 1 }
 		},
 		{
 			"id": "organization.fundraising",
@@ -181,7 +183,8 @@
 					"group": "support.business",
 					"value": 1
 				}
-			]
+			],
+			"fieldwork": { "op": "addResource", "resource": "politicalBudgetCents", "value": 5000 }
 		},
 		{
 			"id": "organization.gala",
@@ -569,7 +572,8 @@
 					"group": "support.working_class",
 					"value": 1
 				}
-			]
+			],
+			"fieldwork": { "op": "prepareCampaign", "value": 1 }
 		},
 		{
 			"id": "campaign.rally",
@@ -728,7 +732,33 @@
 			"target": "upgrade"
 		},
 		{
-			"id": "profession.union_office",
+			"id": "engagement.union.shift",
+			"category": "work",
+			"label": "Faire ses heures à l’atelier",
+			"description": "Le salaire tombe, la pointeuse aussi ; entre deux pauses, les collègues vous racontent leurs fins de mois.",
+			"timeCost": 30,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "engagement",
+				"engagement": "engagement.union"
+			},
+			"unavailableReason": "Réservé à qui vient du syndicalisme.",
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "personalCashCents",
+					"value": 70000
+				},
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "engagement.union.office",
 			"category": "work",
 			"label": "Tenir la permanence syndicale",
 			"description": "Écouter les collègues, remplir des dossiers et rappeler à la direction l’existence du Code du travail.",
@@ -736,15 +766,20 @@
 			"maxPerTurn": 1,
 			"costs": [],
 			"requires": {
-				"op": "profession",
-				"profession": "profession.factory"
+				"op": "engagement",
+				"engagement": "engagement.union"
 			},
-			"unavailableReason": "Réservé à qui vient de l’usine et des chantiers.",
+			"unavailableReason": "Réservé à qui vient du syndicalisme.",
 			"effects": [
 				{
 					"op": "addSupport",
 					"group": "support.working_class",
 					"value": 2
+				},
+				{
+					"op": "addSupport",
+					"group": "support.activists",
+					"value": 1
 				},
 				{
 					"op": "addResource",
@@ -754,23 +789,23 @@
 			]
 		},
 		{
-			"id": "profession.evening_classes",
+			"id": "engagement.association.coordination",
 			"category": "work",
-			"label": "Donner des cours du soir",
-			"description": "Expliquer la règle de trois à des adultes fatigués, et repartir avec quelques électeurs.",
-			"timeCost": 20,
+			"label": "Coordonner l’association",
+			"description": "Un mi-temps de salarié associatif : tableaux de bénévoles, clés du local et rapport d’activité pour la mairie.",
+			"timeCost": 30,
 			"maxPerTurn": 1,
 			"costs": [],
 			"requires": {
-				"op": "profession",
-				"profession": "profession.teacher"
+				"op": "engagement",
+				"engagement": "engagement.association"
 			},
-			"unavailableReason": "Réservé à qui vient de l’enseignement.",
+			"unavailableReason": "Réservé à qui vient de la vie associative.",
 			"effects": [
 				{
 					"op": "addResource",
 					"resource": "personalCashCents",
-					"value": 40000
+					"value": 60000
 				},
 				{
 					"op": "addSupport",
@@ -780,24 +815,59 @@
 			]
 		},
 		{
-			"id": "profession.plead",
+			"id": "engagement.association.drive",
 			"category": "work",
-			"label": "Plaider une affaire",
-			"description": "Une audience, une plaidoirie inspirée et une note d’honoraires qui l’est tout autant.",
+			"label": "Organiser une collecte solidaire",
+			"description": "Des cartons de conserves sur le parking du supermarché, un article dans le journal et beaucoup de mains serrées.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "engagement",
+				"engagement": "engagement.association"
+			},
+			"unavailableReason": "Réservé à qui vient de la vie associative.",
+			"effects": [
+				{
+					"op": "addSupport",
+					"group": "support.middle_class",
+					"value": 1
+				},
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": 1
+				},
+				{
+					"op": "addSupport",
+					"group": "support.activists",
+					"value": 1
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": -2
+				}
+			]
+		},
+		{
+			"id": "engagement.student.odd_jobs",
+			"category": "work",
+			"label": "Enchaîner les petits boulots",
+			"description": "Surveillances d’examens, cours particuliers et inventaires de nuit : de quoi payer le loyer, à peine.",
 			"timeCost": 30,
 			"maxPerTurn": 1,
 			"costs": [],
 			"requires": {
-				"op": "profession",
-				"profession": "profession.lawyer"
+				"op": "engagement",
+				"engagement": "engagement.student"
 			},
-			"unavailableReason": "Réservé à qui vient du barreau.",
+			"unavailableReason": "Réservé à qui vient du militantisme étudiant.",
 			"effects": [
 				{
-					"op": "addResourceRandom",
+					"op": "addResource",
 					"resource": "personalCashCents",
-					"min": 100000,
-					"max": 250000
+					"value": 45000
 				},
 				{
 					"op": "addStat",
@@ -807,7 +877,174 @@
 			]
 		},
 		{
-			"id": "profession.op_ed",
+			"id": "engagement.student.assembly",
+			"category": "work",
+			"label": "Animer une assemblée générale",
+			"description": "Trois heures de débat sur l’ordre du jour, un vote à main levée et une motion qui fera date, au moins sur le campus.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "engagement",
+				"engagement": "engagement.student"
+			},
+			"unavailableReason": "Réservé à qui vient du militantisme étudiant.",
+			"effects": [
+				{
+					"op": "addSupport",
+					"group": "support.activists",
+					"value": 2
+				},
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 1
+				},
+				{
+					"op": "addStat",
+					"stat": "player.exposure",
+					"value": 2
+				}
+			]
+		},
+		{
+			"id": "engagement.public_service.duty",
+			"category": "work",
+			"label": "Assurer son service à la mairie",
+			"description": "Guichet, courriers et réunions de service : un traitement régulier et une vue imprenable sur les rouages locaux.",
+			"timeCost": 30,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "engagement",
+				"engagement": "engagement.public_service"
+			},
+			"unavailableReason": "Réservé à qui vient du service public.",
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "personalCashCents",
+					"value": 80000
+				},
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "engagement.public_service.defend",
+			"category": "work",
+			"label": "Défendre un service menacé",
+			"description": "Une pétition pour sauver le bureau de poste, une délégation reçue en préfecture et une photo devant le guichet.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "engagement",
+				"engagement": "engagement.public_service"
+			},
+			"unavailableReason": "Réservé à qui vient du service public.",
+			"effects": [
+				{
+					"op": "addSupport",
+					"group": "support.middle_class",
+					"value": 1
+				},
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": 1
+				},
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "engagement.business.clients",
+			"category": "work",
+			"label": "Démarcher des clients",
+			"description": "Une journée de rendez-vous, un tableur très coloré et quelques factures qui tombent enfin.",
+			"timeCost": 25,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "engagement",
+				"engagement": "engagement.business"
+			},
+			"unavailableReason": "Réservé à qui vient de l’entreprise.",
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "personalCashCents",
+					"min": 80000,
+					"max": 180000
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 2
+				}
+			]
+		},
+		{
+			"id": "engagement.business.club",
+			"category": "work",
+			"label": "Animer le club des entrepreneurs",
+			"description": "Un petit-déjeuner à la chambre de commerce, trois cartes de visite et un vice-président qui vous tutoie.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "engagement",
+				"engagement": "engagement.business"
+			},
+			"unavailableReason": "Réservé à qui vient de l’entreprise.",
+			"effects": [
+				{
+					"op": "addSupport",
+					"group": "support.business",
+					"value": 2
+				},
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "engagement.press.freelance",
+			"category": "work",
+			"label": "Écrire des piges pour le quotidien régional",
+			"description": "Conseils municipaux, comices agricoles et chiens écrasés, payés à la ligne, relus par un chef d’édition grincheux.",
+			"timeCost": 25,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "engagement",
+				"engagement": "engagement.press"
+			},
+			"unavailableReason": "Réservé à qui vient de la presse locale.",
+			"effects": [
+				{
+					"op": "addResource",
+					"resource": "personalCashCents",
+					"value": 55000
+				},
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "engagement.press.op_ed",
 			"category": "work",
 			"label": "Signer une tribune",
 			"description": "Huit mille signes sur l’avenir du pays, relus par trois amis et un dictionnaire des citations.",
@@ -815,10 +1052,10 @@
 			"maxPerTurn": 1,
 			"costs": [],
 			"requires": {
-				"op": "profession",
-				"profession": "profession.journalist"
+				"op": "engagement",
+				"engagement": "engagement.press"
 			},
-			"unavailableReason": "Réservé à qui vient de la presse.",
+			"unavailableReason": "Réservé à qui vient de la presse locale.",
 			"effects": [
 				{
 					"op": "addResource",
@@ -830,58 +1067,10 @@
 					"group": "support.middle_class",
 					"value": 1
 				},
-				{ "op": "addStat", "stat": "player.exposure", "value": 3 }
-			]
-		},
-		{
-			"id": "profession.consulting",
-			"category": "work",
-			"label": "Conseiller une entreprise",
-			"description": "Une journée de conseil facturée au prix d’une semaine, avec un tableur très coloré.",
-			"timeCost": 25,
-			"maxPerTurn": 1,
-			"costs": [],
-			"requires": {
-				"op": "profession",
-				"profession": "profession.entrepreneur"
-			},
-			"unavailableReason": "Réservé à qui vient de l’entreprise.",
-			"effects": [
 				{
-					"op": "addResource",
-					"resource": "personalCashCents",
-					"value": 150000
-				},
-				{
-					"op": "addSupport",
-					"group": "support.business",
-					"value": 2
-				}
-			]
-		},
-		{
-			"id": "profession.old_networks",
-			"category": "work",
-			"label": "Activer les anciens réseaux",
-			"description": "Un déjeuner avec d’anciens camarades de promotion devenus indispensables dans des ministères.",
-			"timeCost": 20,
-			"maxPerTurn": 1,
-			"costs": [],
-			"requires": {
-				"op": "profession",
-				"profession": "profession.civil_servant"
-			},
-			"unavailableReason": "Réservé à qui vient de la haute administration.",
-			"effects": [
-				{
-					"op": "addResource",
-					"resource": "influence",
+					"op": "addStat",
+					"stat": "player.exposure",
 					"value": 3
-				},
-				{
-					"op": "addSupport",
-					"group": "support.apparatus",
-					"value": 1
 				}
 			]
 		},

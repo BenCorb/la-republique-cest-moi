@@ -17,6 +17,7 @@
  * PRNG et n'expose aucune probabilité.
  */
 import { attractiveness, attractivenessFactors } from './recruitment.ts';
+import { fieldworkEffects } from './activists.ts';
 import {
 	RESOURCE_IDS,
 	type Condition,
@@ -47,7 +48,7 @@ import type {
 	WorldState
 } from './state.ts';
 import { applyPoliticalEffect, isPoliticalEffect } from './world.ts';
-import { interviewIssue, mediaIssue } from './press.ts';
+import { interviewIssue, mediaIssue, pressAudience } from './press.ts';
 import { eraReached } from './eras.ts';
 import { applyReformEffect, effectiveContent, isReformEffect, reformIssue } from './reforms.ts';
 import {
@@ -486,8 +487,12 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 			if (!eraReached(definition.fromEra, state.turn, content)) {
 				fail('condition_not_met', `« ${label} » n’existe pas encore à cette époque.`);
 			}
-			ranges = definition.effects.map(effectRange);
-			actionEffects = definition.effects;
+			// Bonus de terrain selon le palier militant du début du trimestre (P3-19).
+			actionEffects = [
+				...definition.effects,
+				...fieldworkEffects(definition, state.player.activists, content)
+			];
+			ranges = actionEffects.map(effectRange);
 			if (definition.target === 'party') {
 				if (target === null || !Object.hasOwn(content.parties, target)) {
 					fail('invalid_target', `« ${label} » : choisissez un parti existant.`);
@@ -569,7 +574,17 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 				const issue =
 					target === null
 						? 'choisissez un média'
-						: (mediaIssue(target, workingPlayer, upgrades, content) ??
+						: (mediaIssue(
+								target,
+								pressAudience(
+									workingPlayer,
+									workingCareer.mandates,
+									workingCareer.campaigns,
+									content
+								),
+								upgrades,
+								content
+							) ??
 							(definition.effects.some((effect) => effect.op === 'giveInterview')
 								? interviewIssue(workingWorld, target, state.turn, content)
 								: null));
@@ -843,7 +858,12 @@ export function executePlan(
 			timeUsed += definition.timeCost;
 			for (const cost of definition.costs) add(cost.resource, -cost.amount);
 			const expanded = expandRelease(
-				expandPromiseEffects(definition.effects, target, career.promises, content),
+				expandPromiseEffects(
+					[...definition.effects, ...fieldworkEffects(definition, state.player.activists, content)],
+					target,
+					career.promises,
+					content
+				),
 				target,
 				upgrades,
 				content

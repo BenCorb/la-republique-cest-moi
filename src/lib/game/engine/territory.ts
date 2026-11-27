@@ -12,12 +12,14 @@
  *   rencontre avec l'origine sociale ; force de l'adversaire aux scrutins
  *   locaux selon la taille. Valeurs provisoires de `profiles.json`.
  */
-import type {
-	Content,
-	Effect,
-	RegionDefinition,
-	ToponymyDefinition,
-	TownTraitDefinition
+import {
+	REGIONAL_ANCHOR,
+	type Content,
+	type Effect,
+	type MediaDefinition,
+	type RegionDefinition,
+	type ToponymyDefinition,
+	type TownTraitDefinition
 } from '../content/types.ts';
 import { createRng, nextInt, type RngState } from './random.ts';
 
@@ -222,4 +224,26 @@ export function placeOf(
 		case 'national':
 			return departmentOf(territoryState, content)?.name ?? territoryState.departmentCode;
 	}
+}
+
+// -- Presse régionale (P3-18) ------------------------------------------------
+
+/** Quotidien régional d'une région (un par région, validé au chargement). */
+export function regionalMedia(regionId: string, content: Content): MediaDefinition | null {
+	for (const mediaId of content.mediaIds) {
+		const media = content.media[mediaId]!;
+		if (media.scope === 'regional' && media.region === regionId) return media;
+	}
+	return null;
+}
+
+/**
+ * Identifiant concret d'une référence de média : `regional_anchor` désigne le
+ * quotidien de la région d'origine du joueur (pas de déménagement en V1).
+ */
+export function resolveMediaRef(ref: string, regionId: string, content: Content): string {
+	if (ref !== REGIONAL_ANCHOR) return ref;
+	const media = regionalMedia(regionId, content);
+	if (!media) throw new Error(`Aucun quotidien régional pour ${regionId}.`);
+	return media.id;
 }

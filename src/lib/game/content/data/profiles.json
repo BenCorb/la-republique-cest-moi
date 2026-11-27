@@ -176,11 +176,11 @@
 			"inheritanceCents": 1200000
 		}
 	],
-	"professions": [
+	"engagements": [
 		{
-			"id": "profession.factory",
-			"label": "Usine et chantiers",
-			"description": "Les trois-huit, le syndicat et les mains calleuses. Un parcours qui parle aux classes populaires.",
+			"id": "engagement.union",
+			"label": "Syndicalisme",
+			"description": "Délégué du personnel à l’atelier, des réunions qui finissent tard et un mégaphone qui a vécu. Les classes populaires vous connaissent ; le patronat aussi, hélas.",
 			"effects": [
 				{
 					"op": "addSupport",
@@ -189,81 +189,96 @@
 				},
 				{
 					"op": "addSupport",
-					"group": "support.middle_class",
-					"value": -1
+					"group": "support.activists",
+					"value": 2
+				},
+				{
+					"op": "addSupport",
+					"group": "support.business",
+					"value": -3
 				}
 			]
 		},
 		{
-			"id": "profession.teacher",
-			"label": "Enseignement",
-			"description": "Des classes de trente, des copies le dimanche et un don pour expliquer longtemps.",
+			"id": "engagement.association",
+			"label": "Vie associative",
+			"description": "Banque alimentaire, club de foot et comité des fêtes : vous savez remplir une salle des fêtes et un dossier de subvention.",
 			"effects": [
 				{
 					"op": "addSupport",
 					"group": "support.middle_class",
+					"value": 3
+				},
+				{
+					"op": "addSupport",
+					"group": "support.activists",
+					"value": 3
+				},
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "engagement.student",
+			"label": "Militantisme étudiant",
+			"description": "Assemblées générales, tracts photocopiés en douce et une bourse qui ne couvre pas le loyer. Peu de moyens, beaucoup d’énergie.",
+			"effects": [
+				{
+					"op": "addSupport",
+					"group": "support.activists",
 					"value": 5
 				},
 				{
 					"op": "addResource",
 					"resource": "influence",
 					"value": 2
-				}
-			]
-		},
-		{
-			"id": "profession.lawyer",
-			"label": "Barreau",
-			"description": "La robe, les effets de manche et des honoraires confortables. On vous écoute, on vous soupçonne un peu.",
-			"effects": [
+				},
 				{
 					"op": "addResource",
 					"resource": "personalCashCents",
-					"value": 400000
+					"value": -50000
 				},
 				{
 					"op": "addSupport",
 					"group": "support.wealthy",
-					"value": 3
-				},
-				{
-					"op": "addSupport",
-					"group": "support.working_class",
 					"value": -2
 				}
 			]
 		},
 		{
-			"id": "profession.journalist",
-			"label": "Presse",
-			"description": "Un carnet d’adresses, des bouclages tardifs et l’habitude de poser les questions plutôt que d’y répondre.",
+			"id": "engagement.public_service",
+			"label": "Service public",
+			"description": "Agent territorial à la mairie : vous connaissez chaque guichet, chaque circulaire et le prénom de la secrétaire générale.",
 			"effects": [
-				{
-					"op": "addResource",
-					"resource": "influence",
-					"value": 6
-				},
 				{
 					"op": "addSupport",
 					"group": "support.middle_class",
+					"value": 4
+				},
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
 					"value": 2
 				},
 				{
-					"op": "addStat",
-					"stat": "player.stress",
+					"op": "addResource",
+					"resource": "influence",
 					"value": 2
 				}
 			]
 		},
 		{
-			"id": "profession.entrepreneur",
+			"id": "engagement.business",
 			"label": "Entreprise",
-			"description": "Une petite société, des bilans, des salariés et une méfiance tenace envers les formulaires.",
+			"description": "Une petite société de services, trois salariés et la chambre de commerce comme seconde maison. Vous parlez bilan avant de parler programme.",
 			"effects": [
 				{
 					"op": "addResource",
 					"resource": "personalCashCents",
-					"value": 600000
+					"value": 300000
 				},
 				{
 					"op": "addSupport",
@@ -278,31 +293,31 @@
 			]
 		},
 		{
-			"id": "profession.civil_servant",
-			"label": "Haute administration",
-			"description": "Une grande école, des notes de synthèse et un tutoiement facile avec les cabinets ministériels.",
+			"id": "engagement.press",
+			"label": "Presse locale",
+			"description": "Correspondant du quotidien régional : conseils municipaux, kermesses et faits divers. Vous savez qui parle à qui, et comment le dire.",
 			"effects": [
 				{
 					"op": "addResource",
 					"resource": "influence",
-					"value": 8
+					"value": 5
 				},
 				{
 					"op": "addSupport",
-					"group": "support.apparatus",
-					"value": 3
+					"group": "support.middle_class",
+					"value": 2
 				},
 				{
-					"op": "addSupport",
-					"group": "support.working_class",
-					"value": -4
+					"op": "addStat",
+					"stat": "player.exposure",
+					"value": 4
 				}
 			]
 		}
 	],
 	"defaults": {
 		"origin": "origin.middle_class",
-		"profession": "profession.teacher",
+		"engagement": "engagement.association",
 		"region": "region.normandie"
 	},
 	"territory": {

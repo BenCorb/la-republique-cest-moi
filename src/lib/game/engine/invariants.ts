@@ -868,7 +868,9 @@ export function checkContentReferences(state: GameState, content: Content): stri
 				continue;
 			}
 			const known = worldVariables.has(role)
-				? Object.hasOwn(content.parties, actorId) || Object.hasOwn(state.characters, actorId)
+				? Object.hasOwn(content.parties, actorId) ||
+					Object.hasOwn(state.characters, actorId) ||
+					(role === 'regional_media' && Object.hasOwn(content.media, actorId))
 				: Object.hasOwn(state.characters, actorId);
 			if (!known) violations.push(`acteur inconnu : ${role} = ${actorId}`);
 		}
@@ -922,8 +924,8 @@ export function checkContentReferences(state: GameState, content: Content): stri
 	if (!Object.hasOwn(content.origins, state.player.origin)) {
 		violations.push(`origine inconnue du catalogue : ${state.player.origin}`);
 	}
-	if (!Object.hasOwn(content.professions, state.player.profession)) {
-		violations.push(`profession inconnue du catalogue : ${state.player.profession}`);
+	if (!Object.hasOwn(content.engagements, state.player.engagement)) {
+		violations.push(`engagement inconnue du catalogue : ${state.player.engagement}`);
 	}
 	for (const member of state.staff) {
 		const post = content.posts[member.postId];
