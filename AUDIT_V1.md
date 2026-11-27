@@ -229,3 +229,136 @@ Sources des règles électorales :
 [législatives, Sénat](https://www.senat.fr/questions/base/2018/qSEQ180102815.html),
 [régionales, Weka](https://www.weka.fr/actualite/elus/article/le-mode-de-scrutin-des-elections-regionales-et-des-departementales-126713/),
 [sénatoriales, vie-publique.fr](https://www.vie-publique.fr/fiches/19586-lelection-des-senateurs-senatoriales).
+
+## 8. Revue des actions (27 novembre 2026)
+
+Inventaire du catalogue actuel : 56 actions d'agenda (dont 12 propres aux terrains d'engagement)
+et 14 améliorations (organisation, communication, réseau, patrimoine). Le moteur sait déjà
+conditionner une action au trimestre (`calendar.quarter`) ou à l'année (`calendar.year`) : des
+actions saisonnières ou limitées à une période sont possibles sans changer le moteur.
+
+### 8.1 Incohérences et actions datées
+
+| Action ou amélioration                                                                                  | Constat                                                                                                                                                                                                                                         | Proposition                                                                                                                                                               | Tâche        |
+| ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `personal.freelance` (« Accepter des missions en free-lance », 30 h, + 800 €, deux fois par trimestre)  | Elle reste ouverte à un ministre ou à un Premier ministre, ce qui est incohérent. Elle domine aussi les activités rémunérées des terrains, qui rapportent autant ou moins et ne sont possibles qu'une fois : 1 600 € pour 60 h, sans prérequis. | Une fois par trimestre ; fermée aux membres du gouvernement ; gain réduit en mandat national.                                                                             | P3-24        |
+| Activités rémunérées des terrains (« Enchaîner les petits boulots », « Faire ses heures à l'atelier »…) | Elles restent ouvertes toute la carrière : un sénateur de 60 ans enchaîne les petits boulots étudiants.                                                                                                                                         | Petits boulots jusqu'à 30 ans ; activités salariées fermées au gouvernement ; les actions d'engagement non rémunérées restent ouvertes.                                   | P3-24        |
+| `organization.fundraising` (« Organiser une collecte », action unique)                                  | La collecte doit devenir une famille à trois formats (décision P3-23).                                                                                                                                                                          | La transformer en famille ; garder le format modeste sans prérequis.                                                                                                      | P3-39        |
+| `activism.public_meeting`, `campaign.rally`, `activism.hologram_rally`                                  | Trois meetings distincts, alors qu'une famille « meeting » est décidée.                                                                                                                                                                         | Famille « réunion publique et meeting » en trois formats, hors campagne et en campagne ; le meeting holographique devient le format majeur des années 2030.               | P3-39        |
+| `campaign.declare` (« Déclarer sa candidature »)                                                        | Une seule démarche pour tous les scrutins, sans investiture ni choix de place sur une liste.                                                                                                                                                    | Remplacée par « Conduire sa liste », « Demander une place sur une liste » et « Demander l'investiture » ; les candidatures uninominales sans étiquette restent possibles. | P3-29, P3-30 |
+| `communication.press_officer` et `communication.community_manager` (améliorations « Embaucher… »)       | Elles font doublon avec le poste de responsable de la communication de l'entourage, et leur charge n'apparaît pas dans la masse salariale (même confusion que PT-B2-001).                                                                       | Les renommer en prestations (« Agence de presse », « Prestataire réseaux sociaux ») et afficher leur coût parmi les charges récurrentes.                                  | P3-24        |
+| `organization.donor_file` (+ 120 € par trimestre)                                                       | Négligeable dès le milieu de carrière.                                                                                                                                                                                                          | Production qui croît avec la base militante, ou suppression au profit de la famille collecte.                                                                             | P3-39        |
+| `mandate.propose_institutional_reform`                                                                  | Réservée aux députés, sénateurs et ministres.                                                                                                                                                                                                   | Ouvrir au Premier ministre avec un vote plus favorable.                                                                                                                   | P3-36        |
+| `mandate.prepare_reform`                                                                                | Générique : la même action, quelle que soit la fonction.                                                                                                                                                                                        | Garder l'action, mais ajouter les actions propres aux fonctions ci-dessous.                                                                                               | P3-24        |
+| `party.join`, `party.section_meeting`, `party.leave`                                                    | Cohérentes, sans suite au-delà de l'adhésion.                                                                                                                                                                                                   | Compléter avec les actions de la carrière partisane.                                                                                                                      | P3-34        |
+| `staff.*` (recrutement)                                                                                 | Cohérentes avec P3-20 et P3-21.                                                                                                                                                                                                                 | Ajouter la réponse à une contre-proposition.                                                                                                                              | P3-33        |
+| Patrimoine (`wealth.*`), train de vie, `wealth.sell`, `organization.release`                            | Cohérents ; aucun usage politique de la fortune en fin de carrière.                                                                                                                                                                             | Débouchés de l'argent ci-dessous.                                                                                                                                         | P3-39        |
+| Actions de début (tracts, réunion de section, rencontre d'élus)                                         | Toujours utiles d'après la simulation (P3-23) ; pas datées.                                                                                                                                                                                     | Les conserver.                                                                                                                                                            | —            |
+
+### 8.2 Nouvelles actions proposées
+
+Ces propositions alimentent P3-24 et les tâches indiquées. Les chiffres et l'ordre définitifs
+seront fixés pendant le rush, comme décisions déléguées provisoires. **En gras :** les actions qui
+créent un fait judiciaire, c'est-à-dire une tentation au sens du GDD §1.3.
+
+**Mandats locaux (P3-24)**
+
+- _Conseiller municipal d'opposition :_ « Interpeller le maire en conseil » (exposition, soutien
+  des électeurs mécontents) ; « Publier la tribune de l'opposition dans le bulletin municipal ».
+- _Maire :_
+  - « Voter le budget communal », avec trois formats : rigueur, équilibre ou investissement ; cela
+    joue sur les impôts locaux et la satisfaction des groupes ;
+  - « Inaugurer un équipement » (satire du troisième rond-point) ;
+  - « Accorder une subvention à une association » ;
+  - « Jumeler la commune » ;
+  - **« Attribuer un marché public à un proche »** (favoritisme) ;
+  - **« Réserver un logement municipal à un ami »**.
+- _Conseiller régional :_ « Défendre un dossier de sa commune à la région » (influence, retombées
+  locales) ; « Siéger à la commission des transports » (promesses régionales).
+
+**Mandats nationaux (P3-24)**
+
+- _Député :_
+  - « Poser une question au gouvernement » (exposition) ;
+  - « Déposer un amendement » (fait avancer une promesse nationale) ;
+  - « Labourer sa circonscription » (popularité locale) ;
+  - « Distribuer la réserve parlementaire », limitée à 2000–2017 grâce à `calendar.year` ;
+  - **« Employer un proche comme assistant parlementaire »** (emploi fictif).
+- _Sénateur :_ « Recevoir les maires du département » (grands électeurs, P3-29) ; « Rédiger un
+  rapport d'information ».
+
+**Gouvernement (P3-35)**
+
+- _Secrétaire d'État :_ « Faire la tournée des plateaux » ; « Inaugurer à la place du ministre ».
+- _Ministres :_ deux à trois actions propres par portefeuille, en plus de leurs événements et
+  crises :
+
+  | Portefeuille         | Actions                                                                                                            |
+  | -------------------- | ------------------------------------------------------------------------------------------------------------------ |
+  | Intérieur            | Annoncer un plan de sécurité ; Encadrer une manifestation                                                          |
+  | Justice              | Publier une circulaire de politique pénale ; Visiter une prison                                                    |
+  | Économie et Finances | Présenter le budget ; Négocier la reprise d'une usine                                                              |
+  | Travail              | Ouvrir une conférence sociale ; Réformer l'assurance chômage                                                       |
+  | Éducation            | Annoncer une réforme des rythmes scolaires ; Recevoir les syndicats enseignants                                    |
+  | Santé                | Lancer une campagne de prévention ; Fermer ou sauver une maternité                                                 |
+  | Écologie             | Signer un accord climat ; Inaugurer un parc éolien                                                                 |
+  | Agriculture          | Arpenter le Salon de l'agriculture (premier trimestre seulement) ; Négocier les aides avec les syndicats agricoles |
+
+- **Tous les ministres :** **« Prendre la voiture de fonction pour ses vacances »** (abus) ;
+  **« Accepter un voyage offert par un groupe d'intérêts »** (conflit d'intérêts).
+
+**Matignon (P3-36)**
+
+- « Prononcer le discours de politique générale » (une fois, à l'arrivée) ;
+- « Engager la responsabilité du gouvernement (49.3) » : la loi passe, mais une motion de censure
+  devient possible ;
+- « Remanier le gouvernement » ;
+- « Arbitrer entre deux ministres » ;
+- « Recevoir les partenaires sociaux » ;
+- « Proposer une réforme institutionnelle », avec un vote plus favorable.
+
+**Campagnes et scrutins réalistes (P3-29, P3-30)**
+
+- « Conduire sa liste » ; « Demander une place sur une liste » ; « Demander l'investiture » ;
+- « Coller des affiches » (préparation, militants) ;
+- « Imprimer un programme » (budget, crédibilité) ;
+- « Débattre sur la chaîne régionale » ;
+- entre les deux tours, par décision : se maintenir, fusionner ou se désister ;
+- **« Accepter le financement discret d'une entreprise »** (financement occulte).
+
+**Carrière partisane (P3-34)**
+
+- « Soutenir la motion de la direction » ou « Déposer une motion dissidente » ;
+- « Solliciter des ralliements » ;
+- « Préparer sa candidature à la direction » ;
+- en tant que chef du parti : « Arbitrer les investitures » et « Recadrer un cadre frondeur ».
+
+**Argent et organisation (P3-39)**
+
+- Familles « Collecte » et « Réunion publique et meeting », en trois formats ;
+- « Commander un sondage privé » : affine la fourchette du sondage d'une campagne en cours,
+  utilise le système de sondage existant et sert de débouché à l'argent ;
+- « Créer une fondation » : amélioration avec une dotation et une charge, influence et exposition
+  durables ;
+- « Financer un mécénat culturel » (classes moyennes, presse) ;
+- « Lancer un journal militant » (amélioration : capacité militante, exposition).
+
+**Territoire, médias et vie personnelle (P3-24)**
+
+- « Faire le marché du dimanche » (commune d'origine, popularité locale) ;
+- « Présider le comice agricole », au troisième trimestre ;
+- « Soutenir le club de football local » ;
+- « Écrire un livre-programme » : exposition et influence, avec un peu d'argent ; c'est une
+  première activité parallèle légère, les autres passent après la V1 ;
+- « Participer à une émission de divertissement » (exposition, risque de satire) ;
+- « Dîner en famille » (attitude de la famille, stress).
+
+**Fin de carrière (P3-37) :** « Se retirer de la vie politique ».
+
+**Garde-fous pour ces ajouts :**
+
+- chaque action propre à une fonction disparaît avec la fonction (GDD §11.2) ;
+- chaque tentation passe par la table des capacités (P3-12 : pas d'infraction sans le pouvoir
+  correspondant) ;
+- la simulation doit montrer qu'aucune nouvelle action ne devient le choix évident à chaque
+  trimestre.
