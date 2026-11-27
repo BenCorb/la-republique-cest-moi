@@ -1007,6 +1007,16 @@ Retour PT-P3-09-013 ; décisions déléguées de ROADMAP §5.2 ; contenu au GDD 
 - **Versions** : `RULES_VERSION = '0.39.0'` ; format d'état toujours en version 1.
 - **Tests** : `tests/unit/scale.test.ts` (ligne unique et formats selon la capacité, un format par trimestre, plafond annuel et remise à zéro, avance ciblée unique, remboursement ou perte selon le score, sauvegarde, validation des familles, catalogue réel aux rendements décroissants) ; E2E de la ligne d'agenda ; rapport de simulation v21.
 
+### 8.4 septvicies Décisions de P3-32 : leviers de la base militante (27 novembre 2026)
+
+Retour PT-B1-006. Projection seulement : ni état, ni règle, ni `RULES_VERSION` modifiés. Forme d'interface provisoire, à juger au playtest B2.
+
+- `ActivistsView.levers` (`activistLevers`) : constats tirés de l'état public, sans seuil ni pourcentage — arrivées (notoriété, soutien des militants suffisant ou trop bas, campagne en cours ou attrait des candidatures, places presque ou toutes occupées), départs (usure, retenue par un local actif ou non, mécontentement si le soutien passe sous le seuil de `balance.activists`, surnombre), et moyens d'augmenter l'accueil (adhésion et sa section, locaux de l'époque encore achetables avec leurs places, mandats selon leur rang).
+- `ActivistsView.lastMove` distingue arrivées, recrues après le scrutin et départs (`ActivistsRecord`).
+- `UpgradeView.activists` : places d'accueil et réduction de l'usure d'un local, actives au trimestre suivant l'achat ; affichées sur la carte « Développer l'organisation ».
+- Interface : détail repliable « Faire grandir la base militante » dans le panneau « Base militante », à la place de la phrase d'aide.
+- Tests : `tests/unit/activists.test.ts` (leviers favorables et défavorables, options de capacité, aucune formule affichée, carte de local) ; E2E de l'onglet Organisation.
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.

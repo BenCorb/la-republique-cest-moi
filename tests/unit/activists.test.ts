@@ -403,4 +403,65 @@ describe('projection de la base militante', () => {
 		expect(fact).toMatchObject({ title: 'Base militante', tone: 'gain' });
 		expect(fact?.text).toContain('Noyau');
 	});
+
+	it('explique les leviers de croissance et de départ sans formule (PT-B1-006)', () => {
+		const state = createGame({ seed: 'leviers' }, real);
+		const cold = projectView(
+			{
+				...state,
+				player: {
+					...state.player,
+					supports: { ...state.player.supports, 'support.activists': 0 }
+				}
+			},
+			[],
+			real
+		).activists.levers;
+		expect(cold.arrivals.map((lever) => lever.sense)).toContain('cost');
+		expect(cold.arrivals.some((lever) => /personne ne s’engage/u.test(lever.text))).toBe(true);
+		expect(cold.departures.some((lever) => /mécontentement/u.test(lever.text))).toBe(true);
+		// Sans parti : l'adhésion et les locaux sont proposés, avec leurs places d'accueil.
+		expect(cold.capacity[0]).toBe(
+			`Adhérer à un parti : + ${real.balance.activists.partyCapacity} places (section locale)`
+		);
+		expect(cold.capacity.join(' ')).toMatch(
+			/permanence.*\+ 120 places, dès le trimestre suivant/iu
+		);
+		// Aucun chiffre de formule : ni seuil, ni pourcentage.
+		expect(JSON.stringify(cold)).not.toMatch(/%/u);
+
+		const warm = projectView(
+			{
+				...state,
+				player: {
+					...state.player,
+					supports: { ...state.player.supports, 'support.activists': 60 },
+					activists: real.balance.activists.baseCapacity
+				}
+			},
+			[],
+			real
+		).activists.levers;
+		expect(warm.arrivals[1]?.sense).toBe('gain');
+		expect(warm.arrivals.some((lever) => /toutes occupées/u.test(lever.text))).toBe(true);
+	});
+
+	it('annonce sur chaque local ses places d’accueil, actives au trimestre suivant', () => {
+		const state = createGame({ seed: 'locaux' }, real);
+		const upgrades = projectView(state, [], real).upgrades;
+		const office = upgrades.find((upgrade) => upgrade.id === 'organization.local_office');
+		expect(office?.activists).toMatch(
+			/^Base militante : \+ 120 places d’accueil, usure réduite de 1 point par trimestre, à partir du trimestre suivant l’achat$/u
+		);
+		expect(upgrades.find((upgrade) => upgrade.id === 'organization.federation')?.activists).toMatch(
+			/\+ 400 places/u
+		);
+		expect(
+			upgrades.filter((upgrade) => upgrade.activists !== null).map((upgrade) => upgrade.id)
+		).toEqual(
+			real.upgradeIds.filter(
+				(id) => real.upgrades[id]?.activists && upgrades.some((upgrade) => upgrade.id === id)
+			)
+		);
+	});
 });

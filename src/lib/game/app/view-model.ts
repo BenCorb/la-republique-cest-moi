@@ -278,6 +278,8 @@ export interface UpgradeView extends CatalogItemView {
 	readonly family: string;
 	readonly treasury: string;
 	readonly upkeep: readonly string[];
+	/** Apport à la base militante (PT-B1-006) : places d'accueil et rétention, ou `null`. */
+	readonly activists: string | null;
 	readonly owned: number;
 	readonly maxOwned: number;
 }
@@ -2645,6 +2647,22 @@ export interface ActivistsView {
 	readonly lastMove: string | null;
 	/** Effets du palier : bonus de terrain, cotisations, frais. */
 	readonly perks: readonly string[];
+	/**
+	 * Leviers de la base (PT-B1-006), en langage de jeu et sans formule : ce qui
+	 * fait venir des militants, ce qui les fait partir, et ce qui augmente
+	 * durablement l'accueil, selon l'état public de la partie.
+	 */
+	readonly levers: {
+		readonly arrivals: readonly ActivistLeverView[];
+		readonly departures: readonly ActivistLeverView[];
+		readonly capacity: readonly string[];
+	};
+}
+
+/** Levier de la base militante : un constat et son sens (favorable, défavorable, neutre). */
+export interface ActivistLeverView {
+	readonly sense: ChipSense;
+	readonly text: string;
 }
 
 function buildActivists(state: GameState, content: Content): ActivistsView {
@@ -2680,11 +2698,16 @@ function buildActivists(state: GameState, content: Content): ActivistsView {
 	const last = state.history.findLast(
 		(entry): entry is HistoryEntry => entry.type === 'turn.resolved'
 	)?.activists;
-	const gained = last ? last.arrivals + last.recruits : 0;
 	const lastMove = last
-		? gained === 0 && last.departures === 0
+		? last.arrivals + last.recruits === 0 && last.departures === 0
 			? 'Aucun mouvement au dernier trimestre'
-			: `Dernier trimestre : +${gained}, −${last.departures}`
+			: `Dernier trimestre : ${[
+					`${last.arrivals} arrivée${last.arrivals > 1 ? 's' : ''}`,
+					...(last.recruits > 0
+						? [`${last.recruits} recrue${last.recruits > 1 ? 's' : ''} après le scrutin`]
+						: []),
+					`${last.departures} départ${last.departures > 1 ? 's' : ''}`
+				].join(', ')}`
 		: null;
 	const perks = [
 		tier.fieldMultiplier > 0
@@ -2706,8 +2729,108 @@ function buildActivists(state: GameState, content: Content): ActivistsView {
 		capacity,
 		capacityParts,
 		lastMove,
-		perks
+		perks,
+		levers: activistLevers(state, content, capacity)
 	};
+}
+
+/**
+ * Leviers de la base militante (PT-B1-006) : constats tirés de l'état public
+ * (soutien des militants, campagnes, capacité, locaux, adhésion), jamais la
+ * formule ni un tirage.
+ */
+function activistLevers(
+	state: GameState,
+	content: Content,
+	capacity: number
+): ActivistsView['levers'] {
+	const balance = content.balance.activists;
+	const count = state.player.activists;
+	const support = state.player.supports['support.activists'] ?? 0;
+	const running = state.campaigns.some((campaign) => campaign.status === 'running');
+	const active = (upgradeId: string): boolean =>
+		state.upgrades.some(
+			(upgrade) => upgrade.upgradeId === upgradeId && upgrade.acquiredTurn < state.turn
+		);
+	const retaining = content.upgradeIds.some(
+		(id) => (content.upgrades[id]?.activists?.retentionPercent ?? 0) > 0 && active(id)
+	);
+	const arrivals: ActivistLeverView[] = [
+		{
+			sense: 'neutral',
+			text: 'Votre influence et votre exposition font connaître votre nom auprès des sympathisants.'
+		},
+		support > balance.attractionThreshold
+			? {
+					sense: 'gain',
+					text: 'Le soutien des militants convainc une partie de ces sympathisants de s’engager : plus il est haut, plus ils viennent.'
+				}
+			: {
+					sense: 'cost',
+					text: 'Le soutien des militants est trop bas : personne ne s’engage, quelle que soit votre notoriété.'
+				},
+		running
+			? { sense: 'gain', text: 'Votre campagne en cours attire du monde chaque trimestre.' }
+			: {
+					sense: 'neutral',
+					text: 'Une candidature attire du monde pendant la campagne, puis des recrues après le scrutin, même battue.'
+				},
+		...(count >= capacity
+			? [
+					{
+						sense: 'cost' as const,
+						text: 'Vos places d’accueil sont toutes occupées : plus personne ne peut s’engager.'
+					}
+				]
+			: count * 10 >= capacity * 8
+				? [
+						{
+							sense: 'cost' as const,
+							text: 'Vos places d’accueil sont presque pleines : les arrivées ralentissent.'
+						}
+					]
+				: [])
+	];
+	const departures: ActivistLeverView[] = [
+		{
+			sense: 'neutral',
+			text: retaining
+				? 'Chaque trimestre, quelques militants s’éloignent ; vos locaux en retiennent une partie.'
+				: 'Chaque trimestre, quelques militants s’éloignent ; un local en retiendrait une partie.'
+		},
+		...(support < balance.discontentThreshold
+			? [
+					{
+						sense: 'cost' as const,
+						text: 'Le soutien des militants est bas : des départs par mécontentement s’ajoutent.'
+					}
+				]
+			: []),
+		...(count > capacity
+			? [
+					{
+						sense: 'cost' as const,
+						text: 'Plus de militants que de places : les départs s’accélèrent.'
+					}
+				]
+			: [])
+	];
+	const capacityOptions = [
+		...(state.player.partyId === null
+			? [`Adhérer à un parti : + ${balance.partyCapacity} places (section locale)`]
+			: []),
+		...content.upgradeIds.flatMap((id) => {
+			const upgrade = content.upgrades[id]!;
+			if (!upgrade.activists || !eraReached(upgrade.fromEra, state.turn, content)) return [];
+			const owned = state.upgrades.filter((item) => item.upgradeId === id).length;
+			if (owned >= upgrade.maxOwned) return [];
+			return [
+				`${upgrade.label} : + ${upgrade.activists.capacity} places, dès le trimestre suivant`
+			];
+		}),
+		`Exercer un mandat : + ${balance.mandateCapacityPerRank} places par rang du mandat, plus pour une fonction importante`
+	];
+	return { arrivals, departures, capacity: capacityOptions };
 }
 
 /**
@@ -4537,6 +4660,9 @@ export function projectView(
 			effects: amounts(upgrade.production, 1),
 			costChips: amountChips(upgrade.price, -1),
 			effectChips: amountChips(upgrade.production, 1),
+			activists: upgrade.activists
+				? `Base militante : + ${upgrade.activists.capacity} places d’accueil${upgrade.activists.retentionPercent > 0 ? `, usure réduite de ${upgrade.activists.retentionPercent} point${upgrade.activists.retentionPercent > 1 ? 's' : ''} par trimestre` : ''}, à partir du trimestre suivant l’achat`
+				: null,
 			category: null,
 			owned: state.upgrades.filter((owned) => owned.upgradeId === id).length,
 			maxOwned: upgrade.maxOwned,
