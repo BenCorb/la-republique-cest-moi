@@ -43,7 +43,7 @@ import {
 	type TurnPlan
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 18;
+export const SIMULATION_REPORT_VERSION = 19;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -126,7 +126,7 @@ export interface SimulationRun {
 	/** Territoire d'origine (P3-16) : région et taille de la commune. */
 	readonly region: string;
 	readonly townSize: string;
-	readonly profession: string;
+	readonly engagement: string;
 	readonly children: number;
 	readonly separations: number;
 	/** Promesses prises, tenues, partiellement tenues et abandonnées (P3-04). */
@@ -867,7 +867,7 @@ function finalizeRun(
 		origin: state.player.origin,
 		region: state.player.territory.regionId,
 		townSize: state.player.territory.homeTown.sizeId,
-		profession: state.player.profession,
+		engagement: state.player.engagement,
 		children: state.player.family.childrenIds.length,
 		promisesMade: state.promises.length,
 		promisesKept: state.promises.filter((pledge) => pledge.status === 'kept').length,
@@ -965,13 +965,13 @@ export function simulateCareer(
 	if (!Number.isSafeInteger(maxTurns) || maxTurns < 1) {
 		throw new RangeError(`Plafond de tours invalide : ${maxTurns}`);
 	}
-	// Origine et profession tirées de la seed du lot (P2-08), sans toucher au PRNG de la partie.
+	// Origine et engagement tirées de la seed du lot (P2-08), sans toucher au PRNG de la partie.
 	let state = createGame(
 		{
 			seed,
 			origin: content.originIds[hashSeed(`${seed}:origine`) % content.originIds.length]!,
-			profession:
-				content.professionIds[hashSeed(`${seed}:profession`) % content.professionIds.length]!,
+			engagement:
+				content.engagementIds[hashSeed(`${seed}:engagement`) % content.engagementIds.length]!,
 			region: content.regionIds[hashSeed(`${seed}:region`) % content.regionIds.length]!
 		},
 		content
@@ -1346,7 +1346,7 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		'origin',
 		'region',
 		'townSize',
-		'profession',
+		'engagement',
 		'children',
 		'separations',
 		'promisesMade',
@@ -1419,7 +1419,7 @@ export function simulationReportToCsv(report: SimulationReport): string {
 		run.origin,
 		run.region,
 		run.townSize,
-		run.profession,
+		run.engagement,
 		run.children,
 		run.separations,
 		run.promisesMade,

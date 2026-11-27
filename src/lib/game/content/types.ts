@@ -184,9 +184,9 @@ export type Condition =
 	| { readonly op: 'holdsMandate'; readonly mandate: string }
 	/** Le joueur pourrait recevoir ce mandat sans en quitter aucun (cumul et incompatibilités). */
 	| { readonly op: 'canHoldMandate'; readonly mandate: string }
-	/** Origine ou profession du joueur (P2-08). */
+	/** Origine ou engagement du joueur (P2-08). */
 	| { readonly op: 'origin'; readonly origin: string }
-	| { readonly op: 'profession'; readonly profession: string }
+	| { readonly op: 'engagement'; readonly engagement: string }
 	/** Train de vie en cours du joueur (P3-02). */
 	| { readonly op: 'lifestyle'; readonly lifestyle: string }
 	/** Le joueur possède au moins un exemplaire de cette amélioration (P3-03). */
@@ -1421,9 +1421,9 @@ export interface TerritoryDefinition {
 	readonly toponymy: ToponymyDefinition;
 }
 
-/** Profession avant la politique : effets de départ et action propre éventuelle. */
-export interface ProfessionDefinition {
-	/** Identifiant stable, par exemple `profession.lawyer`. */
+/** Terrain d’engagement (P3-17) : ce qui a mené à la politique ; effets de départ, actions propres. */
+export interface EngagementDefinition {
+	/** Identifiant stable, par exemple `engagement.union`. */
 	readonly id: string;
 	readonly label: string;
 	readonly description: string;
@@ -1595,12 +1595,12 @@ export interface Content {
 	readonly institutions: InstitutionsDefinition;
 	readonly origins: Readonly<Record<string, OriginDefinition>>;
 	readonly originIds: readonly string[];
-	readonly professions: Readonly<Record<string, ProfessionDefinition>>;
-	readonly professionIds: readonly string[];
+	readonly engagements: Readonly<Record<string, EngagementDefinition>>;
+	readonly engagementIds: readonly string[];
 	/** Profil retenu quand la création n'en précise pas (tests, simulateur). */
 	readonly defaultProfile: {
 		readonly origin: string;
-		readonly profession: string;
+		readonly engagement: string;
 		readonly region: string;
 	};
 	/** Territoire d'origine (P3-16) : régions, tailles et traits de commune, toponymie. */

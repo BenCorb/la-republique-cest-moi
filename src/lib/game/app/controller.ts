@@ -268,7 +268,7 @@ export class GameController {
 		options: {
 			replaceExisting?: boolean;
 			origin?: string;
-			profession?: string;
+			engagement?: string;
 			region?: string;
 		} = {}
 	): StartResult {
@@ -279,7 +279,7 @@ export class GameController {
 			{
 				seed: this.deps.newSeed(),
 				...(options.origin ? { origin: options.origin } : {}),
-				...(options.profession ? { profession: options.profession } : {}),
+				...(options.engagement ? { engagement: options.engagement } : {}),
 				...(options.region ? { region: options.region } : {})
 			},
 			this.deps.content
@@ -290,7 +290,7 @@ export class GameController {
 		return this.saveStatus?.kind === 'failed' ? 'failed' : 'started';
 	}
 
-	/** Origines et professions proposées à la création d'une carrière. */
+	/** Origines et engagements proposées à la création d'une carrière. */
 	creationOptions(): ReturnType<typeof creationOptions> {
 		return creationOptions(this.deps.content);
 	}

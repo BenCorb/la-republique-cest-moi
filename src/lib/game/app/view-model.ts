@@ -92,7 +92,8 @@ import {
 	type WorldRecord,
 	type PlanPreview,
 	type FamilyRecord,
-	type StaffRecord
+	type StaffRecord,
+	type EventRecord
 } from '../engine/index.ts';
 import {
 	GAUGE_NAMES,
@@ -205,7 +206,7 @@ export interface CatalogItemView {
 	/** Raison pour laquelle l'élément ne peut pas être ajouté au plan. */
 	readonly reason: string | null;
 	/**
-	 * Hors de portée : une condition n'est pas remplie (autre profession, pas
+	 * Hors de portée : une condition n'est pas remplie (autre terrain d’engagement, pas
 	 * d'adhésion, pas de campagne, influence insuffisante…), par opposition à un
 	 * blocage du trimestre (temps, argent, limite atteinte).
 	 */
@@ -937,6 +938,13 @@ export interface NoteHighlightView {
 	readonly chart: NoteChartView | null;
 	/** Bilan électoral de la carrière, joint au résultat d'une candidature. */
 	readonly record: { readonly won: number; readonly lost: number } | null;
+	/**
+	 * Effets observables propres au fait (PT-B1-003) : pastilles de l'événement
+	 * lui-même, jamais la variation nette du trimestre ; vide pour les autres faits.
+	 */
+	readonly chips: readonly ChipView[];
+	/** Autres conséquences de l'événement (mandats, partis, personnes…), repliées. */
+	readonly details: readonly string[];
 }
 
 /**
@@ -1000,10 +1008,10 @@ export interface PlayerView {
 	readonly world: WorldView;
 	/** Personnages rencontrés : actifs d'abord, puis par date de rencontre. */
 	readonly people: readonly PersonView[];
-	/** Profil du personnage : origine, profession et situation familiale. */
+	/** Profil du personnage : origine, engagement et situation familiale. */
 	readonly profile: {
 		readonly origin: string;
-		readonly profession: string;
+		readonly engagement: string;
 		readonly family: string;
 	};
 	readonly career: CareerView;
@@ -1823,6 +1831,31 @@ function buildOutcome(state: GameState, content: Content): OutcomeView | null {
 	const text = written
 		? render(variants[textHash(entry.instanceId) % variants.length]!)
 		: fallbackOutcome(entry, label);
+	const { chips, details } = effectChips(entry, state, content);
+	if (entry.deathCause) details.push('Fin de carrière.');
+	return {
+		instanceId: entry.instanceId,
+		dateLabel: formatTurn(entry.turn),
+		title: definition ? render(definition.title) : entry.eventId,
+		choice: label,
+		text,
+		written,
+		chips,
+		details
+	};
+}
+
+/**
+ * Pastilles des effets réellement appliqués par une décision ou un événement
+ * (P3-14, PT-B1-003) : ressources, jauges, soutiens, préparation et faits, puis
+ * phrases pour les autres conséquences. Lit uniquement l'entrée propre à la
+ * source : rien d'un autre poste du trimestre, rien de caché ni de différé.
+ */
+function effectChips(
+	entry: Pick<EventRecord, 'changes' | 'gauges' | 'politics' | 'people'>,
+	state: GameState,
+	content: Content
+): { chips: ChipView[]; details: string[] } {
 	const chips: ChipView[] = [
 		...resourceChips(entry.changes),
 		...entry.gauges.map((change) => gaugeChip(change.gauge, change.delta))
@@ -1857,17 +1890,7 @@ function buildOutcome(state: GameState, content: Content): OutcomeView | null {
 	}
 	const people = peopleText(entry.people, state, content);
 	if (people) details.push(lowerFirstUpper(people));
-	if (entry.deathCause) details.push('Fin de carrière.');
-	return {
-		instanceId: entry.instanceId,
-		dateLabel: formatTurn(entry.turn),
-		title: definition ? render(definition.title) : entry.eventId,
-		choice: label,
-		text,
-		written,
-		chips,
-		details
-	};
+	return { chips, details };
 }
 
 function lowerFirstUpper(text: string): string {
@@ -1940,7 +1963,9 @@ function noteHighlights(
 				title: `Candidature invalidée — ${label}`,
 				text: `Votre candidature n’a pas été retenue : ${result.reason ?? 'conditions non remplies'}.`,
 				chart: null,
-				record
+				record,
+				chips: [],
+				details: []
 			});
 			continue;
 		}
@@ -1956,7 +1981,9 @@ function noteHighlights(
 				playerPercent: result.playerPercent,
 				rival: rivalName || 'Adversaire'
 			},
-			record
+			record,
+			chips: [],
+			details: []
 		});
 	}
 	for (const result of deadlines?.ballots ?? []) {
@@ -1983,7 +2010,9 @@ function noteHighlights(
 						}))
 					}
 				: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	for (const change of deadlines?.mandates ?? []) {
@@ -1995,7 +2024,9 @@ function noteHighlights(
 			title: `Fin de mandat — ${mandateName(change.mandateId, state, content)}`,
 			text: 'Le mandat arrive à son terme ; le bureau se vide, les cartons se remplissent.',
 			chart: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	for (const step of entry.justice?.cases ?? []) {
@@ -2006,7 +2037,9 @@ function noteHighlights(
 			title: 'Justice',
 			text: caseStepMessage(step.caseId, step.kind, state, content),
 			chart: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	for (const line of worldLines(entry.world, state, content)) {
@@ -2017,7 +2050,9 @@ function noteHighlights(
 			title: 'Vie des partis',
 			text: line.text,
 			chart: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	for (const line of [
@@ -2033,7 +2068,9 @@ function noteHighlights(
 			title: 'Entourage',
 			text: line.text,
 			chart: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	if (entry.institutions && entry.institutions.politics.length > 0) {
@@ -2044,11 +2081,14 @@ function noteHighlights(
 			title: 'Institutions',
 			text: lowerFirstUpper(politicsText(entry.institutions.politics, content)) + '.',
 			chart: null,
-			record: null
+			record: null,
+			chips: [],
+			details: []
 		});
 	}
 	for (const event of entry.events) {
 		if (event.outcome !== 'applied') continue;
+		const { chips, details } = effectChips(event, state, content);
 		items.push({
 			key: `event:${event.instanceId}`,
 			kind: 'event',
@@ -2056,7 +2096,9 @@ function noteHighlights(
 			title: 'Événement',
 			text: `${eventTitle(event.eventId, event.actors, state, content)}.`,
 			chart: null,
-			record: null
+			record: null,
+			chips,
+			details
 		});
 	}
 	return items;
@@ -2724,8 +2766,8 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 						})()
 					},
 					{
-						label: 'Profession',
-						value: content.professions[state.player.profession]?.label ?? state.player.profession
+						label: 'Terrain d’engagement',
+						value: content.engagements[state.player.engagement]?.label ?? state.player.engagement
 					},
 					{ label: 'Enfants', value: String(metrics.children) },
 					{ label: 'Plus fidèle soutien', value: ally },
@@ -3546,6 +3588,8 @@ export interface ProfileOptionView {
 	readonly label: string;
 	readonly description: string;
 	readonly effects: readonly string[];
+	/** Actions propres ouvertes par ce choix (terrain d'engagement, P3-17). */
+	readonly actions: readonly string[];
 }
 
 /** Choix proposés à la création d'un personnage (P2-08). */
@@ -3635,7 +3679,7 @@ export interface RegionOptionView {
 
 export function creationOptions(content: Content): {
 	readonly origins: readonly ProfileOptionView[];
-	readonly professions: readonly ProfileOptionView[];
+	readonly engagements: readonly ProfileOptionView[];
 	readonly regions: readonly RegionOptionView[];
 	readonly defaults: Content['defaultProfile'];
 } {
@@ -3648,11 +3692,17 @@ export function creationOptions(content: Content): {
 		id: entry.id,
 		label: entry.label,
 		description: entry.description,
-		effects: entry.effects.map((effect) => describeEffect(effectRange(effect), content))
+		effects: entry.effects.map((effect) => describeEffect(effectRange(effect), content)),
+		actions: content.actionIds
+			.map((id) => content.actions[id]!)
+			.filter(
+				(action) => action.requires?.op === 'engagement' && action.requires.engagement === entry.id
+			)
+			.map((action) => action.label)
 	});
 	return {
 		origins: content.originIds.map((id) => option(content.origins[id]!)),
-		professions: content.professionIds.map((id) => option(content.professions[id]!)),
+		engagements: content.engagementIds.map((id) => option(content.engagements[id]!)),
 		regions: content.regionIds.map((id) => {
 			const region = content.regions[id]!;
 			return {
@@ -3951,7 +4001,7 @@ export function projectView(
 		entourage: buildEntourage(state, plan, content),
 		profile: {
 			origin: content.origins[state.player.origin]?.label ?? state.player.origin,
-			profession: content.professions[state.player.profession]?.label ?? state.player.profession,
+			engagement: content.engagements[state.player.engagement]?.label ?? state.player.engagement,
 			family: describeFamily(state)
 		}
 	};

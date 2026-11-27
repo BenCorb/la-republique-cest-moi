@@ -104,7 +104,7 @@ export const fixtureBalance = {
 };
 
 /**
- * Profils de test : par défaut, une origine et une profession sans effet ni
+ * Profils de test : par défaut, une origine et un terrain d’engagement sans effet ni
  * famille (les autres tests restent indépendants de la création) ; une origine
  * avec famille et héritage pour les tests de famille.
  */
@@ -134,24 +134,24 @@ export const fixtureProfiles = {
 			inheritanceCents: 1_000_000
 		}
 	],
-	professions: [
+	engagements: [
 		{
-			id: 'profession.none',
+			id: 'engagement.none',
 			label: 'Aucune',
-			description: 'Profession de test sans effet.',
+			description: 'Terrain de test sans effet.',
 			effects: []
 		},
 		{
-			id: 'profession.press',
+			id: 'engagement.press',
 			label: 'Presse',
-			description: 'Profession de test.',
+			description: 'Terrain de test.',
 			effects: [
 				{ op: 'addResource', resource: 'influence', value: 6 },
 				{ op: 'addStat', stat: 'player.stress', value: 2 }
 			]
 		}
 	],
-	defaults: { origin: 'origin.neutral', profession: 'profession.none', region: 'region.test' },
+	defaults: { origin: 'origin.neutral', engagement: 'engagement.none', region: 'region.test' },
 	// Territoire neutre (P3-16) : aucun effet, si bien que les tests existants n'en dépendent pas.
 	territory: {
 		regions: [

@@ -133,7 +133,7 @@ function load(): Content {
 const catalog = load();
 
 function heirs(seed: string, used = catalog): GameState {
-	return createGame({ seed, origin: 'origin.heirs', profession: 'profession.press' }, used);
+	return createGame({ seed, origin: 'origin.heirs', engagement: 'engagement.press' }, used);
 }
 
 function commit(state: GameState, used = catalog, steps = commitTurn().plan.steps): GameState {
@@ -147,7 +147,7 @@ describe('création du personnage', () => {
 	it('applique le profil par défaut sans effet quand rien n’est choisi', () => {
 		const game = createGame({ seed: 'défaut' }, catalog);
 		expect(game.player.origin).toBe('origin.neutral');
-		expect(game.player.profession).toBe('profession.none');
+		expect(game.player.engagement).toBe('engagement.none');
 		expect(game.player.family).toEqual({
 			partnerId: null,
 			childrenIds: [],
@@ -157,7 +157,7 @@ describe('création du personnage', () => {
 		});
 	});
 
-	it('applique les effets de l’origine et de la profession, et génère la famille', () => {
+	it('applique les effets de l’origine et de le terrain d’engagement, et génère la famille', () => {
 		const neutral = createGame({ seed: 'profil' }, catalog);
 		const game = heirs('profil');
 		expect(game.resources.personalCashCents).toBe(neutral.resources.personalCashCents + 50_000);
@@ -173,7 +173,7 @@ describe('création du personnage', () => {
 		expect(game.relationships[parentIds[0]!]?.attitude).toBe(20);
 		expect(checkInvariants(game, catalog)).toEqual([]);
 		expect(evaluateCondition(game, { op: 'origin', origin: 'origin.heirs' })).toBe(true);
-		expect(evaluateCondition(game, { op: 'profession', profession: 'profession.none' })).toBe(
+		expect(evaluateCondition(game, { op: 'engagement', engagement: 'engagement.none' })).toBe(
 			false
 		);
 	});
@@ -182,7 +182,7 @@ describe('création du personnage', () => {
 		const options = creationOptions(catalog);
 		expect(options.defaults).toEqual({
 			origin: 'origin.neutral',
-			profession: 'profession.none',
+			engagement: 'engagement.none',
 			region: 'region.test'
 		});
 		const effects = options.origins.find((option) => option.id === 'origin.heirs')?.effects ?? [];
@@ -324,12 +324,12 @@ describe('frontière familiale', () => {
 });
 
 describe('projection du profil et de la famille', () => {
-	it('présente l’origine, la profession, la situation et les liens familiaux', () => {
+	it('présente l’origine, le terrain d’engagement, la situation et les liens familiaux', () => {
 		const game = heirs('projection-famille');
 		const view = projectView(game, [], catalog);
 		expect(view.profile).toEqual({
 			origin: 'Héritiers',
-			profession: 'Presse',
+			engagement: 'Presse',
 			family: 'célibataire'
 		});
 		// Les membres de la famille ouvrent la liste des relations.

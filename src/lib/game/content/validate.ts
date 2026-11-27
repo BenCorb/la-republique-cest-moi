@@ -55,7 +55,7 @@ import {
 	type MandateDefinition,
 	type MissionDefinition,
 	type OriginDefinition,
-	type ProfessionDefinition,
+	type EngagementDefinition,
 	type PostDefinition,
 	type SupportGroupDefinition,
 	type PartyDefinition,
@@ -105,7 +105,7 @@ export interface RawContent {
 	readonly supports: unknown;
 	/** Postes clés et missions de l'entourage (`entourage.json`). */
 	readonly entourage: unknown;
-	/** Origines, professions et profil par défaut (`profiles.json`). */
+	/** Origines, engagements et profil par défaut (`profiles.json`). */
 	readonly profiles: unknown;
 	/** Infractions du registre des faits et jauges de la justice (`justice.json`). */
 	readonly justice: unknown;
@@ -316,7 +316,7 @@ interface Refs {
 	readonly elections: ReadonlySet<string>;
 	readonly groups: ReadonlySet<string>;
 	readonly origins: ReadonlySet<string>;
-	readonly professions: ReadonlySet<string>;
+	readonly engagements: ReadonlySet<string>;
 	/** Infractions et capacité exigée de leur auteur (P3-12). */
 	readonly offenses: ReadonlyMap<string, CapabilityId>;
 	/** Profils de candidats de l'entourage. */
@@ -393,14 +393,14 @@ function conditionIssues(
 							message: `train de vie inconnu : ${condition.lifestyle}`
 						}
 					];
-		case 'profession':
-			return refs.professions.has(condition.profession)
+		case 'engagement':
+			return refs.engagements.has(condition.engagement)
 				? []
 				: [
 						{
 							source,
-							path: `${path}.profession`,
-							message: `profession inconnue : ${condition.profession}`
+							path: `${path}.engagement`,
+							message: `engagement inconnue : ${condition.engagement}`
 						}
 					];
 		case 'support':
@@ -928,21 +928,21 @@ function crossCheckSupports(
 	return issues;
 }
 
-/** Effets permis à la création d'un personnage (origine et profession). */
+/** Effets permis à la création d'un personnage (origine et engagement). */
 const PROFILE_EFFECTS = new Set(['addResource', 'addSupport', 'addStat']);
 
 function crossCheckProfiles(
 	origins: readonly OriginDefinition[],
-	professions: readonly ProfessionDefinition[],
-	defaults: { readonly origin: string; readonly profession: string },
+	engagements: readonly EngagementDefinition[],
+	defaults: { readonly origin: string; readonly engagement: string },
 	refs: Refs,
 	knownIds: Set<string>
 ): ContentIssue[] {
 	const issues: ContentIssue[] = [];
 	const source = 'profiles.json';
 	const check = (
-		list: readonly (OriginDefinition | ProfessionDefinition)[],
-		field: 'origins' | 'professions'
+		list: readonly (OriginDefinition | EngagementDefinition)[],
+		field: 'origins' | 'engagements'
 	): void => {
 		list.forEach((entry, index) => {
 			const path = `${field}[${index}]`;
@@ -963,7 +963,7 @@ function crossCheckProfiles(
 		});
 	};
 	check(origins, 'origins');
-	check(professions, 'professions');
+	check(engagements, 'engagements');
 	if (!refs.origins.has(defaults.origin)) {
 		issues.push({
 			source,
@@ -971,11 +971,11 @@ function crossCheckProfiles(
 			message: `origine inconnue : ${defaults.origin}`
 		});
 	}
-	if (!refs.professions.has(defaults.profession)) {
+	if (!refs.engagements.has(defaults.engagement)) {
 		issues.push({
 			source,
-			path: 'defaults.profession',
-			message: `profession inconnue : ${defaults.profession}`
+			path: 'defaults.engagement',
+			message: `engagement inconnue : ${defaults.engagement}`
 		});
 	}
 	return issues;
@@ -1715,7 +1715,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	const profileData = profileCatalog.data;
 	const refs: Refs = {
 		origins: new Set(profileData.origins.map((origin) => origin.id)),
-		professions: new Set(profileData.professions.map((profession) => profession.id)),
+		engagements: new Set(profileData.engagements.map((engagement) => engagement.id)),
 		groups: new Set(groupList.map((group) => group.id)),
 		parties: new Set(world.data.parties.map((party) => party.id)),
 		mandates: new Set(career.mandates.map((mandate) => mandate.id)),
@@ -1752,7 +1752,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 	issues.push(
 		...crossCheckProfiles(
 			profileData.origins,
-			profileData.professions,
+			profileData.engagements,
 			profileData.defaults,
 			refs,
 			knownIds
@@ -1801,8 +1801,8 @@ export function validateContent(raw: RawContent): ContentValidation {
 	for (const mandate of career.mandates) mandates[mandate.id] = mandate;
 	const origins: Record<string, OriginDefinition> = {};
 	for (const origin of profileData.origins) origins[origin.id] = origin;
-	const professions: Record<string, ProfessionDefinition> = {};
-	for (const profession of profileData.professions) professions[profession.id] = profession;
+	const engagements: Record<string, EngagementDefinition> = {};
+	for (const engagement of profileData.engagements) engagements[engagement.id] = engagement;
 	const posts: Record<string, PostDefinition> = {};
 	const missions: Record<string, MissionDefinition> = {};
 	for (const post of postList) {
@@ -1874,8 +1874,8 @@ export function validateContent(raw: RawContent): ContentValidation {
 			institutions: career.institutions,
 			origins,
 			originIds: profileData.origins.map((origin) => origin.id),
-			professions,
-			professionIds: profileData.professions.map((profession) => profession.id),
+			engagements,
+			engagementIds: profileData.engagements.map((engagement) => engagement.id),
 			defaultProfile: profileData.defaults,
 			territory: profileData.territory,
 			regions: Object.fromEntries(

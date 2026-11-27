@@ -91,9 +91,22 @@ Le personnage commence toujours à 25 ans. L’alpha ajoute les choix d’origin
 
 **Terrain d’engagement (V1, P3-17) :** syndical, associatif, étudiant, service public, entreprise ou presse. Il décrit ce qui a conduit le personnage vers la politique, lui donne une activité et des revenus modestes, des effets de départ et des actions propres. Il remplace la profession de l’alpha.
 
+**Valeurs provisoires (P3-17, 26 novembre 2026, choix délégués, modifiables à l’équilibrage).** Chaque terrain apporte des effets de départ et deux actions de l’agenda (thème « Travail », une fois par trimestre, réservées à ce terrain) : une activité rémunérée modeste et une action d’engagement. Vie associative par défaut.
+
+| Terrain | Effets de départ | Activité rémunérée | Action d’engagement |
+| --- | --- | --- | --- |
+| Syndicalisme | classes populaires +6, militants +2, milieux d’affaires −3 | Faire ses heures à l’atelier (30 h, +700 €, classes populaires +1) | Tenir la permanence syndicale (20 h, classes populaires +2, militants +1, influence +1) |
+| Vie associative | classes moyennes +3, militants +3, influence +1 | Coordonner l’association (30 h, +600 €, classes moyennes +1) | Organiser une collecte solidaire (20 h, classes moyennes, classes populaires et militants +1, stress −2) |
+| Militantisme étudiant | militants +5, influence +2, argent −500 €, électeurs aisés −2 | Enchaîner les petits boulots (30 h, +450 €, stress +2) | Animer une assemblée générale (15 h, militants +2, influence +1, exposition +2) |
+| Service public | classes moyennes +4, appareil du parti +2, influence +2 | Assurer son service à la mairie (30 h, +800 €, appareil du parti +1) | Défendre un service menacé (20 h, classes moyennes et classes populaires +1, influence +1) |
+| Entreprise | argent +3 000 €, milieux d’affaires +6, classes populaires −3 | Démarcher des clients (25 h, +800 à 1 800 €, stress +2) | Animer le club des entrepreneurs (20 h, milieux d’affaires +2, influence +1) |
+| Presse locale | influence +5, classes moyennes +2, exposition +4 | Écrire des piges pour le quotidien régional (25 h, +550 €, influence +1) | Signer une tribune (15 h, influence +2, classes moyennes +1, exposition +3) |
+
+Ces revenus restent inférieurs ou proches de la mission générique « Prestation en indépendant » (30 h, +800 €) : le terrain colore le départ sans devenir une carrière parallèle. Le terrain ne change pas après la création en V1.
+
 Exemples d’origines : milieu populaire, classe moyenne, grande bourgeoisie, dynastie politique. Les bonus sont liés aux expériences fictives du personnage plutôt qu’à des jugements automatiques sur les catégories sociales.
 
-**Hypothèses provisoires de l’alpha (P2-08, 24 novembre 2026, choix délégués) :** quatre origines (milieu populaire, classe moyenne, grande bourgeoisie, dynastie politique) et six professions (ouvrier, enseignant, avocat, journaliste, entrepreneur, haut fonctionnaire), chacune avec des effets de départ chiffrés (argent, influence, soutiens, stress) et une action propre ; l’origine fixe la famille de départ et l’héritage. Âge de départ toujours 25 ans. Valeurs modifiables à l’équilibrage.
+**Hypothèses provisoires de l’alpha (P2-08, 24 novembre 2026, choix délégués) :** quatre origines (milieu populaire, classe moyenne, grande bourgeoisie, dynastie politique) et six professions (ouvrier, enseignant, avocat, journaliste, entrepreneur, haut fonctionnaire ; remplacées par les terrains d’engagement en P3-17), chacune avec des effets de départ chiffrés (argent, influence, soutiens, stress) et une action propre ; l’origine fixe la famille de départ et l’héritage. Âge de départ toujours 25 ans. Valeurs modifiables à l’équilibrage.
 
 ### 3.2 Orientation politique
 
