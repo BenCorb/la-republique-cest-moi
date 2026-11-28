@@ -70,7 +70,7 @@ export interface FirstStepView {
 	readonly label: string;
 	readonly hint: string;
 	/** Onglet où agir. */
-	readonly tab: 'agenda' | 'world' | 'career' | 'dashboard';
+	readonly tab: 'quarter' | 'politics' | 'france';
 	readonly done: boolean;
 }
 
@@ -92,42 +92,42 @@ export function buildFirstSteps(state: GameState, content: Content): FirstStepsV
 			id: 'plan',
 			label: 'Composer un premier trimestre',
 			hint: 'Choisissez deux ou trois activités dans l’agenda, puis validez « Trimestre suivant ».',
-			tab: 'agenda',
+			tab: 'quarter',
 			done: quarters >= 1
 		},
 		{
 			id: 'party',
 			label: 'Adhérer à un parti ou rester indépendant',
-			hint: 'Dans « Monde politique », comparez les partis : une carte ouvre l’investiture et l’appareil, l’indépendance garde les mains libres.',
-			tab: 'world',
+			hint: 'Dans « La France », comparez les partis : une carte ouvre l’investiture et l’appareil, l’indépendance garde les mains libres.',
+			tab: 'france',
 			done: state.player.affiliations.length > 0 || quarters >= 6
 		},
 		{
 			id: 'activists',
 			label: 'Réunir un noyau militant',
 			hint: 'Tracts, réunion de section et marché du dimanche font venir des militants ; un local les retient.',
-			tab: 'agenda',
+			tab: 'quarter',
 			done: state.player.activists >= 25
 		},
 		{
 			id: 'municipal',
 			label: 'Préparer les municipales',
-			hint: 'Dans l’onglet Carrière, conduisez votre liste ou demandez une place sur celle d’un parti avant la clôture des candidatures.',
-			tab: 'career',
+			hint: 'Dans l’onglet Politique, conduisez votre liste ou demandez une place sur celle d’un parti avant la clôture des candidatures.',
+			tab: 'politics',
 			done: municipal
 		},
 		{
 			id: 'pledge',
 			label: 'Prendre un engagement de campagne',
 			hint: 'Une promesse par scrutin au moins : elle vous suivra une fois élu, et même après.',
-			tab: 'career',
+			tab: 'politics',
 			done: state.promises.length > 0
 		},
 		{
 			id: 'ballot',
 			label: 'Passer l’épreuve du scrutin',
 			hint: 'Préparez la campagne (porte-à-porte, meetings), puis découvrez le procès-verbal au soir du vote.',
-			tab: 'dashboard',
+			tab: 'quarter',
 			done: state.campaigns.some((campaign) => campaign.resultTurn !== null)
 		}
 	];

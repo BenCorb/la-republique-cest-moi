@@ -27,15 +27,13 @@ class MemoryStorage implements KeyValueStorage {
 let clock = 0;
 function controller(
 	storage: KeyValueStorage | null = new MemoryStorage(),
-	content: Content = fixtureContent,
-	yieldControl?: () => Promise<void>
+	content: Content = fixtureContent
 ) {
 	return new GameController({
 		content,
 		storage,
 		now: () => `2026-11-24T10:00:${String(clock++ % 60).padStart(2, '0')}.000Z`,
-		newSeed: () => 'contrôleur',
-		...(yieldControl ? { yieldControl } : {})
+		newSeed: () => 'contrôleur'
 	});
 }
 
@@ -241,79 +239,34 @@ describe('décisions', () => {
 	});
 });
 
-describe('accélération', () => {
-	it('répète le plan pendant une année et sauvegarde chaque état cohérent', async () => {
+describe('tour par tour (D-07)', () => {
+	it('n’expose plus d’accélération : un trimestre à la fois', () => {
+		const game = controller();
+		expect('accelerate' in game).toBe(false);
+		expect('acceleration' in game.snapshot()).toBe(false);
+	});
+
+	it('reconduit les activités épinglées et sauvegarde chaque trimestre', () => {
 		const storage = new MemoryStorage();
 		const game = controller(storage);
 		game.newCareer();
 		game.addStep({ kind: 'action', id: 'test.fixed' });
 		game.togglePin(0);
 
-		expect(await game.accelerate(4)).toBe(true);
+		for (let quarter = 0; quarter < 4; quarter += 1) {
+			expect(game.commitTurn()).toBe(true);
+			const saved = readSave(storage, fixtureContent);
+			expect(saved.status === 'loaded' && saved.envelope.state.turn).toBe(quarter + 1);
+		}
 		const snapshot = game.snapshot();
 		expect(snapshot.view?.dateLabel).toBe('T1 2001');
 		expect(snapshot.view?.resources.find((resource) => resource.id === 'influence')?.value).toBe(
 			'8'
 		);
 		expect(snapshot.plan).toEqual([{ kind: 'action', id: 'test.fixed', pinned: true }]);
-		expect(snapshot.acceleration).toMatchObject({
-			running: false,
-			turnsAdvanced: 4,
-			stopReason: 'limit_reached'
-		});
-		const saved = readSave(storage, fixtureContent);
-		expect(saved.status === 'loaded' && saved.envelope.state.turn).toBe(4);
 	});
 
-	it('rend la main entre les tours et peut être interrompue', async () => {
-		let release: (() => void) | undefined;
-		const yieldControl = () =>
-			new Promise<void>((resolve) => {
-				release = resolve;
-			});
-		const storage = new MemoryStorage();
-		const game = controller(storage, fixtureContent, yieldControl);
-		game.newCareer();
-
-		const running = game.accelerate(40);
-		await Promise.resolve();
-		expect(game.snapshot().acceleration).toMatchObject({ running: true, turnsAdvanced: 1 });
-		expect(game.cancelAcceleration()).toBe(true);
-		release?.();
-		expect(await running).toBe(true);
-		expect(game.snapshot().acceleration).toMatchObject({
-			running: false,
-			turnsAdvanced: 1,
-			stopReason: 'cancelled'
-		});
-		const saved = readSave(storage, fixtureContent);
-		expect(saved.status === 'loaded' && saved.envelope.state.turn).toBe(1);
-	});
-
-	it('s’arrête et sauvegarde lorsqu’une décision apparaît', async () => {
-		const events = withEvents(['test.stress_alert']);
-		const content: Content = {
-			...events,
-			balance: {
-				...events.balance,
-				wellbeing: { ...events.balance.wellbeing, startingStress: 70 }
-			}
-		};
-		const storage = new MemoryStorage();
-		const game = controller(storage, content);
-		game.newCareer();
-
-		await game.accelerate(40);
-		expect(game.snapshot().acceleration).toMatchObject({
-			turnsAdvanced: 1,
-			stopReason: 'decision_pending'
-		});
-		expect(game.snapshot().view?.decision).not.toBeNull();
-		const saved = readSave(storage, content);
-		expect(saved.status === 'loaded' && saved.envelope.state.phase).toBe('decision');
-	});
-
-	it('retire les activités épinglées devenues impossibles et s’arrête sur le plan vide', async () => {
+	it('retire du plan reconduit les activités épinglées devenues impossibles', () => {
 		const game = controller();
 		game.newCareer();
 		game.addStep({ kind: 'action', id: 'test.fixed' });
@@ -321,59 +274,27 @@ describe('accélération', () => {
 		game.togglePin(0);
 		game.togglePin(1);
 
-		await game.accelerate(40);
+		for (let quarter = 0; quarter < 12 && game.snapshot().plan.length > 0; quarter += 1) {
+			expect(game.commitTurn()).toBe(true);
+		}
 		const snapshot = game.snapshot();
-		expect(snapshot.acceleration?.stopReason).toBe('empty_plan');
-		expect(snapshot.acceleration?.message).toMatch(/plus aucune activité/u);
 		expect(snapshot.plan).toEqual([]);
 		expect(snapshot.view?.plan.valid).toBe(true);
-		expect(snapshot.notice?.text).toBe('Plan ajusté :');
-		expect(snapshot.notice?.details).toEqual([
-			expect.stringMatching(/^Gain fixe retiré — Budget politique insuffisant/u),
-			expect.stringMatching(/^Gain fixe retiré — Budget politique insuffisant/u)
-		]);
 		const journal = snapshot.view?.journal.flatMap((quarter) => quarter.lines) ?? [];
-		expect(journal.filter((line) => line.text.startsWith('Plan ajusté :'))).toHaveLength(2);
+		expect(journal.filter((line) => line.text.startsWith('Plan ajusté :')).length).toBeGreaterThan(
+			0
+		);
 	});
 
-	it('n’achète qu’une fois pendant l’accélération et résume la période', async () => {
+	it('n’achète qu’une fois : un achat n’est jamais reconduit', () => {
 		const game = controller();
 		game.newCareer();
 		game.addStep({ kind: 'purchase', id: 'test.donors' });
 		game.addStep({ kind: 'action', id: 'test.random' });
 		game.togglePin(1);
-
-		await game.accelerate(4);
-		const snapshot = game.snapshot();
-		expect(snapshot.acceleration).toMatchObject({ turnsAdvanced: 4, stopReason: 'limit_reached' });
-		expect(snapshot.plan).toEqual([{ kind: 'action', id: 'test.random', pinned: true }]);
-		// Un achat expiré n'est pas un retrait : aucune notice.
-		expect(snapshot.notice).toBeNull();
-		const summary = snapshot.acceleration?.summary;
-		expect(summary).toMatchObject({ turns: 4, period: 'du T1 2000 au T4 2000' });
-		expect(summary?.quarters).toHaveLength(4);
-		expect(summary?.changes.map((change) => change.name)).toContain('Popularité');
-
-		game.dismissAcceleration();
-		expect(game.snapshot().acceleration).toBeNull();
-	});
-
-	it('s’arrête au premier échec de sauvegarde', async () => {
-		const storage = new MemoryStorage();
-		const game = controller(storage);
-		game.newCareer();
-		storage.quota = true;
-
-		await game.accelerate(4);
-		expect(game.snapshot().acceleration).toMatchObject({
-			turnsAdvanced: 1,
-			stopReason: 'save_failed'
-		});
-		expect(game.snapshot().saveStatus).toMatchObject({
-			kind: 'failed',
-			error: { code: 'quota_exceeded' }
-		});
-		expect(game.snapshot().canAct).toBe(false);
+		for (let quarter = 0; quarter < 4; quarter += 1) expect(game.commitTurn()).toBe(true);
+		expect(game.snapshot().plan).toEqual([{ kind: 'action', id: 'test.random', pinned: true }]);
+		expect(game.snapshot().notice).toBeNull();
 	});
 });
 

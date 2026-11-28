@@ -145,20 +145,6 @@ describe('note de cabinet', () => {
 		resumed.openQuarterNote();
 		expect(resumed.snapshot().note).toBe('quarter');
 	});
-
-	it('présente une note de période après une accélération', async () => {
-		const game = controller(new MemoryStorage());
-		game.newCareer();
-		game.addStep({ kind: 'action', id: 'test.fixed' });
-		game.togglePin(0);
-		expect(await game.accelerate(3)).toBe(true);
-		const snapshot = game.snapshot();
-		expect(snapshot.note).toBe('span');
-		expect(snapshot.acceleration?.summary?.turns).toBe(3);
-		game.dismissNote();
-		expect(game.snapshot().note).toBeNull();
-		expect(game.snapshot().acceleration).toBeNull();
-	});
 });
 
 describe('faits marquants de la note', () => {

@@ -12,10 +12,9 @@
 	interface Props {
 		session: GameSession;
 		promises: PromisesView;
-		accelerating: boolean;
 	}
 
-	let { session, promises, accelerating }: Props = $props();
+	let { session, promises }: Props = $props();
 </script>
 
 <section class="card flex flex-col gap-3" aria-labelledby="promesses-title">
@@ -67,7 +66,7 @@
 									<button
 										type="button"
 										class="btn-secondary btn-small"
-										disabled={!offer.addable || accelerating}
+										disabled={!offer.addable}
 										aria-label="Promettre : {offer.label} ({campaign.title})"
 										aria-describedby={offer.reason ? reasonId : undefined}
 										onclick={() =>
@@ -135,7 +134,7 @@
 							<button
 								type="button"
 								class="btn-secondary btn-small"
-								disabled={!pledge.prepareAddable || accelerating}
+								disabled={!pledge.prepareAddable}
 								aria-label="Préparer la réforme : {pledge.label}"
 								aria-describedby={pledge.prepareReason
 									? `prepare-reason-${pledge.pledgeId}`

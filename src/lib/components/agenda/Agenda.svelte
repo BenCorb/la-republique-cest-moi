@@ -21,7 +21,6 @@
 	let { session }: Props = $props();
 	const view = $derived(session.snapshot.view);
 	const plan = $derived(session.snapshot.plan);
-	const accelerating = $derived(session.snapshot.acceleration?.running === true);
 	const hiddenCount = $derived(
 		view?.actionGroups.reduce((total, group) => total + group.outOfReach.length, 0) ?? 0
 	);
@@ -105,7 +104,7 @@
 								0
 									? 'border-primary bg-sidebar font-semibold'
 									: 'border-line'} {format.addable ? '' : 'text-muted'}"
-								disabled={!reachable || !format.addable || accelerating}
+								disabled={!reachable || !format.addable}
 								title={format.reason ?? format.label}
 								aria-label="Ajouter le format {format.format.toLowerCase()} : {format.label}"
 								aria-describedby={format.reason ? `reason-${format.id}` : undefined}
@@ -150,7 +149,6 @@
 					<button
 						type="button"
 						class="btn-secondary btn-small"
-						disabled={accelerating}
 						aria-label="Retirer une occurrence de « {action.label} » du plan"
 						onclick={() => removeOne(action)}
 					>
@@ -167,7 +165,7 @@
 					<button
 						type="button"
 						class="btn-secondary btn-small"
-						disabled={!action.addable || accelerating}
+						disabled={!action.addable}
 						aria-label="Ajouter « {action.label} » au plan"
 						aria-describedby={action.reason ? `reason-${action.id}` : undefined}
 						onclick={() => session.controller.addStep({ kind: 'action', id: action.id })}

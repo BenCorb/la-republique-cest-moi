@@ -1,26 +1,12 @@
-/** Écrans de la partie implémentés (aucun onglet factice, DESIGN.md §3). */
-export type GameTab =
-	| 'dashboard'
-	| 'agenda'
-	| 'career'
-	| 'world'
-	| 'news'
-	| 'entourage'
-	| 'relations'
-	| 'organisation'
-	| 'wealth'
-	| 'journal';
+/** Les six onglets de la partie (D-02) ; aucun onglet factice (DESIGN.md §3). */
+export type GameTab = 'quarter' | 'politics' | 'private' | 'network' | 'france' | 'journal';
 
 /** Libellés des onglets, partagés par la navigation et les premiers pas (P3-40). */
 export const TAB_LABELS: Readonly<Record<GameTab, string>> = {
-	dashboard: 'Tableau de bord',
-	agenda: 'Agenda',
-	career: 'Carrière',
-	world: 'Monde politique',
-	news: 'Actualités',
-	entourage: 'Entourage',
-	relations: 'Relations',
-	organisation: 'Organisation',
-	wealth: 'Patrimoine',
+	quarter: 'Trimestre',
+	politics: 'Politique',
+	private: 'Vie privée',
+	network: 'Mon réseau',
+	france: 'La France',
 	journal: 'Journal'
 };

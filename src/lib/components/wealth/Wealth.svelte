@@ -15,7 +15,6 @@
 	let { session }: Props = $props();
 	const view = $derived(session.snapshot.view);
 	const wealth = $derived(view?.wealth ?? null);
-	const accelerating = $derived(session.snapshot.acceleration?.running === true);
 </script>
 
 {#if view && wealth}
@@ -68,7 +67,7 @@
 							<button
 								type="button"
 								class="btn-secondary btn-small"
-								disabled={!action.addable || accelerating}
+								disabled={!action.addable}
 								title={action.reason ?? action.description}
 								onclick={() => session.controller.addStep({ kind: 'action', id: action.id })}
 							>
@@ -104,7 +103,7 @@
 									<button
 										type="button"
 										class="btn-secondary btn-small"
-										disabled={asset.sale.step === null || accelerating}
+										disabled={asset.sale.step === null}
 										aria-label="Vendre : {asset.label}, pour {asset.proceeds}"
 										onclick={() => asset.sale.step && session.controller.addStep(asset.sale.step)}
 									>
@@ -157,7 +156,7 @@
 								<button
 									type="button"
 									class="btn-secondary btn-small self-end"
-									disabled={!offer.addable || accelerating}
+									disabled={!offer.addable}
 									aria-label="Planifier l’achat « {offer.label} »"
 									aria-describedby={offer.reason ? `reason-${offer.id}` : undefined}
 									onclick={() => session.controller.addStep({ kind: 'purchase', id: offer.id })}

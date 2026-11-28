@@ -36,6 +36,9 @@ import type { CareerView } from './view/career.ts';
 import { ballotReportView, buildCareer } from './view/career.ts';
 import type { FirstStepsView, TerritoryView } from './view/creation.ts';
 import { buildFirstSteps, buildTerritory } from './view/creation.ts';
+import type { FixedLineView, SectionId } from './view/shell.ts';
+export type { FixedLineView, SectionId } from './view/shell.ts';
+import { buildFixedLines, buildSectionSummaries } from './view/shell.ts';
 import type { TrendView } from './view/dashboard.ts';
 import { buildTrends } from './view/dashboard.ts';
 import type { EntourageView } from './view/entourage.ts';
@@ -123,10 +126,8 @@ export type {
 	NoteHighlightView,
 	NoteVariationView,
 	OutcomeView,
-	QuarterNoteView,
-	SpanSummaryView
+	QuarterNoteView
 } from './view/note.ts';
-export { summarizeSpan } from './view/note.ts';
 export type {
 	ActivistLeverView,
 	ActivistsView,
@@ -162,6 +163,10 @@ export type {
 } from './view/world.ts';
 
 export interface PlayerView {
+	/** Revenus et charges certains du trimestre, hors actions (« Fixe ce trimestre », D-02). */
+	readonly fixed: readonly FixedLineView[];
+	/** Ligne de résumé de chaque section des onglets (D-02). */
+	readonly sections: Readonly<Record<SectionId, string>>;
 	/** Tendances des derniers trimestres (P3-08), vides en début de carrière. */
 	readonly trends: readonly TrendView[];
 	/** Résultat du dernier choix d'événement (P3-14), `null` avant le premier. */
@@ -216,6 +221,25 @@ export interface PlayerView {
 	readonly career: CareerView;
 	readonly supports: SupportsView;
 	readonly entourage: EntourageView;
+}
+
+/** Action de retraite du catalogue (P3-37) : celle dont un effet clôt la carrière. */
+function isRetirement(id: string, content: Content): boolean {
+	return content.actions[id]?.effects.some((effect) => effect.op === 'retire') === true;
+}
+
+/** Bouton « Se retirer de la vie politique » (D-08) : action, annonce, possibilité. */
+function retirementView(
+	state: GameState,
+	plan: readonly PlanStep[],
+	content: Content
+): PlanView['retirement'] {
+	const actionId = content.actionIds.find((id) => isRetirement(id, content));
+	if (!actionId) return null;
+	const index = plan.findIndex((step) => step.kind === 'action' && step.id === actionId);
+	if (index >= 0) return { actionId, planIndex: index, addable: false, reason: null };
+	const { addable, reason } = addability(state, plan, { kind: 'action', id: actionId }, content);
+	return { actionId, planIndex: null, addable, reason };
 }
 
 export function projectView(
@@ -303,11 +327,13 @@ export function projectView(
 		};
 	};
 
-	// Les actions ciblées se planifient depuis les écrans Monde politique et Carrière.
+	// Les actions ciblées se planifient depuis les onglets Politique et La France.
 	const actions: CatalogItemView[] = content.actionIds.flatMap((id) => {
 		const action = content.actions[id]!;
 		// Une action d'une époque à venir reste invisible (P3-07).
 		if (action.target || !eraReached(action.fromEra, state.turn, content)) return [];
+		// La retraite s'annonce depuis la barre du bas (D-08), pas depuis l'agenda.
+		if (isRetirement(id, content)) return [];
 		// Famille à l'échelle (P3-23) : une seule ligne, portée par le format modeste.
 		if (action.scale && action.scale.format !== 'modest') return [];
 		const family = action.scale ? content.actionFamilies[action.scale.family] : undefined;
@@ -499,7 +525,8 @@ export function projectView(
 		});
 	}
 
-	return {
+	const view: Omit<PlayerView, 'sections'> = {
+		fixed: buildFixedLines(state, content),
 		trends: buildTrends(state),
 		lastOutcome: buildOutcome(state, content),
 		quarterNote: buildQuarterNote(state, content, adjustments),
@@ -521,11 +548,8 @@ export function projectView(
 		plan: {
 			steps,
 			pinnedCount: steps.filter((step) => step.pinned).length,
-			retiring: plan.some(
-				(step) =>
-					step.kind === 'action' &&
-					content.actions[step.id]?.effects.some((effect) => effect.op === 'retire') === true
-			),
+			retiring: plan.some((step) => step.kind === 'action' && isRetirement(step.id, content)),
+			retirement: retirementView(state, plan, content),
 			adjustments: adjustments.find((entry) => entry.turn === state.turn)?.lines ?? [],
 			timeAvailable: preview.timeAvailable,
 			timeReserved: preview.timeReserved,
@@ -581,4 +605,5 @@ export function projectView(
 			ambition: ambitionText(state, content)
 		}
 	};
+	return { ...view, sections: buildSectionSummaries(view) };
 }

@@ -15,6 +15,36 @@ async function startCareer(page: Page, seed = 'e2e'): Promise<void> {
 	await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 25 ans');
 }
 
+/**
+ * Ouvre un onglet de la coque (D-02) et déplie les sections demandées
+ * (identifiants de `SectionId` : situation, elections, team…).
+ */
+async function openTab(page: Page, tab: string, ...sections: string[]): Promise<void> {
+	await page
+		.getByRole('navigation', { name: 'Écrans de la partie' })
+		.getByRole('button', { name: tab, exact: true })
+		.click();
+	for (const id of sections) {
+		const toggle = page.getByTestId(`section-${id}`).getByRole('button').first();
+		if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click();
+	}
+}
+
+/** Annonce la retraite depuis la barre du bas, avec confirmation (D-08). */
+async function retire(page: Page): Promise<void> {
+	await page.getByRole('button', { name: 'Se retirer de la vie politique' }).click();
+	const confirm = page.getByTestId('retire-dialog');
+	await expect(confirm).toBeVisible();
+	await confirm.getByRole('button', { name: 'Annoncer ma retraite' }).click();
+	await expect(page.getByTestId('retirement-announced')).toBeVisible();
+}
+
+/** Bouton d'un onglet de la navigation. */
+const tabButton = (page: Page, tab: string) =>
+	page
+		.getByRole('navigation', { name: 'Écrans de la partie' })
+		.getByRole('button', { name: tab, exact: true });
+
 /** Boutons qui poursuivent après une note de cabinet ou le résultat d'un choix (P3-14). */
 const MOVE_ON = /^(Préparer ce trimestre|Voir la décision|Continuer|Décision suivante)/u;
 
@@ -117,7 +147,7 @@ test.describe('parcours de jeu', () => {
 			formatResource('personalCashCents', expected.state.resources.personalCashCents)
 		);
 
-		await page.getByRole('button', { name: 'Journal', exact: true }).click();
+		await openTab(page, 'Journal');
 		await expect(page.getByRole('heading', { name: 'T1 2000' })).toBeVisible();
 		await expect(page.getByText('Rencontrer des élus locaux — Influence + 3')).toBeVisible();
 		expect(errors).toEqual([]);
@@ -130,7 +160,7 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByTestId('region-departments')).toContainText('Finistère');
 		await page.getByRole('button', { name: 'Commencer la carrière' }).click();
 		await expect(page.getByTestId('header-territory')).toContainText('Bretagne');
-		await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
+		await openTab(page, 'Trimestre', 'situation');
 		await expect(page.getByTestId('territory')).toContainText('Votre terre d’élection');
 	});
 
@@ -144,27 +174,29 @@ test.describe('parcours de jeu', () => {
 			'Tenir la permanence syndicale'
 		);
 		await page.getByRole('button', { name: 'Commencer la carrière' }).click();
-		await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
+		await openTab(page, 'Trimestre', 'situation');
 		await expect(page.getByText(/· Syndicalisme ·/u)).toBeVisible();
-		await page.getByRole('button', { name: 'Agenda', exact: true }).click();
 		await expect(page.getByText('Tenir la permanence syndicale').first()).toBeVisible();
 	});
 
 	test('affiche le calendrier électoral et la fonction principale', async ({ page }) => {
 		await startCareer(page, 'e2e-carriere');
 		await expect(page.getByTestId('header-function')).toHaveText('Fonction Sans mandat');
-		await page.getByRole('button', { name: 'Carrière', exact: true }).click();
+		await openTab(page, 'Politique', 'elections', 'mandates');
 		await expect(page.getByTestId('main-function')).toHaveText('Fonction principale : Sans mandat');
 		const municipal = page.getByTestId('ballot-ballot.1');
 		await expect(municipal).toContainText('Élections municipales');
 		await expect(municipal).toContainText('T1 2001');
 		await expect(municipal).toContainText('Candidatures closes au T3 2000');
 		await expect(page.getByTestId('cumul')).toHaveText('Cumul : 0 mandat sur 3 au plus.');
+		// Soutiens : section de l'onglet Trimestre (D-02).
+		await openTab(page, 'Trimestre', 'supports');
 		await expect(page.getByTestId('support-support.working_class')).toContainText(
 			'Classes populaires (40 % de l’électorat)'
 		);
 		await expect(page.getByTestId('support-support.apparatus')).toContainText('Appareil du parti');
 		await expect(page.getByRole('meter', { name: 'Popularité' }).first()).toBeVisible();
+		await openTab(page, 'Politique');
 
 		// Candidature aux municipales, puis sondage de la campagne en cours.
 		await page
@@ -175,7 +207,7 @@ test.describe('parcours de jeu', () => {
 		// Un événement peut survenir : il ne fait pas partie de ce parcours.
 		await expect(page.getByTestId('game-date')).toHaveText('T2 2000 · 25 ans');
 		await settleDecisions(page);
-		await page.getByRole('button', { name: 'Carrière', exact: true }).click();
+		await openTab(page, 'Politique', 'elections');
 		await expect(page.getByTestId('campaign-campaign.1')).toContainText('Candidature déposée');
 		await expect(page.getByTestId('poll-campaign.1')).toContainText('Sondage : entre');
 		await expect(page.getByTestId('opponent-campaign.1')).toContainText('Adversaire : ');
@@ -193,14 +225,14 @@ test.describe('parcours de jeu', () => {
 		await expect(offer).toContainText('Engagement prévu ce trimestre.');
 		await nextQuarter(page);
 		await settleDecisions(page);
-		await page.getByRole('button', { name: 'Carrière', exact: true }).click();
+		await openTab(page, 'Politique', 'elections');
 		await expect(page.getByTestId('pledge-pledge.1')).toContainText('Geler les impôts locaux');
 		await expect(page.getByTestId('pledge-pledge.1')).toContainText('Élections municipales (');
 		await expect(page.getByTestId('pledge-pledge.1')).toContainText('Annoncée');
 		await expect(page.getByTestId('pledge-pledge.1')).toContainText('À réaliser si vous êtes élu');
 
 		// Entourage : postes verrouillés tant que l'influence manque.
-		await page.getByRole('button', { name: 'Entourage', exact: true }).click();
+		await openTab(page, 'Mon réseau', 'team');
 		await expect(page.getByTestId('post-post.chief_of_staff')).toContainText(
 			'Il faut au moins 15 points d’influence'
 		);
@@ -216,17 +248,17 @@ test.describe('parcours de jeu', () => {
 		await page.getByRole('button', { name: 'Nouvelle carrière' }).click();
 		await page.getByRole('combobox', { name: 'Région' }).selectOption({ label: 'Hauts-de-France' });
 		await page.getByRole('button', { name: 'Commencer la carrière' }).click();
-		await page.getByRole('button', { name: 'Carrière', exact: true }).click();
+		await openTab(page, 'Politique', 'media');
 		await expect(page.getByTestId('media-media.beffroi')).toContainText('Le Beffroi');
 		await expect(page.getByTestId('media-media.beffroi')).toContainText('Presse régionale');
 		await expect(page.getByTestId('media-media.bocage')).toHaveCount(0);
-		await page.getByRole('button', { name: 'Patrimoine', exact: true }).click();
+		await openTab(page, 'Vie privée', 'wealth');
 		await expect(page.getByText('Racheter Le Beffroi')).toBeVisible();
 	});
 
 	test('accorde une interview et la retrouve dans le fil de presse', async ({ page }) => {
 		await startCareer(page, 'e2e-medias');
-		await page.getByRole('button', { name: 'Carrière', exact: true }).click();
+		await openTab(page, 'Politique', 'media');
 		const bocage = page.getByTestId('media-media.bocage');
 		await expect(bocage).toContainText('Le Courrier du Bocage');
 		await expect(bocage).toContainText('Presse régionale');
@@ -257,14 +289,15 @@ test.describe('parcours de jeu', () => {
 			await expect(feed.getByTestId('press-title')).not.toHaveText(first ?? '');
 		}
 		await feed.getByRole('button', { name: /lire les actualités/ }).click();
-		await expect(page.getByRole('heading', { name: 'Actualités' })).toBeVisible();
+		await expect(tabButton(page, 'La France')).toHaveAttribute('aria-current', 'page');
+		await expect(page.getByRole('heading', { name: 'Actualités', exact: true })).toBeVisible();
 	});
 
 	test('présente les institutions et réserve les réformes aux parlementaires', async ({ page }) => {
 		await startCareer(page, 'e2e-institutions');
-		await page.getByRole('button', { name: 'Monde politique', exact: true }).click();
+		await openTab(page, 'La France', 'context', 'institutions');
 		await expect(page.getByTestId('era')).toContainText('Années 2000');
-		await expect(page.getByRole('heading', { name: 'Institutions' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: 'Institutions' }).first()).toBeVisible();
 		await expect(page.getByText('Réservé aux parlementaires et aux ministres.')).toBeVisible();
 		const cumul = page.getByTestId('institution-institution.cumul');
 		await expect(cumul).toContainText('Cumul des mandats');
@@ -315,20 +348,20 @@ test.describe('parcours de jeu', () => {
 		await expect(page.getByTestId('game-date')).toHaveText('T3 2000 · 25 ans');
 		await settleDecisions(page);
 
-		await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
-		await expect(page.getByRole('heading', { name: 'Tendances' })).toBeVisible();
+		await openTab(page, 'Trimestre', 'supports', 'situation');
+		await expect(page.getByRole('heading', { name: 'Tendances', exact: true })).toBeVisible();
 		await expect(page.getByTestId('trend-influence')).toBeVisible();
 
-		await page.getByRole('button', { name: 'Actualités', exact: true }).click();
-		await expect(page.getByRole('heading', { name: 'Actualités' })).toBeVisible();
+		await openTab(page, 'La France', 'press');
+		await expect(page.getByRole('heading', { name: 'Actualités', exact: true })).toBeVisible();
 		await expect(page.getByText('Seulement les articles vous concernant')).toBeVisible();
 	});
 
 	test('adhère à un parti depuis le monde politique', async ({ page }) => {
 		await startCareer(page, 'e2e-parti');
 		await expect(page.getByTestId('header-party')).toHaveText('Étiquette aucune');
-		await page.getByRole('button', { name: 'Monde politique', exact: true }).click();
-		await expect(page.getByRole('heading', { name: 'Contexte national' })).toBeVisible();
+		await openTab(page, 'La France', 'context', 'parties');
+		await expect(page.getByRole('heading', { name: 'Contexte national' }).first()).toBeVisible();
 		await expect(page.getByText('Gouvernement conduit par Parti des Synthèses.')).toBeVisible();
 		await expect(page.getByTestId('party-party.fn')).toContainText('Front du Non');
 
@@ -343,16 +376,18 @@ test.describe('parcours de jeu', () => {
 		await settleDecisions(page);
 
 		await expect(page.getByTestId('header-party')).toHaveText('Étiquette PS');
-		await page.getByRole('button', { name: 'Monde politique', exact: true }).click();
+		// Étiquette du joueur : section Parti de l'onglet Politique (D-02).
+		await openTab(page, 'Politique', 'party');
 		await expect(page.getByTestId('affiliation')).toHaveText(
 			'Membre du Parti des Synthèses depuis le T1 2000'
 		);
+		await openTab(page, 'La France', 'parties');
 		await expect(page.getByTestId('party-party.ps')).toContainText('Votre parti');
 	});
 
 	test('planifie un achat qui ne produit qu’au trimestre suivant', async ({ page }) => {
 		await startCareer(page, 'e2e-achat');
-		await page.getByRole('button', { name: 'Organisation', exact: true }).click();
+		await openTab(page, 'Mon réseau', 'organisation');
 		// Base militante organique (P3-19) : plus de militant acheté.
 		await expect(page.getByTestId('activists')).toContainText('Base militante');
 		await expect(page.getByTestId('activists-count')).toHaveText('3 militants');
@@ -366,7 +401,7 @@ test.describe('parcours de jeu', () => {
 			'Actif à partir du trimestre prochain'
 		);
 		await nextQuarter(page);
-		await page.getByRole('button', { name: 'Organisation', exact: true }).click();
+		await openTab(page, 'Mon réseau', 'organisation');
 		const group = page.getByTestId('group-network.think_tank');
 		await expect(group).toContainText('Cercle de réflexion');
 		await expect(group).toContainText('Actif ce trimestre');
@@ -375,7 +410,7 @@ test.describe('parcours de jeu', () => {
 		await page.getByRole('button', { name: 'Prévoir un départ : Cercle de réflexion' }).click();
 		await expect(group).toContainText('1 départ prévu ce trimestre');
 		await nextQuarter(page);
-		await page.getByRole('button', { name: 'Organisation', exact: true }).click();
+		await openTab(page, 'Mon réseau', 'organisation');
 		await expect(group).toHaveCount(0);
 		await expect(page.getByText('Personne ne travaille encore pour vous.')).toBeVisible();
 	});
@@ -384,7 +419,7 @@ test.describe('parcours de jeu', () => {
 		page
 	}) => {
 		await startCareer(page, 'e2e-terrain-militant');
-		await page.getByRole('button', { name: 'Agenda', exact: true }).click();
+		await openTab(page, 'Trimestre');
 		await expect(page.getByTestId('field-bonus-activism.leaflets')).toContainText(
 			'Action de terrain : bonus à partir du palier « Noyau »'
 		);
@@ -394,7 +429,7 @@ test.describe('parcours de jeu', () => {
 		page
 	}) => {
 		await startCareer(page, 'e2e-echelle');
-		await page.getByRole('button', { name: 'Agenda', exact: true }).click();
+		await openTab(page, 'Trimestre');
 		const row = page.getByTestId('action-personal.donate');
 		await expect(row).toContainText('Verser un don à son organisation');
 		await expect(row).toContainText('Plafond annuel');
@@ -411,7 +446,7 @@ test.describe('parcours de jeu', () => {
 
 	test('explique comment faire grandir la base militante (PT-B1-006)', async ({ page }) => {
 		await startCareer(page, 'e2e-leviers');
-		await page.getByRole('button', { name: 'Organisation', exact: true }).click();
+		await openTab(page, 'Mon réseau', 'organisation');
 		const levers = page.getByTestId('activist-levers');
 		await levers.getByText('Faire grandir la base militante').click();
 		await expect(levers).toContainText('Ce qui fait venir des militants');
@@ -483,94 +518,32 @@ test.describe('parcours de jeu', () => {
 		expect(after.previous).toBe(stored.previous);
 	});
 
-	test('accélère une année sans arrêt inutile, résume la période et la reprend', async ({
-		page
-	}) => {
-		// Seed sans décision bloquante sur les premiers trimestres (catalogue P3-05).
-		await startCareer(page, 'e2e-year-4');
-		await page.getByRole('button', { name: 'Année suivante' }).click();
-
-		// Sans mandat en jeu, la clôture des candidatures n'arrête plus le temps (P3-09).
-		await expect(page.getByTestId('acceleration-status')).toContainText(
-			'4 trimestres simulés : limite demandée atteinte.'
-		);
-		// Note de période présentée d'office (P3-14).
-		const summary = page.getByTestId('quarter-note').getByTestId('span-summary');
-		await expect(summary).toContainText('4 trimestres simulés du T1 2000 au T4 2000');
-		await summary.getByText('Détail trimestre par trimestre').click();
-		await expect(summary.getByRole('heading', { name: 'T2 2000' })).toBeVisible();
-		await expect(page.getByTestId('game-date')).toHaveText('T1 2001 · 26 ans');
-		await closeNote(page);
-		await expect(summary).toBeHidden();
-
-		await page.reload();
-		await page.getByRole('button', { name: 'Reprendre la carrière' }).click();
-		await expect(page.getByTestId('game-date')).toHaveText('T1 2001 · 26 ans');
-	});
-
-	test('peut interrompre une accélération longue entre deux trimestres', async ({ page }) => {
-		// Le contrôleur cède une frame entre deux trimestres : le test retient ces frames
-		// pour garder l'accélération en cours le temps de l'interrompre, sans course.
-		await page.addInitScript(() => {
-			const native = window.requestAnimationFrame.bind(window);
-			const held: FrameRequestCallback[] = [];
-			const gate = {
-				hold: false,
-				release(): void {
-					gate.hold = false;
-					for (const callback of held.splice(0)) native(callback);
-				}
-			};
-			Object.assign(window, { __frames: gate });
-			window.requestAnimationFrame = (callback) => {
-				if (!gate.hold) return native(callback);
-				held.push(callback);
-				return 0;
-			};
-		});
-		type Gate = { hold: boolean; release: () => void };
-		await startCareer(page, 'e2e-year');
-		await page.evaluate(() => {
-			(window as unknown as { __frames: Gate }).__frames.hold = true;
-		});
-		await page.getByRole('button', { name: 'Jusqu’à une alerte' }).click();
-		const cancel = page.getByRole('button', { name: 'Interrompre' });
-		await expect(cancel).toBeVisible();
-		await cancel.click();
-		await page.evaluate(() => {
-			(window as unknown as { __frames: Gate }).__frames.release();
-		});
-
-		await expect(page.getByTestId('acceleration-status')).toContainText(
-			'1 trimestre simulé : accélération interrompue'
-		);
+	test('se joue au tour par tour : un seul bouton d’avance (D-07)', async ({ page }) => {
+		await startCareer(page, 'e2e-tour');
+		await expect(page.getByRole('button', { name: 'Année suivante' })).toHaveCount(0);
+		await expect(page.getByRole('button', { name: 'Jusqu’à une alerte' })).toHaveCount(0);
+		await nextQuarter(page);
+		await settleDecisions(page);
 		await expect(page.getByTestId('game-date')).toHaveText('T2 2000 · 25 ans');
-		await expect(page.getByRole('button', { name: 'Trimestre suivant' })).toBeEnabled();
-		await expect(page.getByRole('button', { name: 'Année suivante' })).toBeEnabled();
+		await expect(tabButton(page, 'Trimestre')).toHaveAttribute('aria-current', 'page');
 	});
 
-	test('arrête l’accélération sur une décision et la conserve au rechargement', async ({
+	test('ouvre chaque section sur une ligne de résumé, le détail à la demande (D-02)', async ({
 		page
 	}) => {
-		await startCareer(page, 'e2e-decision');
-		// Les échéances électorales arrêtent aussi le temps : relancer jusqu'à la décision.
-		// La note de période précède la décision qui a arrêté le temps (P3-14).
-		const dialog = page.getByTestId('decision-dialog');
-		let stop = '';
-		for (let attempt = 0; attempt < 6 && !(await dialog.isVisible()); attempt += 1) {
-			await page.getByRole('button', { name: 'Jusqu’à une alerte' }).click();
-			await expect(page.getByTestId('quarter-note')).toBeVisible();
-			stop = (await page.getByTestId('span-stop').textContent()) ?? '';
-			await closeNote(page);
-		}
-		await expect(dialog).toBeVisible();
-		expect(stop).toContain('une décision attend votre réponse');
-		const date = await page.getByTestId('game-date').textContent();
-
-		await page.reload();
-		await page.getByRole('button', { name: 'Reprendre la carrière' }).click();
-		await expect(page.getByRole('dialog')).toBeVisible();
-		await expect(page.getByTestId('game-date')).toHaveText(date ?? '');
+		await startCareer(page, 'e2e-sections');
+		// « Fixe ce trimestre » ouvert d'office ; les autres sections, repliées.
+		await expect(page.getByTestId('fixed')).toContainText('Base militante');
+		const situation = page.getByTestId('section-situation');
+		await expect(situation.getByTestId('section-summary-situation')).toContainText('Influence');
+		await expect(situation.getByRole('button').first()).toHaveAttribute('aria-expanded', 'false');
+		await expect(page.getByTestId('territory')).toHaveCount(0);
+		await openTab(page, 'Trimestre', 'situation');
+		await expect(page.getByTestId('territory')).toBeVisible();
+		// L'état déplié survit au changement d'onglet.
+		await openTab(page, 'Journal');
+		await openTab(page, 'Trimestre');
+		await expect(page.getByTestId('territory')).toBeVisible();
 	});
 
 	test('conserve une décision en attente au rechargement et l’applique une fois', async ({
@@ -601,7 +574,7 @@ test.describe('parcours de jeu', () => {
 		await settleDecisions(page);
 		await expect(page.getByRole('dialog')).toBeHidden();
 
-		await page.getByRole('button', { name: 'Journal', exact: true }).click();
+		await openTab(page, 'Journal');
 		await expect(page.getByText(/^Décision — /)).toHaveCount(1);
 	});
 
@@ -668,8 +641,8 @@ test.describe('parcours de jeu', () => {
 
 		await page.goto('./');
 		await page.getByTestId('import-input').setInputFiles(file);
-		await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
-		const card = page.getByRole('region', { name: 'Exposition et justice' });
+		await openTab(page, 'Vie privée', 'justice');
+		const card = page.getByTestId('section-justice');
 		await expect(card.getByText('Exposition médiatique', { exact: true })).toBeVisible();
 		await expect(card.getByText('Risque judiciaire', { exact: true })).toBeVisible();
 		const facts = card.getByTestId('facts');
@@ -701,7 +674,7 @@ test.describe('parcours de jeu', () => {
 
 		await page.goto('./');
 		await page.getByTestId('import-input').setInputFiles(file);
-		await page.getByRole('button', { name: 'Relations', exact: true }).click();
+		await openTab(page, 'Mon réseau', 'relations');
 		const card = page.getByTestId('person-cast.sophie_roux');
 		await expect(card).toContainText('Sophie Roux, du quotidien régional');
 		await expect(card).toContainText('Attitude : favorable');
@@ -734,15 +707,18 @@ test.describe('parcours de jeu', () => {
 			await expect(page.getByRole('meter', { name: 'Stress' }).first()).toBeVisible();
 
 			// Agenda : coûts et effets en pastilles, phrase complète gardée pour l'accessibilité.
-			await page.getByRole('button', { name: 'Agenda', exact: true }).click();
+			await openTab(page, 'Trimestre');
 			const row = page.getByTestId('action-network.meet_officials');
 			await expect(row.locator('[data-sense="gain"]').first()).toBeVisible();
 			await expect(row).toContainText('points de temps');
 			await expect(page.getByRole('meter', { name: 'Temps utilisé' })).toBeVisible();
 
 			// Contrastes AA du texte visible (4,5:1), contrôles désactivés exceptés (WCAG 1.4.3).
-			for (const tab of ['Agenda', 'Tableau de bord']) {
-				await page.getByRole('button', { name: tab, exact: true }).click();
+			for (const [tab, ...sections] of [
+				['Trimestre', 'situation', 'supports'],
+				['Vie privée', 'health', 'justice', 'wealth']
+			] as const) {
+				await openTab(page, tab, ...sections);
 				const failures = await page.evaluate(() => {
 					const parse = (color: string): number[] =>
 						(color.match(/[\d.]+/g) ?? []).map(Number).concat(1).slice(0, 4);
@@ -806,26 +782,23 @@ test.describe('parcours de jeu', () => {
 		async ({ page }) => {
 			await startCareer(page);
 			for (const tab of [
-				'Tableau de bord',
-				'Agenda',
-				'Carrière',
-				'Monde politique',
-				'Entourage',
-				'Relations',
-				'Organisation',
-				'Patrimoine',
-				'Journal'
+				['Trimestre', 'fixed', 'situation', 'supports'],
+				['Politique', 'elections', 'mandates', 'party', 'media'],
+				['Vie privée', 'health', 'justice', 'wealth'],
+				['Mon réseau', 'team', 'organisation', 'relations'],
+				['La France', 'context', 'parties', 'institutions', 'press'],
+				['Journal']
 			]) {
-				await page.getByRole('button', { name: tab, exact: true }).click();
+				await openTab(page, ...(tab as [string, ...string[]]));
 				const overflow = await page.evaluate(
 					() => document.documentElement.scrollWidth - document.documentElement.clientWidth
 				);
-				expect(overflow, tab).toBeLessThanOrEqual(0);
+				expect(overflow, tab[0]).toBeLessThanOrEqual(0);
 				// Seules les colonnes défilent : jamais la page entière (textes « sr-only » contenus).
 				const vertical = await page.evaluate(
 					() => document.documentElement.scrollHeight - document.documentElement.clientHeight
 				);
-				expect(vertical, tab).toBeLessThanOrEqual(0);
+				expect(vertical, tab[0]).toBeLessThanOrEqual(0);
 				await expect(page.getByRole('button', { name: 'Trimestre suivant' })).toBeInViewport();
 			}
 		}
@@ -843,18 +816,14 @@ test.describe('plan permanent (P3-13)', () => {
 				.click();
 			const notebook = page.getByTestId('plan-notebook');
 			for (const tab of [
-				'Tableau de bord',
-				'Agenda',
-				'Carrière',
-				'Monde politique',
-				'Actualités',
-				'Entourage',
-				'Relations',
-				'Organisation',
-				'Patrimoine',
+				'Trimestre',
+				'Politique',
+				'Vie privée',
+				'Mon réseau',
+				'La France',
 				'Journal'
 			]) {
-				await page.getByRole('button', { name: tab, exact: true }).click();
+				await openTab(page, tab);
 				await expect(notebook, tab).toBeVisible();
 				await expect(notebook.getByTestId('notebook-step'), tab).toHaveCount(1);
 			}
@@ -880,7 +849,7 @@ test.describe('plan permanent (P3-13)', () => {
 		{ tag: '@layout' },
 		async ({ page }) => {
 			await startCareer(page, 'e2e-panneau');
-			await page.getByRole('button', { name: 'Agenda', exact: true }).click();
+			await openTab(page, 'Trimestre');
 			const main = page.locator('#contenu');
 			await main.evaluate((element) => element.scrollTo(0, 300));
 			const before = await main.evaluate((element) => element.scrollTop);
@@ -901,10 +870,7 @@ test.describe('plan permanent (P3-13)', () => {
 			await page.keyboard.press('Escape');
 			await expect(sheet).toBeHidden();
 
-			await expect(page.getByRole('button', { name: 'Agenda', exact: true })).toHaveAttribute(
-				'aria-current',
-				'page'
-			);
+			await expect(tabButton(page, 'Trimestre')).toHaveAttribute('aria-current', 'page');
 			expect(await main.evaluate((element) => element.scrollTop)).toBe(before);
 			await expect(page.getByTestId('plan-notebook').getByTestId('notebook-step')).toHaveCount(1);
 		}
@@ -916,8 +882,7 @@ test.describe('plan permanent (P3-13)', () => {
 		async ({ page }) => {
 			await startCareer(page);
 			const bar = page.getByTestId('alert-bar');
-			for (const tab of ['Tableau de bord', 'Agenda', 'Journal'])
-				await page.getByRole('button', { name: tab, exact: true }).click();
+			for (const tab of ['Politique', 'Trimestre', 'Journal']) await openTab(page, tab);
 			await expect(bar).toBeVisible();
 			const infos = bar.getByRole('button', { name: /information/ });
 			await expect(infos).toHaveAttribute('aria-expanded', 'false');
@@ -1018,60 +983,6 @@ test.describe('plan permanent (P3-13)', () => {
 		);
 		expect(overflow).toBeLessThanOrEqual(0);
 	});
-
-	test('verrouille le carnet et le panneau pendant l’accélération', async ({ page }) => {
-		await page.addInitScript(() => {
-			const native = window.requestAnimationFrame.bind(window);
-			const held: FrameRequestCallback[] = [];
-			const gate = {
-				hold: false,
-				release(): void {
-					gate.hold = false;
-					for (const callback of held.splice(0)) native(callback);
-				}
-			};
-			Object.assign(window, { __frames: gate });
-			window.requestAnimationFrame = (callback) => {
-				if (!gate.hold) return native(callback);
-				held.push(callback);
-				return 0;
-			};
-		});
-		type Gate = { hold: boolean; release: () => void };
-		await startCareer(page, 'e2e-year');
-		await page
-			.getByRole('button', { name: 'Ajouter « Rencontrer des élus locaux » au plan' })
-			.click();
-		const notebook = page.getByTestId('plan-notebook');
-		await notebook
-			.getByRole('button', {
-				name: 'Épingler « Rencontrer des élus locaux » : répéter chaque trimestre'
-			})
-			.click();
-		await page.evaluate(() => {
-			(window as unknown as { __frames: Gate }).__frames.hold = true;
-		});
-		await page.getByRole('button', { name: 'Jusqu’à une alerte' }).click();
-		await expect(page.getByRole('button', { name: 'Interrompre' })).toBeVisible();
-		await expect(
-			notebook.getByRole('button', { name: 'Retirer « Rencontrer des élus locaux »' })
-		).toBeDisabled();
-		await notebook.getByRole('button', { name: 'Modifier le plan' }).click();
-		const sheet = page.getByRole('dialog', { name: 'Modifier le plan' });
-		await expect(sheet).toContainText('Accélération en cours');
-		await expect(
-			sheet.getByRole('button', { name: 'Ajouter « Accepter des missions en free-lance » au plan' })
-		).toBeDisabled();
-		await sheet.getByRole('button', { name: 'Fermer' }).click();
-		await page.getByRole('button', { name: 'Interrompre' }).click();
-		await page.evaluate(() => {
-			(window as unknown as { __frames: Gate }).__frames.release();
-		});
-		await expect(page.getByRole('button', { name: 'Trimestre suivant' })).toBeEnabled();
-		await expect(
-			notebook.getByRole('button', { name: 'Retirer « Rencontrer des élus locaux »' })
-		).toBeEnabled();
-	});
 });
 
 test.describe('résultats et note de cabinet (P3-14)', () => {
@@ -1090,10 +1001,7 @@ test.describe('résultats et note de cabinet (P3-14)', () => {
 		await expect(prepare).toBeFocused();
 		await page.keyboard.press('Enter');
 		await expect(note).toBeHidden();
-		await expect(page.getByRole('button', { name: 'Agenda', exact: true })).toHaveAttribute(
-			'aria-current',
-			'page'
-		);
+		await expect(tabButton(page, 'Trimestre')).toHaveAttribute('aria-current', 'page');
 
 		// Réouverture depuis la date de l'en-tête ; Échap la referme.
 		await page.getByTestId('reopen-note').click();
@@ -1128,14 +1036,14 @@ test.describe('résultats et note de cabinet (P3-14)', () => {
 		await page.reload();
 		await page.getByRole('button', { name: 'Reprendre la carrière' }).click();
 		await expect(page.getByTestId('decision-dialog')).toBeHidden();
-		await page.getByRole('button', { name: 'Journal', exact: true }).click();
+		await openTab(page, 'Journal');
 		await expect(page.getByText(/^Décision — /)).toHaveCount(1);
 	});
 
 	test('met en scène un résultat d’élection dans la note, avec son graphique', async ({ page }) => {
 		// Vraie campagne municipale : candidature au T1 2000, scrutin à la fin du T1 2001.
 		await startCareer(page, 'e2e-scrutin');
-		await page.getByRole('button', { name: 'Carrière', exact: true }).click();
+		await openTab(page, 'Politique', 'elections');
 		await page
 			.getByRole('button', { name: 'Prévoir la candidature : Élections municipales du T1 2001' })
 			.click();
@@ -1163,17 +1071,14 @@ test.describe('premiers pas guidés (P3-40)', () => {
 		page
 	}) => {
 		await startCareer(page, 'e2e-premiers-pas');
-		// Le lancement ouvre l'agenda : la bulle y indique le premier objectif.
-		const bubble = page.getByTestId('first-steps-bubble');
-		await expect(bubble).toContainText('Composer un premier trimestre');
-		await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
+		// Le lancement ouvre l'onglet Trimestre : la carte complète y présente les objectifs.
 		const card = page.getByTestId('first-steps');
 		await expect(card).toContainText('Premiers pas · 1/6');
+		await expect(card).toContainText('Composer un premier trimestre');
 		await nextQuarter(page);
-		await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
 		await expect(card).toContainText('Premiers pas · 2/6');
 		await expect(card).toContainText('Adhérer à un parti ou rester indépendant');
-		await card.getByRole('button', { name: 'Aller à : Monde politique' }).click();
+		await card.getByRole('button', { name: 'Aller à : La France' }).click();
 		await expect(page.getByTestId('first-steps-bubble')).toBeVisible();
 		// Masqués, ils disparaissent partout, puis se réactivent depuis l'accueil.
 		await page.getByRole('button', { name: 'Masquer les premiers pas' }).click();
@@ -1181,7 +1086,6 @@ test.describe('premiers pas guidés (P3-40)', () => {
 		await page.reload();
 		await page.getByRole('button', { name: 'Réactiver les premiers pas' }).click();
 		await page.getByRole('button', { name: 'Reprendre la carrière' }).click();
-		await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
 		await expect(page.getByTestId('first-steps')).toBeVisible();
 	});
 });
@@ -1191,13 +1095,19 @@ test.describe('retraite et carnet des carrières (P3-37, P3-41)', () => {
 		page
 	}) => {
 		await startCareer(page, 'e2e-carnet');
+		// D-08 : la retraite quitte l'agenda et s'annonce depuis la barre du bas.
+		await expect(
+			page.getByRole('button', { name: 'Ajouter « Se retirer de la vie politique » au plan' })
+		).toHaveCount(0);
+		await retire(page);
+		// Annulable tant que le trimestre n'est pas joué.
 		await page
-			.getByRole('button', { name: 'Ajouter « Se retirer de la vie politique » au plan' })
+			.getByTestId('retirement-announced')
+			.getByRole('button', { name: 'Renoncer' })
 			.click();
+		await expect(page.getByTestId('retirement-announced')).toHaveCount(0);
+		await retire(page);
 		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
-		const confirm = page.getByTestId('retire-dialog');
-		await expect(confirm).toBeVisible();
-		await confirm.getByRole('button', { name: 'Confirmer la retraite' }).click();
 		await expect(page.getByText(/Portrait/u).first()).toBeVisible();
 		// Partage (P3-42) : seed affichée, retour téléchargé avec une note.
 		await expect(page.getByTestId('career-seed')).toHaveText('Seed de la partie : e2e-carnet');
@@ -1220,14 +1130,8 @@ test.describe('retraite et carnet des carrières (P3-37, P3-41)', () => {
 test.describe('rejouer une partie (P3-42)', () => {
 	test('relance la même seed et le même profil après confirmation', async ({ page }) => {
 		await startCareer(page, 'e2e-rejouer');
-		await page
-			.getByRole('button', { name: 'Ajouter « Se retirer de la vie politique » au plan' })
-			.click();
+		await retire(page);
 		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
-		await page
-			.getByTestId('retire-dialog')
-			.getByRole('button', { name: 'Confirmer la retraite' })
-			.click();
 		await page.getByRole('button', { name: 'Rejouer cette partie' }).click();
 		await page.getByRole('button', { name: 'Remplacer et commencer' }).click();
 		await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 25 ans');
@@ -1239,18 +1143,14 @@ test.describe('livraison (P3-10)', () => {
 		await page.setViewportSize({ width: 1100, height: 800 });
 		await startCareer(page, 'e2e-1100');
 		for (const name of [
-			'Tableau de bord',
-			'Agenda',
-			'Carrière',
-			'Monde politique',
-			'Actualités',
-			'Entourage',
-			'Relations',
-			'Organisation',
-			'Patrimoine',
+			'Trimestre',
+			'Politique',
+			'Vie privée',
+			'Mon réseau',
+			'La France',
 			'Journal'
 		]) {
-			await page.getByRole('button', { name, exact: true }).click();
+			await openTab(page, name);
 			const overflow = await page.evaluate(
 				() => document.documentElement.scrollWidth - window.innerWidth
 			);

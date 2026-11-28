@@ -4,7 +4,7 @@
 	import { TAB_LABELS, type GameTab } from './tabs.ts';
 
 	/**
-	 * Premiers pas guidés (P3-40) : carte complète au tableau de bord, bulle sur
+	 * Premiers pas guidés (P3-40) : carte complète à l’onglet Trimestre, bulle sur
 	 * l'onglet où agir. Aucun effet de jeu ; masquable, réactivable à l'accueil.
 	 */
 	interface Props {
@@ -16,7 +16,7 @@
 
 	let { steps, tab, onTab, onHide }: Props = $props();
 	const current = $derived(steps.current);
-	const full = $derived(tab === 'dashboard');
+	const full = $derived(tab === 'quarter');
 </script>
 
 {#if current && (full || current.tab === tab)}
