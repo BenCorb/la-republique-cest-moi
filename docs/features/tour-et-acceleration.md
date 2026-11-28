@@ -1,6 +1,6 @@
 # Tour, accélération et note de cabinet
 
-> Fiche de fonctionnalité — état au tag `v1.0.0`. **Statut beta : à auditer.** Modèle et mode d’emploi : [README](README.md).
+> Fiche de fonctionnalité — état au tag `v1.0.0`. **Statut beta : en chantier (B-04).** Modèle et mode d’emploi : [README](README.md).
 
 ## Rôle dans le jeu
 
@@ -32,20 +32,28 @@ La boucle trimestrielle : préparer un plan, avancer d’un trimestre ou accél�
 
 ## Règles en vigueur
 
-_À condenser lors de l’audit : les règles et chiffres actuels, tirés du code et des sections d’archive ci-dessus, de façon à ne plus avoir besoin de l’archive._
+_Audit de B-04, avant mise en œuvre ; tiré du code._
+
+- **Avances dans l’interface** : « Trimestre suivant » (`commitTurn`), « Année suivante » (`accelerate(4)`) et « Jusqu’à une alerte » (`accelerate(40)`), interruptibles entre deux trimestres ; désactivées si une décision attend, si le plan est invalide, si la dernière étape n’est pas sauvegardée ou si la carrière est finie.
+- **Moteur d’accélération** (`engine/acceleration.ts`) : répète `transition(commitTurn)` ; arrêts sur décision, alertes (plan, santé, échéance, carrière, entourage, finances), fin, plan invalide ou vide. Utilisé aussi par le simulateur et les tests.
+- **Plan** : activités ponctuelles par défaut ; seules les épinglées sont reconduites ; une activité devenue impossible est retirée avec son motif.
+- **Note de cabinet** après chaque trimestre manuel, note de période (avec `SpanSummary`) après une accélération ; réouvrable depuis l’en-tête.
+- **Retraite** : action d’agenda `personal.retire` (catégorie vie perso, 5 points) ; quand elle est au plan, « Trimestre suivant » ouvre une confirmation (« Quitter la vie politique ? ») ; la carrière s’achève à la fin du trimestre.
 
 ## Décisions provisoires à confirmer
 
-_À relever lors de l’audit (les « décisions déléguées, provisoires » des sections d’archive)._
+- D-07 (créateur) : « Accélérer » et « Année suivante » quittent l’interface ; seul reste « Trimestre suivant » ; GDD §2 et §2.3 à réécrire. Délégué : moteur d’accélération conservé pour les tests et la simulation ; note de cabinet plus courte ; au moins une nouveauté par trimestre.
+- D-08 (créateur) : bouton « Se retirer de la vie politique » dans la barre du bas. Délégué : à gauche, loin du bouton d’avance ; confirmation ; effet à la fin du trimestre ; annulable jusqu’au passage du tour ; l’action d’agenda disparaît.
 
 ## Limites connues
 
-- Fréquence des arrêts électoraux à juger en jeu réel (piste : ne s’arrêter que pour les scrutins déjà visés).
+- La retraite n’est accessible que par l’agenda (retour PT-B02-008).
+- Fréquence des arrêts électoraux de l’accélération : sans objet après D-07.
 
 ## Chantier beta
 
 - Décisions du [dépouillement B-02](../playtests/2026-11-28-b-02-reference.md#décisions-par-retour) : D-07 (tour par tour) → B-04 ; D-08 (retraite) → B-04, B-05.
-- [ ] Audit : règles en vigueur condensées ci-dessus, décisions provisoires listées, partie jouée sur ce système
+- [x] Audit : règles en vigueur condensées ci-dessus, décisions provisoires listées (B-04)
 - [ ] Problèmes UX/UI relevés (captures, retours de playtest)
 - [ ] Plan de consolidation validé par le créateur
 - [ ] Mise en œuvre, tests et fiche à jour
