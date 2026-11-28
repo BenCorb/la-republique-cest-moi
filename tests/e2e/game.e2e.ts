@@ -449,36 +449,29 @@ test.describe('parcours de jeu', () => {
 		expect(await page.evaluate((saveKey) => localStorage.getItem(saveKey), key)).toBe(old);
 	});
 
-	test('s’arrête avant une échéance, résume la période, puis accélère une année', async ({
+	test('accélère une année sans arrêt inutile, résume la période et la reprend', async ({
 		page
 	}) => {
-		// Seed sans décision bloquante sur les sept premiers trimestres (catalogue P3-05).
+		// Seed sans décision bloquante sur les premiers trimestres (catalogue P3-05).
 		await startCareer(page, 'e2e-year-4');
 		await page.getByRole('button', { name: 'Année suivante' }).click();
 
-		// Les législatives sont accessibles : le temps s'arrête avant la clôture des candidatures.
-		await expect(page.getByTestId('acceleration-status')).toContainText(
-			'3 trimestres simulés : Élections législatives : candidatures ouvertes'
-		);
-		// Note de période présentée d'office (P3-14).
-		const summary = page.getByTestId('quarter-note').getByTestId('span-summary');
-		await expect(summary).toContainText('3 trimestres simulés du T1 2000 au T3 2000');
-		await summary.getByText('Détail trimestre par trimestre').click();
-		await expect(summary.getByRole('heading', { name: 'T2 2000' })).toBeVisible();
-		await expect(page.getByTestId('game-date')).toHaveText('T4 2000 · 25 ans');
-		await closeNote(page);
-
-		await page.getByRole('button', { name: 'Année suivante' }).click();
+		// Sans mandat en jeu, la clôture des candidatures n'arrête plus le temps (P3-09).
 		await expect(page.getByTestId('acceleration-status')).toContainText(
 			'4 trimestres simulés : limite demandée atteinte.'
 		);
-		await expect(page.getByTestId('game-date')).toHaveText('T4 2001 · 26 ans');
+		// Note de période présentée d'office (P3-14).
+		const summary = page.getByTestId('quarter-note').getByTestId('span-summary');
+		await expect(summary).toContainText('4 trimestres simulés du T1 2000 au T4 2000');
+		await summary.getByText('Détail trimestre par trimestre').click();
+		await expect(summary.getByRole('heading', { name: 'T2 2000' })).toBeVisible();
+		await expect(page.getByTestId('game-date')).toHaveText('T1 2001 · 26 ans');
 		await closeNote(page);
 		await expect(summary).toBeHidden();
 
 		await page.reload();
 		await page.getByRole('button', { name: 'Reprendre la carrière' }).click();
-		await expect(page.getByTestId('game-date')).toHaveText('T4 2001 · 26 ans');
+		await expect(page.getByTestId('game-date')).toHaveText('T1 2001 · 26 ans');
 	});
 
 	test('peut interrompre une accélération longue entre deux trimestres', async ({ page }) => {

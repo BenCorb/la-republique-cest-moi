@@ -207,6 +207,16 @@ parties réelles.
    recrutement (deux trimestres de salaires) est comprise depuis son motif de refus.
 5. Exporter la sauvegarde d’une anomalie, avec la date de jeu concernée.
 
+**Grand playtest de la V1 (rush, 28 novembre 2026).** Le second volet par simulation est fait
+(ARCHITECTURE §8.4 quaterquadragesies). Reste ce chronométrage humain, désormais avec une cible
+de **60 à 90 minutes** actives (décision du créateur du 27 novembre 2026), la relecture du ton de
+tout le contenu écrit pendant le rush, et l'avis du créateur sur les sommets de carrière (Matignon
+atteint dans près d'une carrière persévérante sur deux en simulation). Mesures CPU de référence
+du second volet (2 500 carrières, 500 par stratégie, seed `p3-09b`) : durée estimée médiane
+64 minutes (54 à 98 selon la stratégie) ; arrêts d'alerte médians 18 à 58 ; épuisement de
+l'ambitieuse 77 % (âge médian 53 ans) ; Matignon 44 % (ambitieuse) et 51 % (mixte), aucun pour
+la prudente et la patrimoniale ; affaires dans 63 % des carrières.
+
 ### Points à observer
 
 | Sujet         | Question                                                     | Mesure CPU de référence (P3-09, 500 carrières)                         |

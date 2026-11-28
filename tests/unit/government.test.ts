@@ -43,7 +43,21 @@ function heavyweight(popularity = 60): GameState {
 			partyId,
 			affiliations: [{ partyId, fromTurn: 0, toTurn: null }],
 			popularity
-		}
+		},
+		// Député élu (P3-09) : on n'entre au gouvernement qu'avec un parcours électif.
+		mandates: [
+			{
+				instanceId: 'term.1',
+				mandateId: 'mandate.deputy',
+				startTurn: 0,
+				access: 'election',
+				status: 'active',
+				endTurn: null,
+				endReason: null,
+				side: null,
+				portfolio: null
+			}
+		]
 	};
 }
 
@@ -235,5 +249,82 @@ describe('gouvernement (P3-35)', () => {
 		expect(evaluateCondition(context(60, 50), when('matignon.censure_adopted'))).toBe(false);
 		expect(evaluateCondition(context(60, 20), when('matignon.dismissed'))).toBe(true);
 		expect(evaluateCondition(context(60, 50), when('matignon.dismissed'))).toBe(false);
+	});
+
+	it('ouvre à chaque portefeuille sa crise propre (P3-35)', () => {
+		const real = loadContent();
+		const base = createGame({ seed: 'crises' }, real);
+		for (const portfolio of real.portfolioIds) {
+			const crises = real.eventIds.filter((id) =>
+				JSON.stringify(real.events[id]?.when ?? null).includes(`"portfolio":"${portfolio}"`)
+			);
+			expect(crises.length, portfolio).toBeGreaterThanOrEqual(1);
+			const minister = {
+				...base,
+				mandates: [
+					{
+						instanceId: 'term.1',
+						mandateId: 'mandate.minister',
+						startTurn: 0,
+						access: 'nomination' as const,
+						status: 'active' as const,
+						endTurn: null,
+						endReason: null,
+						side: null,
+						portfolio
+					}
+				]
+			};
+			for (const id of crises) {
+				expect(evaluateCondition(minister, real.events[id]!.when!), id).toBe(true);
+			}
+		}
+	});
+
+	it('rend chaque scène du gouvernement et de Matignon possible dans son contexte (P3-09)', () => {
+		const real = loadContent();
+		const base = createGame({ seed: 'scènes' }, real);
+		const office = (mandateId: string, portfolio: string | null) => ({
+			instanceId: 'term.1',
+			mandateId,
+			startTurn: 0,
+			access: 'nomination' as const,
+			status: 'active' as const,
+			endTurn: null,
+			endReason: null,
+			side: null,
+			portfolio
+		});
+		const contexts = [
+			...real.portfolioIds.map((portfolio) => office('mandate.minister', portfolio)),
+			office('mandate.secretary_of_state', null),
+			office('mandate.prime_minister', null)
+		].flatMap((mandate) =>
+			[20, 35, 60].flatMap((stability) =>
+				[20, 60].map((popularity) => ({
+					...base,
+					turn: 4,
+					mandates: [mandate],
+					world: { ...base.world, indicators: { ...base.world.indicators, stability } },
+					player: { ...base.player, popularity }
+				}))
+			)
+		);
+		const scenes = real.eventIds.filter(
+			(id) =>
+				id.startsWith('government.') ||
+				id.startsWith('matignon.') ||
+				id === 'unique.pm_first_night' ||
+				id === 'mandate.evening_news_gaffe'
+		);
+		for (const id of scenes) {
+			const when = real.events[id]!.when;
+			if (!when) continue;
+			// Les tentations exigent aussi la capacité « fonction publique », accordée par la fonction.
+			expect(
+				contexts.some((context) => evaluateCondition(context, when)),
+				id
+			).toBe(true);
+		}
 	});
 });

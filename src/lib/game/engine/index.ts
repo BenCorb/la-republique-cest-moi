@@ -10,7 +10,7 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.51.0';
+export const RULES_VERSION = '0.52.0';
 
 export { candidacyRoleOf } from './plan.ts';
 export { eligibleRandomEvents } from './events.ts';

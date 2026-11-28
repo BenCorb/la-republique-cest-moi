@@ -890,7 +890,12 @@ const STRATEGY_WISHES: Readonly<
 };
 
 function randomWishes(seed: string, turn: number, content: Content): PlanStep[] {
-	const untargeted = content.actionIds.filter((id) => !content.actions[id]?.target);
+	// La retraite (P3-37) n'est jamais un choix « au hasard » : elle clôt la carrière.
+	const untargeted = content.actionIds.filter(
+		(id) =>
+			!content.actions[id]?.target &&
+			!content.actions[id]?.effects.some((effect) => effect.op === 'retire')
+	);
 	return [...untargeted.map(action), ...content.upgradeIds.map(purchase)].sort((left, right) => {
 		const leftRank = hashSeed(`${seed}:${turn}:${left.kind}:${left.id}`);
 		const rightRank = hashSeed(`${seed}:${turn}:${right.kind}:${right.id}`);
@@ -941,8 +946,15 @@ function wishesFor(
 	seed: string,
 	content: Content
 ): readonly PlanStep[] {
+	// P3-09 : l'ambitieuse et la mixte se ménagent quand le corps lâche.
+	const exhausted =
+		(strategy === 'ambitious' || strategy === 'mixed') &&
+		(state.player.stress >= 70 || state.player.health < 45)
+			? [action('personal.rest')]
+			: [];
 	const party = [
 		...resignWish(strategy, state, content),
+		...exhausted,
 		...partyWish(strategy, state, seed, content),
 		...candidacyWish(strategy, state, content),
 		...promiseWish(strategy, state, seed, content),
@@ -1060,7 +1072,11 @@ export function chooseSimulationDecision(
 	}
 	// L'ambitieuse est opportuniste (P3-24) : elle cède aux tentations qui se présentent.
 	if (strategy === 'ambitious') {
-		return available.find((choice) => isRiskyChoice(choice)) ?? available[available.length - 1]!;
+		// Une fois sur deux (empreinte de la seed et de l'événement), pour viser des
+		// affaires dans une carrière sur deux environ (P3-24, P3-09).
+		const tempted = hashSeed(`${seed}:${view.instanceId}:tentation`) % 2 === 0;
+		const risky = tempted ? available.find((choice) => isRiskyChoice(choice)) : undefined;
+		return risky ?? available[available.length - 1]!;
 	}
 	if (strategy === 'mixed') return available[(turn + view.remaining) % available.length]!;
 	return available[hashSeed(`${seed}:${view.instanceId}`) % available.length]!;

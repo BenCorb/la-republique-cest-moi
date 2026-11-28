@@ -1168,6 +1168,8 @@ export interface GovernmentBalance {
 	readonly primeMinisterStature: number;
 	/** Chance (%) qu'un ministre de cette stature soit appelé à Matignon à un remaniement. */
 	readonly primeMinisterChancePercent: number;
+	/** Chance (%) que le président appelle le chef du parti majoritaire à Matignon (P3-09). */
+	readonly leaderPrimeMinisterPercent: number;
 	/** Remaniement possible sous cette stabilité, avec cette chance par trimestre (%). */
 	readonly reshuffleStability: number;
 	readonly reshuffleChancePercent: number;

@@ -108,7 +108,7 @@ describe('accélération minimale', () => {
 
 		expect(accelerated.stopReason).toBe('alert');
 		expect(accelerated.turnsAdvanced).toBe(1);
-		expect(accelerated.alerts.map((alert) => alert.id)).toContain('upkeep_at_risk:upgrade.1');
+		expect(accelerated.alerts.map((alert) => alert.id)).toContain('finances');
 
 		const resumed = accelerate(accelerated.state, { plan: recruit, maxTurns: 1 }, fixtureContent);
 		expect(resumed.turnsAdvanced).toBe(1);

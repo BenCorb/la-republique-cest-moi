@@ -91,18 +91,42 @@ function withLastQuarter(state: GameState, patch: Partial<HistoryEntry>): GameSt
 }
 
 describe('arrêts motivés de l’accélération', () => {
-	const start = createGame({ seed: 'alertes-échéances' }, catalog);
+	// Conseiller sortant (P3-09) : seuls les sortants sont arrêtés avant la clôture.
+	const fresh = createGame({ seed: 'alertes-échéances' }, catalog);
+	const start: GameState = {
+		...fresh,
+		mandates: [
+			{
+				instanceId: 'term.1',
+				mandateId: 'mandate.councillor',
+				startTurn: 0,
+				access: 'election',
+				status: 'active',
+				endTurn: null,
+				endReason: null,
+				side: null,
+				portfolio: null
+			}
+		]
+	};
 	const local = start.ballots.find(
 		(ballot) =>
 			ballot.electionId === 'election.local' && ballot.filingClosesTurn - start.turn > LEAD
 	)!;
 
-	it('s’arrête avant la clôture des candidatures d’une élection accessible', () => {
-		const run = accelerate(start, { plan: EMPTY, maxTurns: 200 }, catalog);
-		expect(run.stopReason).toBe('alert');
-		expect(run.alerts.map((alert) => alert.id)).toEqual([`filing:${local.ballotId}`]);
-		expect(run.alerts[0]).toMatchObject({ kind: 'deadline' });
-		expect(run.state.turn).toBe(local.filingClosesTurn - LEAD);
+	it('s’arrête avant la clôture des candidatures d’une élection accessible, pour un sortant', () => {
+		// Sans mandat en jeu, le rappel ne coupe pas l'accélération.
+		expect(
+			accelerationAlerts(fresh, EMPTY, catalog).some((alert) => alert.id.startsWith('filing:'))
+		).toBe(false);
+		const near: GameState = { ...start, turn: local.filingClosesTurn - LEAD };
+		const run = { state: near, alerts: accelerationAlerts(near, EMPTY, catalog) };
+		expect(
+			run.alerts.filter((alert) => alert.id.startsWith('filing:')).map((alert) => alert.id)
+		).toEqual([`filing:${local.ballotId}`]);
+		expect(run.alerts.find((alert) => alert.id.startsWith('filing:'))).toMatchObject({
+			kind: 'deadline'
+		});
 		// L'élection nationale exige un mandat local : aucune alerte inutile.
 		expect(
 			accelerationAlerts(run.state, EMPTY, catalog).some((alert) =>
@@ -115,7 +139,8 @@ describe('arrêts motivés de l’accélération', () => {
 	});
 
 	it('retire la candidature déposée du plan, puis s’arrête au dernier trimestre de campagne et au résultat', () => {
-		const stopped = accelerate(start, { plan: EMPTY, maxTurns: 200 }, catalog).state;
+		let stopped = fresh;
+		while (stopped.turn < local.filingClosesTurn - LEAD) stopped = commit(stopped);
 		const plan: TurnPlan = {
 			steps: [{ kind: 'action', id: 'campaign.declare', target: local.ballotId, pinned: true }]
 		};
@@ -190,11 +215,10 @@ describe('alertes d’entourage et de budget', () => {
 				}
 			]
 		};
-		expect(accelerationAlerts(state, EMPTY, catalog)).toContainEqual({
-			id: 'payroll_at_risk',
-			kind: 'finance',
-			message: 'Budget politique insuffisant pour payer l’entourage le trimestre prochain.'
-		});
+		// Salaires impayés : un seul épisode « finances » (P3-09).
+		expect(
+			accelerationAlerts(state, EMPTY, catalog).filter((alert) => alert.id === 'finances')
+		).toHaveLength(1);
 	});
 
 	it('n’émet aucune alerte hors de la planification', () => {

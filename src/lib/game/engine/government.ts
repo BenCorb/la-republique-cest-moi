@@ -39,8 +39,9 @@ export function governmentStature(
 	const main = mainMandate(career.mandates, content);
 	const rank = main ? (content.mandates[main.mandateId]?.rank ?? 0) : 0;
 	const party = player.partyCareer?.rank;
+	// P3-09 : l'influence pèse moins (au plus 25) ; le parcours électif compte davantage.
 	return Math.round(
-		Math.min(50, influence / 2) +
+		Math.min(25, influence / 4) +
 			player.popularity / 2 +
 			rank / 2 +
 			(party === 'leader' ? 15 : party === 'cadre' ? 5 : 0)
@@ -132,19 +133,35 @@ export function resolveGovernment(
 		player.partyId === null ||
 		player.partyId !== world.governingPartyId ||
 		isIneligible(player, turn) ||
-		stature < rules.secretaryStature
+		stature < rules.secretaryStature ||
+		// P3-09 : on n'entre pas au gouvernement sans avoir jamais été élu.
+		!career.mandates.some((mandate) => mandate.access === 'election')
 	) {
 		return { career: parts, rng: current, changes };
 	}
 
 	// Matignon (P3-36) : le chef du parti majoritaire, ou une stature exceptionnelle.
-	// Le chef du parti majoritaire est appelé à Matignon à la formation du gouvernement.
-	const primeMinister =
-		promoteToMatignon ||
-		(trigger.legislative &&
-			player.partyCareer?.rank === 'leader' &&
-			player.partyId === world.governingPartyId);
-	const minister = !primeMinister && stature >= rules.ministerStature;
+	// P3-09 : un ministère, comme Matignon, suppose un passage au Parlement ou au gouvernement.
+	const seasoned = career.mandates.some((mandate) =>
+		['mandate.deputy', 'mandate.senator', SECRETARY_MANDATE, MINISTER_MANDATE].includes(
+			mandate.mandateId
+		)
+	);
+	// Le chef du parti majoritaire peut être appelé à Matignon à la formation du
+	// gouvernement ; le président choisit parfois une autre personnalité (P3-09).
+	let primeMinister = promoteToMatignon;
+	if (
+		!primeMinister &&
+		trigger.legislative &&
+		seasoned &&
+		player.partyCareer?.rank === 'leader' &&
+		player.partyId === world.governingPartyId
+	) {
+		const roll = nextInt(current, 1, 100);
+		current = roll.rng;
+		primeMinister = roll.value <= rules.leaderPrimeMinisterPercent;
+	}
+	const minister = !primeMinister && seasoned && stature >= rules.ministerStature;
 	let portfolio: string | null = null;
 	if (minister && content.portfolioIds.length > 0) {
 		const draw = nextInt(current, 0, content.portfolioIds.length - 1);

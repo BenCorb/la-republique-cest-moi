@@ -330,10 +330,14 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 			'relations.donor_returns',
 			'justice.entourage_revelation',
 			// Matignon renversé ou remercié (P3-36) : `tests/unit/government.test.ts`.
-			'matignon.censure_adopted',
-			'matignon.dismissed'
+			'mandate.evening_news_gaffe'
 		]);
-		expect(content.eventIds.filter((id) => !seen.has(id) && !targeted.has(id))).toEqual([]);
+		// Gouvernement et Matignon, plus rares depuis P3-09 : `tests/unit/government.test.ts`.
+		const governmental = (id: string): boolean =>
+			id.startsWith('government.') || id.startsWith('matignon.') || id === 'unique.pm_first_night';
+		expect(
+			content.eventIds.filter((id) => !seen.has(id) && !targeted.has(id) && !governmental(id))
+		).toEqual([]);
 	});
 
 	it('révèle une affaire de l’entourage et en fait un événement', () => {
