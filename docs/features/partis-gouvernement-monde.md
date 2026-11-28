@@ -42,6 +42,7 @@ _À condenser lors de l’audit : les règles et chiffres actuels, tirés du cod
 
 ## Chantier beta
 
+- Décisions du [dépouillement B-02](../playtests/2026-11-28-b-02-reference.md#décisions-par-retour) : D-11 (dotation du parti, reversement des indemnités) → B-09.
 - [ ] Audit : règles en vigueur condensées ci-dessus, décisions provisoires listées, partie jouée sur ce système
 - [ ] Problèmes UX/UI relevés (captures, retours de playtest)
 - [ ] Plan de consolidation validé par le créateur

@@ -40,6 +40,7 @@ _À relever lors de l’audit (les « décisions déléguées, provisoires » de
 
 ## Chantier beta
 
+- Décisions du [dépouillement B-02](../playtests/2026-11-28-b-02-reference.md#décisions-par-retour) : D-05 (emploi) → B-10 ; D-11 (coût de la vie, prêt personnel) → B-08, B-09.
 - [ ] Audit : règles en vigueur condensées ci-dessus, décisions provisoires listées, partie jouée sur ce système
 - [ ] Problèmes UX/UI relevés (captures, retours de playtest)
 - [ ] Plan de consolidation validé par le créateur

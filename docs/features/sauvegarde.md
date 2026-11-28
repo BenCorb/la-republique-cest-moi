@@ -41,6 +41,7 @@ _Aucune relevée à la V1._
 
 ## Chantier beta
 
+- Décisions du [dépouillement B-02](../playtests/2026-11-28-b-02-reference.md#décisions-par-retour) : décision 0002 (sauvegardes non conservées pendant la beta) → B-03.
 - [ ] Audit : règles en vigueur condensées ci-dessus, décisions provisoires listées, partie jouée sur ce système
 - [ ] Problèmes UX/UI relevés (captures, retours de playtest)
 - [ ] Plan de consolidation validé par le créateur

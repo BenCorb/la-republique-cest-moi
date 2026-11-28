@@ -45,6 +45,7 @@ _À relever lors de l’audit (les « décisions déléguées, provisoires » de
 
 ## Chantier beta
 
+- Décisions du [dépouillement B-02](../playtests/2026-11-28-b-02-reference.md#décisions-par-retour) : D-02 (démarches, agenda en cartes, épingles) → B-05, B-11 ; D-03 (effets incertains) → B-12 ; référence visuelle : [maquette de la coque](../maquettes/2026-11-28-coque-beta-v2.html), onglet Trimestre.
 - [ ] Audit : règles en vigueur condensées ci-dessus, décisions provisoires listées, partie jouée sur ce système
 - [ ] Problèmes UX/UI relevés (captures, retours de playtest)
 - [ ] Plan de consolidation validé par le créateur

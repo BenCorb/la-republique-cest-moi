@@ -22,4 +22,5 @@ Ne jamais réécrire une décision acceptée : en écrire une nouvelle qui la re
 
 | N° | Décision | Statut |
 | --- | --- | --- |
-| [0001](0001-organisation-beta.md) | Organisation du dépôt et du travail pour la beta | acceptée |
+| [0001](0001-organisation-beta.md) | Organisation du dépôt et du travail pour la beta | acceptée ; conservation des sauvegardes remplacée par 0002 |
+| [0002](0002-sauvegardes-beta.md) | Sauvegardes non conservées pendant la beta | acceptée |
