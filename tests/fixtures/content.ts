@@ -4,10 +4,14 @@
  */
 import { validateContent } from '../../src/lib/game/content/validate.ts';
 import type { Content, EventsBalance } from '../../src/lib/game/content/types.ts';
-import type {
-	HistoryEntry,
-	JournalEntry,
-	TransitionSuccess
+import {
+	chooseEventCommand,
+	describePendingEvent,
+	transition,
+	type GameState,
+	type HistoryEntry,
+	type JournalEntry,
+	type TransitionSuccess
 } from '../../src/lib/game/engine/index.ts';
 
 /**
@@ -55,7 +59,26 @@ export const fixtureBalance = {
 		maxMemories: 3
 	},
 	// Scrutins sans aléa par défaut : le parti le plus fort l'emporte.
-	elections: { voteVolatility: 0, momentum: 1, newGovernmentStability: 60, alertLeadTurns: 2 },
+	elections: {
+		voteVolatility: 0,
+		momentum: 1,
+		newGovernmentStability: 60,
+		alertLeadTurns: 2,
+		contests: {
+			minPartyPerMille: 50,
+			maxPartyContestants: 5,
+			partyStrengthPercent: 70,
+			transferPercent: 80,
+			mergeRetentionPercent: 90,
+			allyDistance: 55,
+			runoffSwing: 0,
+			colistierPreparationPercent: 50,
+			grandElectorBonus: 6,
+			rankSpreadPercent: 40,
+			outsiderRankPenalty: 20,
+			runoffEvent: 'test.runoff'
+		}
+	},
 	// Soutiens immobiles par défaut : les tests de soutiens activent le retour à la référence.
 	supports: { reversionPercent: 0, partyAlignmentMax: 10, influencePerPoint: 10, notorietyMax: 20 },
 	// Scrutin du joueur sans aléa par défaut ; préparation passive et stress de campagne nuls.
@@ -78,7 +101,23 @@ export const fixtureBalance = {
 		rivalExperienceBonus: 3,
 		rivalExperienceCap: 3,
 		rivalryAttitude: -8,
-		opponentMaxAge: 72
+		opponentMaxAge: 72,
+		investiture: {
+			apparatusPercent: 40,
+			influencePercent: 20,
+			popularityPercent: 20,
+			mandatePoints: 10,
+			mandateCap: 30,
+			localPoints: 10,
+			rivalPenalty: 25,
+			rivalChancePercent: 35,
+			minChancePercent: 5,
+			maxChancePercent: 95,
+			supportedFrom: 65,
+			disputedFrom: 40,
+			dissidentApparatus: 10,
+			refusedEvent: 'test.investiture_refused'
+		}
 	},
 	entourage: {
 		candidatesPerPost: 2,
@@ -121,7 +160,8 @@ export const fixtureBalance = {
 			maxAcceptPercent: 100,
 			interviewInterest: 6,
 			maxInterviews: 2,
-			refusalAttitude: -5
+			refusalAttitude: -5,
+			counterOfferPercent: 140
 		},
 		/**
 		 * Recrutement II de test (P3-21) : recherches certaines, aucune progression
@@ -183,6 +223,43 @@ export const fixtureBalance = {
 	 * frais, aucune pénalité de mobilisation) ; `tests/unit/activists.test.ts`
 	 * fixe ses propres valeurs.
 	 */
+	government: {
+		secretaryStature: 55,
+		ministerStature: 72,
+		primeMinisterStature: 100,
+		primeMinisterChancePercent: 10,
+		leaderPrimeMinisterPercent: 100,
+		reshuffleStability: 55,
+		reshuffleChancePercent: 0,
+		keepPopularity: 30,
+		presidentTermTurns: 20,
+		firstPresidentialTurn: 9,
+		reelectionChancePercent: 55,
+		appointmentEvent: 'test.appointment'
+	},
+	partyCareer: {
+		congressCycleTurns: 12,
+		congressOffset: 6,
+		cadreMinApparatus: 40,
+		cadreMinActivists: 30,
+		cadreMinTurns: 4,
+		cadreChancePercent: 25,
+		apparatusPercent: 40,
+		activistsPercent: 25,
+		influencePercent: 15,
+		rallyPoints: 4,
+		rallyCap: 20,
+		minChancePercent: 5,
+		maxChancePercent: 90,
+		favoriteFrom: 60,
+		openFrom: 35,
+		retryCongresses: 1,
+		defeatApparatus: 4,
+		leaderChallengeApparatus: 25,
+		leaderOustChancePercent: 35,
+		cadreInvestitureBonus: 10,
+		leaderInvestitureBonus: 30
+	},
 	activists: {
 		start: 0,
 		baseCapacity: 15,
@@ -274,12 +351,14 @@ export const fixtureProfiles = {
 					{ code: '75', name: 'Capitale de test', startable: false },
 					{ code: '14', name: 'Département de test', startable: true }
 				],
+				councilSeats: 50,
 				toponymy: { roots: ['Testville', 'Montessai', 'Brouillon'], rivers: ['Essai'], pays: [] }
 			},
 			{
 				id: 'region.other',
 				name: 'Autre région',
 				departments: [{ code: '29', name: 'Autre département', startable: true }],
+				councilSeats: 40,
 				toponymy: { roots: ['Ailleurs', 'Autrefois', 'Lointain'], rivers: ['Rive'], pays: ['Pays'] }
 			}
 		],
@@ -290,6 +369,7 @@ export const fixtureProfiles = {
 				description: 'Taille de test.',
 				weight: 1,
 				rivalStrengthModifier: 0,
+				councilSeats: 15,
 				effects: []
 			}
 		],
@@ -456,10 +536,17 @@ export const fixtureCareer = {
 			decidesGovernment: false,
 			minAge: 18,
 			grants: 'mandate.councillor',
-			bonusGrant: { mandate: 'mandate.mayor', minPercent: 60 },
+			headGrant: 'mandate.mayor',
 			requiresAnyMandate: [],
 			rivalStrength: 30,
-			mobilizationNeed: 0
+			mobilizationNeed: 0,
+			system: 'list',
+			turnout: { min: 60, max: 60 },
+			maintainPerMille: 100,
+			mergePerMille: 50,
+			seatMinPerMille: 50,
+			bonusSeatsPercent: 50,
+			firstRoundRegisteredPerMille: 0
 		},
 		{
 			id: 'election.national',
@@ -473,7 +560,14 @@ export const fixtureCareer = {
 			grants: 'mandate.deputy',
 			requiresAnyMandate: ['mandate.councillor'],
 			rivalStrength: 40,
-			mobilizationNeed: 0
+			mobilizationNeed: 0,
+			system: 'single',
+			turnout: { min: 60, max: 60 },
+			maintainPerMille: 125,
+			mergePerMille: 0,
+			seatMinPerMille: 0,
+			bonusSeatsPercent: 0,
+			firstRoundRegisteredPerMille: 250
 		}
 	],
 	mandates: [
@@ -525,7 +619,11 @@ export const fixtureCareer = {
 	institutions: {
 		incompatibilities: [['mandate.minister', 'mandate.deputy']],
 		maxMandates: 3
-	}
+	},
+	portfolios: [
+		{ id: 'portfolio.test_a', label: 'Essais', title: 'ministère des Essais' },
+		{ id: 'portfolio.test_b', label: 'Épreuves', title: 'ministère des Épreuves' }
+	]
 };
 
 export const fixtureTraits = {
@@ -671,6 +769,100 @@ export const fixtureCast = {
 export const fixtureEvents = {
 	'events/test.json': {
 		events: [
+			{
+				id: 'test.runoff',
+				category: 'campaign',
+				title: 'Entre les deux tours',
+				text: 'Le second tour approche.',
+				blocking: true,
+				trigger: 'followUp',
+				weight: 0,
+				priority: 50,
+				cooldownTurns: 0,
+				unique: false,
+				actors: [],
+				choices: [
+					{
+						id: 'maintain',
+						label: 'Se maintenir',
+						hints: [],
+						costs: [],
+						effects: [{ op: 'runoffDecision', decision: 'maintain' }]
+					},
+					{
+						id: 'merge',
+						label: 'Fusionner',
+						hints: [],
+						costs: [],
+						effects: [{ op: 'runoffDecision', decision: 'merge' }]
+					},
+					{
+						id: 'withdraw',
+						label: 'Se désister',
+						hints: [],
+						costs: [],
+						effects: [{ op: 'runoffDecision', decision: 'withdraw' }]
+					}
+				]
+			},
+			{
+				id: 'test.investiture_refused',
+				category: 'campaign',
+				title: 'Investiture refusée',
+				text: 'Un autre portera les couleurs du parti.',
+				blocking: true,
+				trigger: 'followUp',
+				weight: 0,
+				priority: 45,
+				cooldownTurns: 0,
+				unique: false,
+				actors: [],
+				choices: [
+					{
+						id: 'renounce',
+						label: 'Renoncer',
+						hints: [],
+						costs: [],
+						effects: [{ op: 'investitureDecision', decision: 'renounce' }]
+					},
+					{
+						id: 'dissident',
+						label: 'Dissidence',
+						hints: [],
+						costs: [],
+						effects: [{ op: 'investitureDecision', decision: 'dissident' }]
+					}
+				]
+			},
+			{
+				id: 'test.appointment',
+				category: 'career',
+				title: 'Entrée au gouvernement',
+				text: 'Un portefeuille vous est proposé.',
+				blocking: true,
+				trigger: 'followUp',
+				weight: 0,
+				priority: 40,
+				cooldownTurns: 0,
+				unique: false,
+				actors: [],
+				choices: [
+					{
+						id: 'accept',
+						label: 'Accepter',
+						hints: [],
+						costs: [],
+						effects: [{ op: 'appointment', decision: 'accept' }]
+					},
+					{
+						id: 'decline',
+						label: 'Décliner',
+						hints: [],
+						costs: [],
+						effects: [{ op: 'appointment', decision: 'decline' }]
+					}
+				]
+			},
 			{
 				id: 'test.raise_request',
 				category: 'entourage',
@@ -1527,6 +1719,7 @@ export const fixtureMedia = {
 		nationalMandateRank: 40,
 		regionalNationalPercent: 50,
 		toneThreshold: 30,
+		editorialSwingPercent: 0,
 		toneEffects: { critical: 0, neutral: 0, favorable: 0 },
 		maxEffect: 5,
 		criticalExposure: 0,
@@ -1635,6 +1828,13 @@ export const fixtureEpitaphs = {
 			criteria: [],
 			headline: 'Prison à {age} ans',
 			text: 'Rideau.'
+		},
+		{
+			id: 'obituary.retirement',
+			causes: ['retirement'],
+			criteria: [],
+			headline: 'Retraite à {age} ans',
+			text: 'Après {years} ans de vie publique.'
 		}
 	],
 	distinctions: [
@@ -1763,4 +1963,29 @@ export function quarterLog(result: TransitionSuccess): HistoryEntry {
 /** Trimestres résolus d'un journal. */
 export function quarters(history: readonly JournalEntry[]): HistoryEntry[] {
 	return history.filter((entry): entry is HistoryEntry => entry.type === 'turn.resolved');
+}
+
+/**
+ * Tranche les décisions en attente (P3-29) : au second tour, le choix demandé
+ * s'il est possible, sinon le premier choix disponible ; ailleurs, le premier
+ * choix disponible.
+ */
+export function settleDecisions(
+	state: GameState,
+	content: Content,
+	runoff: 'maintain' | 'merge' | 'withdraw' = 'maintain'
+): GameState {
+	let current = state;
+	while (current.phase === 'decision') {
+		const view = describePendingEvent(current, content);
+		if (!view) break;
+		const choice =
+			view.choices.find((entry) => entry.id === runoff && entry.available) ??
+			view.choices.find((entry) => entry.available);
+		if (!choice) throw new Error(`Aucun choix disponible : ${view.eventId}`);
+		const result = transition(current, chooseEventCommand(view.instanceId, choice.id), content);
+		if (!result.ok) throw new Error(result.error.message);
+		current = result.state;
+	}
+	return current;
 }

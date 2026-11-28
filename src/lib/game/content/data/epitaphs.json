@@ -1,6 +1,20 @@
 {
 	"obituaries": [
 		{
+			"id": "obituary.retirement_quiet",
+			"causes": ["retirement"],
+			"criteria": [],
+			"headline": "À {age} ans, une figure de la vie publique tire sa révérence",
+			"text": "Après {years} ans d’engagement, le temps des confidences est venu : un dernier discours, une haie d’honneur clairsemée et la promesse de cultiver enfin son jardin. Ses amis jurent qu’on la reverra ; ses adversaires aussi, mais pas sur le même ton."
+		},
+		{
+			"id": "obituary.retirement_summit",
+			"causes": ["retirement"],
+			"criteria": [{ "metric": "highestRank", "cmp": "gte", "value": 60 }],
+			"headline": "L’ancien membre du gouvernement quitte la politique à {age} ans",
+			"text": "Ministre, puis sage de son camp, l’intéressé a choisi l’heure de son départ, ce qui n’est pas donné à tout le monde. Plus haute fonction : {office}. On évoque déjà des mémoires, des conférences grassement payées et un rôle d’éminence grise qu’il dément avec une modestie remarquée."
+		},
+		{
 			"id": "obituary.quiet_end",
 			"causes": ["natural_causes", "health_failure"],
 			"criteria": [],
@@ -116,6 +130,12 @@
 		}
 	],
 	"distinctions": [
+		{
+			"id": "distinction.matignon",
+			"label": "Le Locataire de Matignon",
+			"description": "Nommé Premier ministre, au sommet de la vie politique.",
+			"criteria": [{ "metric": "highestRank", "cmp": "gte", "value": 80 }]
+		},
 		{
 			"id": "distinction.integrity",
 			"label": "L’Intègre",

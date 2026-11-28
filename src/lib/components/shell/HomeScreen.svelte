@@ -3,6 +3,8 @@
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 	import GameShell from './GameShell.svelte';
 	import SaveBanner from './SaveBanner.svelte';
+	import LogbookCard from './LogbookCard.svelte';
+	import type { LogbookEntry } from '#lib/game/app/view-model.ts';
 
 	/**
 	 * Accueil (DESIGN.md §4.1) : reprendre (mis en évidence, avec dates), nouvelle
@@ -13,9 +15,23 @@
 		session: GameSession;
 		onNewCareer: () => void;
 		onImport: (text: string) => void;
+		/** Premiers pas masqués (P3-40), réactivables d'ici. */
+		firstStepsHidden?: boolean;
+		onShowFirstSteps?: () => void;
+		/** Carnet des carrières (P3-41). */
+		logbook?: readonly LogbookEntry[];
+		onRemoveLogbook?: (id: string | null) => void;
 	}
 
-	let { session, onNewCareer, onImport }: Props = $props();
+	let {
+		session,
+		onNewCareer,
+		onImport,
+		firstStepsHidden = false,
+		onShowFirstSteps,
+		logbook = [],
+		onRemoveLogbook
+	}: Props = $props();
 	const home = $derived(session.snapshot.home);
 	let fileInput: HTMLInputElement | undefined = $state();
 
@@ -54,6 +70,14 @@
 						{home.existing.ended ? 'Voir le bilan' : 'Reprendre la carrière'}
 					</button>
 				</div>
+			{/if}
+
+			{#if firstStepsHidden && onShowFirstSteps}
+				<p class="mt-4 text-sm">
+					<button type="button" class="btn-secondary btn-small" onclick={onShowFirstSteps}>
+						Réactiver les premiers pas
+					</button>
+				</p>
 			{/if}
 
 			{#if home.unreadable}
@@ -96,6 +120,10 @@
 				/>
 			</div>
 		</section>
+
+		{#if onRemoveLogbook}
+			<LogbookCard entries={logbook} onRemove={onRemoveLogbook} />
+		{/if}
 	</div>
 
 	{#snippet status()}

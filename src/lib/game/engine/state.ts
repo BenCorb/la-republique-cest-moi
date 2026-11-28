@@ -6,6 +6,7 @@
  */
 import { GAUGE_MAX } from '../content/types.ts';
 import type {
+	PartyPosture,
 	ArticleTone,
 	ArticleTopic,
 	Content,
@@ -80,6 +81,33 @@ export interface PlayerState {
 	readonly family: FamilyState;
 	/** Base militante active, en nombre de personnes (P3-19). */
 	readonly activists: number;
+	/** Carrière dans le parti (P3-34), `null` sans adhésion. */
+	readonly partyCareer: PartyCareer | null;
+	/** Ambition de départ (P3-38), `null` si aucune n'a été choisie. */
+	readonly ambition: {
+		readonly ambitionId: string;
+		/** Trimestre où l'objectif a été atteint, sinon `null`. */
+		readonly achievedTurn: Turn | null;
+		/** Trimestre où l'ambition a été trahie, sinon `null`. */
+		readonly betrayedTurn: Turn | null;
+	} | null;
+}
+
+export type PartyRank = 'member' | 'cadre' | 'leader';
+
+/**
+ * Carrière partisane (P3-34) : statut (militant, cadre, chef), prochain congrès
+ * du parti, candidature à la direction en préparation et délai après une défaite.
+ */
+export interface PartyCareer {
+	readonly rank: PartyRank;
+	readonly rankSince: Turn;
+	/** Trimestre du prochain congrès (tenu à la fin de ce trimestre). */
+	readonly nextCongressTurn: Turn;
+	/** Candidature à la direction pour le prochain congrès, sinon `null`. */
+	readonly bid: { readonly posture: PartyPosture; readonly rallies: number } | null;
+	/** Premier congrès où une nouvelle candidature est possible après une défaite. */
+	readonly retryTurn: Turn | null;
 }
 
 /** Liens familiaux du joueur : identifiants de personnages (P2-08). */
@@ -174,6 +202,16 @@ export interface WorldState {
 	/** États des partis du catalogue, par identifiant. */
 	readonly parties: Readonly<Record<string, PartyState>>;
 	readonly governingPartyId: string;
+	/**
+	 * Président de la République (P3-35), personnage du monde réélu ou remplacé
+	 * à chaque échéance ; il nomme le Premier ministre dans la majorité.
+	 */
+	readonly president: {
+		readonly characterId: string;
+		readonly partyId: string;
+		readonly electedTurn: Turn;
+		readonly termEndTurn: Turn;
+	};
 	/** Médias du catalogue, par identifiant (P3-03). */
 	readonly media: Readonly<Record<string, MediaState>>;
 	/** Mémoire anti-répétition du fil de presse (P3-15). */
@@ -220,6 +258,13 @@ export interface MandateInstance {
 	/** Trimestre de fin, `null` tant que le mandat est en cours. */
 	readonly endTurn: Turn | null;
 	readonly endReason: MandateEndReason | null;
+	/**
+	 * Siège d'assemblée (P3-29) : majorité (liste victorieuse) ou opposition ;
+	 * `null` hors scrutin de liste.
+	 */
+	readonly side: 'majority' | 'opposition' | null;
+	/** Portefeuille d'un ministre (P3-35), sinon `null`. */
+	readonly portfolio: string | null;
 }
 
 export interface BallotShare {
@@ -242,9 +287,105 @@ export interface Ballot {
 	readonly winnerPartyId: string | null;
 	/** Motif d'annulation (élection anticipée), sinon `null`. */
 	readonly cancelReason: string | null;
+	/**
+	 * Procès-verbal du scrutin sur le territoire du joueur (P3-29), établi au
+	 * vote, avec ou sans candidature du joueur ; `null` avant le vote.
+	 */
+	readonly report: BallotReport | null;
 }
 
-export type CampaignStatus = 'running' | 'won' | 'lost' | 'disqualified';
+/** Issue d'une candidature ou d'une liste au procès-verbal (P3-29). */
+export type ContestantStatus =
+	/** Élue au premier tour, ou arrivée en tête au second. */
+	| 'won'
+	/** Battue au dernier tour auquel elle a pris part. */
+	| 'lost'
+	/** Qualifiée, en attente du second tour (décision du joueur). */
+	| 'qualified'
+	/** Fusionnée dans une autre liste entre les deux tours. */
+	| 'merged'
+	/** Retirée entre les deux tours. */
+	| 'withdrawn'
+	/** Sous le seuil de maintien, éliminée au premier tour. */
+	| 'eliminated';
+
+/** Candidature ou liste d'un procès-verbal (P3-29). */
+export interface BallotContestant {
+	/** `c.N`, rang de création dans le procès-verbal. */
+	readonly contestantId: string;
+	/** Parti de l'étiquette, `null` pour une candidature sans étiquette. */
+	readonly partyId: string | null;
+	/** Tête de liste ou candidat nommé ; `null` pour le joueur ou une tête anonyme. */
+	readonly leaderId: string | null;
+	/** Conduite par le joueur. */
+	readonly player: boolean;
+	/** Candidature dissidente (joueur sans investiture de son parti). */
+	readonly dissident: boolean;
+	/** Part des suffrages exprimés au premier tour, en ‰ (total 1000). */
+	readonly firstRound: number;
+	/** Part au second tour, en ‰ (total 1000 entre les présents) ; `null` sinon. */
+	readonly secondRound: number | null;
+	/** Sièges obtenus (1 pour l'élu d'un scrutin uninominal). */
+	readonly seats: number;
+	readonly status: ContestantStatus;
+	/** Liste d'accueil d'une fusion, sinon `null`. */
+	readonly mergedInto: string | null;
+}
+
+/** Procès-verbal d'un scrutin (P3-29), commun à toutes les vues. */
+export interface BallotReport {
+	/** Lieu du scrutin : commune, région, circonscription ou département. */
+	readonly place: string;
+	/** Mode effectif : liste, uninominal, ou liste/majoritaire des sénatoriales. */
+	readonly system: 'list' | 'single' | 'senate_list' | 'senate_majority';
+	/** Sièges à pourvoir. */
+	readonly seats: number;
+	/** Participation, en % des inscrits. */
+	readonly turnout: number;
+	readonly contestants: readonly BallotContestant[];
+	/** `runoff_pending` : premier tour connu, second tour suspendu à la décision du joueur. */
+	readonly stage: 'runoff_pending' | 'final';
+	/** Un second tour a eu (ou aura) lieu. */
+	readonly secondRound: boolean;
+	/** Candidature ou liste victorieuse, `null` tant que le second tour attend. */
+	readonly winnerId: string | null;
+	/** Liste ou candidature où figure le joueur, `null` s'il n'est pas candidat. */
+	readonly playerContestantId: string | null;
+	/** Rang du joueur sur sa liste (1 : tête de liste ou candidat). */
+	readonly playerRank: number | null;
+	/** Le joueur est élu ; `null` s'il n'est pas candidat ou tant que le second tour attend. */
+	readonly playerElected: boolean | null;
+}
+
+export type CampaignStatus = 'running' | 'won' | 'lost' | 'disqualified' | 'withdrawn';
+
+/** Proposition d'entrée au gouvernement (P3-35), offerte à la frontière. */
+export interface AppointmentOffer {
+	readonly mandateId: string;
+	/** Portefeuille d'un ministère, `null` pour un secrétariat d'État. */
+	readonly portfolio: string | null;
+	readonly offeredTurn: Turn;
+	/** Remaniement (le joueur est déjà au gouvernement) plutôt que formation. */
+	readonly reshuffle: boolean;
+}
+
+/**
+ * Demande d'investiture nationale (P3-30, instance `investiture.N`) : tranchée
+ * une seule fois à la frontière du trimestre de la demande ; accordée, elle
+ * vaut candidature sous l'étiquette ; refusée, elle ouvre le choix entre
+ * renoncer et une candidature dissidente.
+ */
+export interface InvestitureRequest {
+	readonly requestId: string;
+	readonly ballotId: string;
+	readonly electionId: string;
+	readonly partyId: string;
+	readonly requestedTurn: Turn;
+	readonly status: 'pending' | 'granted' | 'refused' | 'dissident' | 'renounced';
+	readonly resolvedTurn: Turn | null;
+	/** Motifs publics de la décision (facteurs défavorables), rédigés. */
+	readonly reasons: readonly string[];
+}
 
 /** Candidature du joueur à une échéance (instance `campaign.N`, P2-03). */
 export interface Campaign {
@@ -273,6 +414,12 @@ export interface Campaign {
 	readonly playerPercent: number | null;
 	/** Motif d'une disqualification, sinon `null`. */
 	readonly reason: string | null;
+	/** Tête de liste (ou candidat) ou colistier sur la liste d'un parti (P3-29). */
+	readonly role: 'head' | 'colistier';
+	/** Rang sur la liste, fixé à la déclaration (1 pour une tête de liste). */
+	readonly listRank: number;
+	/** Trimestre où le résultat est connu (fin du second tour), `null` en campagne. */
+	readonly resultTurn: Turn | null;
 }
 
 export type StaffLeaveReason = 'resigned' | 'dismissed' | 'poached' | 'retired' | 'died';
@@ -311,6 +458,11 @@ export interface ShortlistEntry {
 	 * références, peut-être à tort ; `null` tant que rien n'a été vérifié.
 	 */
 	readonly hints: readonly string[] | null;
+	/**
+	 * Contre-proposition après un premier refus (P3-33) : salaire qu'il
+	 * accepterait, valable jusqu'au trimestre indiqué inclus ; sinon `null`.
+	 */
+	readonly counterOffer: { readonly salaryCents: number; readonly untilTurn: Turn } | null;
 }
 
 /** Recherche de candidats commandée, en attente de son échéance (P3-21). */
@@ -368,6 +520,8 @@ export interface StaffRecord {
 	}[];
 	/** Demandes d'augmentation adressées ce trimestre (P3-21). */
 	readonly raiseRequests: readonly string[];
+	/** Candidats partis faute de réponse à leur contre-proposition (P3-33). */
+	readonly counterLapsed: readonly string[];
 }
 
 /** Règles du cumul en vigueur, copiées du catalogue (modifiables par réforme, P3-05). */
@@ -432,7 +586,13 @@ export type PoliticalChange =
 	| { readonly kind: 'campaignAdvance'; readonly campaignId: string; readonly cents: number }
 	| { readonly kind: 'hired'; readonly characterId: string; readonly postId: string }
 	/** Candidat qui décline l'offre (P3-20) : il quitte la présélection. */
-	| { readonly kind: 'hireRefused'; readonly characterId: string; readonly postId: string }
+	| {
+			readonly kind: 'hireRefused';
+			readonly characterId: string;
+			readonly postId: string;
+			/** Salaire de la contre-proposition (P3-33), `null` quand le candidat s'en va. */
+			readonly counterCents: number | null;
+	  }
 	/** Entretien approfondi avec un candidat (P3-20). */
 	| { readonly kind: 'interviewed'; readonly characterId: string; readonly postId: string }
 	/** Recherche de candidats commandée (P3-21). */
@@ -461,6 +621,37 @@ export type PoliticalChange =
 			readonly characterId: string;
 			readonly postId: string;
 			readonly reason: StaffLeaveReason;
+	  }
+	/** Investiture demandée, accordée, refusée, puis dissidence ou renoncement (P3-30). */
+	| {
+			readonly kind: 'investiture';
+			readonly requestId: string;
+			readonly ballotId: string;
+			readonly status: InvestitureRequest['status'];
+	  }
+	/** Proposition d'entrée au gouvernement, acceptée ou déclinée (P3-35). */
+	| {
+			readonly kind: 'appointment';
+			readonly mandateId: string;
+			readonly portfolio: string | null;
+			readonly status: 'offered' | 'accepted' | 'declined';
+	  }
+	/** Statut dans le parti (P3-34) : promotion, congrès gagné ou perdu, chef renversé. */
+	| {
+			readonly kind: 'partyRank';
+			readonly partyId: string;
+			readonly rank: PartyRank;
+			readonly reason: 'promotion' | 'congress_won' | 'congress_lost' | 'ousted' | 'confirmed';
+	  }
+	/** Candidature à la direction déclarée ou renforcée (P3-34). */
+	| { readonly kind: 'partyBid'; readonly posture: PartyPosture; readonly rallies: number }
+	/** Second tour tranché après la décision du joueur (P3-29). */
+	| {
+			readonly kind: 'runoff';
+			readonly campaignId: string;
+			readonly decision: 'maintain' | 'merge' | 'withdraw';
+			readonly status: Exclude<CampaignStatus, 'running'>;
+			readonly playerPercent: number | null;
 	  }
 	| {
 			readonly kind: 'earlyElection';
@@ -683,6 +874,10 @@ export interface DeadlinesRecord {
 		/** Avance personnelle de la campagne et sort (P3-23), `null` sans avance. */
 		readonly advance: { readonly cents: number; readonly repaid: boolean } | null;
 	}[];
+	/** Campagnes du joueur qualifiées pour un second tour qui attend sa décision (P3-29). */
+	readonly runoffs: readonly string[];
+	/** Demandes d'investiture tranchées à cette frontière (P3-30). */
+	readonly investitures: readonly { readonly requestId: string; readonly granted: boolean }[];
 }
 
 export interface LeaderChange {
@@ -697,6 +892,13 @@ export interface WorldRecord {
 	readonly indicators: readonly { readonly indicator: IndicatorId; readonly delta: number }[];
 	readonly parties: readonly { readonly partyId: string; readonly delta: number }[];
 	readonly leaderChanges: readonly LeaderChange[];
+	/** Présidentielle de ce trimestre (P3-35), sinon `null`. */
+	readonly president: {
+		readonly previousId: string;
+		readonly presidentId: string;
+		readonly partyId: string;
+		readonly reelected: boolean;
+	} | null;
 }
 
 export interface ResourceChange {
@@ -938,7 +1140,9 @@ export type EndState =
 			readonly cause: DeathCause;
 	  }
 	/** Condamnation définitive à de la prison ferme (P3-01). */
-	| { readonly turn: Turn; readonly reason: 'prison'; readonly caseId: string };
+	| { readonly turn: Turn; readonly reason: 'prison'; readonly caseId: string }
+	/** Retraite choisie (P3-37) : le joueur quitte la vie politique. */
+	| { readonly turn: Turn; readonly reason: 'retirement' };
 
 export interface GameState {
 	readonly schemaVersion: typeof STATE_SCHEMA_VERSION;
@@ -964,6 +1168,10 @@ export interface GameState {
 	readonly ballots: readonly Ballot[];
 	/** Candidatures du joueur, en cours et passées, dans l'ordre de déclaration. */
 	readonly campaigns: readonly Campaign[];
+	/** Demandes d'investiture nationale, dans l'ordre (P3-30). */
+	readonly investitures: readonly InvestitureRequest[];
+	/** Proposition d'entrée au gouvernement en attente de réponse (P3-35), sinon `null`. */
+	readonly appointment: AppointmentOffer | null;
 	readonly institutions: InstitutionsState;
 	/** Entourage : collaborateurs en poste et partis, dans l'ordre d'embauche. */
 	readonly staff: readonly StaffMember[];
@@ -993,6 +1201,8 @@ export interface NewGameConfig {
 	readonly engagement?: string;
 	/** Région d'origine (P3-16) ; à défaut, celle du profil par défaut. */
 	readonly region?: string;
+	/** Ambition de départ (P3-38), facultative. */
+	readonly ambition?: string;
 }
 
 export function createGame(config: NewGameConfig, content: Content): GameState {
@@ -1020,6 +1230,11 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		defense: 0,
 		ineligibleUntil: null,
 		lifestyle: content.wealth.defaultLifestyle,
+		partyCareer: null,
+		ambition:
+			config.ambition && content.ambitions[config.ambition]
+				? { ambitionId: config.ambition, achievedTurn: null, betrayedTurn: null }
+				: null,
 		partyId: null,
 		affiliations: [],
 		supports: startingSupports(content),
@@ -1074,6 +1289,8 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		mandates: [],
 		ballots: createCalendar(START_TURN, content),
 		campaigns: [],
+		investitures: [],
+		appointment: null,
 		staff: [],
 		shortlists: {},
 		searches: [],

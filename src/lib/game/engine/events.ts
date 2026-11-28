@@ -57,7 +57,14 @@ import {
 } from './characters.ts';
 import { applyPoliticalEffect, oppositionPartyId } from './world.ts';
 import { inEras } from './eras.ts';
-import { applyCareerEffect, careerEffectIssue, type CareerParts } from './career.ts';
+import { partyLedByPlayer } from './party.ts';
+import {
+	applyCareerEffect,
+	careerEffectIssue,
+	decideInvestiture,
+	resolveRunoff,
+	type CareerParts
+} from './career.ts';
 import {
 	applyPostEffect,
 	bindEventPost,
@@ -189,6 +196,8 @@ function bindWorldVariables(
 				break;
 		}
 		if (partyId === null) return null;
+		// Le joueur dirige ce parti (P3-34) : aucun autre dirigeant à mettre en scène.
+		if (variable.endsWith('_leader') && partyId === partyLedByPlayer(player)) return null;
 		const value = variable.endsWith('_leader') ? world.parties[partyId]?.leaderId : partyId;
 		if (value === undefined) return null;
 		bound[variable] = value;
@@ -349,6 +358,8 @@ function applyAutomaticEffects(
 			throw new Error(`Embauche ou renvoi hors du plan : ${resolved.effect.op}`);
 		} else if (resolved.kind === 'release') {
 			throw new Error('Départ d’un élément de l’organisation hors du plan.');
+		} else if (resolved.kind === 'retire') {
+			throw new Error('Retraite hors du plan.');
 		} else if (resolved.kind === 'lifestyle') {
 			player = { ...player, lifestyle: resolved.effect.lifestyle };
 		} else if (resolved.kind === 'fact') {
@@ -374,6 +385,49 @@ function applyAutomaticEffects(
 			politics.push(...outcome.changes);
 		} else if (resolved.kind === 'reform') {
 			throw new Error('Proposition de réforme hors du plan.');
+		} else if (resolved.kind === 'investiture') {
+			// Après un refus d'investiture (P3-30) : renoncer ou se présenter en dissident.
+			const outcome = decideInvestiture(career, resolved.effect.decision, turn, content);
+			career = outcome.parts;
+			politics.push(...outcome.changes);
+			if (outcome.apparatusDelta !== 0) {
+				const support = applyPoliticalEffect(
+					{
+						op: 'addSupport',
+						group: content.balance.campaigns.apparatusGroup,
+						value: outcome.apparatusDelta
+					},
+					player,
+					world,
+					turn,
+					null,
+					content
+				);
+				player = support.player;
+				politics.push(...support.changes);
+			}
+		} else if (resolved.kind === 'runoff') {
+			// Second tour après la décision du joueur (P3-29), jugé au trimestre courant.
+			const outcome = resolveRunoff(
+				{ player, resources: current, career, characters, relationships },
+				resolved.effect.decision,
+				null,
+				turn,
+				rng,
+				content
+			);
+			for (const resource of RESOURCE_IDS) {
+				const delta = outcome.parts.resources[resource] - current[resource];
+				if (delta !== 0) addResource(resource, delta);
+			}
+			const stress = outcome.parts.player.stress - player.stress;
+			if (stress !== 0) {
+				gaugeDeltas.set('player.stress', (gaugeDeltas.get('player.stress') ?? 0) + stress);
+			}
+			({ player, career, relationships } = outcome.parts);
+			rng = outcome.rng;
+			politics.push(...outcome.politics);
+			people.push(...outcome.people);
 		} else {
 			const key = gaugeKey(resolved.gauge);
 			const { value, applied } = applyGauge(player[key], resolved.delta);
@@ -852,7 +906,9 @@ export function choiceAvailability(
 		ballots: state.ballots,
 		campaigns: state.campaigns,
 		institutions: state.institutions,
-		promises: state.promises
+		promises: state.promises,
+		investitures: state.investitures,
+		appointment: state.appointment
 	};
 	for (const effect of choice.effects) {
 		const issue = careerEffectIssue(effect, career, content ?? null, state.player, state.turn);
@@ -930,7 +986,9 @@ export function chooseEvent(
 				ballots: state.ballots,
 				campaigns: state.campaigns,
 				institutions: state.institutions,
-				promises: state.promises
+				promises: state.promises,
+				investitures: state.investitures,
+				appointment: state.appointment
 			},
 			staff: state.staff,
 			shortlists: state.shortlists,
@@ -1026,6 +1084,8 @@ export function chooseEvent(
 			campaigns: outcome.career.campaigns,
 			institutions: outcome.career.institutions,
 			promises: outcome.career.promises,
+			investitures: outcome.career.investitures,
+			appointment: outcome.career.appointment,
 			staff: outcome.staff,
 			shortlists: outcome.shortlists,
 			facts: outcome.facts,
@@ -1102,4 +1162,28 @@ export function describePendingEvent(state: GameState, content: Content): Pendin
 		})),
 		remaining: state.events.pending.length - 1
 	};
+}
+
+/**
+ * Événements ordinaires éligibles dans cet état (P3-24, mesure de couverture) :
+ * mêmes filtres que le tirage (époque, fenêtre, conditions, acteurs, poste,
+ * plafonds et délais), hors événements déjà en attente. Sans tirage.
+ */
+export function eligibleRandomEvents(state: GameState, content: Content): string[] {
+	const pool: CastPool = { characters: state.characters, relationships: state.relationships };
+	return content.eventIds.filter((id) => {
+		const definition = content.events[id];
+		if (!definition || definition.trigger !== 'random') return false;
+		const occurrence = state.events.occurrences[id];
+		if (definition.unique && occurrence) return false;
+		if (occurrence && state.turn - occurrence.lastTurn < definition.cooldownTurns) return false;
+		const cap = definition.maxOccurrences ?? content.balance.events.maxOccurrences;
+		if (occurrence && cap > 0 && occurrence.count >= cap) return false;
+		if (state.events.pending.some((instance) => instance.eventId === id)) return false;
+		if (!inEras(definition.eras, state.turn, content)) return false;
+		if (!inWindow(definition, state.turn) || !conditionHolds(definition, state)) return false;
+		if (!actorsAvailable(definition, pool)) return false;
+		if (definition.subject === 'post' && !bindEventPost(state.staff, state, content)) return false;
+		return bindWorldVariables(definition, {}, state.player, state.world, content) !== null;
+	});
 }

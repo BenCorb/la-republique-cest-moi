@@ -207,6 +207,18 @@ parties réelles.
    recrutement (deux trimestres de salaires) est comprise depuis son motif de refus.
 5. Exporter la sauvegarde d’une anomalie, avec la date de jeu concernée.
 
+**Report (décision du créateur, 28 novembre 2026) :** ce playtest se fera sur la V1 publiée.
+
+**Grand playtest de la V1 (rush, 28 novembre 2026).** Le second volet par simulation est fait
+(ARCHITECTURE §8.4 quaterquadragesies). Reste ce chronométrage humain, désormais avec une cible
+de **60 à 90 minutes** actives (décision du créateur du 27 novembre 2026), la relecture du ton de
+tout le contenu écrit pendant le rush, et l'avis du créateur sur les sommets de carrière (Matignon
+atteint dans près d'une carrière persévérante sur deux en simulation). Mesures CPU de référence
+du second volet (2 500 carrières, 500 par stratégie, seed `p3-09b`) : durée estimée médiane
+64 minutes (54 à 98 selon la stratégie) ; arrêts d'alerte médians 18 à 58 ; épuisement de
+l'ambitieuse 77 % (âge médian 53 ans) ; Matignon 44 % (ambitieuse) et 51 % (mixte), aucun pour
+la prudente et la patrimoniale ; affaires dans 63 % des carrières.
+
 ### Points à observer
 
 | Sujet         | Question                                                     | Mesure CPU de référence (P3-09, 500 carrières)                         |
@@ -1681,12 +1693,19 @@ section.
   attendent des décisions du créateur et sont examinés après le playtest B2. P3-29 et P3-30 restent à
   faire.
 
+- **Décisions du créateur (27 novembre 2026, début du rush V1).** PT-B1-002 : investiture seedée avec
+  appréciation qualitative, refus ouvrant retrait ou dissidence (P3-30). PT-B1-004 : une
+  contre-proposition salariale, puis départ (P3-33). PT-B1-007 : noyau de carrière partisane sans
+  scission (P3-34). Détail au §5.2 de `ROADMAP.md`.
+
 ## Playtest B2 — Systèmes de la phase 3
 
-**Statut : à jouer.** Version : `main` après P3-32 (règles `0.39.0`). Les sauvegardes antérieures
-sont refusées comme obsolètes, sans être effacées : commencer de nouvelles carrières. Jouer en local
-(`npm run dev`, ou `npm run build` puis `npm run serve:static`) ou sur GitHub Pages après un
-redéploiement demandé explicitement.
+**Statut : clos de façon partielle (27 novembre 2026), décision du créateur.** Une carrière entamée
+suffit à juger que les systèmes de la phase 3 fonctionnent ; le reste du protocole n’a pas été joué.
+Plutôt que des playtests intermédiaires qui retombent sur des manques déjà prévus, le créateur fait
+d’abord aboutir la V1 (rush V1, voir `AGENTS.md`) ; le relevé complet des manques, corrections et
+retouches graphiques se fera au grand playtest de P3-09, qui reprend les points à observer
+ci-dessous. Version jouée : `main` après P3-32 (règles `0.39.0`).
 
 ### Objectif
 
@@ -1734,3 +1753,38 @@ territoire, équipe et militants jugés lisibles.
 Consigner chaque retour sous la forme **PT-B2-NNN — titre (date, gravité, sujets)**, suivie de
 l’observation, de l’impact et d’une proposition éventuelle, comme pour B1. Une proposition reste à
 l’étude tant que le créateur ne l’a pas validée.
+
+- **PT-B2-001 — Prévoir toutes les dépenses du trimestre dans l’en-tête
+  (27 novembre 2026, gênant, économie et prévision).**
+
+  **Observation :** l’en-tête annonce une variation de 0 € du budget politique pour le trimestre
+  suivant, alors que l’onglet Entourage affiche une masse salariale de 600 € par trimestre. Le salaire
+  des collaborateurs n’entre pas dans la prévision.
+
+  **Impact :** la prévision ne permet pas d’anticiper l’état réel du trimestre suivant ; le joueur ne
+  peut pas se fier à l’en-tête pour décider de ses dépenses. Le défaut pouvait toucher d’autres
+  charges que les salaires.
+
+  **Suite donnée :** corrigé sur la branche `fix/playtest-b2-retours` (ARCHITECTURE.md §8.4
+  octovicies). Vérification faite : d’autres montants certains manquaient aussi. La prévision compte
+  désormais les salaires, primes et missions des collaborateurs, le coût des enfants à charge, ainsi
+  que les cotisations et les frais de la base militante. Elle avertit aussi quand un salaire ne
+  pourra pas être payé. Les montants aléatoires (scrutins, événements, justice, héritages) restent
+  hors de la prévision.
+
+- **PT-B2-002 — Élargir l’éventail des actions possibles à chaque trimestre
+  (27 novembre 2026, gênant, agenda et contenu).**
+
+  **Observation :** le nombre d’actions disponibles pendant un trimestre paraît assez limité.
+
+  **Impact :** d’un trimestre à l’autre, le joueur a l’impression de refaire les mêmes choix ; la
+  variété des décisions et la rejouabilité en pâtissent.
+
+  **Proposition à étudier :** ajouter un nouveau paquet d’actions faisables, de préférence
+  contextuelles (liées au mandat exercé, au territoire, à l’actualité, à une campagne en cours ou à
+  la situation de l’entourage), pour donner davantage de choix différents entre deux trimestres. Le
+  périmètre et les actions retenues restent à définir avec le créateur ; ce chantier peut rejoindre
+  la vague de contenu P3-24.
+
+  **Décision du créateur (27 novembre 2026) :** intégré à P3-24, quinze à vingt actions
+  contextuelles.

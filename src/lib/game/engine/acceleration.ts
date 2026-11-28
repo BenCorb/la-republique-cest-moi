@@ -105,6 +105,8 @@ function quarterAlerts(state: GameState, content: Content): AccelerationAlert[] 
 				message: `Nomination : ${content.mandates[change.mandateId]?.label ?? change.mandateId}.`
 			});
 		} else if (change.kind === 'mandateEnded') {
+			// Un mandat à son terme est déjà annoncé par le scrutin et son résultat (P3-09).
+			if (change.reason === 'term') continue;
 			alerts.push({
 				id: `mandate_end:${change.instanceId}`,
 				kind: 'career',
@@ -221,6 +223,14 @@ function deadlineAlerts(state: GameState, content: Content): AccelerationAlert[]
 		if (filingLeft < 0 || filingLeft > lead) continue;
 		if (candidacyIssue(ballot.ballotId, state, state.player, state.turn, content) !== null)
 			continue;
+		// Le rappel n'arrête l'accélération que pour un sortant (P3-09) ; le calendrier
+		// de l'onglet Carrière montre les autres échéances.
+		const outgoing = state.mandates.some(
+			(mandate) =>
+				mandate.status === 'active' &&
+				content.mandates[mandate.mandateId]?.election === ballot.electionId
+		);
+		if (!outgoing) continue;
 		alerts.push({
 			id: `filing:${ballot.ballotId}`,
 			kind: 'deadline',
@@ -242,7 +252,7 @@ function payrollAlert(state: GameState): AccelerationAlert[] {
 	if (payroll === 0 || state.resources.politicalBudgetCents >= payroll) return [];
 	return [
 		{
-			id: 'payroll_at_risk',
+			id: 'finances',
 			kind: 'finance',
 			message: 'Budget politique insuffisant pour payer l’entourage le trimestre prochain.'
 		}
@@ -260,14 +270,19 @@ export function accelerationAlerts(
 ): readonly AccelerationAlert[] {
 	if (state.phase !== 'planning') return [];
 	const preview = previewPlan(state, plan, content);
-	const alerts: AccelerationAlert[] = preview.warnings.map((warning) => ({
-		id:
-			warning.code === 'upkeep_at_risk'
-				? `${warning.code}:${warning.instanceId ?? warning.upgradeId ?? 'unknown'}`
-				: warning.code,
-		kind: warning.code === 'stress_high' ? 'health' : 'plan',
-		message: warning.message
-	}));
+	// Une seule alerte « finances » (P3-09) : charges, salaires et train de vie impayés
+	// forment un même épisode, au lieu d'arrêter l'accélération à chaque variante.
+	const MONEY = new Set(['upkeep_at_risk', 'salary_unpaid', 'lifestyle_unpaid']);
+	const alerts: AccelerationAlert[] = [];
+	for (const warning of preview.warnings) {
+		const money = MONEY.has(warning.code);
+		if (money && alerts.some((alert) => alert.id === 'finances')) continue;
+		alerts.push({
+			id: money ? 'finances' : warning.code,
+			kind: warning.code === 'stress_high' ? 'health' : 'plan',
+			message: warning.message
+		});
+	}
 	if (state.player.health < content.balance.wellbeing.fragileHealthThreshold) {
 		alerts.push({
 			id: 'health_fragile',
@@ -275,7 +290,7 @@ export function accelerationAlerts(
 			message: 'Santé critique : une intervention est recommandée.'
 		});
 	}
-	alerts.push(...payrollAlert(state));
+	if (!alerts.some((alert) => alert.id === 'finances')) alerts.push(...payrollAlert(state));
 	alerts.push(...quarterAlerts(state, content));
 	alerts.push(...deadlineAlerts(state, content));
 	return alerts;

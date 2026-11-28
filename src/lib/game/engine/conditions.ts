@@ -10,6 +10,7 @@ import { ageAt, quarterOf, yearOf } from './calendar.ts';
 import { activeMandates, cumulatedMandates, holdIssue, isIneligible } from './career.ts';
 import type { GameState } from './state.ts';
 import { netWorth } from './wealth.ts';
+import { partyBidIssue } from './world.ts';
 
 /** Sous-ensemble de l'état suffisant pour évaluer une condition. */
 export type ConditionContext = Pick<
@@ -56,6 +57,26 @@ export function readStat(context: ConditionContext, stat: StatId): number {
 			return context.world.indicators.stability;
 		case 'player.affiliated':
 			return context.player.partyId === null ? 0 : 1;
+		case 'player.councilOpposition':
+			return activeMandates(context.mandates).some((mandate) => mandate.side === 'opposition')
+				? 1
+				: 0;
+		case 'player.mandatesHeld':
+			return context.mandates.length;
+		case 'player.partyBidOpen':
+			return partyBidIssue(context.player, context.turn) === null ? 1 : 0;
+		case 'player.partyBid':
+			return context.player.partyCareer?.bid ? 1 : 0;
+		case 'player.pmTurns': {
+			const office = activeMandates(context.mandates).find(
+				(mandate) => mandate.mandateId === 'mandate.prime_minister'
+			);
+			return office ? context.turn - office.startTurn : -1;
+		}
+		case 'player.partyRank': {
+			const rank = context.player.partyCareer?.rank;
+			return rank === 'leader' ? 3 : rank === 'cadre' ? 2 : rank === 'member' ? 1 : 0;
+		}
 		case 'player.partyStrength':
 			return context.player.partyId === null
 				? 0
@@ -166,6 +187,10 @@ export function evaluateCondition(context: ConditionContext, condition: Conditio
 		case 'holdsMandate':
 			return activeMandates(context.mandates).some(
 				(mandate) => mandate.mandateId === condition.mandate
+			);
+		case 'holdsPortfolio':
+			return activeMandates(context.mandates).some(
+				(mandate) => mandate.portfolio === condition.portfolio
 			);
 		case 'support': {
 			const value = context.player.supports[condition.group] ?? 0;

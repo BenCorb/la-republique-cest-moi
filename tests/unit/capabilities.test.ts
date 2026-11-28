@@ -32,7 +32,9 @@ function holding(state: GameState, ...mandateIds: string[]): GameState {
 		access: 'election',
 		status: 'active',
 		endTurn: null,
-		endReason: null
+		endReason: null,
+		side: null,
+		portfolio: null
 	}));
 	return { ...state, mandates };
 }
@@ -115,13 +117,18 @@ describe('capacités exigées par les infractions (P3-12)', () => {
 
 	it('audite chaque fait du catalogue : impossible sans pouvoir, possible avec', () => {
 		expect(factSources.map((source) => source.label).sort()).toEqual([
+			'chain.developer_opening › flat',
 			'entourage.creative_accounting › accept',
 			'finance.donor_favour › call',
 			'finance.expense_report › charge',
 			'finance.gala_table › help',
 			'finance.generous_donor › accept',
+			'government.lobby_seminar › accept',
+			'government.official_car › take',
 			'institutions.transparency_audit › omit',
 			'mandate.lobby_breakfast › sign',
+			'mandate.municipal_flat › give',
+			'mandate.public_contract_friend › favour',
 			'personal.family_job_request › hire',
 			'personal.family_job_request › replace',
 			'relations.donor_returns › accept',
@@ -216,7 +223,7 @@ describe('le retour du donateur (P3-12)', () => {
 			...state,
 			characters: {
 				...state.characters,
-				[donor.id]: { ...donor, traits: ['trait.venality'] }
+				[donor.id]: { ...donor, traits: ['trait.venality'], knownTraits: [] }
 			},
 			relationships: {
 				...state.relationships,
@@ -389,7 +396,8 @@ describe('un poste pour la famille (P3-12)', () => {
 			characterId: relativeId,
 			profileId: 'profile.connected',
 			interviews: 0,
-			hints: null
+			hints: null,
+			counterOffer: null
 		});
 		expect(selected.characters[relativeId]!.tags).toContain('candidate');
 		expect(selected.staff).toEqual(state.staff);

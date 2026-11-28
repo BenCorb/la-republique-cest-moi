@@ -21,15 +21,38 @@ import {
 	type ElectionDefinition,
 	type ResourceAmount,
 	type ResourceId,
-	type Resources
+	type Resources,
+	type RunoffDecision
 } from '../content/types.ts';
 import { ageAt, formatTurn, type Turn } from './calendar.ts';
 import { addRelation, generatePerson, meet, sortedIds } from './characters.ts';
-import { nextInt, type RngState } from './random.ts';
+import { hashSeed, nextInt, type RngState } from './random.ts';
 import { localRivalModifier } from './territory.ts';
+import { resolvePartyCareer } from './party.ts';
+import {
+	canMerge,
+	colistierParty,
+	colistierRank,
+	contestDrafts,
+	contestRules,
+	effectiveSystem,
+	listSystem,
+	perMille,
+	playerFinalPercent,
+	playerFirstRoundPercent,
+	playerHeadsWinner,
+	playerSide,
+	runFirstRound,
+	runSecondRound,
+	seatsFor,
+	type PlayerEntry
+} from './ballots.ts';
 import type {
 	Ballot,
+	BallotReport,
 	BallotShare,
+	InvestitureRequest,
+	AppointmentOffer,
 	Campaign,
 	CampaignStatus,
 	Character,
@@ -75,7 +98,8 @@ function newBallot(
 		status: 'scheduled',
 		shares: null,
 		winnerPartyId: null,
-		cancelReason: null
+		cancelReason: null,
+		report: null
 	};
 }
 
@@ -231,7 +255,9 @@ export type CareerEffect = Extract<
 			| 'callEarlyElection'
 			| 'declareCandidacy'
 			| 'prepareCampaign'
-			| 'advanceCampaign';
+			| 'advanceCampaign'
+			| 'requestInvestiture'
+			| 'appointment';
 	}
 >;
 
@@ -242,7 +268,9 @@ export function isCareerEffect(effect: Effect): effect is CareerEffect {
 		effect.op === 'callEarlyElection' ||
 		effect.op === 'declareCandidacy' ||
 		effect.op === 'prepareCampaign' ||
-		effect.op === 'advanceCampaign'
+		effect.op === 'advanceCampaign' ||
+		effect.op === 'requestInvestiture' ||
+		effect.op === 'appointment'
 	);
 }
 
@@ -253,6 +281,10 @@ export interface CareerParts {
 	readonly institutions: InstitutionsState;
 	/** Registre des promesses, rattachées aux campagnes (P3-04). */
 	readonly promises: readonly PromiseRecord[];
+	/** Demandes d'investiture nationale (P3-30). */
+	readonly investitures: readonly InvestitureRequest[];
+	/** Proposition d'entrée au gouvernement en attente (P3-35). */
+	readonly appointment: AppointmentOffer | null;
 }
 
 export function runningCampaigns(campaigns: readonly Campaign[]): Campaign[] {
@@ -302,7 +334,9 @@ export function candidacyIssue(
 	parts: CareerParts,
 	player: PlayerState,
 	turn: Turn,
-	content: Content
+	content: Content,
+	role: 'head' | 'colistier' = 'head',
+	viaInvestiture = false
 ): string | null {
 	const ballot = parts.ballots.find((entry) => entry.ballotId === ballotIdValue);
 	if (!ballot || ballot.status !== 'scheduled') return 'Aucune élection programmée à cette date.';
@@ -316,6 +350,13 @@ export function candidacyIssue(
 		return `Il faut avoir ${definition.minAge} ans le jour du scrutin.`;
 	}
 	if (isIneligible(player, ballot.turn)) return INELIGIBLE;
+	// Pas de candidature sous étiquette sans l'accord du parti (P3-30).
+	if (role === 'head' && definition.investiture && player.partyId !== null && !viaInvestiture) {
+		return 'Encarté, demandez d’abord l’investiture de votre parti.';
+	}
+	if (role === 'colistier' && !listSystem(effectiveSystem(definition, player.territory, content))) {
+		return 'Ce scrutin n’a pas de listes : seule une candidature personnelle est possible.';
+	}
 	return eligibilityIssue(ballot, parts, content);
 }
 
@@ -346,29 +387,54 @@ export function applyCareerEffect(
 	turn: Turn,
 	target: string | null,
 	content: Content,
-	player: PlayerState
+	player: PlayerState,
+	world: WorldState | null = null,
+	influence = 0
 ): { parts: CareerParts; changes: PoliticalChange[] } {
 	switch (effect.op) {
 		case 'declareCandidacy': {
-			if (target === null || candidacyIssue(target, parts, player, turn, content)) {
+			const role = effect.role ?? 'head';
+			if (target === null || candidacyIssue(target, parts, player, turn, content, role)) {
 				return { parts, changes: [] };
 			}
 			const ballot = parts.ballots.find((entry) => entry.ballotId === target)!;
 			const apparatus = player.supports[content.balance.campaigns.apparatusGroup] ?? 0;
+			const definition = content.elections[ballot.electionId]!;
+			const listPartyId =
+				role !== 'colistier'
+					? null
+					: world
+						? colistierParty(player, world, content)
+						: (player.partyId ?? content.partyIds[0] ?? '');
 			const campaign: Campaign = {
 				campaignId: campaignId(parts.campaigns.length + 1),
 				ballotId: ballot.ballotId,
 				electionId: ballot.electionId,
 				declaredTurn: turn,
-				partyId: player.partyId,
+				partyId: listPartyId ?? player.partyId,
 				invested:
-					player.partyId !== null && apparatus >= content.balance.campaigns.investitureMinApparatus,
+					role === 'colistier'
+						? player.partyId !== null && player.partyId === listPartyId
+						: player.partyId !== null &&
+							apparatus >= content.balance.campaigns.investitureMinApparatus,
 				preparation: 0,
 				advanceCents: 0,
 				opponentId: null,
 				status: 'running',
 				playerPercent: null,
-				reason: null
+				reason: null,
+				role,
+				listRank:
+					listPartyId === null
+						? 1
+						: colistierRank(
+								seatsFor(definition, player.territory, content),
+								player,
+								influence,
+								listPartyId,
+								content
+							),
+				resultTurn: null
 			};
 			return {
 				parts: { ...parts, campaigns: [...parts.campaigns, campaign] },
@@ -378,6 +444,78 @@ export function applyCareerEffect(
 						campaignId: campaign.campaignId,
 						ballotId: ballot.ballotId,
 						invested: campaign.invested
+					}
+				]
+			};
+		}
+		case 'appointment': {
+			// Réponse à la proposition d'entrée au gouvernement (P3-35), une seule fois.
+			const offer = parts.appointment;
+			if (!offer) return { parts, changes: [] };
+			const cleared = { ...parts, appointment: null };
+			if (effect.decision === 'decline') {
+				return {
+					parts: cleared,
+					changes: [
+						{
+							kind: 'appointment',
+							mandateId: offer.mandateId,
+							portfolio: offer.portfolio,
+							status: 'declined'
+						}
+					]
+				};
+			}
+			const granted = applyCareerEffect(
+				{ op: 'grantMandate', mandate: offer.mandateId, replaceIncompatible: true },
+				cleared,
+				turn,
+				null,
+				content,
+				player
+			);
+			const mandates = granted.parts.mandates.map((mandate, index) =>
+				index === granted.parts.mandates.length - 1 &&
+				granted.parts.mandates.length > cleared.mandates.length
+					? { ...mandate, portfolio: offer.portfolio }
+					: mandate
+			);
+			return {
+				parts: { ...granted.parts, mandates },
+				changes: [
+					{
+						kind: 'appointment',
+						mandateId: offer.mandateId,
+						portfolio: offer.portfolio,
+						status: 'accepted'
+					},
+					...granted.changes
+				]
+			};
+		}
+		case 'requestInvestiture': {
+			if (target === null || investitureIssue(target, parts, player, turn, content)) {
+				return { parts, changes: [] };
+			}
+			const ballot = parts.ballots.find((entry) => entry.ballotId === target)!;
+			const request: InvestitureRequest = {
+				requestId: `investiture.${parts.investitures.length + 1}`,
+				ballotId: ballot.ballotId,
+				electionId: ballot.electionId,
+				partyId: player.partyId!,
+				requestedTurn: turn,
+				status: 'pending',
+				resolvedTurn: null,
+				reasons: []
+			};
+			return {
+				parts: { ...parts, investitures: [...parts.investitures, request] },
+				changes: [
+					{
+						kind: 'investiture',
+						requestId: request.requestId,
+						ballotId: ballot.ballotId,
+						status: 'pending'
 					}
 				]
 			};
@@ -433,7 +571,9 @@ export function applyCareerEffect(
 				access: content.mandates[effect.mandate]?.election ? 'election' : 'nomination',
 				status: 'active',
 				endTurn: null,
-				endReason: null
+				endReason: null,
+				side: null,
+				portfolio: null
 			};
 			return {
 				parts: { ...parts, mandates: [...ended.mandates, instance] },
@@ -522,9 +662,23 @@ export function careerEffectIssue(
 	effect: Effect,
 	parts: CareerParts,
 	content: Content | null,
-	player: Pick<PlayerState, 'ineligibleUntil'> | null = null,
+	player: Pick<PlayerState, 'ineligibleUntil' | 'territory'> | null = null,
 	turn: Turn = 0
 ): string | null {
+	if (effect.op === 'appointment') {
+		if (effect.decision === 'decline' || !parts.appointment) return null;
+		if (player && isIneligible(player, turn)) return INELIGIBLE;
+		return holdIssue(
+			parts.appointment.mandateId,
+			parts.mandates,
+			parts.institutions,
+			content,
+			true
+		);
+	}
+	if (effect.op === 'runoffDecision') {
+		return content && player ? runoffIssue(effect.decision, null, parts, player, content) : null;
+	}
 	if (effect.op !== 'grantMandate') return null;
 	if (player && isIneligible(player, turn)) return INELIGIBLE;
 	return holdIssue(
@@ -660,12 +814,6 @@ export function campaignScore(
 				(incumbent ? balance.incumbentBonus : 0)
 		) - mobilizationPenalty(campaign, activists, content)
 	);
-}
-
-function percentOf(player: number, rival: number): number {
-	const left = Math.max(1, player);
-	const right = Math.max(1, rival);
-	return Math.round((left * 100) / (left + right));
 }
 
 /**
@@ -816,31 +964,40 @@ export function campaignPoll(
 ): { readonly min: number; readonly max: number } {
 	const definition = content.elections[campaign.electionId];
 	if (!definition) return { min: 0, max: 0 };
-	// Le sondage ne connaît de l'adversaire que ses traits connus du joueur ;
-	// la taille de la commune pèse sur la concurrence locale (P3-16).
-	const rival =
-		opponentStrength(campaign, characters, campaigns, content, true) +
-		localRivalModifier(player.territory, campaign.electionId, content);
+	// Intentions de vote nationales actuelles, sans aléa ; de l'adversaire, le
+	// sondage ne connaît que les traits connus du joueur.
+	const shares: BallotShare[] = content.partyIds.map((partyId) => ({
+		partyId,
+		percent: partyPollShare(partyId, world, content)
+	}));
 	const incumbent = activeMandates(mandates).some(
 		(mandate) => mandate.mandateId === definition.grants
 	);
-	const score = campaignScore(
+	const entry = playerEntry(
 		campaign,
-		player.popularity,
-		player.activists,
-		partyPollShare(campaign.partyId, world, content),
+		shares,
 		incumbent,
-		content
+		{ player, career: { mandates, campaigns }, characters },
+		content,
+		true
 	);
+	const drafts = contestDrafts({ definition, shares, territory: player.territory, entry }, content);
+	const mine = drafts.findIndex((draft) =>
+		campaign.role === 'head' ? draft.player : !draft.player && draft.partyId === campaign.partyId
+	);
+	if (mine < 0) return { min: 0, max: 0 };
 	// Un collaborateur qui sonde l'électorat resserre la fourchette selon sa compétence.
 	const volatility = Math.round(
 		content.balance.campaigns.volatility *
 			(pollingCompetence === null ? 1 : Math.max(0.25, 1 - pollingCompetence / 150))
 	);
-	return {
-		min: percentOf(score - volatility, rival + volatility),
-		max: percentOf(score + volatility, rival - volatility)
+	const share = (sign: 1 | -1): number => {
+		const weights = drafts.map((draft, index) =>
+			Math.max(1, draft.weight + (index === mine ? sign : -sign) * volatility)
+		);
+		return Math.round(perMille(weights)[mine]! / 10);
 	};
+	return { min: share(-1), max: share(1) };
 }
 
 /** Parties de l'état touchées par les échéances de fin de trimestre. */
@@ -860,19 +1017,40 @@ export interface FrontierDeadlines extends DeadlineParts {
 
 /**
  * Remboursement forfaitaire des frais de campagne après un scrutin : versé si la
- * candidature a été jugée (victoire ou défaite) avec au moins `refundMinPercent`
- * des voix ; jamais après une invalidation. Déduit du résultat, sans état propre.
+ * candidature a été jugée (victoire, défaite ou retrait entre les tours) avec au
+ * moins `refundMinPercent` des voix au premier tour ; jamais après une
+ * invalidation, ni au colistier (la liste de son parti en a la charge).
  */
 export function campaignRefund(
 	definition: ElectionDefinition,
 	status: CampaignStatus,
-	playerPercent: number | null,
+	firstRoundPercent: number | null,
 	content: Content
 ): number {
-	if (status !== 'won' && status !== 'lost') return 0;
-	if (playerPercent === null || playerPercent < content.balance.campaigns.refundMinPercent)
+	if (status !== 'won' && status !== 'lost' && status !== 'withdrawn') return 0;
+	if (
+		firstRoundPercent === null ||
+		firstRoundPercent < content.balance.campaigns.refundMinPercent
+	) {
 		return 0;
+	}
 	return definition.campaignRefundCents ?? 0;
+}
+
+/**
+ * Remboursement d'une candidature jugée, d'après son procès-verbal : premier
+ * tour du joueur, rien pour un colistier (P3-29). Sert aussi au journal.
+ */
+export function campaignRefundFor(
+	campaign: Campaign,
+	status: CampaignStatus,
+	ballots: readonly Ballot[],
+	content: Content
+): number {
+	const definition = content.elections[campaign.electionId];
+	const report = ballots.find((entry) => entry.ballotId === campaign.ballotId)?.report;
+	if (!definition || !report || campaign.role === 'colistier') return 0;
+	return campaignRefund(definition, status, playerFirstRoundPercent(report), content);
 }
 
 /**
@@ -901,7 +1079,32 @@ export function resolveDeadlines(
 	let currentRng = rng;
 	const people: PeopleChange[] = [];
 
-	// 0. Campagnes en cours : préparation passive et exposition (stress).
+	// 0. Investitures demandées ce trimestre : décision unique et seedée (P3-30).
+	const investiture = resolveInvestitures(
+		career,
+		player,
+		resources.influence,
+		turn,
+		currentRng,
+		content
+	);
+	career = investiture.career;
+	currentRng = investiture.rng;
+	const investitures = investiture.resolved;
+
+	// 0 ter. Carrière partisane : promotion de cadre, congrès du parti (P3-34).
+	const party = resolvePartyCareer(
+		player,
+		currentWorld,
+		resources.influence,
+		turn,
+		currentRng,
+		content
+	);
+	player = party.player;
+	currentRng = party.rng;
+
+	// 0 bis. Campagnes en cours : préparation passive et exposition (stress).
 	const running = runningCampaigns(career.campaigns);
 	if (running.length > 0) {
 		career = {
@@ -963,12 +1166,20 @@ export function resolveDeadlines(
 			characters,
 			relationships,
 			rng: currentRng,
-			record: { mandates: [], ballots: [], campaigns: [], people }
+			record: {
+				mandates: [...investiture.changes, ...party.changes],
+				ballots: [],
+				campaigns: [],
+				people,
+				runoffs: [],
+				investitures
+			}
 		};
 	}
 
-	const mandateChanges: PoliticalChange[] = [];
+	const mandateChanges: PoliticalChange[] = [...investiture.changes, ...party.changes];
 	const campaignRecords: DeadlinesRecord['campaigns'][number][] = [];
+	const runoffs: string[] = [];
 
 	// 1. Fins de mandats : un mandat arrive à terme au scrutin de son élection.
 	const dueElections = new Set(due.map((ballot) => ballot.electionId));
@@ -1042,110 +1253,57 @@ export function resolveDeadlines(
 			mandateChanges.push(...fallen.changes);
 		}
 
-		// Candidature du joueur : revalidée au jour du scrutin, puis jugée.
-		for (const campaign of runningCampaigns(career.campaigns)) {
-			if (campaign.ballotId !== ballot.ballotId) continue;
-			const issue = isIneligible(player, ballot.turn)
+		// Procès-verbal du territoire du joueur (P3-29) : sa candidature,
+		// revalidée au jour du scrutin, y figure ; sinon les seuls partis.
+		const campaign =
+			runningCampaigns(career.campaigns).find((entry) => entry.ballotId === ballot.ballotId) ??
+			null;
+		const issue = campaign
+			? isIneligible(player, ballot.turn)
 				? INELIGIBLE
-				: eligibilityIssue(ballot, career, content);
-			let status: Exclude<Campaign['status'], 'running'>;
-			let playerPercent: number | null = null;
-			if (issue) {
-				status = 'disqualified';
-			} else {
-				const partyPercent =
-					shares.find((share) => share.partyId === campaign.partyId)?.percent ?? 0;
-				let score = campaignScore(
-					campaign,
-					player.popularity,
-					player.activists,
-					partyPercent,
-					outgoing.has(definition.grants),
-					content
-				);
-				let rival =
-					opponentStrength(campaign, characters, career.campaigns, content) +
-					localRivalModifier(player.territory, campaign.electionId, content);
-				if (campaignBalance.volatility > 0) {
-					const own = nextInt(currentRng, -campaignBalance.volatility, campaignBalance.volatility);
-					const other = nextInt(own.rng, -campaignBalance.volatility, campaignBalance.volatility);
-					currentRng = other.rng;
-					score += own.value;
-					rival += other.value;
-				}
-				playerPercent = percentOf(score, rival);
-				status = playerPercent > 50 ? 'won' : 'lost';
-			}
-			if (status === 'won') {
-				const grants = [definition.grants];
-				if (definition.bonusGrant && (playerPercent ?? 0) >= definition.bonusGrant.minPercent) {
-					grants.push(definition.bonusGrant.mandate);
-				}
-				for (const mandateId of grants) {
-					const granted = applyCareerEffect(
-						{ op: 'grantMandate', mandate: mandateId },
-						career,
-						turn,
-						null,
-						content,
-						player
-					);
-					career = granted.parts;
-					mandateChanges.push(...granted.changes);
-				}
-				resources.influence += campaignBalance.victoryInfluence;
-			} else if (status === 'lost') {
-				// Une défaite coûte, mais fait connaître : la carrière continue.
-				resources.influence += campaignBalance.defeatInfluence;
-				player = {
-					...player,
-					stress: Math.min(GAUGE_MAX, player.stress + campaignBalance.defeatStress)
-				};
-			}
-			// Frais de campagne remboursés au forfait à partir d'un score minimal.
-			resources.politicalBudgetCents += campaignRefund(definition, status, playerPercent, content);
-			// La rivalité laisse des traces : attitude en baisse et souvenir daté.
-			const opponent = campaign.opponentId ? characters[campaign.opponentId] : undefined;
-			if (opponent && status !== 'disqualified') {
-				const outcome = addRelation(
-					relationships,
-					opponent,
-					campaignBalance.rivalryAttitude,
-					`${definition.label} (${formatTurn(turn)}) : votre ${status === 'won' ? 'victoire' : 'défaite'}.`,
-					turn + 1,
-					content
-				);
-				relationships = outcome.relationships;
-				people.push(...outcome.changes);
-			}
-			career = {
-				...career,
-				campaigns: career.campaigns.map((entry) =>
-					entry.campaignId === campaign.campaignId
-						? { ...entry, status, playerPercent, reason: issue }
-						: entry
-				)
-			};
-			// Avance personnelle (P3-23) : rendue à partir d'un score minimal, perdue sinon.
-			const repaid =
-				campaign.advanceCents > 0 &&
-				status !== 'disqualified' &&
-				(playerPercent ?? 0) >= campaignBalance.advanceRepayMinPercent;
-			if (repaid) resources.personalCashCents += campaign.advanceCents;
-			campaignRecords.push({
-				campaignId: campaign.campaignId,
-				opponentId: campaign.opponentId,
-				status,
-				playerPercent,
-				reason: issue,
-				advance: campaign.advanceCents > 0 ? { cents: campaign.advanceCents, repaid } : null
-			});
+				: eligibilityIssue(ballot, career, content)
+			: null;
+		const entry =
+			campaign && !issue
+				? playerEntry(
+						campaign,
+						shares,
+						outgoing.has(definition.grants),
+						{ player, career, characters },
+						content
+					)
+				: null;
+		const rules = contestRules(definition, player.territory, content);
+		const contest = runFirstRound(
+			{ definition, shares, territory: player.territory, entry },
+			rules,
+			currentRng,
+			content
+		);
+		currentRng = contest.rng;
+		const report = contest.report;
+		if (campaign && report.stage === 'runoff_pending') {
+			runoffs.push(campaign.campaignId);
+		} else if (campaign) {
+			const settled = settleCampaign(
+				{ player, resources, career, characters, relationships },
+				campaign,
+				issue ? null : report,
+				issue,
+				turn,
+				content
+			);
+			({ player, career, relationships } = settled.parts);
+			Object.assign(resources, settled.parts.resources);
+			mandateChanges.push(...settled.mandates);
+			people.push(...settled.people);
+			campaignRecords.push(settled.record);
 		}
 
 		// Scrutin tenu, puis échéance suivante un cycle plus tard.
 		const held = career.ballots.map((entry) =>
 			entry.ballotId === ballot.ballotId
-				? { ...entry, status: 'held' as const, shares, winnerPartyId }
+				? { ...entry, status: 'held' as const, shares, winnerPartyId, report }
 				: entry
 		);
 		career = {
@@ -1172,6 +1330,558 @@ export function resolveDeadlines(
 		characters,
 		relationships,
 		rng: currentRng,
-		record: { mandates: mandateChanges, ballots: ballotRecords, campaigns: campaignRecords, people }
+		record: {
+			mandates: mandateChanges,
+			ballots: ballotRecords,
+			campaigns: campaignRecords,
+			people,
+			runoffs,
+			investitures
+		}
+	};
+}
+
+// ---------------------------------------------------------------------------
+// Procès-verbal et second tour (P3-29)
+// ---------------------------------------------------------------------------
+
+/** Mandats locaux comptés comme appui des grands électeurs (sénatoriales). */
+function localMandates(mandates: readonly MandateInstance[], content: Content): number {
+	return activeMandates(mandates).filter((mandate) => {
+		const election = content.mandates[mandate.mandateId]?.election;
+		const scope = election ? content.elections[election]?.scope : undefined;
+		return scope === 'local' || scope === 'regional';
+	}).length;
+}
+
+/**
+ * Entrée du joueur au procès-verbal : score de campagne de la tête de liste
+ * (prime des grands électeurs aux sénatoriales), ou renfort de la liste du
+ * colistier par sa préparation ; adversaire nommé et sa force.
+ */
+export function playerEntry(
+	campaign: Campaign,
+	shares: readonly BallotShare[],
+	incumbent: boolean,
+	parts: {
+		readonly player: PlayerState;
+		readonly career: Pick<CareerParts, 'mandates' | 'campaigns'>;
+		readonly characters: Readonly<Record<string, Character>>;
+	},
+	content: Content,
+	knownOnly = false
+): PlayerEntry {
+	const definition = content.elections[campaign.electionId]!;
+	const balance = content.balance.campaigns;
+	const contests = content.balance.elections.contests;
+	const partyPercent = shares.find((share) => share.partyId === campaign.partyId)?.percent ?? 0;
+	const weight =
+		campaign.role === 'colistier'
+			? (Math.min(campaign.preparation, balance.preparationCap) *
+					balance.preparationWeightPercent *
+					contests.colistierPreparationPercent) /
+				10000
+			: campaignScore(
+					campaign,
+					parts.player.popularity,
+					parts.player.activists,
+					partyPercent,
+					incumbent,
+					content
+				) +
+				(definition.system === 'senate'
+					? contests.grandElectorBonus * localMandates(parts.career.mandates, content)
+					: 0);
+	const opponent = campaign.opponentId ? parts.characters[campaign.opponentId] : undefined;
+	return {
+		campaign,
+		weight,
+		opponent: opponent
+			? {
+					id: opponent.id,
+					partyId: opponent.partyId,
+					weight:
+						opponentStrength(
+							campaign,
+							parts.characters,
+							parts.career.campaigns,
+							content,
+							knownOnly
+						) + localRivalModifier(parts.player.territory, campaign.electionId, content)
+				}
+			: null
+	};
+}
+
+/** Parties de l'état touchées par le jugement d'une candidature. */
+export interface SettleParts {
+	readonly player: PlayerState;
+	readonly resources: Readonly<Record<ResourceId, number>>;
+	readonly career: CareerParts;
+	readonly characters: Readonly<Record<string, Character>>;
+	readonly relationships: Readonly<Record<string, Relationship>>;
+}
+
+/**
+ * Juge une candidature d'après le procès-verbal définitif (ou son
+ * invalidation) : mandats (siège de majorité ou d'opposition, mairie pour la
+ * tête de la liste victorieuse), influence, stress, remboursement forfaitaire,
+ * avance personnelle et rivalité. `turn` est le trimestre du résultat.
+ */
+export function settleCampaign(
+	parts: SettleParts,
+	campaign: Campaign,
+	report: BallotReport | null,
+	issue: string | null,
+	turn: Turn,
+	content: Content
+): {
+	parts: SettleParts;
+	mandates: PoliticalChange[];
+	people: PeopleChange[];
+	record: DeadlinesRecord['campaigns'][number];
+} {
+	const definition = content.elections[campaign.electionId]!;
+	const balance = content.balance.campaigns;
+	const ballotTurn =
+		parts.career.ballots.find((entry) => entry.ballotId === campaign.ballotId)?.turn ?? turn;
+	let { player, career, relationships } = parts;
+	const resources: Record<ResourceId, number> = { ...parts.resources };
+	const mandates: PoliticalChange[] = [];
+	const people: PeopleChange[] = [];
+	const own = report?.contestants.find((contestant) => contestant.player);
+	const status: Exclude<CampaignStatus, 'running'> =
+		issue !== null || report === null
+			? 'disqualified'
+			: own?.status === 'withdrawn'
+				? 'withdrawn'
+				: report.playerElected
+					? 'won'
+					: 'lost';
+	const playerPercent = status === 'disqualified' ? null : playerFinalPercent(report!);
+	const firstRound =
+		status === 'disqualified' || campaign.role === 'colistier'
+			? null
+			: playerFirstRoundPercent(report!);
+	if (status === 'won') {
+		const side = playerSide(report!);
+		const grants: { mandate: string; side: MandateInstance['side'] }[] = [
+			{ mandate: definition.grants, side }
+		];
+		if (definition.headGrant && playerHeadsWinner(report!)) {
+			grants.push({ mandate: definition.headGrant, side: null });
+		}
+		for (const grant of grants) {
+			const granted = applyCareerEffect(
+				{ op: 'grantMandate', mandate: grant.mandate },
+				career,
+				turn,
+				null,
+				content,
+				player
+			);
+			career = {
+				...granted.parts,
+				mandates: granted.parts.mandates.map((mandate, index) =>
+					index === granted.parts.mandates.length - 1 &&
+					granted.parts.mandates.length > career.mandates.length
+						? { ...mandate, side: grant.side }
+						: mandate
+				)
+			};
+			mandates.push(...granted.changes);
+		}
+		resources.influence += balance.victoryInfluence;
+	} else if (status === 'lost' || status === 'withdrawn') {
+		// Une défaite coûte, mais fait connaître : la carrière continue.
+		resources.influence += balance.defeatInfluence;
+		if (status === 'lost') {
+			player = { ...player, stress: Math.min(GAUGE_MAX, player.stress + balance.defeatStress) };
+		}
+	}
+	// Frais de campagne remboursés au forfait à partir d'un score minimal au premier tour.
+	resources.politicalBudgetCents += campaignRefund(definition, status, firstRound, content);
+	// La rivalité laisse des traces : attitude en baisse et souvenir daté.
+	const opponent = campaign.opponentId ? parts.characters[campaign.opponentId] : undefined;
+	if (opponent && status !== 'disqualified') {
+		const outcome = addRelation(
+			relationships,
+			opponent,
+			balance.rivalryAttitude,
+			`${definition.label} (${formatTurn(ballotTurn)}) : votre ${status === 'won' ? 'victoire' : 'défaite'}.`,
+			Math.max(turn, ballotTurn + 1),
+			content
+		);
+		relationships = outcome.relationships;
+		people.push(...outcome.changes);
+	}
+	career = {
+		...career,
+		campaigns: career.campaigns.map((entry) =>
+			entry.campaignId === campaign.campaignId
+				? { ...entry, status, playerPercent, reason: issue, resultTurn: turn }
+				: entry
+		)
+	};
+	// Avance personnelle (P3-23) : rendue à partir d'un score minimal, perdue sinon.
+	const scored = playerPercent ?? 0;
+	const repaid =
+		campaign.advanceCents > 0 &&
+		status !== 'disqualified' &&
+		scored >= balance.advanceRepayMinPercent;
+	if (repaid) resources.personalCashCents += campaign.advanceCents;
+	return {
+		parts: { player, resources, career, characters: parts.characters, relationships },
+		mandates,
+		people,
+		record: {
+			campaignId: campaign.campaignId,
+			opponentId: campaign.opponentId,
+			status,
+			playerPercent,
+			reason: issue,
+			advance: campaign.advanceCents > 0 ? { cents: campaign.advanceCents, repaid } : null
+		}
+	};
+}
+
+/** Candidature dont le second tour attend la décision du joueur, la plus ancienne d'abord. */
+export function pendingRunoff(
+	parts: Pick<CareerParts, 'campaigns' | 'ballots'>
+): { campaign: Campaign; ballot: Ballot; report: BallotReport } | null {
+	for (const campaign of runningCampaigns(parts.campaigns)) {
+		const ballot = parts.ballots.find((entry) => entry.ballotId === campaign.ballotId);
+		if (ballot?.report?.stage === 'runoff_pending') {
+			return { campaign, ballot, report: ballot.report };
+		}
+	}
+	return null;
+}
+
+/** Raison pour laquelle cette décision d'entre-deux-tours est impossible, ou `null`. */
+export function runoffIssue(
+	decision: RunoffDecision,
+	campaignIdValue: string | null,
+	parts: Pick<CareerParts, 'campaigns' | 'ballots'>,
+	player: Pick<PlayerState, 'territory'>,
+	content: Content
+): string | null {
+	const pending = pendingRunoff(parts);
+	if (!pending || (campaignIdValue !== null && pending.campaign.campaignId !== campaignIdValue)) {
+		return 'Aucun second tour n’attend votre décision.';
+	}
+	const definition = content.elections[pending.campaign.electionId]!;
+	const rules = contestRules(definition, player.territory, content);
+	const own = pending.report.contestants.find((contestant) => contestant.player);
+	if (decision === 'maintain' && own?.status !== 'qualified') {
+		return rules.system === 'single'
+			? 'Il faut 12,5 % des inscrits pour se maintenir.'
+			: 'Il faut 10 % des suffrages pour se maintenir.';
+	}
+	if (decision === 'merge') {
+		if (rules.mergePerMille <= 0) return 'Aucune fusion possible à ce scrutin.';
+		if (!canMerge(pending.report, rules))
+			return 'Il faut 5 % des suffrages et une liste qualifiée.';
+	}
+	return null;
+}
+
+/**
+ * Second tour après la décision du joueur (choix de l'événement
+ * d'entre-deux-tours) : procès-verbal définitif, puis jugement de la
+ * candidature au trimestre courant. Sans second tour en attente, rien.
+ */
+export function resolveRunoff(
+	parts: SettleParts,
+	decision: RunoffDecision,
+	campaignIdValue: string | null,
+	turn: Turn,
+	rng: RngState,
+	content: Content
+): { parts: SettleParts; rng: RngState; politics: PoliticalChange[]; people: PeopleChange[] } {
+	if (runoffIssue(decision, campaignIdValue, parts.career, parts.player, content)) {
+		return { parts, rng, politics: [], people: [] };
+	}
+	const pending = pendingRunoff(parts.career)!;
+	const definition = content.elections[pending.campaign.electionId]!;
+	const rules = contestRules(definition, parts.player.territory, content);
+	const second = runSecondRound(pending.report, rules, decision, rng, content);
+	const career: CareerParts = {
+		...parts.career,
+		ballots: parts.career.ballots.map((entry) =>
+			entry.ballotId === pending.ballot.ballotId ? { ...entry, report: second.report } : entry
+		)
+	};
+	const settled = settleCampaign(
+		{ ...parts, career },
+		pending.campaign,
+		second.report,
+		null,
+		turn,
+		content
+	);
+	return {
+		parts: settled.parts,
+		rng: second.rng,
+		politics: [
+			{
+				kind: 'runoff',
+				campaignId: pending.campaign.campaignId,
+				decision,
+				status: settled.record.status,
+				playerPercent: settled.record.playerPercent
+			},
+			...settled.mandates
+		],
+		people: settled.people
+	};
+}
+
+// ---------------------------------------------------------------------------
+// Investiture nationale (P3-30)
+// ---------------------------------------------------------------------------
+
+/** Raison pour laquelle le joueur ne peut demander l'investiture à cette échéance, ou `null`. */
+export function investitureIssue(
+	ballotIdValue: string,
+	parts: CareerParts,
+	player: PlayerState,
+	turn: Turn,
+	content: Content
+): string | null {
+	const ballot = parts.ballots.find((entry) => entry.ballotId === ballotIdValue);
+	const definition = ballot ? content.elections[ballot.electionId] : undefined;
+	if (!ballot || !definition) return 'Aucune élection programmée à cette date.';
+	if (!definition.investiture) return 'Ce scrutin ne passe pas par une investiture nationale.';
+	if (player.partyId === null) return 'Il faut être membre d’un parti.';
+	if (parts.investitures.some((request) => request.ballotId === ballot.ballotId)) {
+		return 'L’investiture a déjà été demandée pour ce scrutin.';
+	}
+	return candidacyIssue(ballotIdValue, parts, player, turn, content, 'head', true);
+}
+
+/** Facteur observable de l'appréciation d'une investiture. */
+export interface InvestitureFactor {
+	readonly label: string;
+	readonly favorable: boolean;
+}
+
+/**
+ * Appréciation d'une demande d'investiture : seuls des facteurs observables
+ * (appareil, influence, mandats, ancrage, popularité, candidat mieux placé)
+ * et une appréciation qualitative sont montrés ; la chance reste interne.
+ */
+export function investitureAppraisal(
+	ballotIdValue: string,
+	player: PlayerState,
+	influence: number,
+	mandates: readonly MandateInstance[],
+	content: Content
+): { chancePercent: number; label: string; factors: InvestitureFactor[] } {
+	const rules = content.balance.campaigns.investiture;
+	const apparatus = player.supports[content.balance.campaigns.apparatusGroup] ?? 0;
+	const held = activeMandates(mandates).length;
+	const local = localMandates(mandates, content) > 0;
+	const rival =
+		hashSeed(`${ballotIdValue}:${player.partyId ?? ''}`) % 100 < rules.rivalChancePercent;
+	const score =
+		(apparatus * rules.apparatusPercent +
+			Math.min(100, influence) * rules.influencePercent +
+			player.popularity * rules.popularityPercent) /
+			100 +
+		Math.min(rules.mandateCap, held * rules.mandatePoints) +
+		(local ? rules.localPoints : 0) -
+		(rival ? rules.rivalPenalty : 0) +
+		// Un cadre, et plus encore le chef, accèdent mieux aux investitures (P3-34).
+		(player.partyCareer?.rank === 'leader'
+			? content.balance.partyCareer.leaderInvestitureBonus
+			: player.partyCareer?.rank === 'cadre'
+				? content.balance.partyCareer.cadreInvestitureBonus
+				: 0);
+	const chancePercent = Math.round(
+		Math.min(rules.maxChancePercent, Math.max(rules.minChancePercent, score))
+	);
+	const factors: InvestitureFactor[] = [
+		apparatus >= 50
+			? { label: 'l’appareil vous soutient', favorable: true }
+			: apparatus < 25
+				? { label: 'l’appareil vous connaît mal', favorable: false }
+				: { label: 'l’appareil reste partagé', favorable: apparatus >= 35 },
+		influence >= 60
+			? { label: 'une influence reconnue', favorable: true }
+			: { label: 'une influence encore modeste', favorable: false },
+		held > 0
+			? { label: `${held} mandat(s) exercé(s)`, favorable: true }
+			: { label: 'aucun mandat exercé', favorable: false },
+		local
+			? { label: 'un ancrage local', favorable: true }
+			: { label: 'pas d’ancrage local', favorable: false },
+		player.popularity >= 45
+			? { label: 'une popularité solide', favorable: true }
+			: { label: 'une popularité fragile', favorable: false },
+		...(rival ? [{ label: 'un candidat mieux placé brigue la place', favorable: false }] : []),
+		...(player.partyCareer?.rank === 'leader'
+			? [{ label: 'vous dirigez le parti', favorable: true }]
+			: player.partyCareer?.rank === 'cadre'
+				? [{ label: 'vous êtes cadre du parti', favorable: true }]
+				: [])
+	];
+	const label =
+		chancePercent >= rules.supportedFrom
+			? 'Candidature soutenue'
+			: chancePercent >= rules.disputedFrom
+				? 'Investiture disputée'
+				: 'Investiture peu probable';
+	return { chancePercent, label, factors };
+}
+
+/** Candidature de tête créée par une investiture accordée ou une dissidence. */
+function headCampaign(
+	parts: CareerParts,
+	ballot: Ballot,
+	partyId: string,
+	invested: boolean,
+	turn: Turn
+): Campaign {
+	return {
+		campaignId: campaignId(parts.campaigns.length + 1),
+		ballotId: ballot.ballotId,
+		electionId: ballot.electionId,
+		declaredTurn: turn,
+		partyId,
+		invested,
+		preparation: 0,
+		advanceCents: 0,
+		opponentId: null,
+		status: 'running',
+		playerPercent: null,
+		reason: null,
+		role: 'head',
+		listRank: 1,
+		resultTurn: null
+	};
+}
+
+/**
+ * Demandes en attente tranchées à la frontière (une seule fois, tirage seedé) :
+ * accordée, la candidature investie est déposée ; refusée, les motifs
+ * défavorables sont consignés et le choix suivra au trimestre suivant.
+ */
+function resolveInvestitures(
+	career: CareerParts,
+	player: PlayerState,
+	influence: number,
+	turn: Turn,
+	rng: RngState,
+	content: Content
+): {
+	career: CareerParts;
+	rng: RngState;
+	changes: PoliticalChange[];
+	resolved: { requestId: string; granted: boolean }[];
+} {
+	let current = rng;
+	let parts = career;
+	const changes: PoliticalChange[] = [];
+	const resolved: { requestId: string; granted: boolean }[] = [];
+	for (const request of career.investitures) {
+		if (request.status !== 'pending') continue;
+		const ballot = parts.ballots.find((entry) => entry.ballotId === request.ballotId);
+		const appraisal = investitureAppraisal(
+			request.ballotId,
+			player,
+			influence,
+			parts.mandates,
+			content
+		);
+		const draw = nextInt(current, 1, 100);
+		current = draw.rng;
+		const open =
+			ballot?.status === 'scheduled' &&
+			player.partyId === request.partyId &&
+			candidacyIssue(request.ballotId, parts, player, turn, content, 'head', true) === null;
+		const granted = open && draw.value <= appraisal.chancePercent;
+		const reasons = granted
+			? []
+			: open
+				? appraisal.factors.filter((factor) => !factor.favorable).map((factor) => factor.label)
+				: ['votre candidature n’est plus recevable'];
+		const status: InvestitureRequest['status'] = granted ? 'granted' : 'refused';
+		parts = {
+			...parts,
+			investitures: parts.investitures.map((entry) =>
+				entry.requestId === request.requestId
+					? { ...entry, status, resolvedTurn: turn, reasons }
+					: entry
+			)
+		};
+		changes.push({
+			kind: 'investiture',
+			requestId: request.requestId,
+			ballotId: request.ballotId,
+			status
+		});
+		if (granted && ballot) {
+			const campaign = headCampaign(parts, ballot, request.partyId, true, request.requestedTurn);
+			parts = { ...parts, campaigns: [...parts.campaigns, campaign] };
+			changes.push({
+				kind: 'candidacy',
+				campaignId: campaign.campaignId,
+				ballotId: ballot.ballotId,
+				invested: true
+			});
+		}
+		resolved.push({ requestId: request.requestId, granted });
+	}
+	return { career: parts, rng: current, changes, resolved };
+}
+
+/** Demande refusée qui attend la décision du joueur, la plus ancienne d'abord. */
+export function refusedInvestiture(
+	parts: Pick<CareerParts, 'investitures'>
+): InvestitureRequest | null {
+	return parts.investitures.find((request) => request.status === 'refused') ?? null;
+}
+
+/**
+ * Décision après un refus : renoncer (l'appareil apprécie la discipline) ou se
+ * présenter en dissident, sans étiquette ni moyens du parti (l'appareil s'en
+ * détourne). Renvoie la variation d'appui de l'appareil à appliquer.
+ */
+export function decideInvestiture(
+	parts: CareerParts,
+	decision: 'dissident' | 'renounce',
+	turn: Turn,
+	content: Content
+): { parts: CareerParts; changes: PoliticalChange[]; apparatusDelta: number } {
+	const request = refusedInvestiture(parts);
+	if (!request) return { parts, changes: [], apparatusDelta: 0 };
+	const rules = content.balance.campaigns.investiture;
+	const ballot = parts.ballots.find((entry) => entry.ballotId === request.ballotId);
+	const dissident = decision === 'dissident' && ballot?.status === 'scheduled';
+	const status: InvestitureRequest['status'] = dissident ? 'dissident' : 'renounced';
+	let career: CareerParts = {
+		...parts,
+		investitures: parts.investitures.map((entry) =>
+			entry.requestId === request.requestId ? { ...entry, status } : entry
+		)
+	};
+	const changes: PoliticalChange[] = [
+		{ kind: 'investiture', requestId: request.requestId, ballotId: request.ballotId, status }
+	];
+	if (dissident) {
+		const campaign = headCampaign(career, ballot, request.partyId, false, turn);
+		career = { ...career, campaigns: [...career.campaigns, campaign] };
+		changes.push({
+			kind: 'candidacy',
+			campaignId: campaign.campaignId,
+			ballotId: ballot.ballotId,
+			invested: false
+		});
+	}
+	return {
+		parts: career,
+		changes,
+		apparatusDelta: dissident ? -rules.dissidentApparatus : Math.ceil(rules.dissidentApparatus / 3)
 	};
 }

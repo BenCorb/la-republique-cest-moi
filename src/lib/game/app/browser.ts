@@ -51,3 +51,46 @@ export function downloadExport(exported: ExportedSave): void {
 	link.click();
 	setTimeout(() => URL.revokeObjectURL(url), 0);
 }
+
+/**
+ * Retour de partie (P3-42) : la sauvegarde et une note libre dans un seul
+ * fichier JSON, à envoyer à qui l'on veut. Aucun serveur.
+ */
+export function downloadFeedback(exported: ExportedSave, note: string, seed: string): void {
+	const text = JSON.stringify(
+		{
+			format: 'la-republique-cest-moi/retour',
+			version: 1,
+			note,
+			save: JSON.parse(exported.text) as unknown
+		},
+		null,
+		2
+	);
+	const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+	const link = document.createElement('a');
+	link.href = url;
+	link.download = `retour-${seed.replace(/[^A-Za-z0-9_-]+/gu, '-').slice(0, 40)}.json`;
+	link.click();
+	setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+const FIRST_STEPS_KEY = 'la-republique-cest-moi:premiers-pas-masques';
+
+/** Premiers pas masqués (P3-40) : préférence de ce navigateur, jamais de l'état de jeu. */
+export function readFirstStepsHidden(): boolean {
+	try {
+		return globalThis.localStorage?.getItem(FIRST_STEPS_KEY) === '1';
+	} catch {
+		return false;
+	}
+}
+
+export function writeFirstStepsHidden(hidden: boolean): void {
+	try {
+		if (hidden) globalThis.localStorage?.setItem(FIRST_STEPS_KEY, '1');
+		else globalThis.localStorage?.removeItem(FIRST_STEPS_KEY);
+	} catch {
+		// Stockage indisponible : la préférence ne vaut que pour la session.
+	}
+}

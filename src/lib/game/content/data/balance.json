@@ -99,7 +99,21 @@
 		"voteVolatility": 3,
 		"momentum": 1,
 		"newGovernmentStability": 62,
-		"alertLeadTurns": 4
+		"alertLeadTurns": 4,
+		"contests": {
+			"minPartyPerMille": 50,
+			"maxPartyContestants": 5,
+			"partyStrengthPercent": 70,
+			"transferPercent": 80,
+			"mergeRetentionPercent": 90,
+			"allyDistance": 55,
+			"runoffSwing": 3,
+			"colistierPreparationPercent": 50,
+			"grandElectorBonus": 6,
+			"rankSpreadPercent": 40,
+			"outsiderRankPenalty": 20,
+			"runoffEvent": "election.runoff"
+		}
 	},
 	"supports": {
 		"reversionPercent": 6,
@@ -126,7 +140,23 @@
 		"rivalExperienceBonus": 2,
 		"rivalExperienceCap": 2,
 		"rivalryAttitude": -8,
-		"opponentMaxAge": 72
+		"opponentMaxAge": 72,
+		"investiture": {
+			"apparatusPercent": 40,
+			"influencePercent": 20,
+			"popularityPercent": 20,
+			"mandatePoints": 10,
+			"mandateCap": 30,
+			"localPoints": 10,
+			"rivalPenalty": 25,
+			"rivalChancePercent": 35,
+			"minChancePercent": 5,
+			"maxChancePercent": 95,
+			"supportedFrom": 65,
+			"disputedFrom": 40,
+			"dissidentApparatus": 10,
+			"refusedEvent": "election.investiture_refused"
+		}
 	},
 	"entourage": {
 		"candidatesPerPost": 3,
@@ -168,7 +198,8 @@
 			"maxAcceptPercent": 98,
 			"interviewInterest": 6,
 			"maxInterviews": 2,
-			"refusalAttitude": -5
+			"refusalAttitude": -5,
+			"counterOfferPercent": 140
 		},
 		"search": {
 			"levels": {
@@ -221,7 +252,8 @@
 		"renegotiation": {
 			"stepCompetence": 15,
 			"minTurns": 4,
-			"event": "event.staff.raise_request"
+			"event": "event.staff.raise_request",
+			"variants": ["event.staff.raise_poached", "event.staff.raise_promotion"]
 		}
 	},
 	"family": {
@@ -233,6 +265,43 @@
 		"hostileAttitude": -15,
 		"partnerStress": 1,
 		"partnerAgeSpread": 5
+	},
+	"government": {
+		"secretaryStature": 72,
+		"ministerStature": 85,
+		"primeMinisterStature": 100,
+		"primeMinisterChancePercent": 10,
+		"leaderPrimeMinisterPercent": 50,
+		"reshuffleStability": 55,
+		"reshuffleChancePercent": 10,
+		"keepPopularity": 30,
+		"presidentTermTurns": 20,
+		"firstPresidentialTurn": 9,
+		"reelectionChancePercent": 55,
+		"appointmentEvent": "career.ministry_call"
+	},
+	"partyCareer": {
+		"congressCycleTurns": 12,
+		"congressOffset": 6,
+		"cadreMinApparatus": 40,
+		"cadreMinActivists": 30,
+		"cadreMinTurns": 4,
+		"cadreChancePercent": 25,
+		"apparatusPercent": 30,
+		"activistsPercent": 20,
+		"influencePercent": 10,
+		"rallyPoints": 3,
+		"rallyCap": 20,
+		"minChancePercent": 5,
+		"maxChancePercent": 50,
+		"favoriteFrom": 45,
+		"openFrom": 35,
+		"retryCongresses": 2,
+		"defeatApparatus": 4,
+		"leaderChallengeApparatus": 25,
+		"leaderOustChancePercent": 35,
+		"cadreInvestitureBonus": 10,
+		"leaderInvestitureBonus": 30
 	},
 	"activists": {
 		"start": 3,

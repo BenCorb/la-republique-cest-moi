@@ -72,14 +72,22 @@ describe('scénario : passage du temps', () => {
 					shortlisted: [],
 					searches: [],
 					progress: [],
-					raiseRequests: []
+					raiseRequests: [],
+					counterLapsed: []
 				},
 				family: { inheritance: 0, childCosts: 0, stress: 0, neglected: false, widowed: null },
 				wellbeing: { contributions: [], deathCause: null },
 				characters: { departures: [], arrivals: [] },
-				world: { indicators: [], parties: [], leaderChanges: [] },
+				world: { indicators: [], parties: [], leaderChanges: [], president: null },
 				supports: [],
-				deadlines: { mandates: [], ballots: [], campaigns: [], people: [] },
+				deadlines: {
+					mandates: [],
+					ballots: [],
+					campaigns: [],
+					people: [],
+					runoffs: [],
+					investitures: []
+				},
 				exposure: 0,
 				justice: { cases: [], changes: [], gauges: [], politics: [] },
 				wealth: { valueChange: 0, failed: [] },

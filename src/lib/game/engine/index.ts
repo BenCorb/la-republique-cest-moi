@@ -10,8 +10,15 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.39.0';
+export const RULES_VERSION = '0.52.0';
 
+export { candidacyRoleOf } from './plan.ts';
+export { eligibleRandomEvents } from './events.ts';
+export { ambitionVerdict, updateAmbition, type AmbitionVerdict } from './ambition.ts';
+export { congressAppraisal, partyLedByPlayer, resolvePartyCareer } from './party.ts';
+export { governmentPost, governmentStature, resolveGovernment } from './government.ts';
+export { cohabitation, primeMinisterId } from './world.ts';
+export { effectiveSystem, listSystem, seatsFor } from './ballots.ts';
 export {
 	START_YEAR,
 	TURNS_PER_YEAR,
@@ -85,6 +92,11 @@ export {
 	type Ballot,
 	type BallotShare,
 	type Campaign,
+	type BallotReport,
+	type InvestitureRequest,
+	type PartyCareer,
+	type PartyRank,
+	type BallotContestant,
 	type CampaignStatus,
 	type FamilyState,
 	type ShortlistEntry,
@@ -211,6 +223,13 @@ export {
 	campaignId,
 	campaignPoll,
 	campaignRefund,
+	campaignRefundFor,
+	pendingRunoff,
+	investitureAppraisal,
+	investitureIssue,
+	refusedInvestiture,
+	resolveRunoff,
+	settleCampaign,
 	campaignScore,
 	mobilizationPenalty,
 	mobilizationPercent,

@@ -51,6 +51,16 @@
 	],
 	"families": [
 		{
+			"id": "family.fundraising",
+			"label": "Organiser une collecte",
+			"description": "Remplir le budget politique en trois formats : un dîner à prix libre, un dîner de levée de fonds, une grande soirée de donateurs."
+		},
+		{
+			"id": "family.public_meeting",
+			"label": "Réunion publique et meeting",
+			"description": "Occuper le terrain en trois formats : une salle des fêtes, une salle de congrès, un Zénith."
+		},
+		{
 			"id": "family.donation",
 			"label": "Verser un don à son organisation",
 			"description": "Transférer une partie de ses économies au budget politique, en trois formats. Plafond annuel, tous formats confondus.",
@@ -66,6 +76,864 @@
 		}
 	],
 	"actions": [
+		{
+			"id": "mandate.council_question",
+			"category": "mandate",
+			"label": "Interpeller le maire en conseil",
+			"description": "Une question écrite, trois photocopies du budget et un sourire en coin au moment de la poser. Le maire répond à côté ; la presse locale, elle, retient la question.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{ "op": "holdsMandate", "mandate": "mandate.municipal_councillor" },
+					{ "op": "eq", "stat": "player.councilOpposition", "value": 1 }
+				]
+			},
+			"unavailableReason": "Il faut siéger dans l’opposition municipale.",
+			"effects": [
+				{ "op": "addStat", "stat": "player.exposure", "value": 2 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+				{ "op": "addResource", "resource": "influence", "value": 1 }
+			]
+		},
+		{
+			"id": "mandate.council_tribune",
+			"category": "mandate",
+			"label": "Publier la tribune de l’opposition",
+			"description": "Mille cinq cents signes dans le bulletin municipal, relus par le cabinet du maire qui y cherche la diffamation. Il n’en trouve pas, de justesse.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{ "op": "holdsMandate", "mandate": "mandate.municipal_councillor" },
+					{ "op": "eq", "stat": "player.councilOpposition", "value": 1 }
+				]
+			},
+			"unavailableReason": "Il faut siéger dans l’opposition municipale.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+				{ "op": "addResource", "resource": "influence", "value": 1 }
+			]
+		},
+		{
+			"id": "mandate.mayor_budget",
+			"category": "mandate",
+			"label": "Voter le budget communal",
+			"description": "Une nuit de commission des finances, une hausse de la taxe foncière « contenue » et un investissement pour l’école. Les uns applaudissent, les autres font leurs comptes.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.mayor" },
+			"unavailableReason": "Il faut être maire.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+				{ "op": "addSupport", "group": "support.wealthy", "value": -1 },
+				{ "op": "addResource", "resource": "politicalBudgetCents", "value": 20000 },
+				{ "op": "addStat", "stat": "player.stress", "value": 1 }
+			]
+		},
+		{
+			"id": "mandate.mayor_inaugurate",
+			"category": "mandate",
+			"label": "Inaugurer un équipement",
+			"description": "Un rond-point, le troisième du mandat, orné d’une sculpture que personne n’a demandée. Le ruban est coupé, la photo est belle, le carrefour reste bouché.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.mayor" },
+			"unavailableReason": "Il faut être maire.",
+			"effects": [
+				{ "op": "addResource", "resource": "influence", "value": 2 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 1 }
+			]
+		},
+		{
+			"id": "mandate.mayor_grant",
+			"category": "mandate",
+			"label": "Accorder une subvention à une association",
+			"description": "Le club de pétanque, la chorale ou l’amicale des anciens : chacune a son dossier, et ses électeurs.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.mayor" },
+			"unavailableReason": "Il faut être maire.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+				{ "op": "addResource", "resource": "politicalBudgetCents", "value": -15000 }
+			]
+		},
+		{
+			"id": "mandate.mayor_twinning",
+			"category": "mandate",
+			"label": "Jumeler la commune",
+			"description": "Une ville bavaroise, une délégation, un échange de fanions et une rue rebaptisée. Les voyages forment la jeunesse et le conseil municipal.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 10000 }],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.mayor" },
+			"unavailableReason": "Il faut être maire.",
+			"effects": [
+				{ "op": "addResource", "resource": "influence", "value": 2 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+				{ "op": "addStat", "stat": "player.stress", "value": -1 }
+			]
+		},
+		{
+			"id": "mandate.region_file",
+			"category": "mandate",
+			"label": "Défendre un dossier de sa commune à la région",
+			"description": "Une rocade, une gare ou un lycée : vous plaidez en commission, le président de région note, et votre commune attend.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.regional_councillor" },
+			"unavailableReason": "Il faut siéger au conseil régional.",
+			"effects": [
+				{ "op": "addResource", "resource": "influence", "value": 2 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 1 }
+			]
+		},
+		{
+			"id": "mandate.region_transport",
+			"category": "mandate",
+			"label": "Siéger à la commission des transports",
+			"description": "Horaires des TER, matériel roulant et tarifs étudiants : la commission la plus ennuyeuse, et celle que les électeurs regardent le plus.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.regional_councillor" },
+			"unavailableReason": "Il faut siéger au conseil régional.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+				{ "op": "addStat", "stat": "player.stress", "value": 1 }
+			]
+		},
+		{
+			"id": "mandate.deputy_question",
+			"category": "mandate",
+			"label": "Poser une question au gouvernement",
+			"description": "Deux minutes à l’Assemblée le mardi, une question préparée pour les caméras et une réponse ministérielle lue sans lever les yeux.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.deputy" },
+			"unavailableReason": "Il faut siéger à l’Assemblée.",
+			"effects": [
+				{ "op": "addStat", "stat": "player.exposure", "value": 3 },
+				{ "op": "addResource", "resource": "influence", "value": 2 }
+			]
+		},
+		{
+			"id": "mandate.deputy_amendment",
+			"category": "mandate",
+			"label": "Déposer un amendement",
+			"description": "Une virgule déplacée dans un projet de loi, et une ligne dans votre bilan de mandat. Les lobbies, eux, avaient déjà rédigé l’exposé des motifs.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.deputy" },
+			"unavailableReason": "Il faut siéger à l’Assemblée.",
+			"effects": [
+				{ "op": "addResource", "resource": "influence", "value": 3 },
+				{ "op": "addSupport", "group": "support.business", "value": 1 },
+				{ "op": "addStat", "stat": "player.stress", "value": 1 }
+			]
+		},
+		{
+			"id": "mandate.deputy_district",
+			"category": "mandate",
+			"label": "Labourer sa circonscription",
+			"description": "Marchés, comices, kermesses et permanence du samedi : la circonscription se cultive comme un jardin, et elle se souvient des absents.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.deputy" },
+			"unavailableReason": "Il faut siéger à l’Assemblée.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+				{ "op": "addStat", "stat": "player.stress", "value": 1 }
+			]
+		},
+		{
+			"id": "mandate.deputy_reserve",
+			"category": "mandate",
+			"label": "Distribuer la réserve parlementaire",
+			"description": "Quelques milliers d’euros pour l’église qui prend l’eau et le club de foot qui perd ses buts. Une pratique tolérée jusqu’en 2017, et appréciée par les maires.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{ "op": "holdsMandate", "mandate": "mandate.deputy" },
+					{ "op": "lte", "stat": "calendar.year", "value": 2017 }
+				]
+			},
+			"unavailableReason": "Il faut siéger à l’Assemblée, avant la fin de la réserve parlementaire (2017).",
+			"effects": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+				{ "op": "addResource", "resource": "influence", "value": 2 },
+				{ "op": "addSupport", "group": "support.apparatus", "value": 1 }
+			]
+		},
+		{
+			"id": "mandate.senator_mayors",
+			"category": "mandate",
+			"label": "Recevoir les maires du département",
+			"description": "Un déjeuner au Sénat, un dossier de dotation et beaucoup d’écoute. Les grands électeurs ont la mémoire longue, et l’appétit aussi.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.senator" },
+			"unavailableReason": "Il faut siéger au Sénat.",
+			"effects": [
+				{ "op": "addResource", "resource": "influence", "value": 3 },
+				{ "op": "addSupport", "group": "support.apparatus", "value": 1 }
+			]
+		},
+		{
+			"id": "mandate.senator_report",
+			"category": "mandate",
+			"label": "Rédiger un rapport d’information",
+			"description": "Deux cents pages sur « l’avenir des territoires ruraux », trente auditions et une conférence de presse devant quatre journalistes. Le rapport sera cité, parfois lu.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.senator" },
+			"unavailableReason": "Il faut siéger au Sénat.",
+			"effects": [
+				{ "op": "addResource", "resource": "influence", "value": 4 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 1 }
+			]
+		},
+		{
+			"id": "activism.sunday_market",
+			"category": "activism",
+			"label": "Faire le marché du dimanche",
+			"description": "Une poignée de main au maraîcher, un tract au fromager et un débat sur la ligne de bus devant les poulets rôtis. La commune vous voit, et s’en souvient.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [],
+			"effects": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+				{ "op": "addStat", "stat": "player.stress", "value": -1 }
+			]
+		},
+		{
+			"id": "activism.agricultural_show",
+			"category": "activism",
+			"label": "Présider le comice agricole",
+			"description": "Le concours de la plus belle vache, un discours sous la tente et un verre de cidre à chaque stand. Le troisième trimestre seulement, et c’est déjà beaucoup.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "eq", "stat": "calendar.quarter", "value": 3 },
+			"unavailableReason": "Les comices agricoles se tiennent l’été (troisième trimestre).",
+			"effects": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 2 },
+				{ "op": "addResource", "resource": "influence", "value": 1 },
+				{ "op": "addStat", "stat": "player.stress", "value": 1 }
+			]
+		},
+		{
+			"id": "activism.football_club",
+			"category": "activism",
+			"label": "Soutenir le club de football local",
+			"description": "Un chèque pour les maillots, un coup d’envoi fictif et une photo dans le vestiaire. Les supporters votent aussi.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 10000 }],
+			"effects": [{ "op": "addSupport", "group": "support.working_class", "value": 2 }]
+		},
+		{
+			"id": "media.program_book",
+			"category": "media",
+			"label": "Écrire un livre-programme",
+			"description": "Deux cents pages écrites par un plume, relues par vous et dédicacées au salon du livre régional. Les ventes sont modestes ; la notoriété, moins.",
+			"timeCost": 40,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "gte", "stat": "resources.influence", "value": 30 },
+			"unavailableReason": "Il faut un peu de notoriété pour trouver un éditeur.",
+			"effects": [
+				{ "op": "addResource", "resource": "influence", "value": 5 },
+				{ "op": "addResourceRandom", "resource": "personalCashCents", "min": 50000, "max": 300000 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 2 },
+				{ "op": "addStat", "stat": "player.stress", "value": 2 }
+			]
+		},
+		{
+			"id": "media.tv_show",
+			"category": "media",
+			"label": "Participer à une émission de divertissement",
+			"description": "Un jeu télévisé, une chanson ratée et une recette de cuisine improvisée. Les sondages adorent, les éditorialistes un peu moins.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "gte", "stat": "resources.influence", "value": 20 },
+			"unavailableReason": "Il faut être assez connu pour être invité.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 2 },
+				{ "op": "addResourceRandom", "resource": "influence", "min": -2, "max": 4 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 4 }
+			]
+		},
+		{
+			"id": "personal.family_dinner",
+			"category": "personal",
+			"label": "Dîner en famille",
+			"description": "Un dimanche soir sans téléphone, ou presque. Les enfants racontent leur semaine ; vous apprenez des choses.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [],
+			"effects": [
+				{ "op": "addStat", "stat": "player.stress", "value": -3 },
+				{ "op": "familyAttitude", "value": 3 }
+			]
+		},
+		{
+			"id": "organization.fundraising_dinner",
+			"category": "political_finance",
+			"label": "Organiser un dîner de levée de fonds",
+			"description": "Cent couverts à 150 €, un traiteur qui économise sur le fromage et un discours qui insiste sur « l’effort de chacun ». Les chèques suivent le dessert.",
+			"timeCost": 30,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 20000 }],
+			"requires": {
+				"op": "any",
+				"conditions": [
+					{ "op": "gte", "stat": "player.activists", "value": 25 },
+					{ "op": "gte", "stat": "player.staff", "value": 1 }
+				]
+			},
+			"unavailableReason": "Il faut un comité local (25 militants) ou un collaborateur pour organiser cela.",
+			"scale": { "family": "family.fundraising", "format": "sustained" },
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "politicalBudgetCents",
+					"min": 60000,
+					"max": 150000
+				},
+				{ "op": "addStat", "stat": "player.stress", "value": 2 },
+				{ "op": "addSupport", "group": "support.business", "value": 1 }
+			]
+		},
+		{
+			"id": "organization.fundraising_gala",
+			"category": "political_finance",
+			"label": "Organiser une grande soirée de donateurs",
+			"description": "Un hôtel particulier, un quatuor à cordes et des donateurs qui comptent bien qu’on se souvienne de leur nom. Le trésorier compte, lui, jusqu’à tard dans la nuit.",
+			"timeCost": 40,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 100000 }],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{ "op": "gte", "stat": "player.activists", "value": 100 },
+					{ "op": "gte", "stat": "player.staff", "value": 1 }
+				]
+			},
+			"unavailableReason": "Il faut une section implantée (100 militants) et au moins un collaborateur pour organiser cela.",
+			"scale": { "family": "family.fundraising", "format": "major" },
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "politicalBudgetCents",
+					"min": 250000,
+					"max": 600000
+				},
+				{ "op": "addStat", "stat": "player.stress", "value": 3 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 3 },
+				{ "op": "addSupport", "group": "support.business", "value": 2 }
+			]
+		},
+		{
+			"id": "activism.congress_hall",
+			"category": "activism",
+			"label": "Remplir une salle de congrès",
+			"description": "Mille cinq cents sièges, des drapeaux distribués à l’entrée et une sono qui, pour une fois, fonctionne. Les cars de militants arrivent à l’heure, presque.",
+			"timeCost": 40,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 150000 }],
+			"requires": {
+				"op": "any",
+				"conditions": [
+					{ "op": "gte", "stat": "player.activists", "value": 25 },
+					{ "op": "gte", "stat": "player.staff", "value": 1 }
+				]
+			},
+			"unavailableReason": "Il faut un comité local (25 militants) ou un collaborateur pour organiser cela.",
+			"scale": { "family": "family.public_meeting", "format": "sustained" },
+			"effects": [
+				{ "op": "addResourceRandom", "resource": "influence", "min": 10, "max": 20 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 4 },
+				{ "op": "addStat", "stat": "player.stress", "value": 3 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 }
+			]
+		},
+		{
+			"id": "activism.zenith",
+			"category": "activism",
+			"label": "Remplir un Zénith",
+			"description": "Six mille personnes, un écran géant, une entrée sur une musique trop forte et des journalistes qui comptent les rangées vides. Il n’y en a pas : vous avez affrété des cars.",
+			"timeCost": 50,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 600000 }],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{ "op": "gte", "stat": "player.activists", "value": 100 },
+					{ "op": "gte", "stat": "player.staff", "value": 1 }
+				]
+			},
+			"unavailableReason": "Il faut une section implantée (100 militants) et au moins un collaborateur pour organiser cela.",
+			"scale": { "family": "family.public_meeting", "format": "major" },
+			"effects": [
+				{ "op": "addResourceRandom", "resource": "influence", "min": 25, "max": 40 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 8 },
+				{ "op": "addStat", "stat": "player.stress", "value": 5 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 }
+			]
+		},
+		{
+			"id": "wealth.patronage",
+			"category": "wealth",
+			"label": "Financer un mécénat culturel",
+			"description": "Un festival de musique baroque, une restauration de chapelle ou une exposition au musée municipal : votre nom en petits caractères sur l’affiche, et en grand dans les remerciements.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "personalCashCents", "amount": 1000000 }],
+			"effects": [
+				{ "op": "addResource", "resource": "influence", "value": 4 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.wealthy", "value": 1 }
+			]
+		},
+		{
+			"id": "personal.retire",
+			"category": "personal",
+			"label": "Se retirer de la vie politique",
+			"description": "Une dernière conférence de presse, quelques larmes contenues et la promesse de « rester disponible ». La carrière s’achève à la fin du trimestre : tous les mandats sont rendus et le bilan s’ouvre. Irréversible.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [],
+			"effects": [{ "op": "retire" }]
+		},
+		{
+			"id": "matignon.general_policy",
+			"category": "mandate",
+			"label": "Prononcer le discours de politique générale",
+			"description": "Une heure à la tribune de l’Assemblée, des chiffres ronds, des réformes « sans tabou » et une ovation calibrée par les questeurs. On ne le fait qu’une fois.",
+			"timeCost": 30,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{ "op": "holdsMandate", "mandate": "mandate.prime_minister" },
+					{ "op": "eq", "stat": "player.pmTurns", "value": 0 }
+				]
+			},
+			"unavailableReason": "Il faut venir d’être nommé à Matignon.",
+			"effects": [
+				{ "op": "addIndicator", "indicator": "stability", "value": 5 },
+				{ "op": "addResource", "resource": "influence", "value": 5 },
+				{ "op": "addSupport", "group": "support.apparatus", "value": 3 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 4 }
+			]
+		},
+		{
+			"id": "matignon.article_49_3",
+			"category": "mandate",
+			"label": "Engager la responsabilité du gouvernement (49.3)",
+			"description": "Le texte passe sans vote, l’opposition dépose sa motion de censure dans l’heure. Efficace, impopulaire et rarement oublié.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.prime_minister" },
+			"unavailableReason": "Il faut être à Matignon.",
+			"effects": [
+				{ "op": "addIndicator", "indicator": "stability", "value": -6 },
+				{ "op": "addIndicator", "indicator": "economy", "value": 1 },
+				{ "op": "addSupport", "group": "support.apparatus", "value": 2 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": -2 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 4 }
+			]
+		},
+		{
+			"id": "matignon.reshuffle",
+			"category": "mandate",
+			"label": "Remanier le gouvernement",
+			"description": "Trois sortants, quatre entrants, un ministère renommé et une photo sur le perron. La majorité se ressoude, les remerciés écrivent leurs mémoires.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.prime_minister" },
+			"unavailableReason": "Il faut être à Matignon.",
+			"effects": [
+				{ "op": "addIndicator", "indicator": "stability", "value": 4 },
+				{ "op": "addSupport", "group": "support.apparatus", "value": 2 },
+				{ "op": "addResource", "resource": "influence", "value": -2 },
+				{ "op": "addStat", "stat": "player.stress", "value": 2 }
+			]
+		},
+		{
+			"id": "matignon.arbitrate",
+			"category": "mandate",
+			"label": "Arbitrer entre deux ministres",
+			"description": "Bercy veut économiser, l’Éducation veut des postes : une réunion interministérielle, un « bleu » de Matignon et deux ministres qui boudent en sortant.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.prime_minister" },
+			"unavailableReason": "Il faut être à Matignon.",
+			"effects": [
+				{ "op": "addResource", "resource": "influence", "value": 3 },
+				{ "op": "addIndicator", "indicator": "stability", "value": 1 },
+				{ "op": "addStat", "stat": "player.stress", "value": 2 }
+			]
+		},
+		{
+			"id": "matignon.social_partners",
+			"category": "mandate",
+			"label": "Recevoir les partenaires sociaux",
+			"description": "Le grand salon, les croissants, huit organisations et un relevé de décisions que chacune interprétera à sa façon.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.prime_minister" },
+			"unavailableReason": "Il faut être à Matignon.",
+			"effects": [
+				{ "op": "addIndicator", "indicator": "socialClimate", "value": 3 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+				{ "op": "addSupport", "group": "support.business", "value": -1 }
+			]
+		},
+		{
+			"id": "matignon.resign",
+			"category": "mandate",
+			"label": "Remettre sa démission",
+			"description": "Une lettre au président, une passation de pouvoirs dans la cour de Matignon et un dernier discours sur « le sens de l’État ».",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.prime_minister" },
+			"unavailableReason": "Il faut être à Matignon.",
+			"effects": [
+				{ "op": "endMandate", "mandate": "mandate.prime_minister" },
+				{ "op": "addStat", "stat": "player.stress", "value": -5 },
+				{ "op": "addResource", "resource": "influence", "value": 2 }
+			]
+		},
+		{
+			"id": "government.secretary_tv_tour",
+			"category": "mandate",
+			"label": "Faire la tournée des plateaux",
+			"description": "Matinale, chaîne d’info, émission du dimanche : le secrétaire d’État explique, réexplique et finit par croire à ce qu’il explique.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.secretary_of_state" },
+			"unavailableReason": "Il faut être secrétaire d’État.",
+			"effects": [
+				{ "op": "addStat", "stat": "player.exposure", "value": 4 },
+				{ "op": "addResource", "resource": "influence", "value": 2 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 }
+			]
+		},
+		{
+			"id": "government.secretary_inaugurate",
+			"category": "mandate",
+			"label": "Inaugurer à la place du ministre",
+			"description": "Un ruban, des ciseaux trop petits et un discours écrit pour quelqu’un d’autre. La presse locale, elle, est ravie.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsMandate", "mandate": "mandate.secretary_of_state" },
+			"unavailableReason": "Il faut être secrétaire d’État.",
+			"effects": [
+				{ "op": "addResource", "resource": "influence", "value": 2 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+				{ "op": "addStat", "stat": "player.stress", "value": -1 }
+			]
+		},
+		{
+			"id": "government.interior_security_plan",
+			"category": "mandate",
+			"label": "Annoncer un plan de sécurité",
+			"description": "Trois mille policiers, dont mille cinq cents déjà promis par vos prédécesseurs. Les électeurs inquiets applaudissent, les autres comptent.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.interior" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.wealthy", "value": 2 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.activists", "value": -1 },
+				{ "op": "addIndicator", "indicator": "socialClimate", "value": -1 }
+			]
+		},
+		{
+			"id": "government.interior_protest",
+			"category": "mandate",
+			"label": "Encadrer une manifestation",
+			"description": "Une préfecture en alerte, des consignes de fermeté « proportionnée » et une nuit à suivre les écrans. Tout repose sur le dernier carrefour.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.interior" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addResourceRandom", "resource": "influence", "min": -3, "max": 4 },
+				{ "op": "addIndicator", "indicator": "stability", "value": 1 },
+				{ "op": "addStat", "stat": "player.stress", "value": 3 }
+			]
+		},
+		{
+			"id": "government.justice_circular",
+			"category": "mandate",
+			"label": "Publier une circulaire de politique pénale",
+			"description": "Quatre pages aux procureurs, une ligne reprise au journal télévisé. Les magistrats grincent, les électeurs retiennent la ligne.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.justice" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.activists", "value": -1 },
+				{ "op": "addResource", "resource": "influence", "value": 2 }
+			]
+		},
+		{
+			"id": "government.justice_prison_visit",
+			"category": "mandate",
+			"label": "Visiter une prison",
+			"description": "Cellules surpeuplées, gardiens épuisés et un photographe qui cherche le bon angle. Vous promettez des places ; les syndicats, des moyens.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.justice" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 2 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 2 },
+				{ "op": "addStat", "stat": "player.stress", "value": 1 }
+			]
+		},
+		{
+			"id": "government.economy_budget",
+			"category": "mandate",
+			"label": "Présenter le budget",
+			"description": "Le projet de loi de finances, ses hypothèses de croissance optimistes et son « effort partagé ». Les marchés lisent les annexes, les Français les gros titres.",
+			"timeCost": 25,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.economy" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addIndicator", "indicator": "economy", "value": 1 },
+				{ "op": "addSupport", "group": "support.business", "value": 3 },
+				{ "op": "addSupport", "group": "support.working_class", "value": -2 },
+				{ "op": "addResource", "resource": "influence", "value": 3 }
+			]
+		},
+		{
+			"id": "government.economy_factory",
+			"category": "mandate",
+			"label": "Négocier la reprise d’une usine",
+			"description": "Un repreneur introuvable, puis trouvé, puis hésitant. Vous promettez des aides et une visite ; les salariés, eux, promettent de se souvenir.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.economy" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addResourceRandom", "resource": "influence", "min": -2, "max": 5 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 3 },
+				{ "op": "addStat", "stat": "player.stress", "value": 2 }
+			]
+		},
+		{
+			"id": "government.labour_conference",
+			"category": "mandate",
+			"label": "Ouvrir une conférence sociale",
+			"description": "Les partenaires sociaux autour d’une table, la photo de famille et un communiqué commun aussi vague qu’unanime.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.labour" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addIndicator", "indicator": "socialClimate", "value": 2 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.business", "value": -1 }
+			]
+		},
+		{
+			"id": "government.labour_unemployment",
+			"category": "mandate",
+			"label": "Réformer l’assurance chômage",
+			"description": "Durée d’indemnisation, conditions d’accès et une formule sur « le retour à l’activité ». Le patronat salue, la rue se prépare.",
+			"timeCost": 25,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.labour" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addIndicator", "indicator": "economy", "value": 1 },
+				{ "op": "addIndicator", "indicator": "socialClimate", "value": -3 },
+				{ "op": "addSupport", "group": "support.business", "value": 3 },
+				{ "op": "addSupport", "group": "support.working_class", "value": -3 }
+			]
+		},
+		{
+			"id": "government.education_rhythms",
+			"category": "mandate",
+			"label": "Annoncer une réforme des rythmes scolaires",
+			"description": "Le mercredi matin change de camp, les parents d’élèves aussi. Chaque ministre a sa réforme ; voici la vôtre.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.education" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": -1 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 1 },
+				{ "op": "addResource", "resource": "influence", "value": 3 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 2 }
+			]
+		},
+		{
+			"id": "government.education_unions",
+			"category": "mandate",
+			"label": "Recevoir les syndicats enseignants",
+			"description": "Deux heures de réunion, trois revendications, un relevé de conclusions que chacun lira à sa façon.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.education" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addIndicator", "indicator": "socialClimate", "value": 2 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+				{ "op": "addStat", "stat": "player.stress", "value": 1 }
+			]
+		},
+		{
+			"id": "government.health_prevention",
+			"category": "mandate",
+			"label": "Lancer une campagne de prévention",
+			"description": "Une affiche, un slogan, un hashtag et une agence de communication qui facture le tout. Les médecins approuvent, les fumeurs aussi, distraitement.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 20000 }],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.health" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 1 }
+			]
+		},
+		{
+			"id": "government.health_maternity",
+			"category": "mandate",
+			"label": "Sauver une maternité menacée",
+			"description": "Le rapport recommandait la fermeture, le maire la grève de la faim. Vous trouvez des crédits ; la Cour des comptes trouvera la ligne.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.health" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 3 },
+				{ "op": "addIndicator", "indicator": "economy", "value": -1 },
+				{ "op": "addResource", "resource": "influence", "value": 2 }
+			]
+		},
+		{
+			"id": "government.ecology_climate",
+			"category": "mandate",
+			"label": "Signer un accord climat",
+			"description": "Un sommet, une nuit de négociations et un texte « historique » qui engage surtout les gouvernements suivants.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.ecology" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.business", "value": -2 },
+				{ "op": "addResource", "resource": "influence", "value": 4 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 2 }
+			]
+		},
+		{
+			"id": "government.ecology_windfarm",
+			"category": "mandate",
+			"label": "Inaugurer un parc éolien",
+			"description": "Vingt mâts, un vent capricieux et une association de riverains qui a apporté ses banderoles.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.ecology" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+				{ "op": "addSupport", "group": "support.working_class", "value": -1 },
+				{ "op": "addResource", "resource": "influence", "value": 2 }
+			]
+		},
+		{
+			"id": "government.agriculture_salon",
+			"category": "mandate",
+			"label": "Arpenter le Salon de l’agriculture",
+			"description": "Huit heures debout, quarante poignées de main par hectare et un fromage par stand. Le premier trimestre est le seul où l’on vous attend.",
+			"timeCost": 30,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{ "op": "holdsPortfolio", "portfolio": "portfolio.agriculture" },
+					{ "op": "eq", "stat": "calendar.quarter", "value": 1 }
+				]
+			},
+			"unavailableReason": "Il faut tenir le portefeuille de l’Agriculture, au premier trimestre.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 3 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 },
+				{ "op": "addStat", "stat": "player.stress", "value": 2 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 3 }
+			]
+		},
+		{
+			"id": "government.agriculture_subsidies",
+			"category": "mandate",
+			"label": "Négocier les aides avec les syndicats agricoles",
+			"description": "Une nuit rue de Varenne, un tracteur devant la grille et une enveloppe qui grossit à chaque heure de négociation.",
+			"timeCost": 20,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "holdsPortfolio", "portfolio": "portfolio.agriculture" },
+			"unavailableReason": "Il faut tenir ce portefeuille.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.working_class", "value": 2 },
+				{ "op": "addIndicator", "indicator": "economy", "value": -1 },
+				{ "op": "addIndicator", "indicator": "socialClimate", "value": 1 }
+			]
+		},
 		{
 			"id": "activism.leaflets",
 			"category": "activism",
@@ -221,6 +1089,7 @@
 				"value": 10
 			},
 			"unavailableReason": "Il faut au moins 10 points d’influence pour espérer remplir une salle.",
+			"scale": { "family": "family.public_meeting", "format": "modest" },
 			"effects": [
 				{
 					"op": "addResourceRandom",
@@ -269,6 +1138,7 @@
 				"value": 5
 			},
 			"unavailableReason": "Il faut au moins 5 points d’influence pour que quelqu’un se déplace.",
+			"scale": { "family": "family.fundraising", "format": "modest" },
 			"effects": [
 				{
 					"op": "addResourceRandom",
@@ -347,15 +1217,36 @@
 			"label": "Accepter des missions en free-lance",
 			"description": "Il faut bien payer le loyer : quelques missions de conseil, réalisées entre deux réunions.",
 			"timeCost": 30,
-			"maxPerTurn": 2,
+			"maxPerTurn": 1,
 			"costs": [],
-			"effects": [
-				{
-					"op": "addResource",
-					"resource": "personalCashCents",
-					"value": 80000
-				}
-			]
+			"effects": [{ "op": "addResource", "resource": "personalCashCents", "value": 80000 }],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "not",
+						"condition": {
+							"op": "any",
+							"conditions": [
+								{ "op": "holdsMandate", "mandate": "mandate.secretary_of_state" },
+								{ "op": "holdsMandate", "mandate": "mandate.minister" },
+								{ "op": "holdsMandate", "mandate": "mandate.prime_minister" }
+							]
+						}
+					},
+					{
+						"op": "not",
+						"condition": {
+							"op": "any",
+							"conditions": [
+								{ "op": "holdsMandate", "mandate": "mandate.deputy" },
+								{ "op": "holdsMandate", "mandate": "mandate.senator" }
+							]
+						}
+					}
+				]
+			},
+			"unavailableReason": "Une charge nationale ou gouvernementale ne laisse plus place aux missions en free-lance."
 		},
 		{
 			"id": "personal.donate",
@@ -606,6 +1497,137 @@
 			]
 		},
 		{
+			"id": "party.motion_loyal",
+			"category": "party",
+			"label": "Soutenir la motion de la direction",
+			"description": "Signer la motion du premier secrétaire, applaudir aux bons moments et voter comme il faut en commission des résolutions. La fidélité se remarque, surtout quand elle est rare.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "gte", "stat": "player.partyRank", "value": 1 },
+			"unavailableReason": "Il faut être membre d’un parti.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.apparatus", "value": 3 },
+				{ "op": "addSupport", "group": "support.activists", "value": -1 }
+			]
+		},
+		{
+			"id": "party.motion_dissident",
+			"category": "party",
+			"label": "Déposer une motion dissidente",
+			"description": "Un texte au vitriol, trente signatures arrachées en section et une tribune dans la presse militante. La base adore ; le bureau national, beaucoup moins.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "gte", "stat": "player.partyRank", "value": 1 },
+			"unavailableReason": "Il faut être membre d’un parti.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.apparatus", "value": -3 },
+				{ "op": "addSupport", "group": "support.activists", "value": 3 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 2 }
+			]
+		},
+		{
+			"id": "party.bid_unity",
+			"category": "party",
+			"label": "Briguer la direction : rassembler",
+			"description": "Une candidature au congrès sur la ligne du rassemblement : toutes les sensibilités, toutes les fédérations, et des sourires pour chacune. Votre popularité y pèse.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{ "op": "eq", "stat": "player.partyRank", "value": 2 },
+					{ "op": "eq", "stat": "player.partyBidOpen", "value": 1 }
+				]
+			},
+			"unavailableReason": "Il faut être cadre du parti, avant un congrès où une candidature est possible.",
+			"effects": [{ "op": "partyBid", "posture": "unity" }]
+		},
+		{
+			"id": "party.bid_apparatus",
+			"category": "party",
+			"label": "Briguer la direction : tenir l’appareil",
+			"description": "Une candidature au congrès adossée aux secrétaires fédéraux et aux mandats en commission. Votre appui dans l’appareil y pèse.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{ "op": "eq", "stat": "player.partyRank", "value": 2 },
+					{ "op": "eq", "stat": "player.partyBidOpen", "value": 1 }
+				]
+			},
+			"unavailableReason": "Il faut être cadre du parti, avant un congrès où une candidature est possible.",
+			"effects": [{ "op": "partyBid", "posture": "apparatus" }]
+		},
+		{
+			"id": "party.bid_rupture",
+			"category": "party",
+			"label": "Briguer la direction : la rupture",
+			"description": "Une candidature au congrès contre la direction sortante, portée par la base. Vos militants y pèsent ; une défaite coûte plus cher.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{ "op": "eq", "stat": "player.partyRank", "value": 2 },
+					{ "op": "eq", "stat": "player.partyBidOpen", "value": 1 }
+				]
+			},
+			"unavailableReason": "Il faut être cadre du parti, avant un congrès où une candidature est possible.",
+			"effects": [
+				{ "op": "partyBid", "posture": "rupture" },
+				{ "op": "addStat", "stat": "player.exposure", "value": 2 }
+			]
+		},
+		{
+			"id": "party.rally",
+			"category": "party",
+			"label": "Solliciter des ralliements",
+			"description": "Des dîners en tête-à-tête avec les responsables de fédération, une vice-présidence promise ici, une place sur une liste là. Chaque ralliement compte au congrès.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 20000 }],
+			"requires": { "op": "eq", "stat": "player.partyBid", "value": 1 },
+			"unavailableReason": "Il faut avoir déclaré sa candidature à la direction.",
+			"effects": [{ "op": "rallySupport", "value": 1 }]
+		},
+		{
+			"id": "party.arbitrate",
+			"category": "party",
+			"label": "Arbitrer les investitures",
+			"description": "Une nuit au siège, des fédérations à départager et des ambitions à décevoir. Le parti sort de la réunion plus discipliné ; vous, plus fatigué.",
+			"timeCost": 15,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "eq", "stat": "player.partyRank", "value": 3 },
+			"unavailableReason": "Il faut diriger le parti.",
+			"effects": [
+				{ "op": "addResource", "resource": "influence", "value": 3 },
+				{ "op": "addSupport", "group": "support.apparatus", "value": 2 },
+				{ "op": "addStat", "stat": "player.stress", "value": 2 }
+			]
+		},
+		{
+			"id": "party.discipline",
+			"category": "party",
+			"label": "Recadrer un cadre frondeur",
+			"description": "Un entretien à huis clos, une menace de non-investiture et une poignée de main pour les photographes. L’appareil apprécie, la base un peu moins.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "eq", "stat": "player.partyRank", "value": 3 },
+			"unavailableReason": "Il faut diriger le parti.",
+			"effects": [
+				{ "op": "addSupport", "group": "support.apparatus", "value": 3 },
+				{ "op": "addSupport", "group": "support.activists", "value": -2 }
+			]
+		},
+		{
 			"id": "party.leave",
 			"category": "party",
 			"label": "Rendre sa carte",
@@ -665,8 +1687,8 @@
 		{
 			"id": "campaign.declare",
 			"category": "campaign",
-			"label": "Déclarer sa candidature",
-			"description": "Une conférence de presse, un slogan testé auprès de trois cousins et un dépôt de candidature en préfecture. Plus tôt on se déclare, plus longtemps on est exposé.",
+			"label": "Conduire sa liste ou se présenter",
+			"description": "Une conférence de presse, un slogan testé auprès de trois cousins et un dépôt en préfecture : tête de liste aux municipales et aux régionales, candidat aux législatives et aux sénatoriales. Plus tôt on se déclare, plus longtemps on est exposé.",
 			"timeCost": 10,
 			"maxPerTurn": 1,
 			"costs": [
@@ -685,6 +1707,30 @@
 					"value": 1
 				}
 			],
+			"target": "ballot"
+		},
+		{
+			"id": "campaign.join_list",
+			"category": "campaign",
+			"label": "Demander une place sur une liste",
+			"description": "Un café avec la tête de liste de votre parti, ou de la liste la plus solide si vous n’en avez pas. Votre rang dépend de l’appareil, de votre influence et de votre popularité : assez haut, vous êtes élu sans porter la liste.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [],
+			"effects": [{ "op": "declareCandidacy", "role": "colistier" }],
+			"target": "ballot"
+		},
+		{
+			"id": "campaign.request_investiture",
+			"category": "campaign",
+			"label": "Demander l’investiture du parti",
+			"description": "Un dossier pour la commission d’investiture, trois déjeuners avec des secrétaires fédéraux et une photo avec le premier secrétaire. Aux législatives et aux sénatoriales, l’étiquette se mérite : accordée, elle vaut candidature ; refusée, il faudra choisir entre la discipline et la dissidence.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [],
+			"requires": { "op": "gte", "stat": "player.affiliated", "value": 1 },
+			"unavailableReason": "Il faut être membre d’un parti.",
+			"effects": [{ "op": "requestInvestiture" }],
 			"target": "ballot"
 		},
 		{
@@ -1160,6 +2206,17 @@
 			"target": "candidate"
 		},
 		{
+			"id": "staff.hire_counter",
+			"category": "organisation",
+			"label": "Accepter sa contre-proposition",
+			"description": "Il avait dit non, puis donné son prix. Le voici accepté : pas de prime, pas de négociation, juste un contrat signé dans la foulée.",
+			"timeCost": 5,
+			"maxPerTurn": 2,
+			"costs": [],
+			"effects": [{ "op": "hireStaff", "offer": "counter" }],
+			"target": "candidate"
+		},
+		{
 			"id": "staff.dismiss",
 			"category": "organisation",
 			"label": "Se séparer d’un collaborateur",
@@ -1203,21 +2260,26 @@
 			"maxPerTurn": 1,
 			"costs": [],
 			"requires": {
-				"op": "engagement",
-				"engagement": "engagement.union"
+				"op": "all",
+				"conditions": [
+					{ "op": "engagement", "engagement": "engagement.union" },
+					{
+						"op": "not",
+						"condition": {
+							"op": "any",
+							"conditions": [
+								{ "op": "holdsMandate", "mandate": "mandate.secretary_of_state" },
+								{ "op": "holdsMandate", "mandate": "mandate.minister" },
+								{ "op": "holdsMandate", "mandate": "mandate.prime_minister" }
+							]
+						}
+					}
+				]
 			},
-			"unavailableReason": "Réservé à qui vient du syndicalisme.",
+			"unavailableReason": "Réservé à qui vient du syndicalisme ; jamais au gouvernement.",
 			"effects": [
-				{
-					"op": "addResource",
-					"resource": "personalCashCents",
-					"value": 70000
-				},
-				{
-					"op": "addSupport",
-					"group": "support.working_class",
-					"value": 1
-				}
+				{ "op": "addResource", "resource": "personalCashCents", "value": 70000 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 1 }
 			]
 		},
 		{
@@ -1260,21 +2322,26 @@
 			"maxPerTurn": 1,
 			"costs": [],
 			"requires": {
-				"op": "engagement",
-				"engagement": "engagement.association"
+				"op": "all",
+				"conditions": [
+					{ "op": "engagement", "engagement": "engagement.association" },
+					{
+						"op": "not",
+						"condition": {
+							"op": "any",
+							"conditions": [
+								{ "op": "holdsMandate", "mandate": "mandate.secretary_of_state" },
+								{ "op": "holdsMandate", "mandate": "mandate.minister" },
+								{ "op": "holdsMandate", "mandate": "mandate.prime_minister" }
+							]
+						}
+					}
+				]
 			},
-			"unavailableReason": "Réservé à qui vient de la vie associative.",
+			"unavailableReason": "Réservé à qui vient de la vie associative ; jamais au gouvernement.",
 			"effects": [
-				{
-					"op": "addResource",
-					"resource": "personalCashCents",
-					"value": 60000
-				},
-				{
-					"op": "addSupport",
-					"group": "support.middle_class",
-					"value": 1
-				}
+				{ "op": "addResource", "resource": "personalCashCents", "value": 60000 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 }
 			]
 		},
 		{
@@ -1322,21 +2389,27 @@
 			"maxPerTurn": 1,
 			"costs": [],
 			"requires": {
-				"op": "engagement",
-				"engagement": "engagement.student"
+				"op": "all",
+				"conditions": [
+					{ "op": "engagement", "engagement": "engagement.student" },
+					{ "op": "lte", "stat": "player.age", "value": 30 },
+					{
+						"op": "not",
+						"condition": {
+							"op": "any",
+							"conditions": [
+								{ "op": "holdsMandate", "mandate": "mandate.secretary_of_state" },
+								{ "op": "holdsMandate", "mandate": "mandate.minister" },
+								{ "op": "holdsMandate", "mandate": "mandate.prime_minister" }
+							]
+						}
+					}
+				]
 			},
-			"unavailableReason": "Réservé à qui vient du militantisme étudiant.",
+			"unavailableReason": "Réservé à qui vient du militantisme étudiant ; les petits boulots s’arrêtent à trente ans, et jamais au gouvernement.",
 			"effects": [
-				{
-					"op": "addResource",
-					"resource": "personalCashCents",
-					"value": 45000
-				},
-				{
-					"op": "addStat",
-					"stat": "player.stress",
-					"value": 2
-				}
+				{ "op": "addResource", "resource": "personalCashCents", "value": 45000 },
+				{ "op": "addStat", "stat": "player.stress", "value": 2 }
 			]
 		},
 		{
@@ -1379,21 +2452,26 @@
 			"maxPerTurn": 1,
 			"costs": [],
 			"requires": {
-				"op": "engagement",
-				"engagement": "engagement.public_service"
+				"op": "all",
+				"conditions": [
+					{ "op": "engagement", "engagement": "engagement.public_service" },
+					{
+						"op": "not",
+						"condition": {
+							"op": "any",
+							"conditions": [
+								{ "op": "holdsMandate", "mandate": "mandate.secretary_of_state" },
+								{ "op": "holdsMandate", "mandate": "mandate.minister" },
+								{ "op": "holdsMandate", "mandate": "mandate.prime_minister" }
+							]
+						}
+					}
+				]
 			},
-			"unavailableReason": "Réservé à qui vient du service public.",
+			"unavailableReason": "Réservé à qui vient du service public ; jamais au gouvernement.",
 			"effects": [
-				{
-					"op": "addResource",
-					"resource": "personalCashCents",
-					"value": 80000
-				},
-				{
-					"op": "addSupport",
-					"group": "support.apparatus",
-					"value": 1
-				}
+				{ "op": "addResource", "resource": "personalCashCents", "value": 80000 },
+				{ "op": "addSupport", "group": "support.apparatus", "value": 1 }
 			]
 		},
 		{
@@ -1436,22 +2514,26 @@
 			"maxPerTurn": 1,
 			"costs": [],
 			"requires": {
-				"op": "engagement",
-				"engagement": "engagement.business"
+				"op": "all",
+				"conditions": [
+					{ "op": "engagement", "engagement": "engagement.business" },
+					{
+						"op": "not",
+						"condition": {
+							"op": "any",
+							"conditions": [
+								{ "op": "holdsMandate", "mandate": "mandate.secretary_of_state" },
+								{ "op": "holdsMandate", "mandate": "mandate.minister" },
+								{ "op": "holdsMandate", "mandate": "mandate.prime_minister" }
+							]
+						}
+					}
+				]
 			},
-			"unavailableReason": "Réservé à qui vient de l’entreprise.",
+			"unavailableReason": "Réservé à qui vient de l’entreprise ; jamais au gouvernement.",
 			"effects": [
-				{
-					"op": "addResourceRandom",
-					"resource": "personalCashCents",
-					"min": 80000,
-					"max": 180000
-				},
-				{
-					"op": "addStat",
-					"stat": "player.stress",
-					"value": 2
-				}
+				{ "op": "addResourceRandom", "resource": "personalCashCents", "min": 80000, "max": 180000 },
+				{ "op": "addStat", "stat": "player.stress", "value": 2 }
 			]
 		},
 		{
@@ -1489,21 +2571,26 @@
 			"maxPerTurn": 1,
 			"costs": [],
 			"requires": {
-				"op": "engagement",
-				"engagement": "engagement.press"
+				"op": "all",
+				"conditions": [
+					{ "op": "engagement", "engagement": "engagement.press" },
+					{
+						"op": "not",
+						"condition": {
+							"op": "any",
+							"conditions": [
+								{ "op": "holdsMandate", "mandate": "mandate.secretary_of_state" },
+								{ "op": "holdsMandate", "mandate": "mandate.minister" },
+								{ "op": "holdsMandate", "mandate": "mandate.prime_minister" }
+							]
+						}
+					}
+				]
 			},
-			"unavailableReason": "Réservé à qui vient de la presse locale.",
+			"unavailableReason": "Réservé à qui vient de la presse locale ; jamais au gouvernement.",
 			"effects": [
-				{
-					"op": "addResource",
-					"resource": "personalCashCents",
-					"value": 55000
-				},
-				{
-					"op": "addResource",
-					"resource": "influence",
-					"value": 1
-				}
+				{ "op": "addResource", "resource": "personalCashCents", "value": 55000 },
+				{ "op": "addResource", "resource": "influence", "value": 1 }
 			]
 		},
 		{

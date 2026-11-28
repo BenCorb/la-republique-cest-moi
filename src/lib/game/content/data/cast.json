@@ -78,7 +78,7 @@
 		{
 			"id": "cast.bernard_lagarde",
 			"name": "Bernard Lagarde, promoteur immobilier",
-			"tags": ["business", "donor"],
+			"tags": ["business", "donor", "developer"],
 			"age": 58,
 			"renewal": {
 				"epithet": "dans la promotion immobilière"

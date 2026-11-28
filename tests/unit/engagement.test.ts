@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadContent } from '../../src/lib/game/content/load.ts';
-import { creationOptions, projectView } from '../../src/lib/game/app/view-model.ts';
+import { creationOptions, engagementOf, projectView } from '../../src/lib/game/app/view-model.ts';
 import {
 	checkInvariants,
 	commitTurn,
@@ -23,8 +23,7 @@ const TERRAINS = [
 /** Actions ouvertes par un terrain. */
 function ownActions(engagement: string): string[] {
 	return content.actionIds.filter((id) => {
-		const requires = content.actions[id]?.requires;
-		return requires?.op === 'engagement' && requires.engagement === engagement;
+		return engagementOf(content.actions[id]?.requires) === engagement;
 	});
 }
 

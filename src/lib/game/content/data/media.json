@@ -339,6 +339,78 @@
 	],
 	"headlines": [
 		{
+			"id": "headline.interview_dinner_table",
+			"topic": "interview",
+			"tone": "neutral",
+			"text": "Entretien : « Je parle de la France comme on en parle à table »"
+		},
+		{
+			"id": "headline.interview_long_term",
+			"topic": "interview",
+			"tone": "neutral",
+			"text": "Entretien : « Je ne raisonne pas en mandats, mais en décennies »"
+		},
+		{
+			"id": "headline.interview_no_comment",
+			"topic": "interview",
+			"tone": "neutral",
+			"text": "Entretien : quarante minutes, trois idées et un « sans commentaire »"
+		},
+		{
+			"id": "headline.interview_childhood",
+			"topic": "interview",
+			"tone": "neutral",
+			"text": "Entretien : de son enfance à son ambition, « un fil continu »"
+		},
+		{
+			"id": "headline.interview_method",
+			"topic": "interview",
+			"tone": "neutral",
+			"text": "Entretien : « Ma méthode ? Écouter, puis décider, puis réécouter »"
+		},
+		{
+			"id": "headline.interview_doubts",
+			"topic": "interview",
+			"tone": "neutral",
+			"text": "Entretien : « Le doute est une force, à condition de ne pas l’avoir trop souvent »"
+		},
+		{
+			"id": "headline.interview_candid",
+			"topic": "interview",
+			"tone": "favorable",
+			"text": "Entretien : une sincérité qui tranche avec les éléments de langage"
+		},
+		{
+			"id": "headline.interview_ideas",
+			"topic": "interview",
+			"tone": "favorable",
+			"text": "Grand entretien : des idées, enfin, et même des chiffres"
+		},
+		{
+			"id": "headline.interview_rising",
+			"topic": "interview",
+			"tone": "favorable",
+			"text": "Entretien : la confirmation d’une ambition qui monte"
+		},
+		{
+			"id": "headline.interview_slogans",
+			"topic": "interview",
+			"tone": "critical",
+			"text": "Entretien : des slogans en guise de réponses"
+		},
+		{
+			"id": "headline.interview_contradiction",
+			"topic": "interview",
+			"tone": "critical",
+			"text": "Entretien : trois contradictions en vingt minutes, un record de la saison"
+		},
+		{
+			"id": "headline.interview_dodges",
+			"topic": "interview",
+			"tone": "critical",
+			"text": "Entretien : chaque question esquivée avec une rare élégance"
+		},
+		{
 			"id": "headline.justice_critical",
 			"topic": "justice",
 			"tone": "critical",
@@ -674,6 +746,597 @@
 			"tone": "neutral",
 			"fromYear": 2009,
 			"text": "Réseaux sociaux : un ministre s’excuse d’un message qu’il dit ne pas avoir écrit, ni lu"
+		},
+		{
+			"id": "headline.interview_dodge",
+			"topic": "interview",
+			"tone": "critical",
+			"text": "Entretien : trois questions, trois réponses à d’autres questions"
+		},
+		{
+			"id": "headline.interview_notes",
+			"topic": "interview",
+			"tone": "critical",
+			"text": "Interview : l’invité lisait ses fiches, parfois dans le bon ordre"
+		},
+		{
+			"id": "headline.interview_reference_critical",
+			"topic": "interview",
+			"tone": "critical",
+			"kinds": ["reference"],
+			"text": "Entretien : une pensée politique en quête d’auteur"
+		},
+		{
+			"id": "headline.interview_popular_critical",
+			"topic": "interview",
+			"tone": "critical",
+			"kinds": ["popular"],
+			"text": "On l’a cuisiné : « Le prix de la baguette ? Je préfère parler des vrais sujets »"
+		},
+		{
+			"id": "headline.interview_satire",
+			"topic": "interview",
+			"tone": "critical",
+			"kinds": ["satirical"],
+			"text": "Grand entretien : quarante minutes de réponses, une seule idée, déjà prise par quelqu’un d’autre"
+		},
+		{
+			"id": "headline.interview_too_early",
+			"topic": "interview",
+			"tone": "neutral",
+			"text": "Entretien : « Il est trop tôt pour parler de la suite »"
+		},
+		{
+			"id": "headline.interview_field",
+			"topic": "interview",
+			"tone": "neutral",
+			"text": "Entretien : « Je suis d’abord quelqu’un de terrain »"
+		},
+		{
+			"id": "headline.interview_values",
+			"topic": "interview",
+			"tone": "neutral",
+			"text": "Entretien : « Mes valeurs n’ont pas changé, ce sont les circonstances »"
+		},
+		{
+			"id": "headline.interview_anger",
+			"topic": "interview",
+			"tone": "neutral",
+			"text": "Entretien : « J’entends la colère, et je l’écoute »"
+		},
+		{
+			"id": "headline.interview_roots",
+			"topic": "interview",
+			"tone": "neutral",
+			"kinds": ["regional"],
+			"text": "Rencontre : « Je n’oublie pas d’où je viens »"
+		},
+		{
+			"id": "headline.interview_morning_show",
+			"topic": "interview",
+			"tone": "neutral",
+			"kinds": ["news_channel"],
+			"text": "Matinale : douze minutes d’antenne, dont neuf de générique"
+		},
+		{
+			"id": "headline.interview_vision",
+			"topic": "interview",
+			"tone": "favorable",
+			"text": "Grand entretien : une vision, un cap, et même un calendrier"
+		},
+		{
+			"id": "headline.interview_frank",
+			"topic": "interview",
+			"tone": "favorable",
+			"text": "Entretien : un ton franc qui tranche avec la langue de bois"
+		},
+		{
+			"id": "headline.interview_potholes",
+			"topic": "interview",
+			"tone": "favorable",
+			"kinds": ["regional"],
+			"text": "Portrait : une figure locale qui connaît chaque nid-de-poule par son prénom"
+		},
+		{
+			"id": "headline.interview_shopping",
+			"topic": "interview",
+			"tone": "favorable",
+			"kinds": ["popular"],
+			"text": "« Je fais mes courses moi-même » : rencontre avec une personnalité comme vous et moi"
+		},
+		{
+			"id": "headline.ambient_launch",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "Le lancement du plan de lancement est reporté à une date de lancement ultérieure"
+		},
+		{
+			"id": "headline.ambient_report",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "Un rapport de 400 pages recommande d’écrire des rapports plus courts"
+		},
+		{
+			"id": "headline.ambient_train",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "Ligne régionale : le train de 7 h 12 arrive à l’heure, les voyageurs inquiets"
+		},
+		{
+			"id": "headline.ambient_tunnel",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "Le tunnel promis en 1987 franchit une étape décisive : la pose de la première maquette"
+		},
+		{
+			"id": "headline.ambient_bridge",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "Inauguration d’un pont : le ruban est coupé, les travaux peuvent commencer"
+		},
+		{
+			"id": "headline.ambient_heatwave",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "Canicule : le gouvernement recommande de boire de l’eau, une concertation est ouverte"
+		},
+		{
+			"id": "headline.ambient_tax_form",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "Simplification fiscale : le formulaire passe de 12 à 14 pages, plus lisibles"
+		},
+		{
+			"id": "headline.ambient_square",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "Un village rebaptise sa place de la Mairie « place de la Mairie », après consultation"
+		},
+		{
+			"id": "headline.ambient_bakery",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "Dernière boulangerie du canton : trois candidats promettent de la sauver, aucun n’y achète son pain"
+		},
+		{
+			"id": "headline.ambient_mood",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "Sondage : 54 % des Français estiment que la France va mal, 71 % que leur commune va bien"
+		},
+		{
+			"id": "headline.ambient_toll",
+			"topic": "ambient",
+			"tone": "neutral",
+			"text": "Autoroute : le péage augmente pour financer l’étude sur la baisse des péages"
+		},
+		{
+			"id": "headline.ambient_euro",
+			"topic": "ambient",
+			"tone": "neutral",
+			"fromYear": 2002,
+			"text": "Passage à l’euro : un commerçant affiche toujours ses prix en francs, « par nostalgie et par arrondi »"
+		},
+		{
+			"id": "headline.ambient_charger",
+			"topic": "ambient",
+			"tone": "neutral",
+			"fromYear": 2008,
+			"text": "Conseil municipal : séance suspendue, personne ne retrouvait le chargeur"
+		},
+		{
+			"id": "headline.ambient_selfies",
+			"topic": "ambient",
+			"tone": "neutral",
+			"fromYear": 2013,
+			"text": "Inauguration : quarante selfies, trois discours, aucun visiteur"
+		},
+		{
+			"id": "headline.ambient_metaverse",
+			"topic": "ambient",
+			"tone": "neutral",
+			"fromYear": 2022,
+			"text": "Une mairie ouvre une annexe dans le métavers, faute de guichet dans le réel"
+		},
+		{
+			"id": "headline.ambient_ai_speech",
+			"topic": "ambient",
+			"tone": "neutral",
+			"fromYear": 2023,
+			"text": "Un discours écrit par une intelligence artificielle jugé « trop humain » par l’opposition"
+		},
+		{
+			"id": "headline.ambient_drones",
+			"topic": "ambient",
+			"tone": "neutral",
+			"fromYear": 2031,
+			"text": "Les drones d’affichage électoral interdits de survol du cimetière, sauf le dimanche"
+		},
+		{
+			"id": "headline.ambient_rumour",
+			"topic": "ambient",
+			"tone": "neutral",
+			"kinds": ["news_channel"],
+			"text": "ÉDITION SPÉCIALE — Une rumeur dément une autre rumeur"
+		},
+		{
+			"id": "headline.ambient_helicopter",
+			"topic": "ambient",
+			"tone": "neutral",
+			"kinds": ["news_channel"],
+			"text": "En direct : notre hélicoptère suit un embouteillage depuis l’aube"
+		},
+		{
+			"id": "headline.ambient_petanque",
+			"topic": "ambient",
+			"tone": "neutral",
+			"kinds": ["regional"],
+			"text": "Tournoi de pétanque : le maire battu, la revanche fixée aux municipales"
+		},
+		{
+			"id": "headline.ambient_christmas",
+			"topic": "ambient",
+			"tone": "neutral",
+			"kinds": ["regional"],
+			"text": "Le marché de Noël ouvre en octobre pour devancer celui de la commune voisine"
+		},
+		{
+			"id": "headline.ambient_cow",
+			"topic": "ambient",
+			"tone": "neutral",
+			"kinds": ["regional"],
+			"text": "Une vache s’échappe et bloque la nationale : « une action revendicative », selon le syndicat"
+		},
+		{
+			"id": "headline.ambient_cups",
+			"topic": "ambient",
+			"tone": "neutral",
+			"kinds": ["satirical"],
+			"text": "Transition écologique : le ministère remplace ses gobelets en plastique par des gobelets en plastique recyclable"
+		},
+		{
+			"id": "headline.ambient_refund",
+			"topic": "ambient",
+			"tone": "neutral",
+			"kinds": ["satirical"],
+			"text": "Moralisation de la vie publique : un élu rend l’argent, la profession s’inquiète"
+		},
+		{
+			"id": "headline.ambient_op_eds",
+			"topic": "ambient",
+			"tone": "neutral",
+			"kinds": ["reference"],
+			"text": "Tribune : cinquante intellectuels appellent à ne plus signer de tribunes"
+		},
+		{
+			"id": "headline.ambient_lottery",
+			"topic": "ambient",
+			"tone": "neutral",
+			"kinds": ["popular"],
+			"text": "Le loto bat son record, un ministre jure ne pas avoir joué « depuis des années »"
+		},
+		{
+			"id": "headline.election_won_clear",
+			"topic": "election",
+			"tone": "favorable",
+			"details": ["won"],
+			"text": "{subject} : une victoire nette, et des adversaires qui découvrent l’humilité"
+		},
+		{
+			"id": "headline.election_won_popular",
+			"topic": "election",
+			"tone": "favorable",
+			"kinds": ["popular"],
+			"details": ["won"],
+			"text": "{subject} : « On n’y croyait pas », confie un voisin ému"
+		},
+		{
+			"id": "headline.election_won_neutral",
+			"topic": "election",
+			"tone": "neutral",
+			"details": ["won"],
+			"text": "{subject} : l’élection est acquise, le plus dur commence"
+		},
+		{
+			"id": "headline.election_won_abstention",
+			"topic": "election",
+			"tone": "critical",
+			"details": ["won"],
+			"text": "{subject} : une victoire portée par l’abstention"
+		},
+		{
+			"id": "headline.election_won_satire",
+			"topic": "election",
+			"tone": "critical",
+			"kinds": ["satirical"],
+			"details": ["won"],
+			"text": "{subject} : le vainqueur promet de tenir ses promesses, à commencer par les plus faciles"
+		},
+		{
+			"id": "headline.election_lost_honourable",
+			"topic": "election",
+			"tone": "neutral",
+			"details": ["lost"],
+			"text": "{subject} : une défaite honorable, selon l’intéressé et son entourage"
+		},
+		{
+			"id": "headline.election_lost_posters",
+			"topic": "election",
+			"tone": "critical",
+			"details": ["lost"],
+			"text": "{subject} : beaucoup d’affiches, peu de bulletins"
+		},
+		{
+			"id": "headline.election_lost_hangover",
+			"topic": "election",
+			"tone": "critical",
+			"kinds": ["popular"],
+			"details": ["lost"],
+			"text": "{subject} : la gueule de bois au QG, les petits fours aussi"
+		},
+		{
+			"id": "headline.election_lost_beginning",
+			"topic": "election",
+			"tone": "favorable",
+			"details": ["lost"],
+			"text": "{subject} : une défaite qui ressemble à un début"
+		},
+		{
+			"id": "headline.election_lost_reference",
+			"topic": "election",
+			"tone": "favorable",
+			"kinds": ["reference"],
+			"details": ["lost"],
+			"text": "{subject} : un revers qui pose les bases de la suite"
+		},
+		{
+			"id": "headline.election_territories",
+			"topic": "election",
+			"tone": "neutral",
+			"kinds": ["reference"],
+			"text": "{subject} : ce que dit le scrutin de la France des territoires"
+		},
+		{
+			"id": "headline.election_turnout",
+			"topic": "election",
+			"tone": "neutral",
+			"text": "{subject} : participation en berne, commentaires en hausse"
+		},
+		{
+			"id": "headline.election_regional_neutral",
+			"topic": "election",
+			"tone": "neutral",
+			"kinds": ["regional"],
+			"text": "{subject} : soirée électorale à la salle des fêtes, résultats à la buvette"
+		},
+		{
+			"id": "headline.promise_old_leaflets",
+			"topic": "promise",
+			"tone": "critical",
+			"text": "« {subject} » : l’opposition ressort les tracts de campagne"
+		},
+		{
+			"id": "headline.promise_reshuffle",
+			"topic": "promise",
+			"tone": "critical",
+			"details": ["abandoned"],
+			"text": "« {subject} » : une promesse égarée entre deux remaniements"
+		},
+		{
+			"id": "headline.promise_forgotten_popular",
+			"topic": "promise",
+			"tone": "critical",
+			"kinds": ["popular"],
+			"details": ["abandoned"],
+			"text": "« {subject} » : on vous l’avait promis, c’est oublié"
+		},
+		{
+			"id": "headline.promise_half",
+			"topic": "promise",
+			"tone": "critical",
+			"details": ["partial"],
+			"text": "« {subject} » : moitié tenue, moitié trahie, entièrement commentée"
+		},
+		{
+			"id": "headline.promise_pace",
+			"topic": "promise",
+			"tone": "neutral",
+			"text": "« {subject} » : le dossier avance, à son rythme"
+		},
+		{
+			"id": "headline.promise_quietly_kept",
+			"topic": "promise",
+			"tone": "neutral",
+			"details": ["kept"],
+			"text": "« {subject} » : c’est fait, et personne n’en parle"
+		},
+		{
+			"id": "headline.promise_context",
+			"topic": "promise",
+			"tone": "neutral",
+			"details": ["abandoned"],
+			"text": "« {subject} » : « Le contexte a changé », explique-t-on"
+		},
+		{
+			"id": "headline.promise_unexpected",
+			"topic": "promise",
+			"tone": "favorable",
+			"details": ["kept"],
+			"text": "« {subject} » : la promesse tenue que personne n’attendait plus"
+		},
+		{
+			"id": "headline.promise_visible",
+			"topic": "promise",
+			"tone": "favorable",
+			"kinds": ["regional"],
+			"details": ["kept"],
+			"text": "« {subject} » : sur le terrain, le changement se voit"
+		},
+		{
+			"id": "headline.promise_first_step",
+			"topic": "promise",
+			"tone": "favorable",
+			"details": ["partial"],
+			"text": "« {subject} » : un premier pas salué, la suite attendue"
+		},
+		{
+			"id": "headline.justice_boxes",
+			"topic": "justice",
+			"tone": "critical",
+			"details": ["indicted"],
+			"text": "Affaire de {subject} : les enquêteurs ont emporté douze cartons et une plante verte"
+		},
+		{
+			"id": "headline.justice_hidden_popular",
+			"topic": "justice",
+			"tone": "critical",
+			"kinds": ["popular"],
+			"details": ["revealed"],
+			"text": "Affaire de {subject} : ce qu’on vous cache"
+		},
+		{
+			"id": "headline.justice_appeal_time",
+			"topic": "justice",
+			"tone": "critical",
+			"details": ["appealed"],
+			"text": "Affaire de {subject} : l’appel, ou l’art de gagner du temps"
+		},
+		{
+			"id": "headline.justice_works_too_well",
+			"topic": "justice",
+			"tone": "critical",
+			"kinds": ["satirical"],
+			"details": ["convicted"],
+			"text": "Affaire de {subject} : la défense dénonce une justice « qui fonctionne trop bien »"
+		},
+		{
+			"id": "headline.justice_doubt",
+			"topic": "justice",
+			"tone": "critical",
+			"details": ["dismissed"],
+			"text": "Affaire de {subject} : non-lieu, mais le doute s’installe"
+		},
+		{
+			"id": "headline.justice_presumption",
+			"topic": "justice",
+			"tone": "neutral",
+			"details": ["revealed"],
+			"text": "Affaire de {subject} : la justice saisie, la présomption d’innocence rappelée"
+		},
+		{
+			"id": "headline.justice_investigation",
+			"topic": "justice",
+			"tone": "neutral",
+			"details": ["indicted"],
+			"text": "Affaire de {subject} : mise en examen, l’enquête se poursuit"
+		},
+		{
+			"id": "headline.justice_verdict",
+			"topic": "justice",
+			"tone": "neutral",
+			"details": ["convicted"],
+			"text": "Affaire de {subject} : le tribunal rend sa décision"
+		},
+		{
+			"id": "headline.justice_appeal_neutral",
+			"topic": "justice",
+			"tone": "neutral",
+			"details": ["appealed"],
+			"text": "Affaire de {subject} : appel interjeté, le dossier repart pour un tour"
+		},
+		{
+			"id": "headline.justice_cabal",
+			"topic": "justice",
+			"tone": "favorable",
+			"details": ["revealed"],
+			"text": "Affaire de {subject} : des soutiens dénoncent une « cabale »"
+		},
+		{
+			"id": "headline.justice_nothing",
+			"topic": "justice",
+			"tone": "favorable",
+			"details": ["indicted"],
+			"text": "Affaire de {subject} : « Rien à se reprocher », martèle la défense"
+		},
+		{
+			"id": "headline.justice_lenient",
+			"topic": "justice",
+			"tone": "favorable",
+			"details": ["convicted"],
+			"text": "Affaire de {subject} : une peine plus légère que réclamé, la défense satisfaite"
+		},
+		{
+			"id": "headline.justice_appeal_hope",
+			"topic": "justice",
+			"tone": "favorable",
+			"details": ["appealed"],
+			"text": "Affaire de {subject} : en appel, la défense espère un nouveau regard"
+		},
+		{
+			"id": "headline.justice_home_support",
+			"topic": "justice",
+			"tone": "favorable",
+			"kinds": ["regional"],
+			"text": "Affaire de {subject} : au pays, on fait bloc"
+		},
+		{
+			"id": "headline.lifestyle_seminar",
+			"topic": "lifestyle",
+			"tone": "critical",
+			"text": "Vacances aux Seychelles : « un séminaire de réflexion », précise l’entourage"
+		},
+		{
+			"id": "headline.lifestyle_reference",
+			"topic": "lifestyle",
+			"tone": "critical",
+			"kinds": ["reference"],
+			"text": "Train de vie : quand l’exemplarité devient une option"
+		},
+		{
+			"id": "headline.lifestyle_declaration",
+			"topic": "lifestyle",
+			"tone": "neutral",
+			"text": "Grand train de vie : la déclaration de patrimoine sera « bientôt » mise à jour"
+		},
+		{
+			"id": "headline.lifestyle_dinner",
+			"topic": "lifestyle",
+			"tone": "neutral",
+			"kinds": ["news_channel"],
+			"text": "Notre enquête : combien coûte vraiment un dîner en ville ?"
+		},
+		{
+			"id": "headline.lifestyle_dream_house",
+			"topic": "lifestyle",
+			"tone": "favorable",
+			"kinds": ["popular"],
+			"text": "Une maison de rêve et des goûts simples : visite exclusive"
+		},
+		{
+			"id": "headline.lifestyle_table",
+			"topic": "lifestyle",
+			"tone": "favorable",
+			"text": "Réceptions : une table où l’on refait la France, entre deux plats"
+		},
+		{
+			"id": "headline.ownership_empire",
+			"topic": "ownership",
+			"tone": "critical",
+			"kinds": ["reference"],
+			"text": "Concentration des médias : {subject} rejoint un empire de papier"
+		},
+		{
+			"id": "headline.ownership_horoscope",
+			"topic": "ownership",
+			"tone": "neutral",
+			"text": "{subject} : nouvelle formule, nouveau propriétaire, même horoscope"
+		},
+		{
+			"id": "headline.ownership_relief",
+			"topic": "ownership",
+			"tone": "favorable",
+			"kinds": ["regional"],
+			"text": "{subject} : l’avenir du titre assuré, la rédaction respire"
 		}
 	],
 	"balance": {
@@ -681,7 +1344,8 @@
 		"nationalExposure": 30,
 		"nationalMandateRank": 40,
 		"regionalNationalPercent": 50,
-		"toneThreshold": 30,
+		"toneThreshold": 20,
+		"editorialSwingPercent": 15,
 		"toneEffects": {
 			"critical": -3,
 			"neutral": 0,
@@ -692,7 +1356,7 @@
 		"ownedEffectPercent": 50,
 		"relationDriftPercent": 10,
 		"lifestylePercent": 15,
-		"lifestyleLevel": 2,
+		"lifestyleLevel": 1,
 		"ambientPercent": 60,
 		"interviewCooldownTurns": 4,
 		"angleRepeatLimit": 2

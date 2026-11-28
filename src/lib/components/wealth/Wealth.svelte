@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Minus, Plus } from '@lucide/svelte';
+	import { Gem, Minus, Plus, Scale } from '@lucide/svelte';
+	import ResourceIcon from '#lib/components/common/ResourceIcon.svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 
 	/**
@@ -22,18 +23,26 @@
 		<div class="flex flex-col gap-6">
 			<section class="card" aria-labelledby="networth-title">
 				<h2 id="networth-title" class="section-title">Valeur nette</h2>
-				<dl class="mt-3 grid grid-cols-3 gap-3 text-sm">
-					<div>
-						<dt class="text-muted">Argent personnel</dt>
-						<dd class="font-semibold tabular-nums">{wealth.cash}</dd>
+				<dl class="mt-3 grid grid-cols-3 gap-3">
+					<div class="rounded border border-line p-3">
+						<dt class="flex items-center gap-1.5 text-xs font-semibold text-muted uppercase">
+							<ResourceIcon identity="personalCashCents" size="sm" /> Argent personnel
+						</dt>
+						<dd class="mt-1 text-xl font-semibold tabular-nums">{wealth.cash}</dd>
 					</div>
-					<div>
-						<dt class="text-muted">Biens</dt>
-						<dd class="font-semibold tabular-nums">{wealth.assetsValue}</dd>
+					<div class="rounded border border-line p-3">
+						<dt class="flex items-center gap-1.5 text-xs font-semibold text-muted uppercase">
+							<Gem class="size-3.5 text-res-cash" aria-hidden="true" /> Biens
+						</dt>
+						<dd class="mt-1 text-xl font-semibold tabular-nums">{wealth.assetsValue}</dd>
 					</div>
-					<div>
-						<dt class="text-muted">Total</dt>
-						<dd class="font-semibold tabular-nums" data-testid="net-worth">{wealth.netWorth}</dd>
+					<div class="rounded border border-primary/40 bg-primary/5 p-3">
+						<dt class="flex items-center gap-1.5 text-xs font-semibold text-primary uppercase">
+							<Scale class="size-3.5" aria-hidden="true" /> Total
+						</dt>
+						<dd class="mt-1 text-xl font-semibold tabular-nums" data-testid="net-worth">
+							{wealth.netWorth}
+						</dd>
 					</div>
 				</dl>
 				<p class="mt-2 text-xs text-muted">
@@ -115,17 +124,31 @@
 						<li class="card flex flex-col gap-2" data-testid="offer-{offer.id}">
 							<h3 class="font-serif text-base">{offer.label}</h3>
 							<p class="text-sm text-muted">{offer.description}</p>
-							<ul class="text-sm">
-								<li>Prix : {offer.costs.join(', ')}</li>
-								<li>
-									Charges par trimestre : {offer.upkeep.length > 0
-										? offer.upkeep.join(', ')
-										: 'aucune'}
+							<ul class="flex flex-wrap gap-1.5 text-xs" aria-label="Conditions">
+								{#each offer.costs as cost (cost)}
+									<li
+										class="rounded-full border border-cost-line bg-cost-soft px-2 py-0.5 text-danger"
+									>
+										Prix : {cost}
+									</li>
+								{/each}
+								<li
+									class="rounded-full border px-2 py-0.5 {offer.upkeep.length > 0
+										? 'border-risk-line bg-risk-soft text-warning'
+										: 'border-line text-muted'}"
+								>
+									Charges : {offer.upkeep.length > 0 ? offer.upkeep.join(', ') : 'aucune'}
 								</li>
 								{#each offer.effects as effect (effect)}
-									<li>{effect}</li>
+									<li
+										class="rounded-full border border-gain-line bg-gain-soft px-2 py-0.5 text-positive"
+									>
+										{effect}
+									</li>
 								{/each}
-								<li>Possédés : {offer.owned} / {offer.maxOwned}</li>
+								<li class="rounded-full border border-line px-2 py-0.5 text-muted">
+									Possédés : {offer.owned} / {offer.maxOwned}
+								</li>
 							</ul>
 							<div class="mt-auto flex flex-col gap-2">
 								{#if offer.reason}

@@ -21,7 +21,14 @@ import { MIGRATIONS, migrateEnvelope, type Migration, type RawEnvelope } from '.
 import { gameStateSchema } from './state-schema.ts';
 
 export const SAVE_FORMAT = 'republique-save';
-export const SAVE_VERSION = 1;
+/**
+ * Version 2 : premier format conservé de la V1 (P3-10, 28 novembre 2026). Toute
+ * évolution ultérieure de l'état incrémente cette version et fournit une
+ * migration testée depuis la précédente (voir la sauvegarde témoin des tests).
+ */
+export const SAVE_VERSION = 2;
+/** Première version gardée d'une mise à jour à l'autre ; les précédentes (alpha) sont refusées. */
+export const FIRST_KEPT_SAVE_VERSION = 2;
 /** Taille maximale d'une sauvegarde lue ou importée (octets UTF-8). */
 export const MAX_SAVE_BYTES = 5_000_000;
 
@@ -104,6 +111,16 @@ export function readEnvelope(
 			'future_version',
 			'Cette sauvegarde provient d’une version plus récente du jeu. Elle n’a pas été modifiée.',
 			[`saveVersion ${version} > ${SAVE_VERSION}`]
+		);
+	}
+
+	// Préversions (alpha et rush, format 1) : jetables par décision du créateur.
+	// Refusées explicitement, jamais modifiées ni effacées.
+	if (version < FIRST_KEPT_SAVE_VERSION) {
+		return fail(
+			'outdated_rules',
+			'Cette sauvegarde vient d’une préversion du jeu (avant la V1) et n’est plus compatible. Elle est conservée telle quelle.',
+			[`saveVersion ${version} < ${FIRST_KEPT_SAVE_VERSION}`]
 		);
 	}
 

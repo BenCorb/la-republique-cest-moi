@@ -19,6 +19,13 @@
 	import HomeScreen from '#lib/components/shell/HomeScreen.svelte';
 	import CreationScreen from '#lib/components/shell/CreationScreen.svelte';
 	import type { GameTab } from '#lib/components/shell/tabs.ts';
+	import FirstSteps from '#lib/components/shell/FirstSteps.svelte';
+	import {
+		downloadFeedback,
+		readFirstStepsHidden,
+		writeFirstStepsHidden
+	} from '#lib/game/app/browser.ts';
+	import { addToLogbook, readLogbook, removeFromLogbook } from '#lib/game/app/logbook.ts';
 	import { createBrowserSession, downloadExport } from '#lib/game/app/browser.ts';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 
@@ -31,7 +38,29 @@
 	let confirmingNewCareer = $state(false);
 	/** Écran de création ouvert, et profil choisi en attente de confirmation éventuelle. */
 	let creating = $state(false);
-	let chosenProfile = $state<{ origin: string; engagement: string; region: string } | null>(null);
+	/** Carnet des carrières (P3-41) : archive de ce navigateur, hors sauvegarde. */
+	let logbook = $state(readLogbook());
+	$effect(() => {
+		const entry = snapshot?.view?.summary?.logbook;
+		if (entry && !logbook.some((existing) => existing.id === entry.id)) {
+			logbook = addToLogbook(entry);
+		}
+	});
+
+	/** Premiers pas (P3-40) : préférence de ce navigateur. */
+	let firstStepsHidden = $state(readFirstStepsHidden());
+	function setFirstStepsHidden(hidden: boolean): void {
+		firstStepsHidden = hidden;
+		writeFirstStepsHidden(hidden);
+	}
+
+	let chosenProfile = $state<{
+		origin: string;
+		engagement: string;
+		region: string;
+		ambition?: string;
+		seed?: string;
+	} | null>(null);
 
 	onMount(() => {
 		const browser = createBrowserSession();
@@ -45,10 +74,15 @@
 		if (session) creating = true;
 	}
 
-	function createCareer(origin: string, engagement: string, region: string): void {
+	function createCareer(
+		origin: string,
+		engagement: string,
+		region: string,
+		ambition: string | null
+	): void {
 		if (!session) return;
-		chosenProfile = { origin, engagement, region };
-		const result = session.controller.newCareer({ origin, engagement, region });
+		chosenProfile = { origin, engagement, region, ...(ambition ? { ambition } : {}) };
+		const result = session.controller.newCareer(chosenProfile);
 		if (result === 'needs_confirmation') {
 			confirmingNewCareer = true;
 			return;
@@ -62,6 +96,39 @@
 		creating = false;
 		session?.controller.newCareer({ ...(chosenProfile ?? {}), replaceExisting: true });
 		tab = 'agenda';
+	}
+
+	/** Rejouer la même partie (P3-42) : même seed, même profil, après confirmation. */
+	function replayCareer(
+		replay: {
+			seed: string;
+			origin: string;
+			engagement: string;
+			region: string;
+			ambition: string | null;
+		} | null
+	): void {
+		if (!session || !replay) return;
+		chosenProfile = {
+			seed: replay.seed,
+			origin: replay.origin,
+			engagement: replay.engagement,
+			region: replay.region,
+			...(replay.ambition ? { ambition: replay.ambition } : {})
+		};
+		const result = session.controller.newCareer(chosenProfile);
+		if (result === 'needs_confirmation') {
+			confirmingNewCareer = true;
+			return;
+		}
+		tab = 'agenda';
+	}
+
+	/** Retour de partie (P3-42) : sauvegarde et note dans un fichier, sans serveur. */
+	function exportFeedback(note: string): void {
+		const exported = session?.controller.exportCurrent();
+		const seed = snapshot?.view?.summary?.replay.seed ?? 'partie';
+		if (exported) downloadFeedback(exported, note, seed);
 	}
 
 	function exportGame(): void {
@@ -83,6 +150,7 @@
 		origins={options.origins}
 		engagements={options.engagements}
 		regions={options.regions}
+		ambitions={options.ambitions}
 		defaults={options.defaults}
 		onStart={createCareer}
 		onCancel={() => (creating = false)}
@@ -90,17 +158,31 @@
 {:else if snapshot.screen === 'home'}
 	<HomeScreen
 		{session}
+		{firstStepsHidden}
+		onShowFirstSteps={() => setFirstStepsHidden(false)}
+		{logbook}
+		onRemoveLogbook={(id: string | null) => (logbook = removeFromLogbook(id))}
 		onNewCareer={startCareer}
 		onImport={(text: string) => session?.controller.importFile(text)}
 	/>
 {:else}
 	<GameLayout {session} {tab} onTab={(next: GameTab) => (tab = next)}>
+		{#if snapshot.view && !snapshot.view.summary && !firstStepsHidden}
+			<FirstSteps
+				steps={snapshot.view.firstSteps}
+				{tab}
+				onTab={(next: GameTab) => (tab = next)}
+				onHide={() => setFirstStepsHidden(true)}
+			/>
+		{/if}
 		{#if snapshot.view?.summary && tab !== 'journal'}
 			<CareerEnd
 				summary={snapshot.view.summary}
 				onNewCareer={startCareer}
 				onExport={exportGame}
 				onJournal={() => (tab = 'journal')}
+				onReplay={() => replayCareer(snapshot?.view?.summary?.replay ?? null)}
+				onFeedback={(note: string) => exportFeedback(note)}
 			/>
 		{:else if tab === 'dashboard'}
 			<Dashboard {session} />

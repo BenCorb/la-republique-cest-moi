@@ -26,7 +26,7 @@ import { ageAt, type Turn } from './calendar.ts';
 import { generatePerson } from './characters.ts';
 import { withPopularity } from './supports.ts';
 import { resolveMediaRef } from './territory.ts';
-import { nextFloat, nextInt, type RngState } from './random.ts';
+import { createRng, nextFloat, nextInt, type RngState } from './random.ts';
 import type {
 	Character,
 	LeaderChange,
@@ -46,6 +46,41 @@ function jitter(rng: RngState, amplitude: number): { value: number; rng: RngStat
 
 function clamp(value: number, min: number, max: number): number {
 	return Math.min(max, Math.max(min, value));
+}
+
+/** Nouveau président de la République (P3-35), personnage du monde. */
+function newPresident(
+	partyId: string,
+	turn: Turn,
+	characters: Readonly<Record<string, Character>>,
+	rng: RngState,
+	content: Content
+): { character: Character; rng: RngState } {
+	return generatePerson(
+		{
+			tags: ['politician', 'president'],
+			epithet: null,
+			renewal: null,
+			partyId,
+			minAge: 52,
+			maxAge: 66,
+			successorOf: null
+		},
+		turn,
+		characters,
+		rng,
+		content
+	);
+}
+
+/** Le président est-il d'un autre parti que la majorité ? (P3-35) */
+export function cohabitation(world: WorldState): boolean {
+	return world.president.partyId !== world.governingPartyId;
+}
+
+/** Premier ministre (P3-35) : nommé par le président dans la majorité, son dirigeant. */
+export function primeMinisterId(world: WorldState): string | null {
+	return world.parties[world.governingPartyId]?.leaderId ?? null;
 }
 
 /** Nouveau dirigeant de parti, tiré au sort (P2-01), au modèle commun des personnages. */
@@ -91,11 +126,35 @@ export function createWorld(rng: RngState, turn: Turn, content: Content): WorldC
 		currentRng = generated.rng;
 		parties[partyId] = { strength: party.baseStrength, leaderId: generated.character.id };
 	}
+	// Président de la République (P3-35) : élu du premier parti d'opposition, d'où
+	// une cohabitation possible dès le départ.
+	const presidentParty =
+		[...content.partyIds]
+			.filter((id) => id !== content.world.startingGoverningParty)
+			.sort(
+				(left, right) =>
+					(content.parties[right]?.baseStrength ?? 0) - (content.parties[left]?.baseStrength ?? 0)
+			)[0] ?? content.world.startingGoverningParty;
+	// PRNG dérivé : le président ne décale aucun autre tirage de la partie.
+	const president = newPresident(
+		presidentParty,
+		turn,
+		characters,
+		createRng(`${rng.seed}#president`),
+		content
+	);
+	characters[president.character.id] = president.character;
 	return {
 		world: {
 			indicators: { ...content.balance.world.startingIndicators },
 			parties,
 			governingPartyId: content.world.startingGoverningParty,
+			president: {
+				characterId: president.character.id,
+				partyId: presidentParty,
+				electedTurn: turn,
+				termEndTurn: content.balance.government.firstPresidentialTurn
+			},
 			media: Object.fromEntries(
 				content.mediaIds.map((mediaId) => [
 					mediaId,
@@ -153,7 +212,9 @@ export function resolveWorld(
 	characters: Readonly<Record<string, Character>>,
 	turn: Turn,
 	rng: RngState,
-	content: Content
+	content: Content,
+	/** Parti dirigé par le joueur (P3-34) : sa direction n'est pas renouvelée par le monde. */
+	ledByPlayer: string | null = null
 ): FrontierWorld {
 	const balance = content.balance.world;
 	let currentRng = rng;
@@ -219,7 +280,9 @@ export function resolveWorld(
 				: ageAt(leader.birthTurn, turn) >= balance.leaderRetirementAge
 					? 'retirement'
 					: null;
-		if (reason === null && balance.leaderChangeChance > 0) {
+		// Le joueur dirige ce parti : aucun renouvellement par vote interne (P3-34) ;
+		// l'ancienne direction, en retrait, vieillit et se remplace comme les autres.
+		if (reason === null && balance.leaderChangeChance > 0 && partyId !== ledByPlayer) {
 			const roll = nextFloat(currentRng);
 			currentRng = roll.rng;
 			if (roll.value < balance.leaderChangeChance) reason = 'internal_vote';
@@ -240,11 +303,58 @@ export function resolveWorld(
 		});
 	}
 
+	// 4. Présidentielle (P3-35), sans élection jouable en V1 : le sortant, en forme et
+	// d'un des deux premiers partis, peut être réélu ; sinon le premier parti l'emporte.
+	let president = world.president;
+	let presidentRecord: WorldRecord['president'] = null;
+	if (turn > president.termEndTurn) {
+		const ranked = [...content.partyIds].sort(
+			(left, right) => (parties[right]?.strength ?? 0) - (parties[left]?.strength ?? 0)
+		);
+		const incumbent = updatedCharacters[president.characterId];
+		let reelected = false;
+		if (
+			incumbent?.status === 'active' &&
+			ageAt(incumbent.birthTurn, turn) < 78 &&
+			ranked.slice(0, 2).includes(president.partyId)
+		) {
+			const roll = nextInt(currentRng, 1, 100);
+			currentRng = roll.rng;
+			reelected = roll.value <= content.balance.government.reelectionChancePercent;
+		}
+		const term = content.balance.government.presidentTermTurns;
+		if (reelected) {
+			president = { ...president, electedTurn: turn, termEndTurn: president.termEndTurn + term };
+		} else {
+			const partyId = ranked[0] ?? president.partyId;
+			const elected = newPresident(partyId, turn, updatedCharacters, currentRng, content);
+			currentRng = elected.rng;
+			updatedCharacters[elected.character.id] = elected.character;
+			president = {
+				characterId: elected.character.id,
+				partyId,
+				electedTurn: turn,
+				termEndTurn: president.termEndTurn + term
+			};
+		}
+		presidentRecord = {
+			previousId: world.president.characterId,
+			presidentId: president.characterId,
+			partyId: president.partyId,
+			reelected
+		};
+	}
+
 	return {
-		world: { ...world, indicators, parties },
+		world: { ...world, indicators, parties, president },
 		characters: updatedCharacters,
 		rng: currentRng,
-		record: { indicators: indicatorChanges, parties: partyChanges, leaderChanges }
+		record: {
+			indicators: indicatorChanges,
+			parties: partyChanges,
+			leaderChanges,
+			president: presidentRecord
+		}
 	};
 }
 
@@ -258,7 +368,9 @@ export type PoliticalEffect = Extract<
 			| 'leaveParty'
 			| 'addSupport'
 			| 'addMediaRelation'
-			| 'giveInterview';
+			| 'giveInterview'
+			| 'partyBid'
+			| 'rallySupport';
 	}
 >;
 
@@ -270,8 +382,31 @@ export function isPoliticalEffect(effect: Effect): effect is PoliticalEffect {
 		effect.op === 'leaveParty' ||
 		effect.op === 'addSupport' ||
 		effect.op === 'addMediaRelation' ||
-		effect.op === 'giveInterview'
+		effect.op === 'giveInterview' ||
+		effect.op === 'partyBid' ||
+		effect.op === 'rallySupport'
 	);
+}
+
+/** Premier congrès après ce trimestre (P3-34). */
+export function nextCongressAfter(turn: Turn, content: Content): Turn {
+	const { congressCycleTurns: cycle, congressOffset: offset } = content.balance.partyCareer;
+	let next = turn + 1;
+	while (((next % cycle) + cycle) % cycle !== offset % cycle) next += 1;
+	return next;
+}
+
+/** Raison pour laquelle le joueur ne peut briguer la direction, ou `null` (P3-34). */
+export function partyBidIssue(player: PlayerState, turn: Turn): string | null {
+	const career = player.partyCareer;
+	if (player.partyId === null || !career) return 'Il faut être membre d’un parti.';
+	if (career.rank === 'leader') return 'Vous dirigez déjà le parti.';
+	if (career.rank !== 'cadre') return 'Il faut d’abord devenir cadre du parti.';
+	if (career.retryTurn !== null && career.nextCongressTurn < career.retryTurn) {
+		return 'Après votre défaite, le parti attend un congrès avant une nouvelle candidature.';
+	}
+	if (career.nextCongressTurn < turn) return 'Aucun congrès programmé.';
+	return null;
 }
 
 export interface PoliticalOutcome {
@@ -285,7 +420,10 @@ function leave(player: PlayerState, turn: Turn): { player: PlayerState; left: st
 	const affiliations = player.affiliations.map((affiliation) =>
 		affiliation.toTurn === null ? { ...affiliation, toTurn: turn } : affiliation
 	);
-	return { player: { ...player, partyId: null, affiliations }, left: player.partyId };
+	return {
+		player: { ...player, partyId: null, affiliations, partyCareer: null },
+		left: player.partyId
+	};
 }
 
 /**
@@ -339,7 +477,15 @@ export function applyPoliticalEffect(
 				player: {
 					...left.player,
 					partyId,
-					affiliations: [...left.player.affiliations, { partyId, fromTurn: turn, toTurn: null }]
+					affiliations: [...left.player.affiliations, { partyId, fromTurn: turn, toTurn: null }],
+					// Militant du parti (P3-34), jusqu'au prochain congrès.
+					partyCareer: {
+						rank: 'member',
+						rankSince: turn,
+						nextCongressTurn: nextCongressAfter(turn, content),
+						bid: null,
+						retryTurn: null
+					}
 				},
 				world,
 				changes
@@ -351,6 +497,29 @@ export function applyPoliticalEffect(
 				player: left.player,
 				world,
 				changes: left.left ? [{ kind: 'left', partyId: left.left }] : []
+			};
+		}
+		case 'partyBid': {
+			// Candidature à la direction (P3-34) : la posture se choisit ou se change avant le congrès.
+			if (partyBidIssue(player, turn) || !player.partyCareer) return { player, world, changes: [] };
+			const rallies = player.partyCareer.bid?.rallies ?? 0;
+			return {
+				player: {
+					...player,
+					partyCareer: { ...player.partyCareer, bid: { posture: effect.posture, rallies } }
+				},
+				world,
+				changes: [{ kind: 'partyBid', posture: effect.posture, rallies }]
+			};
+		}
+		case 'rallySupport': {
+			const bid = player.partyCareer?.bid;
+			if (!bid || !player.partyCareer) return { player, world, changes: [] };
+			const rallies = bid.rallies + effect.value;
+			return {
+				player: { ...player, partyCareer: { ...player.partyCareer, bid: { ...bid, rallies } } },
+				world,
+				changes: [{ kind: 'partyBid', posture: bid.posture, rallies }]
 			};
 		}
 		case 'addSupport': {

@@ -50,9 +50,9 @@
 		{
 			"id": "communication.press_officer",
 			"family": "communication",
-			"ownedLabel": "Attaché de presse",
-			"label": "Embaucher un attaché de presse à mi-temps",
-			"description": "Il connaît trois journalistes, en tutoie deux et rédige des communiqués plus vite que vous ne les lisez.",
+			"ownedLabel": "Agence de presse",
+			"label": "Engager une agence de presse",
+			"description": "Une agence qui connaît trois journalistes, en tutoie deux et facture des communiqués plus vite que vous ne les lisez. Une prestation, pas un collaborateur : son coût s’ajoute aux charges récurrentes.",
 			"treasury": "politicalBudgetCents",
 			"timeCost": 20,
 			"maxOwned": 1,
@@ -66,9 +66,9 @@
 			"id": "communication.community_manager",
 			"family": "communication",
 			"fromEra": "era.decade_2010",
-			"ownedLabel": "Community manager",
-			"label": "Recruter un community manager",
-			"description": "Vingt-quatre ans, trois téléphones et une conviction : tout peut devenir une vidéo. Vos comptes sur le réseau Piaf n’ont jamais été aussi vivants, ni aussi imprévisibles.",
+			"ownedLabel": "Prestataire réseaux sociaux",
+			"label": "Prendre un prestataire pour les réseaux sociaux",
+			"description": "Une agence de vingt-quatre ans d’âge moyen, trois téléphones et une conviction : tout peut devenir une vidéo. Une prestation facturée chaque trimestre, pas un collaborateur. Vos comptes sur le réseau Piaf n’ont jamais été aussi vivants, ni aussi imprévisibles.",
 			"treasury": "politicalBudgetCents",
 			"timeCost": 15,
 			"maxOwned": 1,
@@ -229,6 +229,42 @@
 				"failurePerMille": 2,
 				"salePercent": 88,
 				"stressPerTurn": -1
+			}
+		},
+		{
+			"id": "wealth.foundation",
+			"family": "personal",
+			"ownedLabel": "Votre fondation",
+			"label": "Créer une fondation",
+			"description": "Une fondation reconnue d’utilité publique, un conseil d’administration de gens respectables et des colloques sur « l’avenir des territoires ». L’argent y entre plus facilement qu’il n’en sort.",
+			"treasury": "personalCashCents",
+			"timeCost": 15,
+			"maxOwned": 1,
+			"price": [{ "resource": "personalCashCents", "amount": 5000000 }],
+			"upkeep": [{ "resource": "personalCashCents", "amount": 150000 }],
+			"production": [{ "resource": "influence", "amount": 2 }]
+		},
+		{
+			"id": "wealth.national_media",
+			"family": "personal",
+			"ownedLabel": "Votre hebdomadaire national",
+			"label": "Racheter La Gazette fouineuse",
+			"description": "L’hebdomadaire satirique national, au bord du dépôt de bilan. Les ventes rapportent un peu ; la rédaction, réputée indomptable, le reste.",
+			"treasury": "personalCashCents",
+			"timeCost": 15,
+			"maxOwned": 1,
+			"price": [{ "resource": "personalCashCents", "amount": 60000000 }],
+			"upkeep": [{ "resource": "personalCashCents", "amount": 500000 }],
+			"production": [],
+			"asset": {
+				"annualYieldPercent": 3,
+				"annualGrowthPercent": 0,
+				"volatilityPercent": 8,
+				"economySensitivityPercent": 2,
+				"failurePerMille": 4,
+				"salePercent": 75,
+				"stressPerTurn": 1,
+				"media": "media.gazette"
 			}
 		},
 		{

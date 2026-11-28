@@ -30,7 +30,8 @@ import {
 	fixtureSupports,
 	fixtureTraits,
 	fixtureUpgrades,
-	fixtureWorld
+	fixtureWorld,
+	settleDecisions
 } from '../fixtures/content.ts';
 
 const declareAction = {
@@ -92,7 +93,7 @@ function commit(state: GameState, steps: PlanStep[] = [], used = catalog): GameS
 
 function advanceTo(state: GameState, turn: number, used = catalog): GameState {
 	let current = state;
-	while (current.turn < turn) current = commit(current, [], used);
+	while (current.turn < turn) current = settleDecisions(commit(current, [], used), used);
 	return current;
 }
 
@@ -184,7 +185,10 @@ describe('force et relation de l’adversaire', () => {
 		opponentId: 'test.rival',
 		status: 'running',
 		playerPercent: null,
-		reason: null
+		reason: null,
+		role: 'head',
+		listRank: 1,
+		resultTurn: null
 	};
 
 	it('additionne force de base, expérience plafonnée et traits ; le sondage ignore les traits cachés', () => {
@@ -224,7 +228,8 @@ describe('force et relation de l’adversaire', () => {
 			known.characters,
 			[]
 		);
-		expect(informed.max).toBeLessThan(poll.max);
+		// Face à plusieurs listes (P3-29), deux points de force pèsent moins d'un point de sondage.
+		expect(informed.max).toBeLessThanOrEqual(poll.max);
 	});
 
 	it('se souvient de chaque affrontement et s’éloigne du joueur', () => {

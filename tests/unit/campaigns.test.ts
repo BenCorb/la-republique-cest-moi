@@ -37,6 +37,7 @@ import {
 	fixtureUpgrades,
 	fixtureWorld,
 	quarterLog,
+	settleDecisions,
 	withEvents
 } from '../fixtures/content.ts';
 
@@ -136,7 +137,9 @@ function councillor(state: GameState): GameState {
 		access: 'election',
 		status: 'active',
 		endTurn: null,
-		endReason: null
+		endReason: null,
+		side: null,
+		portfolio: null
 	};
 	return { ...state, mandates: [mandate] };
 }
@@ -160,7 +163,9 @@ describe('candidature', () => {
 		ballots: state.ballots,
 		campaigns: state.campaigns,
 		institutions: state.institutions,
-		promises: state.promises
+		promises: state.promises,
+		investitures: state.investitures,
+		appointment: state.appointment
 	});
 
 	it('s’ouvre jusqu’à la clôture, sous conditions d’âge et de mandat', () => {
@@ -308,13 +313,16 @@ describe('scrutin du joueur', () => {
 			withSupport(createGame({ seed: 'sortant' }, catalog), 'support.workers', 60)
 		);
 		const declared = commit(sitting, [declare('ballot.1')]).state;
-		const result = commit(advanceTo(declared, 40));
+		const result = { state: settleDecisions(commit(advanceTo(declared, 40)).state, catalog) };
+		expect(checkInvariants(result.state, catalog)).toEqual([]);
 		expect(result.state.campaigns[0]?.status).toBe('won');
 		expect(
 			result.state.mandates.map((mandate) => [mandate.mandateId, mandate.status, mandate.endReason])
 		).toEqual([
 			['mandate.councillor', 'ended', 'term'],
-			['mandate.councillor', 'active', null]
+			['mandate.councillor', 'active', null],
+			// Tête de la liste victorieuse, élu maire par le conseil (P3-29).
+			['mandate.mayor', 'active', null]
 		]);
 	});
 
@@ -336,7 +344,9 @@ describe('scrutin du joueur', () => {
 			access: 'nomination',
 			status: 'active',
 			endTurn: null,
-			endReason: null
+			endReason: null,
+			side: null,
+			portfolio: null
 		};
 		const result = commit({ ...before, mandates: [...before.mandates, minister] });
 		expect(result.state.campaigns[0]).toMatchObject({
@@ -388,7 +398,10 @@ describe('invariants des campagnes', () => {
 					opponentId: null,
 					status: 'running',
 					playerPercent: null,
-					reason: null
+					reason: null,
+					role: 'head',
+					listRank: 1,
+					resultTurn: null
 				}
 			],
 			ballots: base.ballots.map((ballot) =>

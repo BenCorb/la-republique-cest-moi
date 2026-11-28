@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BallotReport from './BallotReport.svelte';
 	import { CalendarClock, LogOut, Megaphone, Vote } from '@lucide/svelte';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 	import SupportsCard from './SupportsCard.svelte';
@@ -23,6 +24,40 @@
 	<div class="grid gap-5 xl:grid-cols-2">
 		{#if supports}
 			<SupportsCard {supports} />
+		{/if}
+		{#if career.partyCareer}
+			{@const party = career.partyCareer}
+			<section
+				class="card flex flex-col gap-2"
+				aria-labelledby="parti-title"
+				data-testid="party-career"
+			>
+				<h2 id="parti-title" class="section-title">Votre parti</h2>
+				<p class="text-sm">
+					<span class="font-semibold">{party.rank}</span> du {party.party}, {party.since}
+				</p>
+				<p class="text-xs text-muted">{party.congress}</p>
+				{#if party.bid}
+					<p class="text-sm">{party.bid}</p>
+				{/if}
+				{#if party.appraisal}
+					<p class="text-xs">
+						<span class="font-semibold">{party.appraisal}</span>
+						<span class="text-muted">
+							— {party.factors
+								.map((factor) => `${factor.favorable ? '+' : '−'} ${factor.label}`)
+								.join(' · ')}
+						</span>
+					</p>
+				{/if}
+				{#if party.retry}
+					<p class="text-xs text-warning">{party.retry}</p>
+				{/if}
+				<p class="text-xs text-muted">
+					Motions, candidature à la direction et ralliements s’ajoutent depuis l’agenda (thème
+					Parti).
+				</p>
+			</section>
 		{/if}
 		<section class="card flex flex-col gap-3" aria-labelledby="mandats-title">
 			<h2 id="mandats-title" class="section-title">Mandats</h2>
@@ -244,6 +279,56 @@
 									>
 										<Megaphone class="size-3.5" aria-hidden="true" /> Se présenter
 									</button>
+									{#if ballot.investiture}
+										{@const investiture = ballot.investiture}
+										<div class="flex w-full flex-col items-end gap-1" data-testid="investiture">
+											<p class="text-xs">
+												<span class="font-semibold">{investiture.appraisal}</span>
+												<span class="text-muted">
+													— {investiture.factors
+														.map((factor) => `${factor.favorable ? '+' : '−'} ${factor.label}`)
+														.join(' · ')}
+												</span>
+											</p>
+											{#if investiture.status}
+												<p class="text-xs text-muted">{investiture.status}</p>
+											{:else}
+												<button
+													type="button"
+													class="btn-secondary btn-small"
+													disabled={!investiture.addable || investiture.planned || accelerating}
+													title={investiture.reason ?? undefined}
+													aria-label="Demander l’investiture : {ballot.label} du {ballot.dateLabel}"
+													onclick={() =>
+														session.controller.addStep({
+															kind: 'action',
+															id: investiture.actionId,
+															target: ballot.ballotId
+														})}
+												>
+													{investiture.planned ? 'Investiture demandée' : 'Demander l’investiture'}
+												</button>
+											{/if}
+										</div>
+									{/if}
+									{#if ballot.listPlace}
+										{@const place = ballot.listPlace}
+										<button
+											type="button"
+											class="btn-secondary btn-small"
+											disabled={!place.addable || place.planned || accelerating}
+											title={place.reason ?? undefined}
+											aria-label="Demander une place sur une liste : {ballot.label} du {ballot.dateLabel}"
+											onclick={() =>
+												session.controller.addStep({
+													kind: 'action',
+													id: place.actionId,
+													target: ballot.ballotId
+												})}
+										>
+											{place.planned ? 'Place demandée' : 'Demander une place sur une liste'}
+										</button>
+									{/if}
 								{/if}
 							</div>
 						{/if}
@@ -282,6 +367,14 @@
 							</span>
 							— en tête : {result.winner}
 							<span class="block text-xs text-muted">{result.shares}</span>
+							{#if result.report}
+								<details class="mt-1">
+									<summary class="cursor-pointer text-xs text-primary">
+										Procès-verbal — {result.report.title}
+									</summary>
+									<div class="mt-1"><BallotReport report={result.report} /></div>
+								</details>
+							{/if}
 						</li>
 					{/each}
 				</ul>

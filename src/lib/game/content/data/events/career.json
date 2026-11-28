@@ -1,6 +1,1258 @@
 {
 	"events": [
 		{
+			"id": "matignon.censure_survived",
+			"category": "career",
+			"title": "La motion de censure est repoussée",
+			"text": "L’opposition a déposé sa motion de censure. Il manque trente voix : votre majorité, rappelée de ses circonscriptions, a tenu. De justesse, et avec des conditions.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 9,
+			"maxOccurrences": 3,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.prime_minister"
+					},
+					{
+						"op": "lte",
+						"stat": "world.stability",
+						"value": 45
+					},
+					{
+						"op": "gte",
+						"stat": "world.stability",
+						"value": 26
+					}
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "thank",
+					"label": "Remercier la majorité",
+					"hints": ["Les députés se sentent écoutés", "Il faudra leur rendre la politesse"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": 3
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -2
+						}
+					],
+					"outcome": [
+						"Un déjeuner à Matignon pour les députés de la majorité ; les promesses de circonscription s’accumulent."
+					]
+				},
+				{
+					"id": "defy",
+					"label": "Ironiser sur l’opposition",
+					"hints": ["Un bon mot au journal de 20 heures", "La tension reste vive"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 3
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "stability",
+							"value": -2
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Votre formule fait le tour des rédactions. L’opposition, vexée, prépare déjà la prochaine motion."
+					]
+				}
+			]
+		},
+		{
+			"id": "matignon.censure_adopted",
+			"category": "career",
+			"title": "Le gouvernement est renversé",
+			"text": "La motion de censure est adoptée : pour la première fois depuis longtemps, l’Assemblée renverse le gouvernement. Il vous reste à porter votre démission à l’Élysée.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 6,
+			"priority": 9,
+			"maxOccurrences": 2,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.prime_minister"
+					},
+					{
+						"op": "lte",
+						"stat": "world.stability",
+						"value": 25
+					}
+				]
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "endMandate",
+					"mandate": "mandate.prime_minister"
+				},
+				{
+					"op": "addIndicator",
+					"indicator": "stability",
+					"value": -5
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 6
+				},
+				{
+					"op": "addResource",
+					"resource": "influence",
+					"value": -5
+				}
+			]
+		},
+		{
+			"id": "matignon.dismissed",
+			"category": "career",
+			"title": "Le président vous remercie",
+			"text": "Un entretien d’une demi-heure à l’Élysée, un communiqué de trois lignes : le président souhaite « un nouvel élan ». Votre successeur est déjà dans l’antichambre.",
+			"blocking": false,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 9,
+			"maxOccurrences": 2,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.prime_minister"
+					},
+					{
+						"op": "lte",
+						"stat": "player.popularity",
+						"value": 28
+					}
+				]
+			},
+			"actors": [],
+			"effects": [
+				{
+					"op": "endMandate",
+					"mandate": "mandate.prime_minister"
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 4
+				},
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
+					"value": -3
+				}
+			]
+		},
+		{
+			"id": "matignon.flood_crisis",
+			"category": "career",
+			"title": "Des inondations historiques",
+			"text": "Des rivières sortent de leur lit dans trois régions, les images de toits émergeant de l’eau tournent en boucle. Les maires réclament l’état de catastrophe naturelle.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 9,
+			"maxOccurrences": 3,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.prime_minister"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "visit",
+					"label": "Se rendre sur place en bottes",
+					"hints": ["Présent auprès des sinistrés", "Les images peuvent se retourner"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Bottes, ciré et promesses : vous êtes là. Une sinistrée vous apostrophe devant les caméras ; vous l’écoutez, longuement."
+					]
+				},
+				{
+					"id": "fund",
+					"label": "Débloquer un fonds d’urgence",
+					"hints": ["Les élus locaux respirent", "Le budget souffre"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": 2
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "economy",
+							"value": -2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 1
+						}
+					],
+					"outcome": [
+						"Un décret dans la nuit, des aides en dix jours : les préfets n’en reviennent pas."
+					]
+				}
+			]
+		},
+		{
+			"id": "matignon.market_crash",
+			"category": "career",
+			"title": "Un krach boursier",
+			"text": "Les places financières s’effondrent un jeudi noir. Les banques appellent Bercy, Bercy appelle Matignon et tout le monde attend votre allocution.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 9,
+			"maxOccurrences": 3,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.prime_minister"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "rescue",
+					"label": "Garantir les dépôts et soutenir les banques",
+					"hints": ["Les marchés se calment", "Les contribuables s’en souviendront"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "economy",
+							"value": 3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": -2
+						}
+					],
+					"outcome": [
+						"Un plan de garantie annoncé avant l’ouverture : les marchés se calment, les éditorialistes parlent de « socialisation des pertes »."
+					]
+				},
+				{
+					"id": "wait",
+					"label": "Laisser les marchés se corriger",
+					"hints": ["Rigueur doctrinale", "Le chômage menace"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "economy",
+							"value": -3
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": -2
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Vous refusez de « céder à la panique ». Les marchés continuent de céder, eux."
+					]
+				}
+			]
+		},
+		{
+			"id": "matignon.transport_strike",
+			"category": "career",
+			"title": "Le pays à l’arrêt",
+			"text": "Une grève reconductible paralyse trains et métros depuis dix jours. Les usagers marchent, les commentateurs comptent, et l’Élysée vous demande une sortie de crise.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 9,
+			"maxOccurrences": 3,
+			"cooldownTurns": 8,
+			"unique": false,
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.prime_minister"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "negotiate",
+					"label": "Nommer un médiateur",
+					"hints": ["La grève s’essouffle", "Des concessions coûteuses"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": 3
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "economy",
+							"value": -1
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -1
+						}
+					],
+					"outcome": [
+						"Un médiateur, trois nuits de négociation et un protocole d’accord. Les trains repartent."
+					]
+				},
+				{
+					"id": "firm",
+					"label": "Tenir bon",
+					"hints": ["Votre autorité s’affirme", "Le pays souffre"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": -3
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "stability",
+							"value": -2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.wealthy",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Le mouvement s’épuise au bout d’un mois. Vous avez gagné ; beaucoup s’en souviendront."
+					]
+				}
+			]
+		},
+		{
+			"id": "government.official_car",
+			"category": "career",
+			"title": "La voiture de fonction a le plein",
+			"text": "Le chauffeur vous demande, l’air de rien, si la berline vous dépose aussi à la maison de campagne pour le pont de l’Ascension. La carte carburant ne pose jamais de questions.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "any",
+						"conditions": [
+							{
+								"op": "holdsMandate",
+								"mandate": "mandate.minister"
+							},
+							{
+								"op": "holdsMandate",
+								"mandate": "mandate.secretary_of_state"
+							}
+						]
+					},
+					{
+						"op": "capability",
+						"capability": "public_office"
+					}
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "take",
+					"label": "Partir en voiture de fonction",
+					"hints": ["Des vacances sans frais", "Les chauffeurs ont parfois de la mémoire"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "personalCashCents",
+							"value": 150000
+						},
+						{
+							"op": "recordFact",
+							"offense": "offense.conflict_of_interest",
+							"severity": 1
+						}
+					],
+					"outcome": [
+						"Quatre heures d’autoroute à l’arrière d’une berline officielle. Le chauffeur, lui, a tout noté dans son carnet de bord."
+					]
+				},
+				{
+					"id": "train",
+					"label": "Prendre le train comme tout le monde",
+					"hints": ["Exemplaire", "Moins confortable"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 1
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 1
+						}
+					],
+					"outcome": [
+						"Seconde classe, voiture 14. Un voyageur vous reconnaît et prend un selfie ; la photo fait le tour des réseaux, à votre avantage."
+					]
+				}
+			]
+		},
+		{
+			"id": "government.lobby_seminar",
+			"category": "career",
+			"title": "Un séminaire dans un palace",
+			"text": "Une fédération professionnelle vous invite à « un séminaire de réflexion » dans un palace de la Côte, tous frais payés. Le programme tient sur une demi-page ; le spa, sur trois.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.minister"
+					},
+					{
+						"op": "capability",
+						"capability": "public_office"
+					}
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "accept",
+					"label": "Accepter l’invitation",
+					"hints": ["Trois jours de repos", "Les fédérations ont parfois de la mémoire"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -5
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 2
+						},
+						{
+							"op": "recordFact",
+							"offense": "offense.conflict_of_interest",
+							"severity": 2
+						}
+					],
+					"outcome": [
+						"Trois jours de « réflexion » entre deux massages. La fédération repart avec quelques amendements bien compris."
+					]
+				},
+				{
+					"id": "decline",
+					"label": "Décliner poliment",
+					"hints": ["Rien à se reprocher", "La fédération boude"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": -1
+						}
+					],
+					"outcome": [
+						"Vous déclinez par courrier. La fédération trouve un autre ministre, moins regardant."
+					]
+				}
+			]
+		},
+		{
+			"id": "government.interior_riots",
+			"category": "career",
+			"title": "Une nuit de violences urbaines",
+			"text": "Des voitures brûlent dans trois villes, les images tournent en boucle et l’opposition réclame votre démission avant le journal de 13 heures.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "holdsPortfolio",
+				"portfolio": "portfolio.interior"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "firm",
+					"label": "Déployer les forces mobiles",
+					"hints": ["L’ordre revient", "Les quartiers s’en souviendront"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "stability",
+							"value": 2
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": -2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.wealthy",
+							"value": 2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": -2
+						}
+					],
+					"outcome": [
+						"Les compagnies de CRS quadrillent les quartiers ; le calme revient, la colère reste."
+					]
+				},
+				{
+					"id": "dialogue",
+					"label": "Recevoir les élus et les associations",
+					"hints": ["La tension baisse", "On vous trouve faible"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": 2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 1
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -2
+						}
+					],
+					"outcome": [
+						"Une nuit de réunions en préfecture, des promesses de moyens et un calme fragile."
+					]
+				}
+			]
+		},
+		{
+			"id": "government.justice_escape",
+			"category": "career",
+			"title": "Une évasion spectaculaire",
+			"text": "Un détenu célèbre s’est évadé par hélicoptère d’une maison d’arrêt censée être imprenable. Les chaînes d’info rediffusent la scène au ralenti.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "holdsPortfolio",
+				"portfolio": "portfolio.justice"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "sanction",
+					"label": "Limoger le directeur de l’administration pénitentiaire",
+					"hints": ["Un responsable désigné", "Les surveillants s’insurgent"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 1
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": -1
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 3
+						}
+					],
+					"outcome": [
+						"Le directeur part, les surveillants manifestent, l’évadé envoie une carte postale."
+					]
+				},
+				{
+					"id": "plan",
+					"label": "Annoncer un plan de sécurisation des prisons",
+					"hints": ["Rassurant", "Coûteux"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 2
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "economy",
+							"value": -1
+						}
+					],
+					"outcome": [
+						"Des filets anti-hélicoptères pour toutes les prisons ; le budget suivra, dit-on."
+					]
+				}
+			]
+		},
+		{
+			"id": "government.economy_downgrade",
+			"category": "career",
+			"title": "L’agence de notation vous dégrade",
+			"text": "Une agence de notation retire un « A » à la France un vendredi soir. Les marchés ouvrent lundi ; les éditorialistes, eux, n’ont jamais fermé.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "holdsPortfolio",
+				"portfolio": "portfolio.economy"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "austerity",
+					"label": "Annoncer un plan de rigueur",
+					"hints": ["Les marchés se calment", "La rue gronde"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "economy",
+							"value": 2
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": -3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": -2
+						}
+					],
+					"outcome": [
+						"Gel des dépenses, hausse d’une taxe oubliée : les marchés saluent, les syndicats appellent à manifester."
+					]
+				},
+				{
+					"id": "shrug",
+					"label": "Minimiser la nouvelle",
+					"hints": ["Rien ne change", "On vous trouve léger"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"« Une agence n’est pas un peuple », déclarez-vous. Une phrase reprise partout, pas toujours en bien."
+					]
+				}
+			]
+		},
+		{
+			"id": "government.labour_strike",
+			"category": "career",
+			"title": "La grève générale menace",
+			"text": "Les syndicats appellent à une journée de grève reconductible contre votre projet de loi. Les transports s’arrêtent déjà dans les sondages.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "holdsPortfolio",
+				"portfolio": "portfolio.labour"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "hold",
+					"label": "Maintenir le texte",
+					"hints": ["Autorité affirmée", "Le pays bloqué"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": -3
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "stability",
+							"value": -1
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Trois semaines de grève, des files d’attente interminables et un texte voté de justesse."
+					]
+				},
+				{
+					"id": "withdraw",
+					"label": "Retirer l’article contesté",
+					"hints": ["La grève s’arrête", "Recul assumé"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": 3
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"L’article disparaît, les trains repartent et l’opposition parle de « reculade »."
+					]
+				}
+			]
+		},
+		{
+			"id": "government.education_strike",
+			"category": "career",
+			"title": "Les enseignants dans la rue",
+			"text": "Une réforme des programmes, un mot de trop dans une interview et voilà les salles de classe vides. Les parents d’élèves comptent les jours de garde.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "holdsPortfolio",
+				"portfolio": "portfolio.education"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "negotiate",
+					"label": "Ouvrir des négociations",
+					"hints": ["Apaisement", "Une réforme édulcorée"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": 2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 1
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -1
+						}
+					],
+					"outcome": [
+						"Des groupes de travail, une concertation et une réforme qui ressemble beaucoup à l’ancienne."
+					]
+				},
+				{
+					"id": "persist",
+					"label": "Tenir bon",
+					"hints": ["Fermeté", "Les parents vous en veulent"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": -2
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": -2
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						}
+					],
+					"outcome": ["La grève s’essouffle ; la rancune, non."]
+				}
+			]
+		},
+		{
+			"id": "government.health_epidemic",
+			"category": "career",
+			"title": "Une épidémie de grippe sévère",
+			"text": "Les urgences débordent, les pharmacies manquent de vaccins et un professeur de médecine vous accuse d’imprévoyance sur tous les plateaux.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "holdsPortfolio",
+				"portfolio": "portfolio.health"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "vaccines",
+					"label": "Commander des millions de doses",
+					"hints": ["Rassurant", "Peut-être trop"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 2
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "economy",
+							"value": -2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Les vaccins arrivent en masse ; une partie dormira longtemps dans des entrepôts."
+					]
+				},
+				{
+					"id": "hospitals",
+					"label": "Débloquer des moyens pour les urgences",
+					"hints": ["Les soignants respirent", "Le budget souffre"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 2
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": 1
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "economy",
+							"value": -1
+						}
+					],
+					"outcome": [
+						"Des lits rouverts, des primes annoncées : les soignants applaudissent, sans illusion."
+					]
+				}
+			]
+		},
+		{
+			"id": "government.ecology_spill",
+			"category": "career",
+			"title": "Une marée noire sur les côtes",
+			"text": "Un pétrolier battant pavillon de complaisance se brise au large. Les plages se couvrent de mazout et les bénévoles de cirés.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "holdsPortfolio",
+				"portfolio": "portfolio.ecology"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "site",
+					"label": "Se rendre sur place en bottes",
+					"hints": ["Présent", "Les images ne pardonnent rien"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 4
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Vous ramassez un oiseau mazouté devant les caméras. L’image fait le tour du pays."
+					]
+				},
+				{
+					"id": "law",
+					"label": "Annoncer une loi sur le transport maritime",
+					"hints": ["Sérieux", "Lointain"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": -1
+						}
+					],
+					"outcome": [
+						"Un projet de loi ambitieux, attendu pour la prochaine session, ou celle d’après."
+					]
+				}
+			]
+		},
+		{
+			"id": "government.agriculture_crisis",
+			"category": "career",
+			"title": "Les tracteurs bloquent les préfectures",
+			"text": "Prix du lait effondrés, fumier devant les préfectures et un syndicat agricole qui exige d’être reçu dans l’heure.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "holdsPortfolio",
+				"portfolio": "portfolio.agriculture"
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "aid",
+					"label": "Annoncer un plan d’aide d’urgence",
+					"hints": ["Les campagnes s’apaisent", "Bruxelles fronce les sourcils"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 2
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "economy",
+							"value": -1
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Une enveloppe d’urgence et une promesse de « réforme structurelle ». Les tracteurs rentrent à la ferme."
+					]
+				},
+				{
+					"id": "market",
+					"label": "Rappeler les règles du marché",
+					"hints": ["Cohérent", "Les campagnes vous en veulent"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": -2
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "socialClimate",
+							"value": -2
+						}
+					],
+					"outcome": [
+						"Le fumier reste devant la préfecture une semaine de plus, et dans les mémoires plus longtemps."
+					]
+				}
+			]
+		},
+		{
+			"id": "career.party_federation_feud",
+			"category": "career",
+			"title": "Deux fédérations, une seule circonscription",
+			"text": "Le secrétaire fédéral du Nord et celle du Sud revendiquent la même investiture pour leurs protégés, menacent de démissionner, puis de ne pas démissionner. Le bureau national attend votre arbitrage avant le journal de vingt heures.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 12,
+			"unique": false,
+			"when": {
+				"op": "eq",
+				"stat": "player.partyRank",
+				"value": 3
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "favour_loyal",
+					"label": "Trancher pour le plus fidèle",
+					"hints": ["L’appareil se resserre autour de vous", "La base grogne contre le copinage"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": 4
+						},
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": -3
+						}
+					],
+					"outcome": [
+						"Le fidèle est investi. L’autre fédération publie un communiqué amer, puis rentre dans le rang."
+					]
+				},
+				{
+					"id": "primary",
+					"label": "Organiser une primaire locale",
+					"hints": ["Les militants apprécient", "Des semaines de querelles en perspective"],
+					"costs": [
+						{
+							"resource": "politicalBudgetCents",
+							"amount": 30000
+						}
+					],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": 4
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Les militants votent, les urnes sont scellées, le perdant conteste. Le parti en sort plus vivant, et plus bruyant."
+					]
+				}
+			]
+		},
+		{
+			"id": "career.party_frondeurs",
+			"category": "career",
+			"title": "La fronde au bureau national",
+			"text": "Une poignée de cadres signe une tribune réclamant « un nouveau souffle » à la tête du parti. Personne ne vous nomme, tout le monde vous désigne. La presse compte déjà les signatures.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "eq",
+				"stat": "player.partyRank",
+				"value": 3
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "concede",
+					"label": "Ouvrir la direction aux frondeurs",
+					"hints": ["La fronde se calme", "Votre autorité s’en ressent"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": 3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": -2
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -2
+						}
+					],
+					"outcome": [
+						"Trois frondeurs entrent au bureau national et découvrent les réunions du lundi matin. La tribune est vite oubliée."
+					]
+				},
+				{
+					"id": "crush",
+					"label": "Mater la fronde",
+					"hints": ["L’appareil vous suit", "La presse s’en régale"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 4
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Les signataires sont privés de commission, puis de tribune. L’ordre règne, et un éditorialiste parle de « caporalisme »."
+					]
+				}
+			]
+		},
+		{
 			"id": "career.council_vacancy",
 			"category": "career",
 			"title": "Un siège se libère",
@@ -193,36 +1445,13 @@
 		{
 			"id": "career.ministry_call",
 			"category": "career",
-			"title": "Un coup de fil un dimanche soir",
-			"text": "Le téléphone sonne un dimanche soir : {governing_leader} vous propose d’entrer au gouvernement, au ministère délégué aux Petites Choses Importantes. Il faudrait répondre avant le journal de 20 heures.",
+			"title": "Un coup de fil de Matignon",
+			"text": "Le téléphone sonne un dimanche soir : l’Élysée, puis la voix du président lui-même. Il compose un gouvernement et pense à vous ; il faudrait répondre avant le journal de 20 heures.",
 			"blocking": true,
-			"trigger": "random",
-			"weight": 3,
-			"priority": 8,
-			"cooldownTurns": 12,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 40,
 			"unique": false,
-			"when": {
-				"op": "all",
-				"conditions": [
-					{
-						"op": "eq",
-						"stat": "player.partyGoverning",
-						"value": 1
-					},
-					{
-						"op": "gte",
-						"stat": "resources.influence",
-						"value": 60
-					},
-					{
-						"op": "not",
-						"condition": {
-							"op": "holdsMandate",
-							"mandate": "mandate.minister"
-						}
-					}
-				]
-			},
 			"actors": [],
 			"choices": [
 				{
@@ -236,9 +1465,8 @@
 					"costs": [],
 					"effects": [
 						{
-							"op": "grantMandate",
-							"mandate": "mandate.minister",
-							"replaceIncompatible": true
+							"op": "appointment",
+							"decision": "accept"
 						},
 						{
 							"op": "addResource",
@@ -269,13 +1497,18 @@
 					"costs": [],
 					"effects": [
 						{
+							"op": "appointment",
+							"decision": "decline"
+						},
+						{
 							"op": "addResource",
 							"resource": "influence",
 							"value": -2
 						}
 					]
 				}
-			]
+			],
+			"cooldownTurns": 0
 		},
 		{
 			"id": "career.minister_reshuffled",
@@ -401,6 +1634,627 @@
 					"value": 5
 				}
 			]
+		},
+		{
+			"id": "chain.developer_mall",
+			"category": "career",
+			"title": "Un centre commercial aux portes de la ville",
+			"text": "{developer} déroule une maquette sur votre bureau : un centre commercial, quatre cents emplois promis et un rond-point offert. Il ne lui manque qu’un avis favorable, et peut-être un ami.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": true,
+			"actors": [
+				{
+					"role": "developer",
+					"tags": ["developer"]
+				}
+			],
+			"choices": [
+				{
+					"id": "back",
+					"label": "Soutenir le projet",
+					"hints": ["Des emplois annoncés", "Les commerçants du centre-ville grincent"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 1
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": -1
+						},
+						{
+							"op": "addRelation",
+							"role": "developer",
+							"value": 10,
+							"memory": "Vous avez soutenu son centre commercial."
+						}
+					],
+					"outcome": [
+						"Le permis avance, la maquette trône dans le hall de la mairie, et {developer} vous tutoie désormais."
+					],
+					"followUp": {
+						"eventId": "chain.developer_opening",
+						"delayTurns": 4
+					}
+				},
+				{
+					"id": "refuse",
+					"label": "Défendre les commerces du centre",
+					"hints": ["Le centre-ville vous remercie", "Un promoteur vexé"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": -2
+						},
+						{
+							"op": "addRelation",
+							"role": "developer",
+							"value": -10,
+							"memory": "Vous avez enterré son centre commercial."
+						}
+					],
+					"outcome": [
+						"Le projet part dans la commune voisine. {developer} vous croise au marché sans vous voir."
+					]
+				}
+			],
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "any",
+						"conditions": [
+							{
+								"op": "holdsMandate",
+								"mandate": "mandate.mayor"
+							},
+							{
+								"op": "holdsMandate",
+								"mandate": "mandate.regional_councillor"
+							}
+						]
+					},
+					{
+						"op": "capability",
+						"capability": "public_office"
+					}
+				]
+			}
+		},
+		{
+			"id": "chain.developer_opening",
+			"category": "career",
+			"title": "L’inauguration du centre commercial",
+			"text": "Ruban, fanfare et parking plein : le centre ouvre. En coupant le ruban, {developer} glisse qu’un appartement du programme voisin pourrait vous être réservé « à prix d’ami ».",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": false,
+			"actors": [
+				{
+					"role": "developer",
+					"tags": ["developer"]
+				}
+			],
+			"choices": [
+				{
+					"id": "flat",
+					"label": "Accepter l’appartement à prix d’ami",
+					"hints": ["Une affaire en or", "Les promoteurs ont parfois de la mémoire"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "personalCashCents",
+							"value": 2000000
+						},
+						{
+							"op": "addRelation",
+							"role": "developer",
+							"value": 10,
+							"memory": "Vous avez accepté son appartement à prix d’ami."
+						},
+						{
+							"op": "recordFact",
+							"offense": "offense.conflict_of_interest",
+							"severity": 2,
+							"accomplices": ["developer"]
+						}
+					],
+					"outcome": [
+						"Un acte notarié discret, un prix « négocié ». {developer} garde une copie de tout, par habitude."
+					],
+					"followUp": {
+						"eventId": "chain.developer_audit",
+						"delayTurns": 6
+					}
+				},
+				{
+					"id": "pay",
+					"label": "Décliner et couper le ruban",
+					"hints": ["Rien à se reprocher", "Le promoteur s’étonne"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 2
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Vous coupez le ruban sous les flashs. {developer} range son offre avec un sourire pincé."
+					]
+				}
+			],
+			"when": {
+				"op": "capability",
+				"capability": "public_office"
+			}
+		},
+		{
+			"id": "chain.developer_audit",
+			"category": "career",
+			"title": "Les magistrats financiers épluchent le centre commercial",
+			"text": "Les magistrats financiers épluchent le dossier du centre commercial : permis, rond-point offert, et quelques transactions immobilières dans le voisinage. {developer} ne répond plus au téléphone.",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": false,
+			"actors": [
+				{
+					"role": "developer",
+					"tags": ["developer"]
+				}
+			],
+			"choices": [
+				{
+					"id": "cooperate",
+					"label": "Collaborer pleinement",
+					"hints": ["La transparence rassure", "Tout finit par se savoir"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 4
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 1
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 3
+						}
+					],
+					"outcome": [
+						"Vous remettez tous les documents. Le rapport sera sévère pour la procédure, moins pour vous."
+					]
+				},
+				{
+					"id": "deny",
+					"label": "Dénoncer un acharnement",
+					"hints": ["Les fidèles serrent les rangs", "Les magistrats aussi"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 6
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						},
+						{
+							"op": "addRelation",
+							"role": "developer",
+							"value": -5,
+							"memory": "Vous l’avez laissé seul face aux magistrats."
+						}
+					],
+					"outcome": [
+						"Votre communiqué parle d’un « dossier monté de toutes pièces ». Les magistrats, eux, poursuivent leur lecture."
+					]
+				}
+			]
+		},
+		{
+			"id": "unique.mayor_first_council",
+			"category": "career",
+			"title": "Votre premier conseil municipal en maire",
+			"text": "La salle du conseil, l’écharpe qui gratte, et vingt-sept élus qui attendent votre premier ordre du jour. Le doyen de l’opposition a préparé sa question.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 8,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": true,
+			"actors": [],
+			"choices": [
+				{
+					"id": "open",
+					"label": "Ouvrir la séance par une main tendue",
+					"hints": ["Un climat apaisé", "L’opposition prend ses aises"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 2
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 1
+						}
+					],
+					"outcome": [
+						"Vous saluez l’opposition par son nom. Le doyen range sa question pour une autre fois."
+					]
+				},
+				{
+					"id": "firm",
+					"label": "Imposer d’emblée votre programme",
+					"hints": ["Une autorité installée", "Une opposition remontée"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Six délibérations votées en une heure. L’opposition quitte la salle au troisième point."
+					]
+				}
+			],
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.mayor"
+			}
+		},
+		{
+			"id": "unique.region_first_session",
+			"category": "career",
+			"title": "Votre première session au conseil régional",
+			"text": "Un hémicycle moderne, des écrans partout et un budget en milliards. Vous découvrez que la région s’occupe des lycées, des trains et surtout d’elle-même.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 8,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": true,
+			"actors": [],
+			"choices": [
+				{
+					"id": "transport",
+					"label": "Rejoindre la commission des transports",
+					"hints": ["Des dossiers concrets", "Des usagers exigeants"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 1
+						}
+					],
+					"outcome": ["Les horaires du TER deviennent votre lecture du soir."]
+				},
+				{
+					"id": "budget",
+					"label": "Rejoindre la commission des finances",
+					"hints": ["Le cœur du pouvoir régional", "Des nuits de tableaux"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					],
+					"outcome": ["Vous apprenez à lire un budget primitif, puis à le contester."]
+				}
+			],
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.regional_councillor"
+			}
+		},
+		{
+			"id": "unique.deputy_maiden_speech",
+			"category": "career",
+			"title": "Votre premier discours dans l’hémicycle",
+			"text": "Deux minutes à la tribune de l’Assemblée, un hémicycle à moitié vide et un huissier qui vous regarde comme un nouveau. Le discours est prêt ; le trac aussi.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 8,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": true,
+			"actors": [],
+			"choices": [
+				{
+					"id": "bold",
+					"label": "Oser une formule",
+					"hints": ["Elle peut faire le tour des rédactions", "Ou se retourner contre vous"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResourceRandom",
+							"resource": "influence",
+							"min": -2,
+							"max": 6
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 3
+						}
+					],
+					"outcome": [
+						"Votre formule déclenche des applaudissements sur vos bancs et des quolibets en face. La presse la reprend, plus ou moins fidèlement."
+					]
+				},
+				{
+					"id": "sober",
+					"label": "Rester sobre et technique",
+					"hints": ["Sérieux remarqué", "Personne ne s’en souviendra"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Un discours sans éclat mais sans faute. Le président de groupe vous félicite d’un signe de tête."
+					]
+				}
+			],
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.deputy"
+			}
+		},
+		{
+			"id": "unique.senator_luxembourg",
+			"category": "career",
+			"title": "Premiers pas au palais du Luxembourg",
+			"text": "Les dorures, le jardin et un restaurant où l’on parle bas. Un sénateur chevronné vous prend par le bras : « Ici, mon cher, on a le temps. »",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 8,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": true,
+			"actors": [],
+			"choices": [
+				{
+					"id": "mentor",
+					"label": "Écouter le vieux sénateur",
+					"hints": ["Des réseaux précieux", "Un rythme sénatorial"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -2
+						}
+					],
+					"outcome": ["Il vous présente à tout le monde, et vous apprend à ne jamais vous presser."]
+				},
+				{
+					"id": "hurry",
+					"label": "Déposer votre première proposition de loi",
+					"hints": ["Un nouveau qui se montre", "Les anciens sourient"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 2
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 1
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 1
+						}
+					],
+					"outcome": [
+						"Votre proposition est renvoyée en commission, où elle prendra le temps du Sénat."
+					]
+				}
+			],
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.senator"
+			}
+		},
+		{
+			"id": "unique.minister_handover",
+			"category": "career",
+			"title": "La passation de pouvoirs",
+			"text": "Dans la cour du ministère, votre prédécesseur vous remet les dossiers, le code du coffre et un conseil glissé à l’oreille : « Méfiez-vous du directeur de cabinet. »",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 8,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": true,
+			"actors": [],
+			"choices": [
+				{
+					"id": "keep",
+					"label": "Garder l’équipe en place",
+					"hints": ["Continuité assurée", "Des fidélités incertaines"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -1
+						}
+					],
+					"outcome": [
+						"Le directeur de cabinet vous remercie de votre confiance. Vous ne saurez jamais s’il fallait s’en méfier."
+					]
+				},
+				{
+					"id": "clean",
+					"label": "Faire place nette",
+					"hints": ["Une équipe à vous", "Des débuts chaotiques"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 3
+						}
+					],
+					"outcome": [
+						"Trois directeurs remplacés en une semaine : l’administration vous observe, prudemment."
+					]
+				}
+			],
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.minister"
+			}
+		},
+		{
+			"id": "unique.pm_first_night",
+			"category": "career",
+			"title": "Première nuit à Matignon",
+			"text": "L’hôtel de Matignon dort, sauf vous. Un huissier apporte un dossier marqué « urgent » et le café de deux heures du matin. Le jardin, dans le noir, paraît immense.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 8,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": true,
+			"actors": [],
+			"choices": [
+				{
+					"id": "work",
+					"label": "Lire tous les dossiers",
+					"hints": ["Maîtrise totale", "Une fatigue qui s’installe"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 4
+						}
+					],
+					"outcome": [
+						"À l’aube, vous connaissez chaque dossier. Vos ministres, eux, découvrent que vous les avez lus."
+					]
+				},
+				{
+					"id": "garden",
+					"label": "Faire un tour dans le jardin",
+					"hints": ["Un moment pour soi", "Le premier de longtemps"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -4
+						}
+					],
+					"outcome": [
+						"Vous marchez jusqu’au fond du parc. Les gardes vous saluent ; le pays, lui, attend demain."
+					]
+				}
+			],
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.prime_minister"
+			}
 		}
 	]
 }

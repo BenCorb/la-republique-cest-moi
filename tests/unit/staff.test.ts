@@ -206,6 +206,31 @@ describe('embauche et production', () => {
 		});
 	});
 
+	it('annonce les salaires et la production des collaborateurs dans la prévision (PT-B2-001)', () => {
+		const state = opened('prévision');
+		const expertId = state.shortlists['post.aide']![0]!.characterId;
+		const hired = commit(state, [hire(expertId)]).state;
+		const competence = hired.characters[expertId]!.competence;
+		const produced = Math.round((2_000 * competence) / 50);
+		const without = previewPlan({ ...hired, staff: [] }, { steps: [] }, catalog).resourceChanges
+			.politicalBudgetCents;
+		const preview = previewPlan(hired, { steps: [] }, catalog);
+		expect(preview.resourceChanges.politicalBudgetCents).toEqual({
+			min: without.min - 1_000 + produced,
+			max: without.max - 1_000 + produced
+		});
+		// La prévision suit la résolution, au centime près.
+		const resolved = commit(hired);
+		expect(
+			resolved.state.resources.politicalBudgetCents - hired.resources.politicalBudgetCents
+		).toBe(preview.resourceChanges.politicalBudgetCents.min);
+
+		// Salaire impossible à payer : avertissement, ni salaire ni production prévus.
+		const broke = { ...hired, resources: { ...hired.resources, politicalBudgetCents: 0 } };
+		const warned = previewPlan(broke, { steps: [] }, catalog);
+		expect(warned.warnings.map((warning) => warning.code)).toContain('salary_unpaid');
+	});
+
 	it('refuse un candidat hors présélection, un poste fermé ou un premier salaire impayable', () => {
 		const state = opened('refus');
 		const candidate = state.shortlists['post.aide']![0]!.characterId;

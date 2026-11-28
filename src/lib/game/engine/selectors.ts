@@ -10,7 +10,7 @@ import { netWorth } from './wealth.ts';
 import { promiseCounts } from './promises.ts';
 
 /** Cause de fin de carrière : décès, ou prison ferme (P3-01). */
-export type EndCause = DeathCause | 'prison';
+export type EndCause = DeathCause | 'prison' | 'retirement';
 
 /** Bilan minimal de carrière (enrichi par le bilan de fin, P1-08 puis V1). */
 export interface CareerSummary {
@@ -51,7 +51,7 @@ export function careerSummary(state: GameState): CareerSummary {
 	const decisions = state.history.filter((entry) => entry.type === 'event.resolved');
 	return {
 		ended: state.end !== null,
-		cause: state.end ? (state.end.reason === 'prison' ? 'prison' : state.end.cause) : null,
+		cause: state.end ? (state.end.reason === 'death' ? state.end.cause : state.end.reason) : null,
 		cases: state.cases.filter((entry) => entry.defendantId === null).length,
 		convictions: state.cases.filter(
 			(entry) => entry.defendantId === null && entry.outcome === 'convicted'

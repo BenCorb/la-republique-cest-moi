@@ -69,10 +69,18 @@ describe('agenda regroupé par thème', () => {
 
 	it('met à part les actions hors de portée, avec leur motif', () => {
 		const activism = view.actionGroups.find((group) => group.id === 'activism')!;
-		expect(activism.actions.map((action) => action.id)).toEqual(['activism.leaflets']);
-		expect(activism.outOfReach.map((action) => action.id)).toEqual(['activism.public_meeting']);
-		expect(activism.outOfReach[0]?.outOfReach).toBe(true);
-		expect(activism.outOfReach[0]?.reason).toContain('10 points d’influence');
+		expect(activism.actions.map((action) => action.id)).toEqual([
+			'activism.sunday_market',
+			'activism.football_club',
+			'activism.leaflets'
+		]);
+		// Le comice n'a lieu qu'au troisième trimestre (P3-24).
+		expect(activism.outOfReach.map((action) => action.id)).toEqual([
+			'activism.agricultural_show',
+			'activism.public_meeting'
+		]);
+		expect(activism.outOfReach[1]?.outOfReach).toBe(true);
+		expect(activism.outOfReach[1]?.reason).toContain('10 points d’influence');
 		// Les actions d'autres terrains sont hors de portée (profil par défaut : vie associative).
 		const work = view.actionGroups.find((group) => group.id === 'work')!;
 		expect(work.actions.map((action) => action.id)).toEqual([

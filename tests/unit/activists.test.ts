@@ -98,7 +98,9 @@ const mandate = (mandateId: string): MandateInstance => ({
 	access: 'election',
 	status: 'active',
 	endTurn: null,
-	endReason: null
+	endReason: null,
+	side: null,
+	portfolio: null
 });
 
 function campaign(overrides: Partial<Campaign> = {}): Campaign {
@@ -115,6 +117,9 @@ function campaign(overrides: Partial<Campaign> = {}): Campaign {
 		status: 'running',
 		playerPercent: null,
 		reason: null,
+		role: 'head',
+		listRank: 1,
+		resultTurn: null,
 		...overrides
 	};
 }
@@ -235,6 +240,8 @@ describe('croissance et attrition', () => {
 			mandates: [],
 			ballots: [],
 			people: [],
+			runoffs: [],
+			investitures: [],
 			campaigns: [
 				{
 					campaignId: 'campaign.1',
@@ -289,6 +296,24 @@ describe('croissance et attrition', () => {
 		expect(broke.resources.politicalBudgetCents).toBe(0);
 		// Frais impayés : la base s'use davantage.
 		expect(broke.record.departures).toBeGreaterThan(paid.record.departures);
+	});
+	it('annonce les cotisations et les frais du palier dans la prévision (PT-B2-001)', () => {
+		const start = base();
+		const state: GameState = {
+			...start,
+			player: { ...start.player, activists: 30, partyId: content.partyIds[0]! },
+			resources: { ...start.resources, politicalBudgetCents: 10_000 }
+		};
+		const idle = { ...state, player: { ...state.player, activists: 0 } };
+		const without = previewPlan(idle, { steps: [] }, content).resourceChanges;
+		const preview = previewPlan(state, { steps: [] }, content).resourceChanges;
+		// 30 militants : 3 000 de cotisations, 5 000 de frais pour le palier adhérent.
+		expect(preview.politicalBudgetCents.min - without.politicalBudgetCents.min).toBe(-2_000);
+		const resolved = transition(state, commitTurn({ steps: [] }), content);
+		if (!resolved.ok) throw new Error(resolved.error.message);
+		expect(resolved.state.resources.politicalBudgetCents - 10_000).toBe(
+			preview.politicalBudgetCents.min
+		);
 	});
 });
 

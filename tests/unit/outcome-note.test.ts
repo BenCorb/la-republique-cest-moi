@@ -180,12 +180,17 @@ describe('faits marquants de la note', () => {
 			opponentId: null,
 			status,
 			playerPercent: percent,
-			reason: null
+			reason: null,
+			role: 'head',
+			listRank: 1,
+			resultTurn: null
 		};
 		const deadlines: DeadlinesRecord = {
 			mandates: [],
 			ballots: [],
 			people: [],
+			runoffs: [],
+			investitures: [],
 			campaigns: [
 				{
 					campaignId: 'campaign.1',
@@ -206,13 +211,14 @@ describe('faits marquants de la note', () => {
 		};
 	}
 
-	it('met en tête une victoire, avec sa phrase, son duel et le bilan électoral', () => {
+	it('met en tête une victoire, avec sa phrase, son procès-verbal et le bilan électoral', () => {
 		const note = projectView(withResult('won', 54), [], fixtureContent).quarterNote;
 		const fact = note?.highlights[0];
 		expect(fact).toMatchObject({ kind: 'victory', tone: 'gain' });
 		expect(fact?.title).toMatch(/^Victoire — /u);
 		expect(fact?.text).toContain('54 %');
-		expect(fact?.chart).toEqual({ kind: 'duel', playerPercent: 54, rival: 'Adversaire' });
+		// Échéance factice sans procès-verbal : aucun graphique (P3-29).
+		expect(fact?.chart).toBeNull();
 		expect(fact?.record).toEqual({ won: 1, lost: 0 });
 	});
 

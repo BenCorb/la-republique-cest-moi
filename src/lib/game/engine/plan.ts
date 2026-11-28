@@ -17,7 +17,7 @@
  * PRNG et n'expose aucune probabilité.
  */
 import { attractiveness, attractivenessFactors } from './recruitment.ts';
-import { fieldworkEffects } from './activists.ts';
+import { fieldworkEffects, resolveActivists } from './activists.ts';
 import {
 	RESOURCE_IDS,
 	type Condition,
@@ -57,12 +57,13 @@ import {
 	advanceIssue,
 	applyCareerEffect,
 	candidacyIssue,
+	investitureIssue,
 	isCareerEffect,
 	mandateIncome,
 	reservedTime,
 	type CareerParts
 } from './career.ts';
-import { shiftFamily } from './family.ts';
+import { dependantsCostCents, shiftFamily } from './family.ts';
 import {
 	applyPromiseEffect,
 	expandPromiseEffects,
@@ -78,6 +79,7 @@ import {
 	vetIssue,
 	hireIssue,
 	isStaffEffect,
+	resolveStaffProduction,
 	staffTimeBonus,
 	type EntourageParts,
 	type HiringDecision
@@ -108,7 +110,7 @@ export interface PlanIssue {
 
 /** Avertissement non bloquant : le plan reste valide. */
 export interface PlanWarning {
-	readonly code: 'upkeep_at_risk' | 'stress_high' | 'lifestyle_unpaid';
+	readonly code: 'upkeep_at_risk' | 'stress_high' | 'lifestyle_unpaid' | 'salary_unpaid';
 	/** Exemplaire concerné (`upkeep_at_risk`), sinon `null`. */
 	readonly instanceId: string | null;
 	readonly upgradeId: string | null;
@@ -255,8 +257,16 @@ function searchLevelOf(effects: readonly Effect[]): SearchLevel | null {
 	return null;
 }
 
+/** Rôle d'une candidature déclarée (P3-29) : tête de liste ou candidat par défaut. */
+export function candidacyRoleOf(effects: readonly Effect[]): 'head' | 'colistier' {
+	for (const effect of effects) {
+		if (effect.op === 'declareCandidacy') return effect.role ?? 'head';
+	}
+	return 'head';
+}
+
 /** Offre portée par une action d'embauche (P3-20), standard par défaut. */
-function hireOfferOf(effects: readonly Effect[]): HireOffer {
+function hireOfferOf(effects: readonly Effect[]): HireOffer | 'counter' {
 	for (const effect of effects) if (effect.op === 'hireStaff') return effect.offer ?? 'standard';
 	return 'standard';
 }
@@ -279,7 +289,8 @@ function applyStateEffects(
 	turn: number,
 	target: string | null,
 	content: Content,
-	decision: HiringDecision | null = null
+	decision: HiringDecision | null = null,
+	influence = 0
 ): StateParts & { changes: PoliticalChange[] } {
 	let { player, world, career, entourage } = parts;
 	const changes: PoliticalChange[] = [];
@@ -290,7 +301,16 @@ function applyStateEffects(
 			world = outcome.world;
 			changes.push(...outcome.changes);
 		} else if (isCareerEffect(effect)) {
-			const outcome = applyCareerEffect(effect, career, turn, target, content, player);
+			const outcome = applyCareerEffect(
+				effect,
+				career,
+				turn,
+				target,
+				content,
+				player,
+				world,
+				influence
+			);
 			career = outcome.parts;
 			changes.push(...outcome.changes);
 		} else if (isStaffEffect(effect)) {
@@ -337,7 +357,9 @@ function careerOf(state: GameState): CareerParts {
 		ballots: state.ballots,
 		campaigns: state.campaigns,
 		institutions: state.institutions,
-		promises: state.promises
+		promises: state.promises,
+		investitures: state.investitures,
+		appointment: state.appointment
 	};
 }
 
@@ -512,7 +534,16 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 				const issue =
 					target === null
 						? 'choisissez une élection'
-						: candidacyIssue(target, workingCareer, workingPlayer, state.turn, content);
+						: definition.effects.some((effect) => effect.op === 'requestInvestiture')
+							? investitureIssue(target, workingCareer, workingPlayer, state.turn, content)
+							: candidacyIssue(
+									target,
+									workingCareer,
+									workingPlayer,
+									state.turn,
+									content,
+									candidacyRoleOf(definition.effects)
+								);
 				if (issue) fail('invalid_target', `« ${label} » : ${issue}`);
 			} else if (definition.target === 'search') {
 				const level = searchLevelOf(definition.effects);
@@ -761,7 +792,9 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 			},
 			state.turn,
 			target,
-			content
+			content,
+			null,
+			working.influence
 		));
 		if (instanceId !== null) {
 			upgrades.push(newInstance(instanceId, step.id, state.turn, content));
@@ -806,10 +839,60 @@ export function previewPlan(state: GameState, plan: TurnPlan, catalog: Content):
 	}
 	const stressed = applyGaugeEffect(workingPlayer, 'player.stress', mandates.stress).player;
 
+	// Charges et recettes certaines de la frontière, dans l'ordre et avec les
+	// fonctions de la résolution (ARCHITECTURE.md §8.4) : salaires et missions des
+	// collaborateurs, enfants à charge, cotisations et frais de la base militante.
+	// Les montants aléatoires ou conditionnels (scrutins, événements, justice,
+	// héritages, remboursements de recherche) restent hors de la prévision.
+	const frontier: Record<ResourceId, number> = { ...economy.resources };
+	for (const amount of mandates.income) frontier[amount.resource] += amount.amount;
+	const staffed = resolveStaffProduction(
+		{
+			resources: frontier,
+			player: stressed,
+			world: workingWorld,
+			career: workingCareer,
+			entourage: workingEntourage
+		},
+		state.turn,
+		content
+	);
+	const withFamily: Record<ResourceId, number> = { ...staffed.resources };
+	withFamily.personalCashCents -= Math.min(
+		withFamily.personalCashCents,
+		dependantsCostCents(staffed.player, workingEntourage.characters, state.turn + 1, content)
+	);
+	const settledResources = resolveActivists(
+		staffed.player,
+		withFamily,
+		{
+			turn: state.turn,
+			upgrades,
+			mandates: staffed.career.mandates,
+			campaigns: staffed.career.campaigns,
+			deadlines: null
+		},
+		content
+	).resources;
+	for (const unpaid of staffed.record.production.filter((entry) => entry.status === 'unpaid')) {
+		const name = workingEntourage.characters[unpaid.characterId]?.name ?? unpaid.characterId;
+		warnings.push({
+			code: 'salary_unpaid',
+			instanceId: null,
+			upgradeId: null,
+			message: `Salaire de ${name} non couvert par le budget politique : sa mission sera suspendue ce trimestre et sa relation avec vous en pâtira.`
+		});
+	}
+	for (const resource of RESOURCE_IDS) {
+		const delta = settledResources[resource] - frontier[resource];
+		totals[resource].min += delta;
+		totals[resource].max += delta;
+	}
+
 	// Santé et stress à la frontière du trimestre (partie certaine uniquement).
 	// Le temps réservé par les mandats compte dans la charge de travail.
 	const wellbeing = forecastWellbeing(
-		stressed,
+		staffed.player,
 		timeUsed + reserved,
 		state.turn,
 		content.balance.wellbeing,
@@ -923,6 +1006,8 @@ export function executePlan(
 					throw new Error(`Départ non développé : ${step.id}`);
 				} else if (resolved.kind === 'fact') {
 					throw new Error(`Fait hors événement : ${step.id}`);
+				} else if (resolved.kind === 'retire') {
+					// Retraite (P3-37) : tranchée par la résolution du trimestre.
 				} else {
 					// Le candidat décide à l'exécution, selon l'attractivité du moment (P3-20).
 					const decision: HiringDecision | null =
@@ -946,7 +1031,8 @@ export function executePlan(
 						state.turn,
 						target,
 						content,
-						decision
+						decision,
+						current.influence
 					);
 					({ player, world, career, entourage } = applied);
 					politics.push(...applied.changes);

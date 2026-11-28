@@ -116,7 +116,8 @@
 			"family": "Extrême droite",
 			"description": "Contre, par principe, et contre le principe aussi. Promet de tout changer pour que tout redevienne comme avant, en mieux.",
 			"positions": { "economy": 10, "society": 85, "sovereignty": 90 },
-			"baseStrength": 14
+			"baseStrength": 14,
+			"cordon": true
 		}
 	],
 	"startingGoverningParty": "party.ps",

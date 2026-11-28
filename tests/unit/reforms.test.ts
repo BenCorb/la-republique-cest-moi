@@ -126,7 +126,9 @@ function holding(state: GameState, ...mandateIds: string[]): GameState {
 		access: 'election',
 		status: 'active',
 		endTurn: null,
-		endReason: null
+		endReason: null,
+		side: null,
+		portfolio: null
 	}));
 	return { ...state, mandates };
 }

@@ -43,10 +43,12 @@ import {
 	type GameState,
 	type PendingEventView,
 	type PlanStep,
-	type TurnPlan
+	type TurnPlan,
+	eligibleRandomEvents,
+	netWorth
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 21;
+export const SIMULATION_REPORT_VERSION = 25;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -122,6 +124,28 @@ export interface SimulationRun {
 	readonly campaigns: number;
 	readonly campaignsWon: number;
 	readonly campaignsLost: number;
+	/** Candidatures et élections par type de scrutin (P3-29). */
+	readonly campaignsByElection: Readonly<
+		Record<string, { readonly ran: number; readonly won: number }>
+	>;
+	/** Scrutins du joueur tranchés au second tour (P3-29). */
+	readonly runoffs: number;
+	/**
+	 * Part de la fortune consacrée aux débouchés politiques et de prestige
+	 * (dons, avances, mécénat, fondation, médias), en % de cette dépense plus la
+	 * valeur nette finale (P3-39).
+	 */
+	readonly fortuneSpentPercent: number;
+	/** Actions distinctes accomplies dans la carrière (P3-24). */
+	readonly distinctActions: number;
+	/** Part de l'action la plus fréquente parmi toutes les actions accomplies, en % (P3-24). */
+	readonly topActionSharePercent: number;
+	/** Événements ordinaires éligibles par trimestre, 10e centile (P3-24). */
+	readonly eligibleEventsP10: number;
+	/** Part des trimestres sous la cible de huit événements éligibles, en % (P3-24). */
+	readonly quartersBelowEligibleTarget: number;
+	/** Plus haut statut atteint dans un parti (P3-34). */
+	readonly partyRankPeak: 'none' | 'member' | 'cadre' | 'leader';
 	/** Adversaires différents affrontés et plus grand nombre d'affrontements avec le même. */
 	readonly distinctOpponents: number;
 	/** Profil de départ et famille en fin de carrière (P2-08). */
@@ -341,7 +365,8 @@ function partyWish(
 	content: Content
 ): PlanStep[] {
 	const joinId = content.actionIds.find((id) => content.actions[id]?.target === 'party');
-	if (!joinId || state.player.partyId !== null) return [];
+	if (state.player.partyId !== null) return partyCareerWish(strategy, state, content);
+	if (!joinId) return [];
 	let target: string | undefined;
 	if (strategy === 'ambitious') {
 		target = [...content.partyIds].sort(
@@ -354,6 +379,30 @@ function partyWish(
 		target = content.partyIds[hashSeed(`${seed}:parti`) % content.partyIds.length];
 	}
 	return target ? [{ kind: 'action', id: joinId, target }] : [];
+}
+
+/**
+ * Carrière partisane (P3-34) : l'ambitieuse brigue la direction sur la ligne de
+ * l'appareil et sollicite des ralliements, la mixte sur celle du rassemblement ;
+ * chef, l'une et l'autre arbitrent les investitures. Les plans invalides
+ * sont écartés par la prévision.
+ */
+function partyCareerWish(
+	strategy: SimulationStrategy,
+	state: GameState,
+	content: Content
+): PlanStep[] {
+	const has = (id: string): boolean => Object.hasOwn(content.actions, id);
+	const steps: string[] =
+		strategy === 'ambitious'
+			? ['party.bid_apparatus', 'party.rally', 'party.arbitrate']
+			: strategy === 'mixed'
+				? ['party.bid_unity', 'party.arbitrate']
+				: [];
+	const bidding = state.player.partyCareer?.bid !== null && state.player.partyCareer !== null;
+	return steps
+		.filter((id) => has(id) && !(bidding && id.startsWith('party.bid_')))
+		.map((id): PlanStep => ({ kind: 'action', id }));
 }
 
 /**
@@ -374,7 +423,17 @@ function candidacyWish(
 	state: GameState,
 	content: Content
 ): PlanStep[] {
-	const declareId = content.actionIds.find((id) => content.actions[id]?.target === 'ballot');
+	const declareId = content.actionIds.find(
+		(id) =>
+			content.actions[id]?.target === 'ballot' &&
+			content.actions[id]?.effects.some(
+				(effect) => effect.op === 'declareCandidacy' && effect.role !== 'colistier'
+			)
+	);
+	// Encartée, une politique demande l'investiture là où elle est exigée (P3-30).
+	const investitureId = content.actionIds.find((id) =>
+		content.actions[id]?.effects.some((effect) => effect.op === 'requestInvestiture')
+	);
 	const targets = CANDIDACY_TARGETS[strategy];
 	if (!declareId || (targets !== 'all' && targets.length === 0)) return [];
 	const ballots = [...state.ballots]
@@ -386,6 +445,10 @@ function candidacyWish(
 	for (const ballot of ballots) {
 		const step: PlanStep = { kind: 'action', id: declareId, target: ballot.ballotId };
 		if (previewPlan(state, { steps: [step] }, content).valid) return [step];
+		if (investitureId) {
+			const request: PlanStep = { kind: 'action', id: investitureId, target: ballot.ballotId };
+			if (previewPlan(state, { steps: [request] }, content).valid) return [request];
+		}
 	}
 	return [];
 }
@@ -775,9 +838,15 @@ const STRATEGY_WISHES: Readonly<
 		action('campaign.rally'),
 		action('campaign.canvass'),
 		action('party.section_meeting'),
+		// Familles en trois formats (P3-39) : le plus grand format accessible d'abord.
+		action('activism.zenith'),
+		action('activism.congress_hall'),
 		action('activism.public_meeting'),
+		action('organization.fundraising_gala'),
+		action('organization.fundraising_dinner'),
 		action('organization.fundraising'),
 		action('network.meet_officials'),
+		action('wealth.patronage'),
 		// Le plus grand format accessible (P3-23) : un seul passe par trimestre.
 		action('personal.donate_major'),
 		action('personal.donate_sustained'),
@@ -794,6 +863,10 @@ const STRATEGY_WISHES: Readonly<
 		purchase('wealth.sme_shares'),
 		purchase('wealth.country_house'),
 		purchase('wealth.local_media'),
+		// Débouchés de la fortune (P3-39) : fondation, hebdomadaire national, mécénat.
+		purchase('wealth.foundation'),
+		purchase('wealth.national_media'),
+		action('wealth.patronage'),
 		action('lifestyle.adopt_comfortable'),
 		purchase('network.think_tank'),
 		purchase('organization.donor_file'),
@@ -810,13 +883,19 @@ const STRATEGY_WISHES: Readonly<
 		purchase('organization.local_office'),
 		action('network.meet_officials'),
 		action('organization.gala'),
+		action('organization.fundraising_dinner'),
 		action('organization.fundraising'),
 		action('personal.freelance')
 	]
 };
 
 function randomWishes(seed: string, turn: number, content: Content): PlanStep[] {
-	const untargeted = content.actionIds.filter((id) => !content.actions[id]?.target);
+	// La retraite (P3-37) n'est jamais un choix « au hasard » : elle clôt la carrière.
+	const untargeted = content.actionIds.filter(
+		(id) =>
+			!content.actions[id]?.target &&
+			!content.actions[id]?.effects.some((effect) => effect.op === 'retire')
+	);
 	return [...untargeted.map(action), ...content.upgradeIds.map(purchase)].sort((left, right) => {
 		const leftRank = hashSeed(`${seed}:${turn}:${left.kind}:${left.id}`);
 		const rightRank = hashSeed(`${seed}:${turn}:${right.kind}:${right.id}`);
@@ -867,8 +946,15 @@ function wishesFor(
 	seed: string,
 	content: Content
 ): readonly PlanStep[] {
+	// P3-09 : l'ambitieuse et la mixte se ménagent quand le corps lâche.
+	const exhausted =
+		(strategy === 'ambitious' || strategy === 'mixed') &&
+		(state.player.stress >= 70 || state.player.health < 45)
+			? [action('personal.rest')]
+			: [];
 	const party = [
 		...resignWish(strategy, state, content),
+		...exhausted,
 		...partyWish(strategy, state, seed, content),
 		...candidacyWish(strategy, state, content),
 		...promiseWish(strategy, state, seed, content),
@@ -958,16 +1044,40 @@ export function chooseSimulationDecision(
 	view: PendingEventView,
 	strategy: SimulationStrategy,
 	seed: string,
-	turn: number
+	turn: number,
+	/** Événement de nomination au gouvernement (P3-35) : toute politique candidate accepte. */
+	appointmentEvent: string | null = null
 ): EventChoiceView | null {
 	const available = view.choices.filter((choice) => choice.available);
 	if (available.length === 0) return null;
+	if (view.eventId === appointmentEvent && strategy !== 'random-valid') {
+		const accept = available.find((choice) => choice.id === 'accept');
+		if (accept && strategy !== 'patrimonial') return accept;
+	}
+	// Entre les deux tours (P3-29) : se maintenir si possible, sinon fusionner, sinon se désister.
+	const runoff = ['maintain', 'merge', 'withdraw'].map((id) =>
+		available.find((choice) => choice.id === id)
+	);
+	const isRunoff = ['maintain', 'merge', 'withdraw'].every((id) =>
+		view.choices.some((choice) => choice.id === id)
+	);
+	if (strategy !== 'random-valid' && isRunoff) {
+		const preferred = runoff.find((choice) => choice !== undefined);
+		if (preferred) return preferred;
+	}
 	if (strategy === 'prudent' || strategy === 'patrimonial') {
 		const safe = strategy === 'prudent' ? available.filter((choice) => !isRiskyChoice(choice)) : [];
 		const pool = safe.length > 0 ? safe : available;
 		return pool.reduce((best, choice) => (visibleCost(choice) < visibleCost(best) ? choice : best));
 	}
-	if (strategy === 'ambitious') return available[available.length - 1]!;
+	// L'ambitieuse est opportuniste (P3-24) : elle cède aux tentations qui se présentent.
+	if (strategy === 'ambitious') {
+		// Une fois sur deux (empreinte de la seed et de l'événement), pour viser des
+		// affaires dans une carrière sur deux environ (P3-24, P3-09).
+		const tempted = hashSeed(`${seed}:${view.instanceId}:tentation`) % 2 === 0;
+		const risky = tempted ? available.find((choice) => isRiskyChoice(choice)) : undefined;
+		return risky ?? available[available.length - 1]!;
+	}
 	if (strategy === 'mixed') return available[(turn + view.remaining) % available.length]!;
 	return available[hashSeed(`${seed}:${view.instanceId}`) % available.length]!;
 }
@@ -1045,10 +1155,31 @@ function finalizeRun(
 	invariantViolations: readonly string[],
 	error: string | null,
 	content: Content,
-	peakPopularity: number
+	peakPopularity: number,
+	eligible: readonly number[] = []
 ): SimulationRun {
 	const summary = careerSummary(state);
+	const sortedEligible = [...eligible].sort((a, b) => a - b);
 	return {
+		...(() => {
+			const counts = new Map<string, number>();
+			for (const entry of state.history) {
+				if (entry.type !== 'turn.resolved') continue;
+				for (const step of entry.steps) {
+					if (step.kind === 'action') counts.set(step.id, (counts.get(step.id) ?? 0) + 1);
+				}
+			}
+			const total = [...counts.values()].reduce((sum, value) => sum + value, 0);
+			const top = Math.max(0, ...counts.values());
+			return {
+				distinctActions: counts.size,
+				topActionSharePercent: total > 0 ? Math.round((top * 100) / total) : 0
+			};
+		})(),
+		eligibleEventsP10: percentile(sortedEligible, 0.1),
+		quartersBelowEligibleTarget: eligible.length
+			? Math.round((eligible.filter((count) => count < 8).length * 100) / eligible.length)
+			: 0,
 		seed,
 		strategy,
 		status,
@@ -1102,6 +1233,61 @@ function finalizeRun(
 		campaigns: state.campaigns.length,
 		campaignsWon: state.campaigns.filter((campaign) => campaign.status === 'won').length,
 		campaignsLost: state.campaigns.filter((campaign) => campaign.status === 'lost').length,
+		campaignsByElection: Object.fromEntries(
+			content.electionIds.map((electionId) => {
+				const ran = state.campaigns.filter(
+					(campaign) => campaign.electionId === electionId && campaign.status !== 'running'
+				);
+				return [
+					electionId,
+					{ ran: ran.length, won: ran.filter((campaign) => campaign.status === 'won').length }
+				];
+			})
+		),
+		fortuneSpentPercent: (() => {
+			const outlets = (kind: 'action' | 'purchase', id: string): boolean =>
+				kind === 'purchase'
+					? ['wealth.foundation', 'wealth.local_media', 'wealth.national_media'].includes(id)
+					: content.actions[id]?.scale?.family === 'family.donation' ||
+						content.actions[id]?.scale?.family === 'family.campaign_advance' ||
+						id === 'wealth.patronage';
+			const spent = state.history.reduce(
+				(total, entry) =>
+					entry.type !== 'turn.resolved'
+						? total
+						: total +
+							entry.steps.reduce(
+								(sum, step) =>
+									outlets(step.kind, step.id)
+										? sum -
+											step.changes
+												.filter((change) => change.resource === 'personalCashCents')
+												.reduce((cash, change) => cash + Math.min(0, change.delta), 0)
+										: sum,
+								0
+							),
+				0
+			);
+			const remaining = Math.max(0, netWorth(state.resources, state.upgrades));
+			return spent + remaining > 0 ? Math.round((spent * 100) / (spent + remaining)) : 0;
+		})(),
+		partyRankPeak: (() => {
+			const ranks = state.history.flatMap((entry) =>
+				entry.type === 'turn.resolved'
+					? (entry.deadlines?.mandates ?? []).flatMap((change) =>
+							change.kind === 'partyRank' ? [change.rank] : []
+						)
+					: []
+			);
+			if (ranks.includes('leader')) return 'leader' as const;
+			if (ranks.includes('cadre')) return 'cadre' as const;
+			return state.player.affiliations.length > 0 ? ('member' as const) : ('none' as const);
+		})(),
+		runoffs: state.campaigns.filter(
+			(campaign) =>
+				state.ballots.find((ballot) => ballot.ballotId === campaign.ballotId)?.report
+					?.secondRound === true
+		).length,
 		distinctOpponents: new Set(
 			state.campaigns.flatMap((campaign) => (campaign.opponentId ? [campaign.opponentId] : []))
 		).size,
@@ -1226,8 +1412,11 @@ export function simulateCareer(
 	let activeAlertIds = new Set<string>();
 	let error: string | null = null;
 	let violations = checkInvariants(state, content);
+	const eligible: number[] = [];
 
 	while (state.end === null && state.turn < maxTurns && error === null && violations.length === 0) {
+		// Couverture (P3-24) : événements ordinaires éligibles au début de chaque trimestre.
+		eligible.push(eligibleRandomEvents(state, content).length);
 		const plan = chooseSimulationPlan(state, strategy, seed, content);
 		const preview = previewPlan(state, plan, content);
 		if (!preview.valid) {
@@ -1253,7 +1442,13 @@ export function simulateCareer(
 				error = `Décision sans vue publique au tour ${state.turn}.`;
 				break;
 			}
-			const choice = chooseSimulationDecision(view, strategy, seed, state.turn);
+			const choice = chooseSimulationDecision(
+				view,
+				strategy,
+				seed,
+				state.turn,
+				content.balance.government.appointmentEvent
+			);
 			if (!choice) {
 				error = `Aucun choix public disponible pour ${view.eventId}.`;
 				break;
@@ -1281,7 +1476,8 @@ export function simulateCareer(
 		violations,
 		error,
 		content,
-		peakPopularity
+		peakPopularity,
+		eligible
 	);
 }
 

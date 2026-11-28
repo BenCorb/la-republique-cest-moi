@@ -266,7 +266,10 @@ function checkPromiseInvariants(state: GameState): string[] {
 		if (ongoing && campaign) {
 			if (
 				pledge.status === 'announced' &&
-				(pledge.closedTurn === null) !== (campaign.status === 'running')
+				(pledge.closedTurn === null) !==
+					// Un second tour tranché pendant le trimestre (P3-29) est réglé à sa frontière.
+					(campaign.status === 'running' ||
+						(campaign.resultTurn !== null && campaign.resultTurn >= state.turn))
 			) {
 				violations.push(`promesse annoncée incohérente avec sa campagne : ${id}`);
 			}
@@ -640,6 +643,41 @@ function checkCareerInvariants(state: GameState): string[] {
 		if (ballot.shares && ballot.shares.reduce((total, share) => total + share.percent, 0) !== 100) {
 			violations.push(`parts de voix dont la somme diffère de 100 : ${ballot.ballotId}`);
 		}
+		const report = ballot.report;
+		if ((ballot.status === 'held') !== (report !== null)) {
+			violations.push(`procès-verbal incohérent : ${ballot.ballotId}`);
+		}
+		if (report) {
+			const sum = (values: readonly (number | null)[]): number =>
+				values.reduce<number>((total, value) => total + (value ?? 0), 0);
+			if (
+				report.contestants.length > 0 &&
+				sum(report.contestants.map((c) => c.firstRound)) !== 1000
+			) {
+				violations.push(`premier tour dont la somme diffère de 1000 ‰ : ${ballot.ballotId}`);
+			}
+			if (
+				report.stage === 'final' &&
+				report.secondRound &&
+				sum(report.contestants.map((c) => c.secondRound)) !== 1000
+			) {
+				violations.push(`second tour dont la somme diffère de 1000 ‰ : ${ballot.ballotId}`);
+			}
+			if (
+				report.stage === 'final' &&
+				sum(report.contestants.map((c) => c.seats)) !== report.seats
+			) {
+				violations.push(`sièges attribués incohérents : ${ballot.ballotId}`);
+			}
+			if (
+				report.stage === 'runoff_pending' &&
+				!state.campaigns.some(
+					(campaign) => campaign.ballotId === ballot.ballotId && campaign.status === 'running'
+				)
+			) {
+				violations.push(`second tour en attente sans candidature : ${ballot.ballotId}`);
+			}
+		}
 		if ((ballot.status === 'cancelled') !== (ballot.cancelReason !== null)) {
 			violations.push(`annulation incohérente : ${ballot.ballotId}`);
 		}
@@ -654,7 +692,11 @@ function checkCareerInvariants(state: GameState): string[] {
 		const ballot = ballots.find((entry) => entry.ballotId === campaign.ballotId);
 		if (!ballot) {
 			violations.push(`campagne pour une échéance inconnue : ${campaign.campaignId}`);
-		} else if (campaign.status === 'running' && ballot.status !== 'scheduled') {
+		} else if (
+			campaign.status === 'running' &&
+			ballot.status !== 'scheduled' &&
+			ballot.report?.stage !== 'runoff_pending'
+		) {
 			violations.push(`campagne en cours pour une échéance passée : ${campaign.campaignId}`);
 		} else if (campaign.status !== 'running' && ballot.status === 'scheduled') {
 			violations.push(`campagne jugée avant son scrutin : ${campaign.campaignId}`);
@@ -667,10 +709,40 @@ function checkCareerInvariants(state: GameState): string[] {
 			violations.push(`campagne incohérente : ${campaign.campaignId}`);
 		}
 		if (
-			(campaign.status === 'won' || campaign.status === 'lost') !==
+			(campaign.status === 'won' ||
+				campaign.status === 'lost' ||
+				campaign.status === 'withdrawn') !==
 			(campaign.playerPercent !== null)
 		) {
 			violations.push(`score de campagne incohérent : ${campaign.campaignId}`);
+		}
+	});
+	// Investitures (P3-30) : séquence, décision unique à la frontière de la demande.
+	state.investitures.forEach((request, index) => {
+		if (request.requestId !== `investiture.${index + 1}`) {
+			violations.push(`identifiant d’investiture invalide : ${request.requestId}`);
+		}
+		if (
+			request.status === 'pending' &&
+			request.requestedTurn !== state.turn &&
+			state.phase !== 'ended'
+		) {
+			violations.push(`investiture jamais tranchée : ${request.requestId}`);
+		}
+		if ((request.status === 'pending') !== (request.resolvedTurn === null)) {
+			violations.push(`date de décision d’investiture incohérente : ${request.requestId}`);
+		}
+		if (
+			request.status === 'granted' &&
+			// Une élection anticipée reporte la candidature sur la nouvelle échéance.
+			!state.campaigns.some(
+				(campaign) =>
+					campaign.electionId === request.electionId &&
+					campaign.declaredTurn === request.requestedTurn &&
+					campaign.invested
+			)
+		) {
+			violations.push(`investiture accordée sans candidature : ${request.requestId}`);
 		}
 	});
 	for (const campaign of state.campaigns) {

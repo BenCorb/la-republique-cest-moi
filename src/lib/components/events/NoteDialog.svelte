@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BallotReport from '#lib/components/career/BallotReport.svelte';
 	import {
 		BookOpen,
 		CalendarCheck,
@@ -203,6 +204,11 @@
 												{/if}
 											</details>
 										{/if}
+										{#if fact.chart?.kind === 'report'}
+											<div class="mt-2">
+												<BallotReport report={fact.chart.report} compact />
+											</div>
+										{/if}
 										{#if fact.chart?.kind === 'shares'}
 											<div class="mt-2">
 												<ScoreBars
@@ -218,33 +224,6 @@
 											</div>
 										{/if}
 									</div>
-									{#if fact.chart?.kind === 'duel'}
-										<div class="flex shrink-0 flex-col items-center gap-0.5">
-											<Donut
-												segments={[
-													{
-														value: fact.chart.playerPercent,
-														color:
-															fact.kind === 'victory'
-																? 'var(--color-positive)'
-																: 'var(--color-danger)',
-														label: 'Vous'
-													},
-													{
-														value: 100 - fact.chart.playerPercent,
-														color: 'var(--color-muted)',
-														label: fact.chart.rival
-													}
-												]}
-												center="{fact.chart.playerPercent} %"
-												label="Vous {fact.chart.playerPercent} %, {fact.chart.rival} {100 -
-													fact.chart.playerPercent} %"
-											/>
-											<span class="max-w-28 text-center text-[11px] leading-tight text-muted">
-												vs {fact.chart.rival}
-											</span>
-										</div>
-									{/if}
 								</div>
 								{#if fact.record && fact.record.won + fact.record.lost > 0}
 									{@const total = fact.record.won + fact.record.lost}

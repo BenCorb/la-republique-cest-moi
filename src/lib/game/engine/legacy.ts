@@ -104,7 +104,7 @@ export function distinctionsOf(state: GameState, content: Content): DistinctionD
 /** Cause de fin au sens du catalogue, `null` tant que la carrière continue. */
 export function endCauseOf(state: GameState): EndCauseId | null {
 	if (!state.end) return null;
-	return state.end.reason === 'prison' ? 'prison' : state.end.cause;
+	return state.end.reason === 'death' ? state.end.cause : state.end.reason;
 }
 
 /**

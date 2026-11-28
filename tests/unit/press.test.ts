@@ -228,6 +228,11 @@ describe('médias et fil de presse (P3-03)', () => {
 		expect(articleTone('favorable', national, -30, false, catalog)).toBe('neutral');
 		expect(articleTone('neutral', national, -100, true, catalog)).toBe('favorable');
 		expect(articleTone('neutral', satire, 80, false, catalog)).toBe('neutral');
+		// Relation très marquée : deux crans (P3-24) ; ligne éditoriale : un cran de plus ou de moins.
+		expect(articleTone('critical', national, 60, false, catalog)).toBe('favorable');
+		expect(articleTone('favorable', national, -60, false, catalog)).toBe('critical');
+		expect(articleTone('neutral', national, 0, false, catalog, -1)).toBe('critical');
+		expect(articleTone('neutral', national, 0, false, catalog, 1)).toBe('favorable');
 	});
 
 	it('proportionne l’effet à l’audience et à l’exposition, borné, réduit pour un média possédé', () => {
@@ -505,7 +510,9 @@ describe('presse régionale (P3-18)', () => {
 		access: 'election',
 		status: 'active',
 		endTurn: null,
-		endReason: null
+		endReason: null,
+		side: null,
+		portfolio: null
 	};
 	const running = (electionId: string): Campaign => ({
 		campaignId: 'campaign.1',
@@ -519,7 +526,10 @@ describe('presse régionale (P3-18)', () => {
 		opponentId: null,
 		status: 'running',
 		playerPercent: null,
-		reason: null
+		reason: null,
+		role: 'head',
+		listRank: 1,
+		resultTurn: null
 	});
 
 	it('suit le joueur par son quotidien régional, jamais par celui d’une autre région', () => {

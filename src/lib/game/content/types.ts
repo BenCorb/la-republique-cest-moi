@@ -130,6 +130,18 @@ export const STAT_IDS = [
 	'world.stability',
 	/** 1 si le joueur est membre d'un parti, sinon 0. */
 	'player.affiliated',
+	/** Rang dans le parti (P3-34) : 0 sans parti, 1 militant, 2 cadre, 3 chef. */
+	'player.partyRank',
+	/** Mandats exercés au cours de la carrière, terminés compris (P3-38). */
+	'player.mandatesHeld',
+	/** Siège d'assemblée locale dans l'opposition (P3-24), 1 ou 0. */
+	'player.councilOpposition',
+	/** Trimestres à Matignon depuis la nomination (P3-36), −1 hors de Matignon. */
+	'player.pmTurns',
+	/** Candidature à la direction possible au prochain congrès (P3-34), 1 ou 0. */
+	'player.partyBidOpen',
+	/** Candidature à la direction déclarée (P3-34), 1 ou 0. */
+	'player.partyBid',
 	/** Force du parti du joueur (0 sans parti). */
 	'player.partyStrength',
 	/** 1 si le parti du joueur conduit le gouvernement, sinon 0. */
@@ -184,6 +196,8 @@ export type Condition =
 	| { readonly op: 'memberOf'; readonly party: string }
 	/** Le joueur exerce un mandat de cette définition. */
 	| { readonly op: 'holdsMandate'; readonly mandate: string }
+	/** Portefeuille ministériel exercé (P3-35). */
+	| { readonly op: 'holdsPortfolio'; readonly portfolio: string }
 	/** Le joueur pourrait recevoir ce mandat sans en quitter aucun (cumul et incompatibilités). */
 	| { readonly op: 'canHoldMandate'; readonly mandate: string }
 	/** Origine ou engagement du joueur (P2-08). */
@@ -266,7 +280,15 @@ export type Effect =
 	/** Élection anticipée : remplace l'échéance régulière prévue de ce type. */
 	| { readonly op: 'callEarlyElection'; readonly election: string; readonly delayTurns: number }
 	/** Candidature à l'échéance choisie dans le plan (`target`), sous conditions d'éligibilité. */
-	| { readonly op: 'declareCandidacy' }
+	| { readonly op: 'declareCandidacy'; readonly role?: 'head' | 'colistier' | undefined }
+	| { readonly op: 'runoffDecision'; readonly decision: RunoffDecision }
+	| { readonly op: 'requestInvestiture' }
+	| { readonly op: 'partyBid'; readonly posture: PartyPosture }
+	/** Se retirer de la vie politique (P3-37) : fin de carrière choisie. */
+	| { readonly op: 'retire' }
+	| { readonly op: 'appointment'; readonly decision: 'accept' | 'decline' }
+	| { readonly op: 'rallySupport'; readonly value: number }
+	| { readonly op: 'investitureDecision'; readonly decision: 'dissident' | 'renounce' }
 	/** Préparation ajoutée à chaque campagne en cours. */
 	| { readonly op: 'prepareCampaign'; readonly value: number }
 	/**
@@ -278,7 +300,7 @@ export type Effect =
 	| { readonly op: 'advanceCampaign'; readonly valueCents: number }
 	/** Embauche du candidat choisi dans le plan (`target`), sur son poste (P2-05). */
 	/** Offre faite au candidat (P3-20) : réduite, standard (par défaut) ou généreuse. */
-	| { readonly op: 'hireStaff'; readonly offer?: HireOffer | undefined }
+	| { readonly op: 'hireStaff'; readonly offer?: HireOffer | 'counter' | undefined }
 	/** Entretien approfondi avec un candidat présélectionné (P3-20), avant l'offre. */
 	| { readonly op: 'courtCandidate' }
 	/**
@@ -578,7 +600,7 @@ export const LEGACY_METRICS = [
 export type LegacyMetric = (typeof LEGACY_METRICS)[number];
 
 /** Causes de fin de carrière (décès ou prison ferme). */
-export const END_CAUSES = ['health_failure', 'natural_causes', 'prison'] as const;
+export const END_CAUSES = ['health_failure', 'natural_causes', 'prison', 'retirement'] as const;
 export type EndCauseId = (typeof END_CAUSES)[number];
 
 export interface LegacyCriterion {
@@ -713,6 +735,11 @@ export interface PressBalance {
 	readonly regionalNationalPercent: number;
 	/** Relation au-delà de laquelle un média adoucit sa tonalité (et en deçà de l'opposé, la durcit). */
 	readonly toneThreshold: number;
+	/**
+	 * Ligne éditoriale (P3-24) : part des articles durcis, et autant d'adoucis,
+	 * d'un cran, par empreinte du média, du sujet et du trimestre (sans tirage).
+	 */
+	readonly editorialSwingPercent: number;
 	/** Effet de base d'un article sur chaque groupe touché, par tonalité. */
 	readonly toneEffects: Readonly<Record<ArticleTone, number>>;
 	/** Effet maximal d'un article sur un groupe, en valeur absolue. */
@@ -1126,6 +1153,101 @@ export interface Balance {
 	readonly entourage: EntourageBalance;
 	readonly family: FamilyBalance;
 	readonly activists: ActivistsBalance;
+	/** Carrière partisane (P3-34). */
+	readonly partyCareer: PartyCareerBalance;
+	/** Gouvernement : président, nominations et remaniements (P3-35). */
+	readonly government: GovernmentBalance;
+}
+
+/** Gouvernement (P3-35, décisions déléguées provisoires). */
+export interface GovernmentBalance {
+	/** Stature exigée pour un secrétariat d'État, puis pour un ministère. */
+	readonly secretaryStature: number;
+	readonly ministerStature: number;
+	/** Stature exigée pour Matignon (le chef du parti majoritaire y est appelé d'office, P3-36). */
+	readonly primeMinisterStature: number;
+	/** Chance (%) qu'un ministre de cette stature soit appelé à Matignon à un remaniement. */
+	readonly primeMinisterChancePercent: number;
+	/** Chance (%) que le président appelle le chef du parti majoritaire à Matignon (P3-09). */
+	readonly leaderPrimeMinisterPercent: number;
+	/** Remaniement possible sous cette stabilité, avec cette chance par trimestre (%). */
+	readonly reshuffleStability: number;
+	readonly reshuffleChancePercent: number;
+	/** Popularité en deçà de laquelle un membre du gouvernement est remercié au remaniement. */
+	readonly keepPopularity: number;
+	/** Mandat présidentiel (trimestres), premier scrutin, chance de réélection (%). */
+	readonly presidentTermTurns: number;
+	readonly firstPresidentialTurn: number;
+	readonly reelectionChancePercent: number;
+	/** Événement bloquant de la proposition de nomination (`followUp`). */
+	readonly appointmentEvent: string;
+}
+
+/**
+ * Ambition de départ (P3-38), sans aucun bonus : rappelée au dossier, saluée
+ * quand l'objectif est atteint, jugée au bilan (atteinte, manquée, trahie).
+ */
+export interface AmbitionDefinition {
+	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	/** Objectif : atteint dès qu'il est vrai (ou seulement en fin de carrière). */
+	readonly goal: Condition;
+	/** Jugé seulement en fin de carrière (« les mains propres »). */
+	readonly judgeAtEnd?: boolean | undefined;
+	/** Trahison de l'ambition, définitive dès qu'elle est vraie. */
+	readonly betrayal?: Condition | undefined;
+}
+
+/** Portefeuille ministériel jouable (P3-35). */
+export interface PortfolioDefinition {
+	readonly id: string;
+	/** Nom court (« Intérieur »). */
+	readonly label: string;
+	/** Nom du ministère, en minuscules (« ministère de l’Intérieur »). */
+	readonly title: string;
+}
+
+/** Posture d'une candidature à la direction du parti (P3-34). */
+export type PartyPosture = 'unity' | 'apparatus' | 'rupture';
+export const PARTY_POSTURES = ['unity', 'apparatus', 'rupture'] as const;
+
+/**
+ * Carrière partisane (P3-34, décisions déléguées provisoires) : promotion de
+ * cadre par opportunité, congrès réguliers, candidature à la direction.
+ */
+export interface PartyCareerBalance {
+	/** Trimestres entre deux congrès, et rang du congrès dans le cycle (`turn % cycle`). */
+	readonly congressCycleTurns: number;
+	readonly congressOffset: number;
+	/** Promotion de cadre : appui de l'appareil, militants et ancienneté minimaux, chance par trimestre (%). */
+	readonly cadreMinApparatus: number;
+	readonly cadreMinActivists: number;
+	readonly cadreMinTurns: number;
+	readonly cadreChancePercent: number;
+	/** Poids (en %) de l'appareil, du soutien militant et de l'influence dans un congrès. */
+	readonly apparatusPercent: number;
+	readonly activistsPercent: number;
+	readonly influencePercent: number;
+	/** Points par ralliement obtenu, plafonnés. */
+	readonly rallyPoints: number;
+	readonly rallyCap: number;
+	/** Bornes de la chance de l'emporter au congrès (%). */
+	readonly minChancePercent: number;
+	readonly maxChancePercent: number;
+	/** Seuils d'appréciation : « favori », « congrès ouvert ». */
+	readonly favoriteFrom: number;
+	readonly openFrom: number;
+	/** Congrès à attendre après une défaite avant une nouvelle candidature. */
+	readonly retryCongresses: number;
+	/** Appui de l'appareil perdu après une défaite (doublé pour la rupture). */
+	readonly defeatApparatus: number;
+	/** Chef : contesté sous cet appui de l'appareil, et chance d'être renversé (%). */
+	readonly leaderChallengeApparatus: number;
+	readonly leaderOustChancePercent: number;
+	/** Bonus d'investiture d'un cadre et d'un chef du parti. */
+	readonly cadreInvestitureBonus: number;
+	readonly leaderInvestitureBonus: number;
 }
 
 /** Bonus de terrain d'une action (P3-19) : ressource ou préparation de campagne. */
@@ -1200,6 +1322,39 @@ export interface ElectionsBalance {
 	readonly newGovernmentStability: number;
 	/** Trimestres avant une échéance où une alerte est affichée. */
 	readonly alertLeadTurns: number;
+	/** Scrutins réalistes (P3-29) : candidatures locales, tours et sièges. */
+	readonly contests: ContestsBalance;
+}
+
+/**
+ * Scrutins réalistes (P3-29, décisions déléguées provisoires) : qui se
+ * présente, avec quelle force, et comment les voix se reportent au second tour.
+ */
+export interface ContestsBalance {
+	/** Part nationale minimale (‰) pour qu'un parti présente une liste ou un candidat. */
+	readonly minPartyPerMille: number;
+	/** Candidatures ou listes de partis au plus, hors joueur et adversaire nommé. */
+	readonly maxPartyContestants: number;
+	/** Force de la liste du premier parti, en % de la force de base de l'élection. */
+	readonly partyStrengthPercent: number;
+	/** Part des voix d'un éliminé qui se reporte au second tour, en %. */
+	readonly transferPercent: number;
+	/** Part des voix conservée par une liste qui fusionne, en %. */
+	readonly mergeRetentionPercent: number;
+	/** Écart moyen de positions (0 à 200) en deçà duquel deux forces sont alliées. */
+	readonly allyDistance: number;
+	/** Aléa maximal ajouté à chaque candidature au second tour. */
+	readonly runoffSwing: number;
+	/** Part de la préparation du joueur colistier qui renforce sa liste, en %. */
+	readonly colistierPreparationPercent: number;
+	/** Prime des grands électeurs par mandat local exercé (sénatoriales). */
+	readonly grandElectorBonus: number;
+	/** Étendue des rangs possibles d'un colistier, en % des sièges. */
+	readonly rankSpreadPercent: number;
+	/** Points d'appui retirés à un colistier sans carte du parti de la liste. */
+	readonly outsiderRankPenalty: number;
+	/** Événement bloquant de la décision d'entre-deux-tours (`followUp`). */
+	readonly runoffEvent: string;
 }
 
 /** Évolution des soutiens à chaque frontière (hypothèses de tuning, P2-07). */
@@ -1218,6 +1373,35 @@ export interface SupportsBalance {
  * Modèle de campagne et de scrutin du joueur (hypothèses de tuning, P2-03). Les
  * poids sont des pourcentages appliqués aux composantes du score.
  */
+/**
+ * Investiture nationale (P3-30, décisions déléguées provisoires) : appréciation
+ * de la candidature par l'appareil, sans seuil affiché ; décision tirée une fois.
+ */
+export interface InvestitureBalance {
+	/** Poids (en %) de l'appui de l'appareil, de l'influence (plafonnée à 100) et de la popularité. */
+	readonly apparatusPercent: number;
+	readonly influencePercent: number;
+	readonly popularityPercent: number;
+	/** Points par mandat exercé, plafonnés. */
+	readonly mandatePoints: number;
+	readonly mandateCap: number;
+	/** Points d'un mandat local ou régional exercé (ancrage). */
+	readonly localPoints: number;
+	/** Pénalité quand un candidat mieux placé brigue l'investiture, et sa fréquence (%). */
+	readonly rivalPenalty: number;
+	readonly rivalChancePercent: number;
+	/** Bornes de la chance d'investiture (%). */
+	readonly minChancePercent: number;
+	readonly maxChancePercent: number;
+	/** Seuils d'appréciation : « candidature soutenue », « investiture disputée ». */
+	readonly supportedFrom: number;
+	readonly disputedFrom: number;
+	/** Appui de l'appareil perdu par une candidature dissidente. */
+	readonly dissidentApparatus: number;
+	/** Événement bloquant après un refus (`followUp`). */
+	readonly refusedEvent: string;
+}
+
 export interface CampaignsBalance {
 	readonly popularityWeightPercent: number;
 	/** Part du score du parti au scrutin reprise par un candidat investi. */
@@ -1251,6 +1435,8 @@ export interface CampaignsBalance {
 	readonly rivalryAttitude: number;
 	/** Âge maximal d'un adversaire le jour du scrutin. */
 	readonly opponentMaxAge: number;
+	/** Investiture nationale (P3-30). */
+	readonly investiture: InvestitureBalance;
 }
 
 /** Entourage et délégation (hypothèses de tuning, P2-05). */
@@ -1345,6 +1531,8 @@ export interface RenegotiationBalance {
 	readonly minTurns: number;
 	/** Événement bloquant de la demande (rôle `collaborator`). */
 	readonly event: string;
+	/** Variantes de la demande (P3-24), choisies sans tirage avec l'événement principal. */
+	readonly variants?: readonly string[] | undefined;
 }
 
 /** Offre d'embauche (P3-20). */
@@ -1397,6 +1585,8 @@ export interface RecruitmentBalance {
 	readonly maxInterviews: number;
 	/** Attitude d'un candidat qui décline. */
 	readonly refusalAttitude: number;
+	/** Salaire réclamé après un premier refus (P3-33), en % du salaire demandé. */
+	readonly counterOfferPercent: number;
 }
 
 /** Vie de famille (hypothèses de tuning, P2-08). */
@@ -1452,6 +1642,11 @@ export interface PartyDefinition {
 	readonly positions: { readonly [K in AxisId]: number };
 	/** Force électorale de référence (poids relatif, entier). */
 	readonly baseStrength: number;
+	/**
+	 * Tenu à l'écart des alliances d'entre-deux-tours (P3-29) : ni fusion ni
+	 * désistement avec lui, de part et d'autre.
+	 */
+	readonly cordon?: boolean | undefined;
 }
 
 export interface AxisDefinition {
@@ -1466,6 +1661,9 @@ export interface AxisDefinition {
  * Type d'élection (GDD §7.3) : calendrier régulier fictif, échelle et effet sur
  * le gouvernement. Le scrutin d'une échéance a lieu à la fin de son trimestre.
  */
+/** Décision du joueur entre les deux tours (P3-29). */
+export type RunoffDecision = 'maintain' | 'merge' | 'withdraw';
+
 export interface ElectionDefinition {
 	/** Identifiant stable, par exemple `election.legislative`. */
 	readonly id: string;
@@ -1483,8 +1681,34 @@ export interface ElectionDefinition {
 	readonly minAge: number;
 	/** Mandat obtenu par le joueur élu. */
 	readonly grants: string;
-	/** Mandat supplémentaire au-delà d'un score (la tête de liste municipale devient maire). */
-	readonly bonusGrant?: { readonly mandate: string; readonly minPercent: number } | undefined;
+	/** Mandat de la tête de la liste victorieuse (le maire, élu par le conseil), sinon absent. */
+	readonly headGrant?: string | undefined;
+	/** Un candidat encarté doit demander l'investiture de son parti (P3-30). */
+	readonly investiture?: boolean | undefined;
+	/**
+	 * Mode de scrutin (P3-29) : liste à deux tours avec prime majoritaire,
+	 * uninominal à deux tours, ou sénatoriales (grands électeurs, liste à la
+	 * proportionnelle ou majoritaire selon le nombre de sièges du département).
+	 */
+	readonly system: 'list' | 'single' | 'senate';
+	/** Participation tirée au scrutin, en % des inscrits. */
+	readonly turnout: { readonly min: number; readonly max: number };
+	/**
+	 * Seuil de maintien au second tour, en ‰ : des suffrages exprimés pour une
+	 * liste, des inscrits pour un scrutin uninominal.
+	 */
+	readonly maintainPerMille: number;
+	/** Seuil de fusion d'une liste, en ‰ des exprimés ; 0 : aucune fusion. */
+	readonly mergePerMille: number;
+	/** Seuil de répartition des sièges d'une liste, en ‰ des exprimés. */
+	readonly seatMinPerMille: number;
+	/** Prime majoritaire de la liste en tête, en % des sièges. */
+	readonly bonusSeatsPercent: number;
+	/** Uninominal : part des inscrits exigée pour l'emporter au premier tour, en ‰ ; 0 : aucune. */
+	readonly firstRoundRegisteredPerMille: number;
+	/** Sénatoriales : sièges d'un département sans valeur propre, et seuil de la proportionnelle. */
+	readonly senate?:
+		{ readonly defaultSeats: number; readonly proportionalMinSeats: number } | undefined;
 	/** Mandats dont l'un au moins est exigé pour se présenter (grands électeurs), vide sinon. */
 	readonly requiresAnyMandate: readonly string[];
 	/** Score de l'adversaire principal, avant aléa. */
@@ -1654,6 +1878,8 @@ export interface DepartmentDefinition {
 	readonly name: string;
 	/** Peut accueillir une commune de départ fictive (Paris : non). */
 	readonly startable: boolean;
+	/** Sénateurs élus par le département (P3-29), sinon la valeur par défaut de l'élection. */
+	readonly senators?: number | undefined;
 }
 
 /** Région métropolitaine réelle, avec ses fragments toponymiques fictifs (P3-16). */
@@ -1662,6 +1888,8 @@ export interface RegionDefinition {
 	readonly id: string;
 	readonly name: string;
 	readonly departments: readonly DepartmentDefinition[];
+	/** Sièges du conseil régional (P3-29). */
+	readonly councilSeats: number;
 	/** Fragments propres à la région : racines inventées, rivières et pays réels. */
 	readonly toponymy: {
 		readonly roots: readonly string[];
@@ -1681,6 +1909,8 @@ export interface TownSizeDefinition {
 	readonly weight: number;
 	/** Ajouté à la force de l'adversaire aux scrutins locaux (municipales). */
 	readonly rivalStrengthModifier: number;
+	/** Sièges du conseil municipal (P3-29). */
+	readonly councilSeats: number;
 	/** Effets de départ (ressources, soutiens, jauges). */
 	readonly effects: readonly Effect[];
 }
@@ -1897,11 +2127,17 @@ export interface Content {
 	readonly electionIds: readonly string[];
 	readonly mandates: Readonly<Record<string, MandateDefinition>>;
 	readonly mandateIds: readonly string[];
+	/** Portefeuilles ministériels jouables (P3-35). */
+	readonly portfolios: Readonly<Record<string, PortfolioDefinition>>;
+	readonly portfolioIds: readonly string[];
 	readonly institutions: InstitutionsDefinition;
 	readonly origins: Readonly<Record<string, OriginDefinition>>;
 	readonly originIds: readonly string[];
 	readonly engagements: Readonly<Record<string, EngagementDefinition>>;
 	readonly engagementIds: readonly string[];
+	/** Ambitions de départ, facultatives (P3-38). */
+	readonly ambitions: Readonly<Record<string, AmbitionDefinition>>;
+	readonly ambitionIds: readonly string[];
 	/** Profil retenu quand la création n'en précise pas (tests, simulateur). */
 	readonly defaultProfile: {
 		readonly origin: string;

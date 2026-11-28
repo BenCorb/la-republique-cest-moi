@@ -98,12 +98,19 @@ function choosePlan(state: GameState, wishes: readonly PlanStep[]): TurnPlan {
 				}));
 		}
 		if (step !== CANDIDACY) return [step];
-		const open = state.ballots.find(
-			(ballot) =>
-				ballot.status === 'scheduled' &&
-				previewPlan(state, { steps: [declare(ballot.ballotId)] }, content).valid
-		);
-		return open ? [declare(open.ballotId)] : [];
+		// Encarté aux législatives et sénatoriales : l'investiture d'abord (P3-30).
+		const request = (target: string): PlanStep => ({
+			kind: 'action',
+			id: 'campaign.request_investiture',
+			target
+		});
+		for (const ballot of state.ballots) {
+			if (ballot.status !== 'scheduled') continue;
+			for (const step of [declare(ballot.ballotId), request(ballot.ballotId)]) {
+				if (previewPlan(state, { steps: [step] }, content).valid) return [step];
+			}
+		}
+		return [];
 	});
 	for (;;) {
 		const turnPlan: TurnPlan = { steps: candidate };
@@ -279,6 +286,10 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 				HIRE,
 				act('campaign.canvass'),
 				act('party.section_meeting'),
+				// Carrière partisane (P3-34) : candidature à la direction, ralliements, arbitrages.
+				act('party.bid_apparatus'),
+				act('party.rally'),
+				act('party.arbitrate'),
 				act('network.meet_officials'),
 				act('organization.fundraising'),
 				act('personal.freelance'),
@@ -317,9 +328,16 @@ describe('scénario : catalogue réel', { timeout: LONG_SCENARIO_TIMEOUT }, () =
 			'press.donor_investigation',
 			'entourage.loyal_chief',
 			'relations.donor_returns',
-			'justice.entourage_revelation'
+			'justice.entourage_revelation',
+			// Matignon renversé ou remercié (P3-36) : `tests/unit/government.test.ts`.
+			'mandate.evening_news_gaffe'
 		]);
-		expect(content.eventIds.filter((id) => !seen.has(id) && !targeted.has(id))).toEqual([]);
+		// Gouvernement et Matignon, plus rares depuis P3-09 : `tests/unit/government.test.ts`.
+		const governmental = (id: string): boolean =>
+			id.startsWith('government.') || id.startsWith('matignon.') || id === 'unique.pm_first_night';
+		expect(
+			content.eventIds.filter((id) => !seen.has(id) && !targeted.has(id) && !governmental(id))
+		).toEqual([]);
 	});
 
 	it('révèle une affaire de l’entourage et en fait un événement', () => {

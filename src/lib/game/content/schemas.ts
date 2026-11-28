@@ -13,6 +13,7 @@ import { z } from 'zod';
 import {
 	ACTION_FORMATS,
 	HIRE_OFFERS,
+	PARTY_POSTURES,
 	ARTICLE_TONES,
 	REGIONAL_ANCHOR,
 	END_CAUSES,
@@ -120,6 +121,7 @@ export const conditionSchema: z.ZodType<Condition> = z.lazy(() =>
 		z.strictObject({ op: z.enum(COMPARISON_OPS), stat: z.enum(STAT_IDS), value: safeInt }),
 		z.strictObject({ op: z.literal('memberOf'), party: contentId }),
 		z.strictObject({ op: z.literal('holdsMandate'), mandate: contentId }),
+		z.strictObject({ op: z.literal('holdsPortfolio'), portfolio: contentId }),
 		z.strictObject({ op: z.literal('canHoldMandate'), mandate: contentId }),
 		z.strictObject({ op: z.literal('origin'), origin: contentId }),
 		z.strictObject({ op: z.literal('engagement'), engagement: contentId }),
@@ -203,8 +205,27 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 		op: z.literal('endMandate'),
 		mandate: z.union([contentId, z.literal('target')])
 	}),
-	z.strictObject({ op: z.literal('declareCandidacy') }),
-	z.strictObject({ op: z.literal('hireStaff'), offer: z.enum(HIRE_OFFERS).optional() }),
+	z.strictObject({
+		op: z.literal('declareCandidacy'),
+		role: z.enum(['head', 'colistier']).optional()
+	}),
+	z.strictObject({ op: z.literal('requestInvestiture') }),
+	z.strictObject({ op: z.literal('partyBid'), posture: z.enum(PARTY_POSTURES) }),
+	z.strictObject({ op: z.literal('retire') }),
+	z.strictObject({ op: z.literal('appointment'), decision: z.enum(['accept', 'decline']) }),
+	z.strictObject({ op: z.literal('rallySupport'), value: positiveInt }),
+	z.strictObject({
+		op: z.literal('investitureDecision'),
+		decision: z.enum(['dissident', 'renounce'])
+	}),
+	z.strictObject({
+		op: z.literal('runoffDecision'),
+		decision: z.enum(['maintain', 'merge', 'withdraw'])
+	}),
+	z.strictObject({
+		op: z.literal('hireStaff'),
+		offer: z.enum([...HIRE_OFFERS, 'counter']).optional()
+	}),
 	z.strictObject({ op: z.literal('courtCandidate') }),
 	z.strictObject({ op: z.literal('orderSearch'), level: z.enum(SEARCH_LEVELS) }),
 	z.strictObject({ op: z.literal('vetCandidate') }),
@@ -649,7 +670,8 @@ export const partySchema: z.ZodType<PartyDefinition> = z.strictObject({
 		society: axisPosition,
 		sovereignty: axisPosition
 	}),
-	baseStrength: positiveInt
+	baseStrength: positiveInt,
+	cordon: z.boolean().optional()
 });
 
 const axisSchema: z.ZodType<AxisDefinition> = z.strictObject({
@@ -697,6 +719,20 @@ export const charactersBalanceSchema: z.ZodType<CharactersBalance> = z
 
 export const electionsBalanceSchema: z.ZodType<ElectionsBalance> = z.strictObject({
 	voteVolatility: nonNegativeInt,
+	contests: z.strictObject({
+		minPartyPerMille: z.number().int().min(0).max(1000),
+		maxPartyContestants: positiveInt,
+		partyStrengthPercent: z.number().int().min(0).max(200),
+		transferPercent: z.number().int().min(0).max(100),
+		mergeRetentionPercent: z.number().int().min(0).max(100),
+		allyDistance: z.number().int().min(0).max(200),
+		runoffSwing: nonNegativeInt,
+		colistierPreparationPercent: z.number().int().min(0).max(100),
+		grandElectorBonus: nonNegativeInt,
+		rankSpreadPercent: z.number().int().min(0).max(100),
+		outsiderRankPenalty: z.number().int().min(0).max(100),
+		runoffEvent: contentId
+	}),
 	momentum: nonNegativeInt,
 	newGovernmentStability: gaugeValue,
 	alertLeadTurns: nonNegativeInt
@@ -713,7 +749,21 @@ export const electionSchema: z.ZodType<ElectionDefinition> = z
 		decidesGovernment: z.boolean(),
 		minAge: positiveInt,
 		grants: contentId,
-		bonusGrant: z.strictObject({ mandate: contentId, minPercent: gaugeValue }).optional(),
+		headGrant: contentId.optional(),
+		investiture: z.boolean().optional(),
+		system: z.enum(['list', 'single', 'senate']),
+		turnout: z.strictObject({
+			min: z.number().int().min(1).max(100),
+			max: z.number().int().min(1).max(100)
+		}),
+		maintainPerMille: z.number().int().min(0).max(1000),
+		mergePerMille: z.number().int().min(0).max(1000),
+		seatMinPerMille: z.number().int().min(0).max(1000),
+		bonusSeatsPercent: z.number().int().min(0).max(100),
+		firstRoundRegisteredPerMille: z.number().int().min(0).max(1000),
+		senate: z
+			.strictObject({ defaultSeats: positiveInt, proportionalMinSeats: positiveInt })
+			.optional(),
 		requiresAnyMandate: z.array(contentId),
 		rivalStrength: gaugeValue,
 		campaignRefundCents: nonNegativeInt.optional(),
@@ -722,6 +772,14 @@ export const electionSchema: z.ZodType<ElectionDefinition> = z
 	.refine((election) => election.filingLeadTurns < election.cycleTurns, {
 		message: 'la clôture des candidatures doit précéder le scrutin dans le cycle',
 		path: ['filingLeadTurns']
+	})
+	.refine((election) => election.turnout.min <= election.turnout.max, {
+		message: 'participation minimale supérieure à la maximale',
+		path: ['turnout']
+	})
+	.refine((election) => (election.system === 'senate') === (election.senate !== undefined), {
+		message: 'paramètres sénatoriaux exigés pour le seul mode « senate »',
+		path: ['senate']
 	});
 
 export const mandateSchema: z.ZodType<MandateDefinition> = z.strictObject({
@@ -744,7 +802,19 @@ const institutionsSchema: z.ZodType<InstitutionsDefinition> = z.strictObject({
 export const careerCatalogSchema = z.strictObject({
 	elections: z.array(electionSchema).min(1),
 	mandates: z.array(mandateSchema).min(1),
-	institutions: institutionsSchema
+	institutions: institutionsSchema,
+	portfolios: z
+		.array(
+			z.strictObject({
+				id: contentId.refine(
+					(value) => value.startsWith('portfolio.'),
+					'identifiant « portfolio.nom »'
+				),
+				label: frenchText,
+				title: frenchText
+			})
+		)
+		.default([])
 });
 
 export const supportsBalanceSchema: z.ZodType<SupportsBalance> = z.strictObject({
@@ -915,6 +985,7 @@ export const pressBalanceSchema: z.ZodType<PressBalance> = z.strictObject({
 	nationalMandateRank: positiveInt,
 	regionalNationalPercent: percent,
 	toneThreshold: safeInt.refine((value) => value >= 1 && value <= 100, 'de 1 à 100'),
+	editorialSwingPercent: z.number().int().min(0).max(50),
 	toneEffects: z.strictObject({ critical: toneEffect, neutral: toneEffect, favorable: toneEffect }),
 	maxEffect: positiveInt,
 	criticalExposure: nonNegativeInt,
@@ -1036,7 +1107,23 @@ export const campaignsBalanceSchema: z.ZodType<CampaignsBalance> = z.strictObjec
 	rivalExperienceBonus: nonNegativeInt,
 	rivalExperienceCap: nonNegativeInt,
 	rivalryAttitude: safeInt.refine((value) => Math.abs(value) <= 100, 'variation de -100 à 100'),
-	opponentMaxAge: positiveInt
+	opponentMaxAge: positiveInt,
+	investiture: z.strictObject({
+		apparatusPercent: nonNegativeInt,
+		influencePercent: nonNegativeInt,
+		popularityPercent: nonNegativeInt,
+		mandatePoints: nonNegativeInt,
+		mandateCap: nonNegativeInt,
+		localPoints: nonNegativeInt,
+		rivalPenalty: nonNegativeInt,
+		rivalChancePercent: z.number().int().min(0).max(100),
+		minChancePercent: z.number().int().min(0).max(100),
+		maxChancePercent: z.number().int().min(0).max(100),
+		supportedFrom: nonNegativeInt,
+		disputedFrom: nonNegativeInt,
+		dissidentApparatus: nonNegativeInt,
+		refusedEvent: contentId
+	})
 });
 
 const hireOfferSchema = z.strictObject({
@@ -1070,7 +1157,8 @@ const recruitmentBalanceSchema: z.ZodType<RecruitmentBalance> = z
 		maxAcceptPercent: gaugeValue,
 		interviewInterest: nonNegativeInt,
 		maxInterviews: nonNegativeInt,
-		refusalAttitude: safeInt.refine((value) => Math.abs(value) <= 100, 'de -100 à 100')
+		refusalAttitude: safeInt.refine((value) => Math.abs(value) <= 100, 'de -100 à 100'),
+		counterOfferPercent: positiveInt
 	})
 	.refine(
 		(balance) =>
@@ -1153,7 +1241,8 @@ export const entourageBalanceSchema: z.ZodType<EntourageBalance> = z
 		renegotiation: z.strictObject({
 			stepCompetence: positiveInt,
 			minTurns: positiveInt,
-			event: contentId
+			event: contentId,
+			variants: z.array(contentId).optional()
 		})
 	})
 	.refine((balance) => balance.fairAdviceCompetence <= balance.preciseAdviceCompetence, {
@@ -1258,10 +1347,12 @@ const territorySchema: z.ZodType<TerritoryDefinition> = z.strictObject({
 						z.strictObject({
 							code: z.string().regex(/^(\d{2}|2[AB])$/u, 'code de département'),
 							name: frenchText,
-							startable: z.boolean()
+							startable: z.boolean(),
+							senators: positiveInt.optional()
 						})
 					)
 					.min(1),
+				councilSeats: positiveInt,
 				toponymy: z.strictObject({
 					roots: z.array(toponym).min(3),
 					rivers: z.array(toponym).min(1),
@@ -1282,6 +1373,7 @@ const territorySchema: z.ZodType<TerritoryDefinition> = z.strictObject({
 				description: frenchText,
 				weight: positiveInt,
 				rivalStrengthModifier: safeInt,
+				councilSeats: positiveInt,
 				effects: z.array(effectSchema)
 			})
 		)
@@ -1327,7 +1419,22 @@ export const profileCatalogSchema = z.strictObject({
 	origins: z.array(originSchema).min(1),
 	engagements: z.array(engagementSchema).min(1),
 	defaults: z.strictObject({ origin: contentId, engagement: contentId, region: contentId }),
-	territory: territorySchema
+	territory: territorySchema,
+	ambitions: z
+		.array(
+			z.strictObject({
+				id: contentId.refine(
+					(value) => value.startsWith('ambition.'),
+					'identifiant « ambition.nom »'
+				),
+				label: frenchText,
+				description: frenchText,
+				goal: conditionSchema,
+				judgeAtEnd: z.boolean().optional(),
+				betrayal: conditionSchema.optional()
+			})
+		)
+		.default([])
 });
 
 export const activistsBalanceSchema: z.ZodType<ActivistsBalance> = z
@@ -1384,5 +1491,42 @@ export const balanceSchema: z.ZodType<Balance> = z.strictObject({
 	campaigns: campaignsBalanceSchema,
 	entourage: entourageBalanceSchema,
 	family: familyBalanceSchema,
-	activists: activistsBalanceSchema
+	activists: activistsBalanceSchema,
+	government: z.strictObject({
+		secretaryStature: nonNegativeInt,
+		ministerStature: nonNegativeInt,
+		primeMinisterStature: nonNegativeInt,
+		primeMinisterChancePercent: z.number().int().min(0).max(100),
+		leaderPrimeMinisterPercent: z.number().int().min(0).max(100),
+		reshuffleStability: nonNegativeInt,
+		reshuffleChancePercent: z.number().int().min(0).max(100),
+		keepPopularity: nonNegativeInt,
+		presidentTermTurns: positiveInt,
+		firstPresidentialTurn: nonNegativeInt,
+		reelectionChancePercent: z.number().int().min(0).max(100),
+		appointmentEvent: contentId
+	}),
+	partyCareer: z.strictObject({
+		congressCycleTurns: positiveInt,
+		congressOffset: nonNegativeInt,
+		cadreMinApparatus: nonNegativeInt,
+		cadreMinActivists: nonNegativeInt,
+		cadreMinTurns: nonNegativeInt,
+		cadreChancePercent: z.number().int().min(0).max(100),
+		apparatusPercent: nonNegativeInt,
+		activistsPercent: nonNegativeInt,
+		influencePercent: nonNegativeInt,
+		rallyPoints: nonNegativeInt,
+		rallyCap: nonNegativeInt,
+		minChancePercent: z.number().int().min(0).max(100),
+		maxChancePercent: z.number().int().min(0).max(100),
+		favoriteFrom: nonNegativeInt,
+		openFrom: nonNegativeInt,
+		retryCongresses: nonNegativeInt,
+		defeatApparatus: nonNegativeInt,
+		leaderChallengeApparatus: nonNegativeInt,
+		leaderOustChancePercent: z.number().int().min(0).max(100),
+		cadreInvestitureBonus: nonNegativeInt,
+		leaderInvestitureBonus: nonNegativeInt
+	})
 });

@@ -185,6 +185,11 @@
 											: ''}
 									</p>
 									<p class="mt-1 text-xs">Salaire demandé : {candidate.asked}</p>
+									{#if candidate.counter}
+										<p class="mt-1 text-xs font-medium text-warning" data-testid="counter-offer">
+											{candidate.counter}
+										</p>
+									{/if}
 									{#if candidate.hints !== null}
 										<p class="mt-1 text-xs" data-testid="hints">
 											<span class="font-semibold">Références :</span>

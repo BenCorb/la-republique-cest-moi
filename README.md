@@ -25,7 +25,8 @@ compte, aucune IA au runtime ; les sauvegardes restent dans le navigateur.
 ## Jouer
 
 Une carrière commence à 25 ans, au premier trimestre 2000, et dure jusqu’au bilan : mort naturelle,
-mort d’épuisement ou condamnation à la prison ferme. À chaque trimestre, on compose un plan avec le temps
+mort d’épuisement, condamnation à la prison ferme ou retraite choisie (« Se retirer de la vie
+politique »). À chaque trimestre, on compose un plan avec le temps
 disponible, on vérifie la prévision, puis on avance.
 
 - **Tableau de bord** : ressources, santé, stress, exposition médiatique et risque judiciaire,
@@ -45,8 +46,16 @@ Trois façons d’avancer : « Trimestre suivant », « Année suivante » (quat
 entourage, budget, justice), fin de carrière ou plan devenu invalide. Les décisions bloquantes
 s’affichent dans une fenêtre et doivent être tranchées. La partie est sauvegardée automatiquement
 dans le navigateur ; « Exporter » produit un fichier JSON réimportable depuis l’accueil. En fin de
-carrière, le bilan présente la nécrologie, les distinctions et les moments marquants. Paramètre
-d’essai : `?seed=texte` dans l’adresse impose la seed d’une nouvelle carrière.
+carrière, le bilan présente la nécrologie, les distinctions et les moments marquants ; il s’inscrit
+au carnet des carrières de l’accueil (affichage seul, dans ce navigateur).
+
+**Seed et partage.** Chaque carrière est entièrement déterminée par sa seed (une chaîne de
+caractères) et par les choix du joueur : même seed, même profil et mêmes décisions donnent la même
+partie. La seed s’affiche au bilan ; « Rejouer cette partie » relance la même seed avec le même
+profil, et « Exporter un retour » télécharge la sauvegarde avec une note libre, à envoyer à qui
+l’on veut. Pour imposer une seed dès la création, ajouter `?seed=texte` à l’adresse (par exemple
+`https://bencorb.github.io/la-republique-cest-moi/?seed=entre-amis`). Aucun serveur n’intervient :
+tout reste dans le navigateur.
 
 ## Documents de référence
 

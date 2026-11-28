@@ -449,36 +449,29 @@ test.describe('parcours de jeu', () => {
 		expect(await page.evaluate((saveKey) => localStorage.getItem(saveKey), key)).toBe(old);
 	});
 
-	test('s’arrête avant une échéance, résume la période, puis accélère une année', async ({
+	test('accélère une année sans arrêt inutile, résume la période et la reprend', async ({
 		page
 	}) => {
-		// Seed sans décision bloquante sur les sept premiers trimestres (catalogue P3-05).
+		// Seed sans décision bloquante sur les premiers trimestres (catalogue P3-05).
 		await startCareer(page, 'e2e-year-4');
 		await page.getByRole('button', { name: 'Année suivante' }).click();
 
-		// Les législatives sont accessibles : le temps s'arrête avant la clôture des candidatures.
-		await expect(page.getByTestId('acceleration-status')).toContainText(
-			'3 trimestres simulés : Élections législatives : candidatures ouvertes'
-		);
-		// Note de période présentée d'office (P3-14).
-		const summary = page.getByTestId('quarter-note').getByTestId('span-summary');
-		await expect(summary).toContainText('3 trimestres simulés du T1 2000 au T3 2000');
-		await summary.getByText('Détail trimestre par trimestre').click();
-		await expect(summary.getByRole('heading', { name: 'T2 2000' })).toBeVisible();
-		await expect(page.getByTestId('game-date')).toHaveText('T4 2000 · 25 ans');
-		await closeNote(page);
-
-		await page.getByRole('button', { name: 'Année suivante' }).click();
+		// Sans mandat en jeu, la clôture des candidatures n'arrête plus le temps (P3-09).
 		await expect(page.getByTestId('acceleration-status')).toContainText(
 			'4 trimestres simulés : limite demandée atteinte.'
 		);
-		await expect(page.getByTestId('game-date')).toHaveText('T4 2001 · 26 ans');
+		// Note de période présentée d'office (P3-14).
+		const summary = page.getByTestId('quarter-note').getByTestId('span-summary');
+		await expect(summary).toContainText('4 trimestres simulés du T1 2000 au T4 2000');
+		await summary.getByText('Détail trimestre par trimestre').click();
+		await expect(summary.getByRole('heading', { name: 'T2 2000' })).toBeVisible();
+		await expect(page.getByTestId('game-date')).toHaveText('T1 2001 · 26 ans');
 		await closeNote(page);
 		await expect(summary).toBeHidden();
 
 		await page.reload();
 		await page.getByRole('button', { name: 'Reprendre la carrière' }).click();
-		await expect(page.getByTestId('game-date')).toHaveText('T4 2001 · 26 ans');
+		await expect(page.getByTestId('game-date')).toHaveText('T1 2001 · 26 ans');
 	});
 
 	test('peut interrompre une accélération longue entre deux trimestres', async ({ page }) => {
@@ -1099,9 +1092,113 @@ test.describe('résultats et note de cabinet (P3-14)', () => {
 		const fact = page.getByTestId('note-fact').first();
 		await expect(fact).toHaveAttribute('data-kind', /^(victory|defeat)$/u);
 		await expect(fact).toContainText(/(Victoire|Défaite) — Élections municipales/u);
-		await expect(fact.getByRole('img', { name: /^Vous \d+ %/u })).toBeVisible();
+		// Procès-verbal commun (P3-29) : candidatures, tours et issue du joueur.
+		const report = fact.getByTestId('ballot-report');
+		await expect(report).toBeVisible();
+		await expect(report.getByRole('row', { name: /Votre liste/u })).toBeVisible();
 		await expect(fact.getByTestId('note-record')).toContainText(
 			'Bilan électoral de votre carrière'
 		);
+	});
+});
+
+test.describe('premiers pas guidés (P3-40)', () => {
+	test('guide les premiers objectifs, se masque et se réactive depuis l’accueil', async ({
+		page
+	}) => {
+		await startCareer(page, 'e2e-premiers-pas');
+		// Le lancement ouvre l'agenda : la bulle y indique le premier objectif.
+		const bubble = page.getByTestId('first-steps-bubble');
+		await expect(bubble).toContainText('Composer un premier trimestre');
+		await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
+		const card = page.getByTestId('first-steps');
+		await expect(card).toContainText('Premiers pas · 1/6');
+		await nextQuarter(page);
+		await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
+		await expect(card).toContainText('Premiers pas · 2/6');
+		await expect(card).toContainText('Adhérer à un parti ou rester indépendant');
+		await card.getByRole('button', { name: 'Aller à : Monde politique' }).click();
+		await expect(page.getByTestId('first-steps-bubble')).toBeVisible();
+		// Masqués, ils disparaissent partout, puis se réactivent depuis l'accueil.
+		await page.getByRole('button', { name: 'Masquer les premiers pas' }).click();
+		await expect(page.getByTestId('first-steps-bubble')).toHaveCount(0);
+		await page.reload();
+		await page.getByRole('button', { name: 'Réactiver les premiers pas' }).click();
+		await page.getByRole('button', { name: 'Reprendre la carrière' }).click();
+		await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
+		await expect(page.getByTestId('first-steps')).toBeVisible();
+	});
+});
+
+test.describe('retraite et carnet des carrières (P3-37, P3-41)', () => {
+	test('confirme la retraite, ouvre le bilan et archive la carrière au carnet', async ({
+		page
+	}) => {
+		await startCareer(page, 'e2e-carnet');
+		await page
+			.getByRole('button', { name: 'Ajouter « Se retirer de la vie politique » au plan' })
+			.click();
+		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		const confirm = page.getByTestId('retire-dialog');
+		await expect(confirm).toBeVisible();
+		await confirm.getByRole('button', { name: 'Confirmer la retraite' }).click();
+		await expect(page.getByText(/Portrait/u).first()).toBeVisible();
+		// Partage (P3-42) : seed affichée, retour téléchargé avec une note.
+		await expect(page.getByTestId('career-seed')).toHaveText('Seed de la partie : e2e-carnet');
+		await page.getByRole('button', { name: 'Exporter un retour' }).click();
+		const feedback = page.getByTestId('feedback-dialog');
+		await feedback.getByLabel('Votre note (facultative)').fill('Partie très drôle.');
+		const download = page.waitForEvent('download');
+		await feedback.getByRole('button', { name: 'Télécharger le retour' }).click();
+		expect((await download).suggestedFilename()).toBe('retour-e2e-carnet.json');
+		// Le carnet, à l'accueil, garde la carrière, puis s'efface sur demande.
+		await page.goto('./');
+		const logbook = page.getByTestId('logbook');
+		await expect(logbook.getByTestId('logbook-entry')).toHaveCount(1);
+		await expect(logbook).toContainText('Seed : e2e-carnet');
+		await logbook.getByRole('button', { name: 'Vider le carnet' }).click();
+		await expect(logbook.getByTestId('logbook-entry')).toHaveCount(0);
+	});
+});
+
+test.describe('rejouer une partie (P3-42)', () => {
+	test('relance la même seed et le même profil après confirmation', async ({ page }) => {
+		await startCareer(page, 'e2e-rejouer');
+		await page
+			.getByRole('button', { name: 'Ajouter « Se retirer de la vie politique » au plan' })
+			.click();
+		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await page
+			.getByTestId('retire-dialog')
+			.getByRole('button', { name: 'Confirmer la retraite' })
+			.click();
+		await page.getByRole('button', { name: 'Rejouer cette partie' }).click();
+		await page.getByRole('button', { name: 'Remplacer et commencer' }).click();
+		await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 25 ans');
+	});
+});
+
+test.describe('livraison (P3-10)', () => {
+	test('tient à 1 100 px de large sans défilement horizontal', async ({ page }) => {
+		await page.setViewportSize({ width: 1100, height: 800 });
+		await startCareer(page, 'e2e-1100');
+		for (const name of [
+			'Tableau de bord',
+			'Agenda',
+			'Carrière',
+			'Monde politique',
+			'Actualités',
+			'Entourage',
+			'Relations',
+			'Organisation',
+			'Patrimoine',
+			'Journal'
+		]) {
+			await page.getByRole('button', { name, exact: true }).click();
+			const overflow = await page.evaluate(
+				() => document.documentElement.scrollWidth - window.innerWidth
+			);
+			expect(overflow, name).toBeLessThanOrEqual(0);
+		}
 	});
 });

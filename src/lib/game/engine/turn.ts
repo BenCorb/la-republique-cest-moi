@@ -32,7 +32,7 @@ import { chooseEvent, resolveEventFrontier } from './events.ts';
 import { resolveWellbeing } from './health.ts';
 import { executePlan, previewPlan } from './plan.ts';
 import { resolveCharacters } from './characters.ts';
-import { mandateIncome, reservedTime, resolveDeadlines } from './career.ts';
+import { endMandates, mandateIncome, reservedTime, resolveDeadlines } from './career.ts';
 import { applyGauge } from './effects.ts';
 import { RESOURCE_IDS, type ResourceId } from '../content/types.ts';
 import { resolveWorld } from './world.ts';
@@ -43,6 +43,9 @@ import { resolvePromises } from './promises.ts';
 import { resolvePress } from './press.ts';
 import { effectiveContent, resolveReforms } from './reforms.ts';
 import { resolveActivists } from './activists.ts';
+import { partyLedByPlayer } from './party.ts';
+import { resolveGovernment } from './government.ts';
+import { updateAmbition } from './ambition.ts';
 import { resolveStaffFrontier, resolveStaffProduction } from './staff.ts';
 import { resolveFamily } from './family.ts';
 import type {
@@ -155,12 +158,28 @@ function commitTurn(
 	);
 	const nextTurn = resolvedTurn + 1;
 
+	// Retraite choisie (P3-37) : la carrière s'achève à la fin de T, comme un décès,
+	// sans aucune échéance ni événement à la frontière.
+	const retired = command.plan.steps.some(
+		(step) =>
+			step.kind === 'action' &&
+			content.actions[step.id]?.effects.some((effect) => effect.op === 'retire') === true
+	);
+
 	// 4 bis. Personnages puis monde (sauf décès) : ils évoluent même si le joueur ne fait rien.
-	const people = wellbeing.record.deathCause
-		? null
-		: resolveCharacters(production.entourage.characters, nextTurn, wellbeing.rng, content);
+	const people =
+		wellbeing.record.deathCause || retired
+			? null
+			: resolveCharacters(production.entourage.characters, nextTurn, wellbeing.rng, content);
 	const world = people
-		? resolveWorld(production.world, people.characters, nextTurn, people.rng, content)
+		? resolveWorld(
+				production.world,
+				people.characters,
+				nextTurn,
+				people.rng,
+				content,
+				partyLedByPlayer(production.player)
+			)
 		: null;
 
 	// 4 bis (suite). Entourage : départs, puis présélections pour les postes vacants.
@@ -230,7 +249,7 @@ function commitTurn(
 		: null;
 
 	// 5. Échéances de la fin de T : fins de mandat, scrutins, échéances suivantes.
-	const deadlines =
+	let deadlines =
 		world && exposure && team && family
 			? resolveDeadlines(
 					{
@@ -246,6 +265,35 @@ function commitTurn(
 					content
 				)
 			: null;
+
+	// 5 bis-0. Gouvernement : formation après des législatives, remaniements (P3-35).
+	const government = deadlines
+		? resolveGovernment(
+				deadlines.career,
+				deadlines.player,
+				deadlines.world,
+				deadlines.resources.influence,
+				{
+					legislative: deadlines.record.ballots.some(
+						(ballot) => content.elections[ballot.electionId]?.decidesGovernment === true
+					)
+				},
+				resolvedTurn,
+				deadlines.rng,
+				content
+			)
+		: null;
+	if (deadlines && government) {
+		deadlines = {
+			...deadlines,
+			career: government.career,
+			rng: government.rng,
+			record: {
+				...deadlines.record,
+				mandates: [...deadlines.record.mandates, ...government.changes]
+			}
+		};
+	}
 
 	// 5 bis. Justice : étapes échues des dossiers, révélations, usure de la défense.
 	const justice = deadlines
@@ -361,7 +409,36 @@ function commitTurn(
 								...state.events.scheduled,
 								...justice!.scheduled,
 								...pledges.scheduled,
-								...team!.scheduled
+								...team!.scheduled,
+								// Proposition d'entrée au gouvernement (P3-35), au début de T+1.
+								...(government?.changes.some(
+									(change) => change.kind === 'appointment' && change.status === 'offered'
+								)
+									? [
+											{
+												eventId: content.balance.government.appointmentEvent,
+												dueTurn: nextTurn,
+												sourceInstanceId: 'government',
+												actors: {}
+											}
+										]
+									: []),
+								// Investiture refusée (P3-30) : renoncer ou se présenter en dissident, au début de T+1.
+								...(deadlines?.record.investitures ?? [])
+									.filter((entry) => !entry.granted)
+									.map((entry) => ({
+										eventId: content.balance.campaigns.investiture.refusedEvent,
+										dueTurn: nextTurn,
+										sourceInstanceId: entry.requestId,
+										actors: {}
+									})),
+								// Second tour en attente (P3-29) : décision au début de T+1.
+								...(deadlines?.record.runoffs ?? []).map((campaignIdValue) => ({
+									eventId: content.balance.elections.contests.runoffEvent,
+									dueTurn: nextTurn,
+									sourceInstanceId: campaignIdValue,
+									actors: {}
+								}))
 							]
 						},
 						world: reforms.parts.world,
@@ -394,6 +471,7 @@ function commitTurn(
 			...production.record,
 			departures: team?.record.departures ?? [],
 			shortlisted: team?.record.shortlisted ?? [],
+			counterLapsed: team?.record.counterLapsed ?? [],
 			searches: team?.record.searches ?? [],
 			raiseRequests: team?.record.raiseRequests ?? []
 		},
@@ -423,10 +501,12 @@ function commitTurn(
 	// 7. Phase suivante.
 	const end: EndState | null = wellbeing.record.deathCause
 		? { turn: resolvedTurn, reason: 'death', cause: wellbeing.record.deathCause }
-		: (justice?.end ??
-			(frontier?.deathCause
-				? { turn: nextTurn, reason: 'death', cause: frontier.deathCause }
-				: null));
+		: retired
+			? { turn: resolvedTurn, reason: 'retirement' }
+			: (justice?.end ??
+				(frontier?.deathCause
+					? { turn: nextTurn, reason: 'death', cause: frontier.deathCause }
+					: null));
 	const events = frontier?.events ?? { ...state.events, pending: [], scheduled: [] };
 	return {
 		ok: true,
@@ -450,7 +530,10 @@ function commitTurn(
 				frontier?.shortlists ?? settled?.entourage.shortlists ?? production.entourage.shortlists,
 			searches:
 				settled?.entourage.searches ?? team?.entourage.searches ?? production.entourage.searches,
-			mandates: frontier?.career.mandates ?? settled?.career.mandates ?? production.career.mandates,
+			// Retraite : démission de tous les mandats en cours (P3-37).
+			mandates: retired
+				? endMandates(production.career.mandates, () => true, 'resigned', resolvedTurn).mandates
+				: (frontier?.career.mandates ?? settled?.career.mandates ?? production.career.mandates),
 			ballots: frontier?.career.ballots ?? settled?.career.ballots ?? production.career.ballots,
 			campaigns:
 				frontier?.career.campaigns ?? settled?.career.campaigns ?? production.career.campaigns,
@@ -459,6 +542,14 @@ function commitTurn(
 				settled?.career.institutions ??
 				production.career.institutions,
 			promises: frontier?.career.promises ?? settled?.career.promises ?? production.career.promises,
+			investitures:
+				frontier?.career.investitures ??
+				settled?.career.investitures ??
+				production.career.investitures,
+			appointment:
+				frontier?.career.appointment ??
+				settled?.career.appointment ??
+				production.career.appointment,
 			upgrades: wealth?.upgrades ?? execution.upgrades,
 			facts: frontier?.facts ?? state.facts,
 			cases: settled?.cases ?? state.cases,
@@ -498,6 +589,12 @@ export function transition(
 	command: GameCommand,
 	content: Content
 ): TransitionResult {
+	const result = dispatch(state, command, content);
+	// Ambition de départ (P3-38) : constatée après chaque commande réussie.
+	return result.ok ? { ...result, state: updateAmbition(result.state, content) } : result;
+}
+
+function dispatch(state: GameState, command: GameCommand, content: Content): TransitionResult {
 	switch (command.type) {
 		case 'commitTurn':
 			return commitTurn(state, command, content);

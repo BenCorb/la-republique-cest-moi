@@ -45,7 +45,11 @@
 							"group": "support.middle_class",
 							"value": 3
 						},
-						{ "op": "addStat", "stat": "player.exposure", "value": 5 }
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 5
+						}
 					],
 					"followUp": {
 						"eventId": "press.portrait_published",
@@ -74,7 +78,11 @@
 							"value": -5,
 							"memory": "Vous avez proposé un encart publicitaire au lieu d’un entretien."
 						},
-						{ "op": "addStat", "stat": "player.exposure", "value": 3 }
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 3
+						}
 					]
 				},
 				{
@@ -178,7 +186,11 @@
 							"value": -5,
 							"memory": "Vous avez préparé le débat radiophonique comme une finale."
 						},
-						{ "op": "addStat", "stat": "player.exposure", "value": 6 }
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 6
+						}
 					]
 				},
 				{
@@ -202,7 +214,11 @@
 							"value": 5,
 							"memory": "Vous avez accepté son débat."
 						},
-						{ "op": "addStat", "stat": "player.exposure", "value": 6 }
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 6
+						}
 					]
 				},
 				{
@@ -328,6 +344,225 @@
 					"op": "addStat",
 					"stat": "player.stress",
 					"value": 4
+				}
+			]
+		},
+		{
+			"id": "chain.investigator_questions",
+			"category": "press",
+			"title": "Une journaliste pose des questions",
+			"text": "{journalist} prépare une enquête sur « les réseaux de l’élu qui monte ». Elle demande à consulter vos agendas des deux dernières années et vos comptes de campagne.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": true,
+			"actors": [
+				{
+					"role": "journalist",
+					"tags": ["investigative"]
+				}
+			],
+			"choices": [
+				{
+					"id": "open",
+					"label": "Ouvrir les archives",
+					"hints": ["Rien à cacher, pour l’instant", "Une enquête plus fouillée"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "journalist",
+							"value": 10,
+							"memory": "Vous lui avez ouvert vos archives."
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Elle repart avec trois cartons et un merci sincère. L’article sera long, mais équilibré."
+					]
+				},
+				{
+					"id": "stonewall",
+					"label": "Opposer une fin de non-recevoir",
+					"hints": ["Tranquillité immédiate", "Une journaliste piquée au vif"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "journalist",
+							"value": -15,
+							"memory": "Vous avez refusé de lui répondre."
+						}
+					],
+					"outcome": [
+						"Votre attaché lui raccroche au nez. Elle note l’heure de l’appel, et le ton."
+					],
+					"followUp": {
+						"eventId": "chain.investigator_article",
+						"delayTurns": 4
+					}
+				}
+			],
+			"when": {
+				"op": "gte",
+				"stat": "resources.influence",
+				"value": 40
+			}
+		},
+		{
+			"id": "chain.investigator_article",
+			"category": "press",
+			"title": "L’enquête paraît",
+			"text": "Six pages dans La Gazette fouineuse, signées {journalist} : vos dîners, vos amis, vos financements. Rien d’illégal, tout est gênant.",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": false,
+			"actors": [
+				{
+					"role": "journalist",
+					"tags": ["investigative"]
+				}
+			],
+			"choices": [
+				{
+					"id": "reply",
+					"label": "Publier un droit de réponse",
+					"hints": ["Une réponse posée", "L’affaire dure"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 1
+						}
+					],
+					"outcome": [
+						"Votre droit de réponse paraît en page 12, en petits caractères. Les lecteurs fidèles le lisent, les autres non."
+					]
+				},
+				{
+					"id": "sue",
+					"label": "Porter plainte en diffamation",
+					"hints": ["Une contre-attaque", "Un procès médiatique"],
+					"costs": [
+						{
+							"resource": "personalCashCents",
+							"amount": 500000
+						}
+					],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 5
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 3
+						},
+						{
+							"op": "addRelation",
+							"role": "journalist",
+							"value": -10,
+							"memory": "Vous l’avez attaquée en diffamation."
+						}
+					],
+					"outcome": [
+						"Votre avocat dépose plainte. {journalist} s’en réjouit dans un éditorial : « Le procès sera public. »"
+					],
+					"followUp": {
+						"eventId": "chain.investigator_trial",
+						"delayTurns": 6
+					}
+				}
+			]
+		},
+		{
+			"id": "chain.investigator_trial",
+			"category": "press",
+			"title": "Le procès en diffamation",
+			"text": "La 17e chambre du tribunal examine votre plainte contre {journalist}. La salle est pleine, les dessinateurs de presse aussi.",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": false,
+			"actors": [
+				{
+					"role": "journalist",
+					"tags": ["investigative"]
+				}
+			],
+			"choices": [
+				{
+					"id": "persist",
+					"label": "Maintenir la plainte jusqu’au bout",
+					"hints": ["Une victoire possible", "Un débat sur la liberté de la presse"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResourceRandom",
+							"resource": "influence",
+							"min": -6,
+							"max": 6
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 4
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 3
+						}
+					],
+					"outcome": [
+						"Le jugement tombe : une relaxe partielle, une condamnation symbolique, et deux camps convaincus d’avoir gagné."
+					]
+				},
+				{
+					"id": "withdraw",
+					"label": "Retirer la plainte",
+					"hints": ["Fin de l’affaire", "Un aveu de faiblesse, disent certains"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": -2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -2
+						},
+						{
+							"op": "addRelation",
+							"role": "journalist",
+							"value": 5,
+							"memory": "Vous avez retiré votre plainte."
+						}
+					],
+					"outcome": [
+						"Vous retirez la plainte la veille de l’audience. {journalist} écrit un dernier article, presque bienveillant."
+					]
 				}
 			]
 		}

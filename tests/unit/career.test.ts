@@ -145,7 +145,9 @@ function holding(state: GameState, ...mandateIds: string[]): GameState {
 		access: 'election',
 		status: 'active',
 		endTurn: null,
-		endReason: null
+		endReason: null,
+		side: null,
+		portfolio: null
 	}));
 	return { ...state, mandates };
 }
@@ -284,7 +286,9 @@ describe('calendrier électoral', () => {
 			ballots: base.ballots,
 			campaigns: base.campaigns,
 			institutions: base.institutions,
-			promises: base.promises
+			promises: base.promises,
+			investitures: base.investitures,
+			appointment: base.appointment
 		};
 		const outcome = applyCareerEffect(
 			{ op: 'callEarlyElection', election: 'election.local', delayTurns: 1 },
@@ -318,6 +322,8 @@ describe('calendrier électoral', () => {
 						mandates: [],
 						ballots: base.ballots.map((ballot) => ({ ...ballot, turn: 0 })),
 						campaigns: [],
+						investitures: [],
+						appointment: null,
 						institutions: base.institutions,
 						promises: []
 					}

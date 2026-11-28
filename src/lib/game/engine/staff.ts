@@ -45,7 +45,7 @@ import { applyCareerEffect, type CareerParts } from './career.ts';
 import { addRelation, generatePerson, meet } from './characters.ts';
 import { evaluateCondition, type ConditionContext } from './conditions.ts';
 import { gaugeKey } from './effects.ts';
-import { nextInt, type RngState } from './random.ts';
+import { hashSeed, nextInt, type RngState } from './random.ts';
 import type {
 	Character,
 	PlayerState,
@@ -168,12 +168,19 @@ export function shortlistPostOf(candidateId: string, parts: EntourageParts): str
 export function hireTerms(
 	candidateId: string,
 	parts: EntourageParts,
-	offer: HireOffer,
+	offer: HireOffer | 'counter',
 	content: Content
 ): { postId: string; salaryCents: number; bonusCents: number } | null {
 	const postId = shortlistPostOf(candidateId, parts);
 	const candidate = parts.characters[candidateId];
 	if (!postId || !candidate) return null;
+	if (offer === 'counter') {
+		// Contre-proposition (P3-33) : le salaire annoncé, sans prime.
+		const counter = parts.shortlists[postId]?.find(
+			(entry) => entry.characterId === candidateId
+		)?.counterOffer;
+		return counter ? { postId, salaryCents: counter.salaryCents, bonusCents: 0 } : null;
+	}
 	const salaryCents = offeredSalaryCents(postId, candidate.competence, offer, content);
 	return { postId, salaryCents, bonusCents: offerBonusCents(salaryCents, offer, content) };
 }
@@ -194,12 +201,15 @@ export function hireIssue(
 	parts: EntourageParts,
 	context: ConditionContext | null,
 	content: Content,
-	offer: HireOffer = 'standard'
+	offer: HireOffer | 'counter' = 'standard'
 ): string | null {
 	const postId = Object.keys(parts.shortlists).find((id) =>
 		parts.shortlists[id]?.some((entry) => entry.characterId === candidateId)
 	);
 	if (!postId) return 'Ce candidat ne figure dans aucune présélection.';
+	if (offer === 'counter' && !hireTerms(candidateId, parts, 'counter', content)) {
+		return 'Ce candidat n’a fait aucune contre-proposition.';
+	}
 	const post = content.posts[postId];
 	if (!post) return `Poste inconnu : ${postId}.`;
 	if (occupantOf(parts.staff, postId)) return `Le poste « ${post.label} » est déjà pourvu.`;
@@ -425,8 +435,10 @@ export function applyStaffEffect(
 	const post = content.posts[postId]!;
 	const candidate = parts.characters[target]!;
 	const recruitment = content.balance.entourage.recruitment;
-	// Le candidat décide à l'exécution seulement ; un refus le retire de la présélection.
-	if (decision) {
+	// Le candidat décide à l'exécution seulement (P3-20). Un premier refus est
+	// suivi d'une contre-proposition valable un trimestre ; un second, d'un départ
+	// (P3-33). Une offre au montant de la contre-proposition est toujours acceptée.
+	if (decision && offer !== 'counter') {
 		const entry = parts.shortlists[postId]!.find((item) => item.characterId === target)!;
 		const chance = acceptancePercent(
 			decision.attraction,
@@ -444,6 +456,29 @@ export function applyStaffEffect(
 				turn,
 				content
 			);
+			if (entry.counterOffer === null) {
+				const asked = askedSalaryCents(postId, candidate.competence, content);
+				const rounding = recruitment.salaryRoundingCents;
+				const counterCents = Math.max(
+					terms.salaryCents + rounding,
+					Math.round((asked * recruitment.counterOfferPercent) / 100 / rounding) * rounding
+				);
+				return {
+					parts: {
+						...parts,
+						shortlists: {
+							...parts.shortlists,
+							[postId]: parts.shortlists[postId]!.map((item) =>
+								item.characterId === target
+									? { ...item, counterOffer: { salaryCents: counterCents, untilTurn: turn + 1 } }
+									: item
+							)
+						},
+						relationships: relation.relationships
+					},
+					changes: [{ kind: 'hireRefused', characterId: target, postId, counterCents }]
+				};
+			}
 			return {
 				parts: {
 					...parts,
@@ -457,7 +492,7 @@ export function applyStaffEffect(
 					},
 					relationships: relation.relationships
 				},
-				changes: [{ kind: 'hireRefused', characterId: target, postId }]
+				changes: [{ kind: 'hireRefused', characterId: target, postId, counterCents: null }]
 			};
 		}
 	}
@@ -470,7 +505,8 @@ export function applyStaffEffect(
 	const relation = addRelation(
 		parts.relationships,
 		hired,
-		content.balance.entourage.hireAttitude + recruitment.offers[offer].attitude,
+		content.balance.entourage.hireAttitude +
+			(offer === 'counter' ? 0 : recruitment.offers[offer].attitude),
 		`Recrutement au poste : ${post.label}.`,
 		turn,
 		content
@@ -828,7 +864,10 @@ export function resolveStaffFrontier(
 	refundCents: number;
 	/** Demande d'augmentation programmée pour ce trimestre. */
 	scheduled: readonly ScheduledEvent[];
-	record: Pick<StaffRecord, 'departures' | 'shortlisted' | 'searches' | 'raiseRequests'>;
+	record: Pick<
+		StaffRecord,
+		'departures' | 'shortlisted' | 'searches' | 'raiseRequests' | 'counterLapsed'
+	>;
 } {
 	let parts = entourage;
 	let current = rng;
@@ -847,6 +886,34 @@ export function resolveStaffFrontier(
 		if (!reason) continue;
 		parts = leave(parts, member.characterId, reason, turn).parts;
 		departures.push({ characterId: member.characterId, postId: member.postId, reason });
+	}
+
+	// Contre-propositions restées sans réponse (P3-33) : le candidat s'en va.
+	const counterLapsed: string[] = [];
+	for (const [postId, entries] of Object.entries(parts.shortlists)) {
+		const lapsed = entries.filter(
+			(entry) => entry.counterOffer !== null && entry.counterOffer.untilTurn < turn
+		);
+		if (lapsed.length === 0) continue;
+		counterLapsed.push(...lapsed.map((entry) => entry.characterId));
+		const characters = { ...parts.characters };
+		for (const entry of lapsed) {
+			const character = characters[entry.characterId];
+			if (character) {
+				characters[entry.characterId] = {
+					...character,
+					tags: character.tags.filter((tag) => tag !== 'candidate')
+				};
+			}
+		}
+		parts = {
+			...parts,
+			characters,
+			shortlists: {
+				...parts.shortlists,
+				[postId]: entries.filter((entry) => !lapsed.includes(entry))
+			}
+		};
 	}
 
 	const shortlisted: string[] = [];
@@ -873,6 +940,7 @@ export function resolveStaffFrontier(
 				characterId: made.character.id,
 				profileId: drawn.profile.id,
 				interviews: 0,
+				counterOffer: null,
 				hints: null
 			});
 		}
@@ -934,6 +1002,7 @@ export function resolveStaffFrontier(
 				characterId: made.character.id,
 				profileId: profile.id,
 				interviews: 0,
+				counterOffer: null,
 				// Le chasseur de têtes livre un dossier vérifié : des indices, jamais une certitude.
 				hints:
 					level.vetting === null
@@ -975,8 +1044,10 @@ export function resolveStaffFrontier(
 					: entry
 			)
 		};
+		// Variantes (P3-24) : choisies par empreinte du collaborateur et du trimestre.
+		const requests = [renegotiation.event, ...(renegotiation.variants ?? [])];
 		scheduled.push({
-			eventId: renegotiation.event,
+			eventId: requests[hashSeed(`${member.characterId}:${turn}`) % requests.length]!,
 			dueTurn: turn,
 			sourceInstanceId: `staff:${member.characterId}`,
 			actors: { [STAFF_ROLE]: member.characterId }
@@ -990,7 +1061,7 @@ export function resolveStaffFrontier(
 		rng: current,
 		refundCents,
 		scheduled,
-		record: { departures, shortlisted, searches, raiseRequests }
+		record: { departures, shortlisted, searches, raiseRequests, counterLapsed }
 	};
 }
 
@@ -1148,7 +1219,13 @@ export function applyPostEffect(
 					...parts.shortlists,
 					[postId]: [
 						...(parts.shortlists[postId] ?? []).filter((entry) => entry.characterId !== actor.id),
-						{ characterId: actor.id, profileId: effect.profile, interviews: 0, hints: null }
+						{
+							characterId: actor.id,
+							profileId: effect.profile,
+							interviews: 0,
+							hints: null,
+							counterOffer: null
+						}
 					]
 				}
 			},

@@ -40,7 +40,7 @@ import {
 } from '../content/types.ts';
 import { yearOf, type Turn } from './calendar.ts';
 import { applyGauge } from './effects.ts';
-import { nextInt, type RngState } from './random.ts';
+import { hashSeed, nextInt, type RngState } from './random.ts';
 import type {
 	Article,
 	Campaign,
@@ -168,12 +168,33 @@ export function articleTone(
 	media: MediaDefinition,
 	relation: number,
 	owned: boolean,
-	content: Content
+	content: Content,
+	/** Ligne éditoriale de l'article (P3-24) : −1, 0 ou +1. */
+	editorial = 0
 ): ArticleTone {
 	const threshold = content.press.toneThreshold;
-	const shift = owned ? 1 : relation >= threshold ? 1 : relation <= -threshold ? -1 : 0;
-	const tone = shiftTone(base, shift);
+	// Un cran par seuil de relation, deux pour une relation très marquée ; un média
+	// possédé adoucit toujours d'un cran (P3-24 : tous les titres deviennent possibles).
+	const strong = relation >= 2 * threshold ? 1 : relation <= -2 * threshold ? -1 : 0;
+	const shift = owned
+		? 1 + Math.max(0, strong)
+		: (relation >= threshold ? 1 : relation <= -threshold ? -1 : 0) + strong;
+	const tone = shiftTone(base, shift + editorial);
 	return media.kind === 'satirical' && tone === 'favorable' ? 'neutral' : tone;
+}
+
+/** Ligne éditoriale d'un article (P3-24), par empreinte : −1, 0 ou +1, sans tirage. */
+export function editorialSwing(
+	mediaId: string,
+	topic: string,
+	subjectId: string | null,
+	turn: number,
+	content: Content
+): number {
+	const percent = content.press.editorialSwingPercent;
+	if (percent <= 0) return 0;
+	const roll = hashSeed(`${mediaId}:${topic}:${subjectId ?? ''}:${turn}`) % 100;
+	return roll < percent ? -1 : roll >= 100 - percent ? 1 : 0;
 }
 
 /** Effet d'un article sur chaque groupe lecteur (entier borné, 0 pour la neutralité). */
@@ -269,13 +290,21 @@ function subjectsOf(
 	}
 	for (const campaign of inputs.campaigns) {
 		if (campaign.status !== 'won' && campaign.status !== 'lost') continue;
-		const ballot = inputs.ballots.find((item) => item.ballotId === campaign.ballotId);
-		if (ballot?.turn !== inputs.turn) continue;
+		// Résultat connu ce trimestre : au scrutin, ou après la décision du second tour (P3-29).
+		if (campaign.resultTurn !== inputs.turn) continue;
 		subjects.push({
 			topic: 'election',
 			subjectId: campaign.campaignId,
 			detail: campaign.status,
-			tone: campaign.status === 'won' ? 'favorable' : 'neutral',
+			// Tonalité selon le score (P3-24) : large victoire, victoire étroite, défaite honorable ou lourde.
+			tone:
+				campaign.status === 'won'
+					? (campaign.playerPercent ?? 0) >= 55
+						? 'favorable'
+						: 'neutral'
+					: (campaign.playerPercent ?? 0) >= 40
+						? 'neutral'
+						: 'critical',
 			mediaId: null
 		});
 	}
@@ -311,7 +340,8 @@ function subjectsOf(
 				topic: 'lifestyle',
 				subjectId: null,
 				detail: null,
-				tone: 'critical',
+				// Train de vie aisé : on en parle ; fastueux : on le reproche (P3-24).
+				tone: lifestyle.level > content.press.lifestyleLevel ? 'critical' : 'neutral',
 				mediaId: null
 			});
 		}
@@ -570,7 +600,14 @@ export function resolvePress(
 		if (!media) continue;
 		const isOwned = owned.has(media.id) && subject.topic !== 'ownership';
 		const relation = world.media[media.id]?.relation ?? 0;
-		const tone = articleTone(subject.tone, media, relation, isOwned, content);
+		const tone = articleTone(
+			subject.tone,
+			media,
+			relation,
+			isOwned,
+			content,
+			editorialSwing(media.id, subject.topic, subject.subjectId, inputs.turn, content)
+		);
 		const headlines = headlineCandidates(
 			subject.topic,
 			tone,

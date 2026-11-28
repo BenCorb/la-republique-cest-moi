@@ -73,7 +73,9 @@ function mandate(
 		access: 'election',
 		status: endTurn === null ? 'active' : 'ended',
 		endTurn,
-		endReason: endTurn === null ? null : 'term'
+		endReason: endTurn === null ? null : 'term',
+		side: null,
+		portfolio: null
 	};
 }
 

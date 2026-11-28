@@ -13,7 +13,9 @@ import {
 	type Effect,
 	type GaugeId,
 	type IndicatorId,
-	type ResourceId
+	type PartyPosture,
+	type ResourceId,
+	type RunoffDecision
 } from '../content/types.ts';
 import { nextInt, type RngState } from './random.ts';
 import type { CareerEffect } from './career.ts';
@@ -46,6 +48,17 @@ export type EffectRange =
 	| { readonly kind: 'mandate'; readonly change: 'grant' | 'end'; readonly mandate: string }
 	| { readonly kind: 'earlyElection'; readonly election: string; readonly delayTurns: number }
 	| { readonly kind: 'candidacy' }
+	/** Retraite choisie (P3-37). */
+	| { readonly kind: 'retire' }
+	/** Réponse à une proposition d'entrée au gouvernement (P3-35). */
+	| { readonly kind: 'appointment'; readonly decision: 'accept' | 'decline' }
+	/** Candidature à la direction du parti et ralliements (P3-34). */
+	| { readonly kind: 'partyBid'; readonly posture: PartyPosture }
+	| { readonly kind: 'rally'; readonly value: number }
+	/** Décision d'entre-deux-tours (P3-29). */
+	| { readonly kind: 'runoff'; readonly decision: RunoffDecision }
+	/** Investiture demandée, ou décision après un refus (P3-30). */
+	| { readonly kind: 'investiture'; readonly decision: 'request' | 'dissident' | 'renounce' }
 	| {
 			readonly kind: 'staff';
 			readonly change:
@@ -113,6 +126,7 @@ export type ResolvedEffect =
 	| { readonly kind: 'family'; readonly effect: FamilyEffect; readonly rng: RngState }
 	/** Départ de l'exemplaire ciblé, appliqué par le plan (actions seulement). */
 	| { readonly kind: 'release'; readonly rng: RngState }
+	| { readonly kind: 'retire'; readonly rng: RngState }
 	/** Fait inscrit au registre par le moteur d'événements (P3-01). */
 	| { readonly kind: 'fact'; readonly effect: FactEffect; readonly rng: RngState }
 	/** Embauche ou présélection d'un acteur au poste lié à l'événement (P3-12). */
@@ -122,7 +136,17 @@ export type ResolvedEffect =
 	/** Promesse du registre, appliquée par `applyPromiseEffect` (P3-04). */
 	| { readonly kind: 'promise'; readonly effect: PromiseEffect; readonly rng: RngState }
 	/** Proposition de réforme, appliquée par `applyReformEffect` (P3-05, actions seulement). */
-	| { readonly kind: 'reform'; readonly effect: ReformEffect; readonly rng: RngState };
+	| { readonly kind: 'reform'; readonly effect: ReformEffect; readonly rng: RngState }
+	| {
+			readonly kind: 'runoff';
+			readonly effect: Extract<Effect, { op: 'runoffDecision' }>;
+			readonly rng: RngState;
+	  }
+	| {
+			readonly kind: 'investiture';
+			readonly effect: Extract<Effect, { op: 'investitureDecision' }>;
+			readonly rng: RngState;
+	  };
 
 export type LifestyleEffect = Extract<Effect, { op: 'setLifestyle' }>;
 
@@ -190,6 +214,16 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'earlyElection', election: effect.election, delayTurns: effect.delayTurns };
 		case 'declareCandidacy':
 			return { kind: 'candidacy' };
+		case 'runoffDecision':
+			return { kind: 'runoff', decision: effect.decision };
+		case 'requestInvestiture':
+			return { kind: 'investiture', decision: 'request' };
+		case 'appointment':
+			return { kind: 'appointment', decision: effect.decision };
+		case 'retire':
+			return { kind: 'retire' };
+		case 'investitureDecision':
+			return { kind: 'investiture', decision: effect.decision };
 		case 'hireStaff':
 			return { kind: 'staff', change: 'hire' };
 		case 'courtCandidate':
@@ -236,6 +270,10 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'media', change: 'relation', media: effect.media, value: effect.value };
 		case 'giveInterview':
 			return { kind: 'media', change: 'interview', media: 'target', value: 0 };
+		case 'partyBid':
+			return { kind: 'partyBid', posture: effect.posture };
+		case 'rallySupport':
+			return { kind: 'rally', value: effect.value };
 		case 'proposeReform':
 			return { kind: 'reform' };
 		default: {
@@ -262,9 +300,18 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 		case 'leaveParty':
 		case 'addMediaRelation':
 		case 'giveInterview':
+		case 'partyBid':
+		case 'rallySupport':
 			return { kind: 'politics', effect, rng };
 		case 'proposeReform':
 			return { kind: 'reform', effect, rng };
+		case 'runoffDecision':
+			return { kind: 'runoff', effect, rng };
+		case 'requestInvestiture':
+		case 'appointment':
+			return { kind: 'career', effect, rng };
+		case 'investitureDecision':
+			return { kind: 'investiture', effect, rng };
 		case 'addRelation':
 		case 'revealTraits':
 			return { kind: 'people', effect, rng };
@@ -283,6 +330,8 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 			return { kind: 'staffAction', effect, rng };
 		case 'releaseUpgrade':
 			return { kind: 'release', rng };
+		case 'retire':
+			return { kind: 'retire', rng };
 		case 'staffLeaves':
 		case 'grantRaise':
 			return { kind: 'people', effect, rng };

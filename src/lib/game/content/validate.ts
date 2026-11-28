@@ -320,6 +320,7 @@ function crossCheckWorld(
 interface Refs {
 	readonly parties: ReadonlySet<string>;
 	readonly mandates: ReadonlySet<string>;
+	readonly portfolios: ReadonlySet<string>;
 	readonly elections: ReadonlySet<string>;
 	readonly groups: ReadonlySet<string>;
 	readonly origins: ReadonlySet<string>;
@@ -430,6 +431,16 @@ function conditionIssues(
 						}
 					]
 				: [];
+		case 'holdsPortfolio':
+			return refs.portfolios.has(condition.portfolio)
+				? []
+				: [
+						{
+							source,
+							path: `${path}.portfolio`,
+							message: `portefeuille inconnu : ${condition.portfolio}`
+						}
+					];
 		case 'holdsMandate':
 		case 'canHoldMandate':
 			return refs.mandates.has(condition.mandate)
@@ -574,6 +585,26 @@ function effectIssues(
 						source,
 						path: at,
 						message: 'candidature réservée aux actions ciblant une échéance'
+					});
+				}
+				break;
+			case 'requestInvestiture':
+				if (targetKind !== 'ballot') {
+					issues.push({
+						source,
+						path: at,
+						message: 'investiture réservée aux actions ciblant une échéance'
+					});
+				}
+				break;
+			case 'investitureDecision':
+			case 'appointment':
+			case 'runoffDecision':
+				if (roles === null) {
+					issues.push({
+						source,
+						path: at,
+						message: 'décision d’entre-deux-tours réservée aux événements'
 					});
 				}
 				break;
@@ -861,6 +892,7 @@ function crossCheckPolitics(
 				(effect.op === 'joinParty' && effect.party === 'target') ||
 				(effect.op === 'endMandate' && effect.mandate === 'target') ||
 				effect.op === 'declareCandidacy' ||
+				effect.op === 'requestInvestiture' ||
 				effect.op === 'advanceCampaign' ||
 				effect.op === 'hireStaff' ||
 				effect.op === 'courtCandidate' ||
@@ -1263,25 +1295,30 @@ function crossCheckRecruitment(
 			}
 		}
 	});
-	const event = events.find((entry) => entry.event.id === entourage.renegotiation.event);
-	if (!event) {
-		issues.push({
-			source: 'balance.json',
-			path: 'entourage.renegotiation.event',
-			message: `événement inconnu : ${entourage.renegotiation.event}`
-		});
-	} else if (
-		!event.event.blocking ||
-		event.event.trigger !== 'followUp' ||
-		event.event.subject !== 'staff' ||
-		!event.event.actors.some((slot) => slot.role === 'collaborator')
-	) {
-		issues.push({
-			source: event.source,
-			path: `events[${event.index}]`,
-			message:
-				'la renégociation est un événement bloquant « followUp » de sujet « staff » avec un rôle « collaborator »'
-		});
+	for (const requestId of [
+		entourage.renegotiation.event,
+		...(entourage.renegotiation.variants ?? [])
+	]) {
+		const event = events.find((entry) => entry.event.id === requestId);
+		if (!event) {
+			issues.push({
+				source: 'balance.json',
+				path: 'entourage.renegotiation',
+				message: `événement inconnu : ${requestId}`
+			});
+		} else if (
+			!event.event.blocking ||
+			event.event.trigger !== 'followUp' ||
+			event.event.subject !== 'staff' ||
+			!event.event.actors.some((slot) => slot.role === 'collaborator')
+		) {
+			issues.push({
+				source: event.source,
+				path: `events[${event.index}]`,
+				message:
+					'la renégociation est un événement bloquant « followUp » de sujet « staff » avec un rôle « collaborator »'
+			});
+		}
 	}
 	for (const { source, index, event: definition } of events) {
 		const raises =
@@ -1370,7 +1407,7 @@ function crossCheckCareer(
 	});
 	elections.forEach((election, index) => {
 		const path = `elections[${index}]`;
-		const grants = [election.grants, ...(election.bonusGrant ? [election.bonusGrant.mandate] : [])];
+		const grants = [election.grants, ...(election.headGrant ? [election.headGrant] : [])];
 		for (const mandateId of [...grants, ...election.requiresAnyMandate]) {
 			if (!mandateIds.has(mandateId)) {
 				issues.push({ source, path, message: `mandat inconnu : ${mandateId}` });
@@ -1814,7 +1851,11 @@ export function validateContent(raw: RawContent): ContentValidation {
 				justiceCatalog.data.balance.entourageRevelationEvent,
 				...promisesCatalog.data.promises.map((promise) => promise.dilemmaEvent),
 				...Object.values(promisesCatalog.data.balance.recallEvents),
-				balance.data.entourage.renegotiation.event
+				balance.data.entourage.renegotiation.event,
+				...(balance.data.entourage.renegotiation.variants ?? []),
+				balance.data.elections.contests.runoffEvent,
+				balance.data.campaigns.investiture.refusedEvent,
+				balance.data.government.appointmentEvent
 			])
 		)
 	);
@@ -1846,6 +1887,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 		groups: new Set(groupList.map((group) => group.id)),
 		parties: new Set(world.data.parties.map((party) => party.id)),
 		mandates: new Set(career.mandates.map((mandate) => mandate.id)),
+		portfolios: new Set(career.portfolios.map((portfolio) => portfolio.id)),
 		elections: new Set(career.elections.map((election) => election.id)),
 		offenses: new Map(
 			justiceCatalog.data.offenses.map((offense) => [offense.id, offense.capability])
@@ -1890,6 +1932,13 @@ export function validateContent(raw: RawContent): ContentValidation {
 	issues.push(
 		...crossCheckTerritory(profileData.territory, profileData.defaults.region, refs, knownIds)
 	);
+	profileData.ambitions.forEach((ambition, index) => {
+		const path = `ambitions[${index}]`;
+		issues.push(...conditionIssues(ambition.goal, refs, 'profiles.json', `${path}.goal`));
+		if (ambition.betrayal) {
+			issues.push(...conditionIssues(ambition.betrayal, refs, 'profiles.json', `${path}.betrayal`));
+		}
+	});
 	const postList = entourageCatalog.data.posts;
 	issues.push(...crossCheckEntourage(postList, refs, knownIds));
 	issues.push(
@@ -2012,11 +2061,19 @@ export function validateContent(raw: RawContent): ContentValidation {
 			electionIds: career.elections.map((election) => election.id),
 			mandates,
 			mandateIds: career.mandates.map((mandate) => mandate.id),
+			portfolios: Object.fromEntries(
+				career.portfolios.map((portfolio) => [portfolio.id, portfolio])
+			),
+			portfolioIds: career.portfolios.map((portfolio) => portfolio.id),
 			institutions: career.institutions,
 			origins,
 			originIds: profileData.origins.map((origin) => origin.id),
 			engagements,
 			engagementIds: profileData.engagements.map((engagement) => engagement.id),
+			ambitions: Object.fromEntries(
+				profileData.ambitions.map((ambition) => [ambition.id, ambition])
+			),
+			ambitionIds: profileData.ambitions.map((ambition) => ambition.id),
 			defaultProfile: profileData.defaults,
 			territory: profileData.territory,
 			regions: Object.fromEntries(
@@ -2580,7 +2637,7 @@ function crossCheckPromises(
 			});
 		} else {
 			// Levier vérifié (P3-22) : seul un mandat issu de cette élection peut tenir la promesse.
-			const granted = new Set([election.grants, election.bonusGrant?.mandate ?? election.grants]);
+			const granted = new Set([election.grants, election.headGrant ?? election.grants]);
 			promise.lever.forEach((mandateId, leverIndex) => {
 				if (!granted.has(mandateId)) {
 					issues.push({

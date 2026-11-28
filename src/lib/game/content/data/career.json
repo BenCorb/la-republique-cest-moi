@@ -10,14 +10,18 @@
 			"decidesGovernment": false,
 			"minAge": 18,
 			"grants": "mandate.municipal_councillor",
-			"bonusGrant": {
-				"mandate": "mandate.mayor",
-				"minPercent": 55
-			},
+			"headGrant": "mandate.mayor",
 			"requiresAnyMandate": [],
 			"rivalStrength": 30,
 			"campaignRefundCents": 80000,
-			"mobilizationNeed": 10
+			"mobilizationNeed": 10,
+			"system": "list",
+			"turnout": { "min": 50, "max": 72 },
+			"maintainPerMille": 100,
+			"mergePerMille": 50,
+			"seatMinPerMille": 50,
+			"bonusSeatsPercent": 50,
+			"firstRoundRegisteredPerMille": 0
 		},
 		{
 			"id": "election.senatorial",
@@ -29,6 +33,7 @@
 			"decidesGovernment": false,
 			"minAge": 30,
 			"grants": "mandate.senator",
+			"investiture": true,
 			"requiresAnyMandate": [
 				"mandate.municipal_councillor",
 				"mandate.mayor",
@@ -36,7 +41,15 @@
 			],
 			"rivalStrength": 36,
 			"campaignRefundCents": 50000,
-			"mobilizationNeed": 5
+			"mobilizationNeed": 5,
+			"system": "senate",
+			"turnout": { "min": 95, "max": 99 },
+			"maintainPerMille": 0,
+			"mergePerMille": 0,
+			"seatMinPerMille": 0,
+			"bonusSeatsPercent": 0,
+			"firstRoundRegisteredPerMille": 0,
+			"senate": { "defaultSeats": 2, "proportionalMinSeats": 3 }
 		},
 		{
 			"id": "election.legislative",
@@ -48,10 +61,18 @@
 			"decidesGovernment": true,
 			"minAge": 23,
 			"grants": "mandate.deputy",
+			"investiture": true,
 			"requiresAnyMandate": [],
 			"rivalStrength": 40,
 			"campaignRefundCents": 150000,
-			"mobilizationNeed": 60
+			"mobilizationNeed": 60,
+			"system": "single",
+			"turnout": { "min": 48, "max": 72 },
+			"maintainPerMille": 125,
+			"mergePerMille": 0,
+			"seatMinPerMille": 0,
+			"bonusSeatsPercent": 0,
+			"firstRoundRegisteredPerMille": 250
 		},
 		{
 			"id": "election.regional",
@@ -66,7 +87,14 @@
 			"requiresAnyMandate": [],
 			"rivalStrength": 33,
 			"campaignRefundCents": 100000,
-			"mobilizationNeed": 250
+			"mobilizationNeed": 250,
+			"system": "list",
+			"turnout": { "min": 35, "max": 60 },
+			"maintainPerMille": 100,
+			"mergePerMille": 50,
+			"seatMinPerMille": 50,
+			"bonusSeatsPercent": 25,
+			"firstRoundRegisteredPerMille": 0
 		}
 	],
 	"mandates": [
@@ -182,6 +210,34 @@
 			"stressPerTurn": 1
 		},
 		{
+			"id": "mandate.secretary_of_state",
+			"label": "Secrétariat d’État",
+			"rank": 50,
+			"election": null,
+			"endsWithGovernment": true,
+			"requires": [],
+			"timePerTurn": 35,
+			"income": [
+				{ "resource": "influence", "amount": 4 },
+				{ "resource": "personalCashCents", "amount": 2100000 }
+			],
+			"stressPerTurn": 3
+		},
+		{
+			"id": "mandate.prime_minister",
+			"label": "Matignon",
+			"rank": 80,
+			"election": null,
+			"endsWithGovernment": true,
+			"requires": [],
+			"timePerTurn": 50,
+			"income": [
+				{ "resource": "influence", "amount": 9 },
+				{ "resource": "personalCashCents", "amount": 3600000 }
+			],
+			"stressPerTurn": 6
+		},
+		{
 			"id": "mandate.minister",
 			"label": "Portefeuille ministériel",
 			"rank": 60,
@@ -206,8 +262,33 @@
 		"incompatibilities": [
 			["mandate.deputy", "mandate.senator"],
 			["mandate.minister", "mandate.deputy"],
-			["mandate.minister", "mandate.senator"]
+			["mandate.minister", "mandate.senator"],
+			["mandate.secretary_of_state", "mandate.deputy"],
+			["mandate.secretary_of_state", "mandate.senator"],
+			["mandate.secretary_of_state", "mandate.minister"],
+			["mandate.prime_minister", "mandate.deputy"],
+			["mandate.prime_minister", "mandate.senator"],
+			["mandate.prime_minister", "mandate.minister"],
+			["mandate.prime_minister", "mandate.secretary_of_state"]
 		],
 		"maxMandates": 3
-	}
+	},
+	"portfolios": [
+		{ "id": "portfolio.interior", "label": "Intérieur", "title": "ministère de l’Intérieur" },
+		{ "id": "portfolio.justice", "label": "Justice", "title": "ministère de la Justice" },
+		{
+			"id": "portfolio.economy",
+			"label": "Économie et Finances",
+			"title": "ministère de l’Économie et des Finances"
+		},
+		{ "id": "portfolio.labour", "label": "Travail", "title": "ministère du Travail" },
+		{
+			"id": "portfolio.education",
+			"label": "Éducation",
+			"title": "ministère de l’Éducation nationale"
+		},
+		{ "id": "portfolio.health", "label": "Santé", "title": "ministère de la Santé" },
+		{ "id": "portfolio.ecology", "label": "Écologie", "title": "ministère de l’Écologie" },
+		{ "id": "portfolio.agriculture", "label": "Agriculture", "title": "ministère de l’Agriculture" }
+	]
 }

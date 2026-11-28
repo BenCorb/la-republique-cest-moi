@@ -21,17 +21,19 @@ import {
 	type ActionDefinition,
 	type ActionFamilyDefinition,
 	type ActionFormat,
+	type Condition,
 	type PromiseDefinition,
 	type PromiseMode,
 	type PromiseStatus,
 	type GaugeId,
 	type ResourceAmount,
-	type ResourceId
+	type PartyPosture,
+	type ResourceId,
+	type RunoffDecision
 } from '../content/types.ts';
 import {
 	accelerationAlerts,
 	ageAt,
-	campaignRefund,
 	careerSummary,
 	currentJudicialRisk,
 	assetIncome,
@@ -110,6 +112,17 @@ import {
 	cumulatedMandates,
 	type MandateInstance,
 	campaignPoll,
+	campaignRefundFor,
+	ambitionVerdict,
+	type AmbitionVerdict,
+	cohabitation,
+	partyLedByPlayer,
+	primeMinisterId,
+	congressAppraisal,
+	investitureAppraisal,
+	candidacyRoleOf,
+	effectiveSystem,
+	listSystem,
 	livingChildren,
 	pollingCompetence,
 	postUnlocked,
@@ -123,7 +136,12 @@ import {
 	type FamilyRecord,
 	type ActivistsRecord,
 	type StaffRecord,
-	type EventRecord
+	type EventRecord,
+	type CampaignStatus,
+	type InvestitureRequest,
+	type PartyRank,
+	type BallotReport,
+	type BallotContestant
 } from '../engine/index.ts';
 import {
 	GAUGE_NAMES,
@@ -199,6 +217,8 @@ export interface PlanView {
 	readonly steps: readonly PlanStepView[];
 	/** Étapes épinglées, seules répétées aux trimestres suivants (P3-11). */
 	readonly pinnedCount: number;
+	/** Le plan contient la retraite (P3-37) : confirmation exigée, accélération fermée. */
+	readonly retiring: boolean;
 	/** Retraits automatiques du trimestre en cours, avec leur motif (P3-11). */
 	readonly adjustments: readonly string[];
 	readonly timeAvailable: number;
@@ -376,6 +396,10 @@ export interface DecisionView {
 	readonly choices: readonly ChoiceView[];
 	readonly remaining: number;
 	readonly advice: AdviceView | null;
+	/** Premier tour d'un scrutin en attente du second (P3-29), sinon `null`. */
+	readonly report: BallotReportView | null;
+	/** Fonction proposée par le gouvernement (P3-35), sinon `null`. */
+	readonly appointment: string | null;
 }
 
 export interface JournalLine {
@@ -429,6 +453,32 @@ export interface SummaryView {
 		readonly title: string;
 		readonly lines: readonly { readonly label: string; readonly value: string }[];
 	}[];
+	/** Fiche du carnet des carrières (P3-41), archivée dans ce navigateur. */
+	readonly logbook: LogbookEntry;
+	/** Pour rejouer la même partie (P3-42) : seed et profil de départ. */
+	readonly replay: {
+		readonly seed: string;
+		readonly origin: string;
+		readonly engagement: string;
+		readonly region: string;
+		readonly ambition: string | null;
+	};
+}
+
+/**
+ * Fiche d'une carrière terminée au carnet (P3-41) : affichage seul, jamais
+ * mêlée à la sauvegarde en cours, sans bonus ni déblocage.
+ */
+export interface LogbookEntry {
+	/** Seed et trimestre de fin : une carrière n'est archivée qu'une fois. */
+	readonly id: string;
+	readonly seed: string;
+	readonly headline: string;
+	readonly dates: string;
+	readonly cause: string;
+	readonly office: string;
+	readonly ambition: string | null;
+	readonly distinctions: readonly { readonly id: string; readonly label: string }[];
 }
 
 export interface IndicatorView {
@@ -460,6 +510,13 @@ export interface WorldView {
 	/** Partis par intentions de vote décroissantes. */
 	readonly parties: readonly PartyView[];
 	readonly governingParty: string;
+	/** Exécutif (P3-35) : président, Premier ministre, cohabitation, prochaine présidentielle. */
+	readonly executive: {
+		readonly president: string;
+		readonly primeMinister: string;
+		readonly cohabitation: boolean;
+		readonly nextPresidential: string;
+	};
 	/** Situation du joueur : « Sans étiquette » ou « Membre du … depuis … ». */
 	readonly affiliation: string;
 	readonly partyAcronym: string | null;
@@ -576,6 +633,27 @@ export interface BallotView {
 	readonly candidacyPlanned: boolean;
 	readonly candidacyAddable: boolean;
 	readonly candidacyReason: string | null;
+	/**
+	 * Investiture nationale (P3-30) : appréciation qualitative et facteurs
+	 * observables, demande possible, prévue, ou issue ; `null` hors scrutin concerné.
+	 */
+	readonly investiture: {
+		readonly actionId: string;
+		readonly appraisal: string;
+		readonly factors: readonly { readonly label: string; readonly favorable: boolean }[];
+		readonly planned: boolean;
+		readonly addable: boolean;
+		readonly reason: string | null;
+		/** Issue d'une demande déjà faite, en clair, sinon `null`. */
+		readonly status: string | null;
+	} | null;
+	/** Place sur la liste d'un parti (P3-29) : action, prévue, possible ; `null` sans liste. */
+	readonly listPlace: {
+		readonly actionId: string;
+		readonly planned: boolean;
+		readonly addable: boolean;
+		readonly reason: string | null;
+	} | null;
 }
 
 export interface CampaignView {
@@ -607,7 +685,24 @@ export interface AdvanceOfferView {
 	readonly reason: string | null;
 }
 
+/** Carrière dans le parti (P3-34), sans aucun chiffre caché. */
+export interface PartyCareerView {
+	readonly party: string;
+	readonly rank: string;
+	readonly since: string;
+	readonly congress: string;
+	/** Candidature déclarée (posture, ralliements), sinon `null`. */
+	readonly bid: string | null;
+	/** Appréciation du congrès pour une candidature déclarée, sinon `null`. */
+	readonly appraisal: string | null;
+	readonly factors: readonly { readonly label: string; readonly favorable: boolean }[];
+	/** Délai après une défaite, en clair, sinon `null`. */
+	readonly retry: string | null;
+}
+
 export interface CareerView {
+	/** Carrière dans le parti (P3-34), `null` sans adhésion. */
+	readonly partyCareer: PartyCareerView | null;
 	/** Fonction principale (mandat de rang le plus élevé) ou « Sans mandat ». */
 	readonly mainFunction: string;
 	readonly mandates: readonly MandateView[];
@@ -626,6 +721,8 @@ export interface CareerView {
 		readonly winner: string;
 		readonly shares: string;
 		readonly early: boolean;
+		/** Procès-verbal du territoire du joueur (P3-29). */
+		readonly report: BallotReportView | null;
 	}[];
 	readonly pastMandates: readonly { readonly label: string; readonly period: string }[];
 	readonly declareActionId: string | null;
@@ -837,7 +934,7 @@ export interface PostSearchView {
 /** Offre d'embauche proposée à un candidat (P3-20). */
 export interface HireOfferView {
 	readonly actionId: string;
-	readonly offer: HireOffer;
+	readonly offer: HireOffer | 'counter';
 	readonly label: string;
 	/** « 1 040 € par trimestre », prime éventuelle comprise en mention. */
 	readonly salary: string;
@@ -852,6 +949,8 @@ export interface HireOfferView {
 
 export interface CandidateView extends StaffPersonView {
 	readonly profile: string;
+	/** Contre-proposition en cours (P3-33), en clair, sinon `null`. */
+	readonly counter: string | null;
 	/** Prétention salariale (P3-20). */
 	readonly asked: string;
 	/** Une offre est déjà prévue au plan. */
@@ -1062,6 +1161,8 @@ export interface OutcomeView {
 	readonly chips: readonly ChipView[];
 	/** Autres conséquences constatées (mandats, partis, personnes…). */
 	readonly details: readonly string[];
+	/** Procès-verbal définitif après une décision d'entre-deux-tours (P3-29). */
+	readonly report: BallotReportView | null;
 }
 
 /** Statistique de la note : variation du trimestre et valeur atteinte (P3-14). */
@@ -1075,13 +1176,44 @@ export interface NoteVariationView {
 	readonly sense: ChipSense;
 }
 
-/** Graphique d'un fait marquant : duel du joueur ou parts d'un scrutin. */
+/** Ligne du procès-verbal d'un scrutin (P3-29). */
+export interface BallotReportRowView {
+	readonly key: string;
+	/** « Vous », la tête de liste nommée ou « Liste du … ». */
+	readonly name: string;
+	/** Étiquette : sigle du parti, « sans étiquette » ou « dissident ». */
+	readonly label: string;
+	readonly player: boolean;
+	/** La liste où figure le joueur (colistier compris). */
+	readonly mine: boolean;
+	/** Parts en % avec une décimale (« 27,1 % »). */
+	readonly firstRound: string;
+	readonly firstRoundValue: number;
+	readonly secondRound: string | null;
+	readonly seats: number;
+	/** Issue rédigée : élue, battue, qualifiée, fusionnée avec…, retirée, éliminée. */
+	readonly outcome: string;
+	readonly winner: boolean;
+}
+
+/** Procès-verbal d'un scrutin, identique avec ou sans candidature du joueur (P3-29). */
+export interface BallotReportView {
+	readonly ballotId: string;
+	readonly title: string;
+	readonly dateLabel: string;
+	/** Mode, sièges et participation en une ligne. */
+	readonly summary: string;
+	readonly rows: readonly BallotReportRowView[];
+	readonly secondRound: boolean;
+	readonly pending: boolean;
+	readonly showSeats: boolean;
+	/** Issue pour le joueur (élu, rang, mairie…), `null` s'il n'était pas candidat. */
+	readonly verdict: string | null;
+}
+
+/** Graphique d'un fait marquant : procès-verbal du joueur ou parts d'un scrutin. */
 export type NoteChartView =
-	| {
-			readonly kind: 'duel';
-			readonly playerPercent: number;
-			readonly rival: string;
-	  }
+	| { readonly kind: 'report'; readonly report: BallotReportView }
 	| {
 			readonly kind: 'shares';
 			readonly rows: readonly {
@@ -1186,11 +1318,15 @@ export interface PlayerView {
 	readonly world: WorldView;
 	/** Personnages rencontrés : actifs d'abord, puis par date de rencontre. */
 	readonly people: readonly PersonView[];
+	/** Premiers pas guidés (P3-40), sans aucun effet de jeu. */
+	readonly firstSteps: FirstStepsView;
 	/** Profil du personnage : origine, engagement et situation familiale. */
 	readonly profile: {
 		readonly origin: string;
 		readonly engagement: string;
 		readonly family: string;
+		/** Ambition de départ et son état (P3-38), sinon `null`. */
+		readonly ambition: string | null;
 	};
 	readonly career: CareerView;
 	readonly supports: SupportsView;
@@ -1216,7 +1352,8 @@ const SOURCE_LABELS: { readonly [K in WellbeingSource]: string } = {
 const CAUSE_LABELS = {
 	health_failure: 'Épuisement : la santé a fini par céder.',
 	natural_causes: 'Mort naturelle.',
-	prison: 'Condamnation définitive à de la prison ferme.'
+	prison: 'Condamnation définitive à de la prison ferme.',
+	retirement: 'Retraite choisie : vous quittez la vie politique.'
 } as const;
 
 function amounts(list: readonly ResourceAmount[], sign: 1 | -1): string[] {
@@ -1311,6 +1448,51 @@ const PARTY_REFERENCE_LABELS: Readonly<Record<string, string>> = {
 	target: 'parti choisi'
 };
 
+/** Carrière partisane (P3-34). */
+export const PARTY_POSTURE_LABELS: Readonly<Record<PartyPosture, string>> = {
+	unity: 'Rassemblement',
+	apparatus: 'Appareil',
+	rupture: 'Rupture'
+};
+export const PARTY_RANK_LABELS: Readonly<Record<PartyRank, string>> = {
+	member: 'Militant',
+	cadre: 'Cadre du parti',
+	leader: 'Chef du parti'
+};
+const PARTY_RANK_REASONS: Readonly<
+	Record<Extract<PoliticalChange, { kind: 'partyRank' }>['reason'], string>
+> = {
+	promotion: 'promotion : vous devenez cadre du parti',
+	congress_won: 'congrès gagné : vous prenez la tête du parti',
+	congress_lost: 'congrès perdu : la direction vous échappe',
+	ousted: 'congrès perdu : vous êtes renversé de la direction',
+	confirmed: 'congrès : votre direction est reconduite'
+};
+
+/** Étapes d'une investiture, au journal (P3-30). */
+const INVESTITURE_STATUS_TEXT: Readonly<Record<InvestitureRequest['status'], string>> = {
+	pending: 'investiture demandée au parti',
+	granted: 'investiture accordée : candidature déposée sous l’étiquette du parti',
+	refused: 'investiture refusée par le parti',
+	dissident: 'candidature dissidente, sans étiquette ni moyens du parti',
+	renounced: 'renoncement à la candidature, discipline saluée par l’appareil'
+};
+
+/** Issue d'une candidature après le second tour (P3-29). */
+const RUNOFF_OUTCOMES: Readonly<Record<Exclude<CampaignStatus, 'running'>, string>> = {
+	won: 'élu',
+	lost: 'battu',
+	withdrawn: 'retrait',
+	disqualified: 'candidature invalidée'
+};
+
+/** Décisions d'entre-deux-tours (P3-29). */
+const RUNOFF_LABELS: Readonly<Record<RunoffDecision, string>> = {
+	maintain: 'Maintien au second tour',
+	merge: 'Fusion des listes',
+	withdraw: 'Retrait au profit d’un autre'
+};
+
 function partyLabel(party: string | null, content: Content): string {
 	if (party === null) return 'votre parti';
 	return content.parties[party]?.name ?? PARTY_REFERENCE_LABELS[party] ?? party;
@@ -1344,6 +1526,22 @@ function describeEffect(range: EffectRange, content: Content): string {
 			return `Élection anticipée : ${content.elections[range.election]?.label ?? range.election}`;
 		case 'candidacy':
 			return 'Candidature déposée';
+		case 'runoff':
+			return RUNOFF_LABELS[range.decision];
+		case 'appointment':
+			return range.decision === 'accept' ? 'Entrée au gouvernement' : 'Proposition déclinée';
+		case 'retire':
+			return 'Fin de carrière : retraite de la vie politique';
+		case 'partyBid':
+			return `Candidature à la direction : ${PARTY_POSTURE_LABELS[range.posture]}`;
+		case 'rally':
+			return `Ralliements au congrès + ${range.value}`;
+		case 'investiture':
+			return range.decision === 'request'
+				? 'Demande d’investiture'
+				: range.decision === 'dissident'
+					? 'Candidature dissidente'
+					: 'Renoncement à la candidature';
 		case 'fact':
 			return `Fait inscrit au registre : ${content.offenses[range.offense]?.label ?? range.offense}`;
 		case 'lifestyle':
@@ -1446,6 +1644,16 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 					return change.invested
 						? 'candidature déposée avec l’investiture du parti'
 						: 'candidature déposée sans investiture';
+				case 'investiture':
+					return INVESTITURE_STATUS_TEXT[change.status];
+				case 'appointment':
+					return `${change.status === 'offered' ? 'proposition d’entrée au gouvernement' : change.status === 'accepted' ? 'entrée au gouvernement' : 'proposition du gouvernement déclinée'} : ${change.portfolio ? (content.portfolios[change.portfolio]?.title ?? change.portfolio) : (content.mandates[change.mandateId]?.label ?? change.mandateId).toLocaleLowerCase('fr')}`;
+				case 'partyRank':
+					return `${PARTY_RANK_REASONS[change.reason]} (${content.parties[change.partyId]?.acronym ?? change.partyId})`;
+				case 'partyBid':
+					return `candidature à la direction, ligne du ${PARTY_POSTURE_LABELS[change.posture].toLocaleLowerCase('fr')} (${change.rallies} ralliement(s))`;
+				case 'runoff':
+					return `second tour : ${RUNOFF_OUTCOMES[change.status]}${change.playerPercent === null ? '' : ` (${change.playerPercent} %)`}`;
 				case 'preparation':
 					return `préparation de campagne + ${change.delta}`;
 				case 'campaignAdvance':
@@ -1459,7 +1667,9 @@ function politicsText(changes: readonly PoliticalChange[], content: Content): st
 				case 'hired':
 					return `embauche au poste « ${content.posts[change.postId]?.label ?? change.postId} »`;
 				case 'hireRefused':
-					return `le candidat décline le poste « ${content.posts[change.postId]?.label ?? change.postId} » : « votre projet est intéressant, mais pas encore à ce stade de ma carrière »`;
+					return change.counterCents === null
+						? `le candidat décline le poste « ${content.posts[change.postId]?.label ?? change.postId} » et quitte la présélection`
+						: `le candidat décline le poste « ${content.posts[change.postId]?.label ?? change.postId} », mais accepterait ${formatResource('politicalBudgetCents', change.counterCents)} par trimestre`;
 				case 'interviewed':
 					return `entretien approfondi pour le poste « ${content.posts[change.postId]?.label ?? change.postId} »`;
 				case 'searchOrdered':
@@ -1517,6 +1727,123 @@ const MANDATE_END_LABELS: { readonly [K in MandateEndReason]: string } = {
 };
 
 /** Résultat d'un scrutin en une ligne : trois premières parts. */
+const REPORT_SYSTEMS: Readonly<Record<BallotReport['system'], string>> = {
+	list: 'scrutin de liste à deux tours, prime majoritaire',
+	single: 'scrutin uninominal à deux tours',
+	senate_list: 'grands électeurs, scrutin de liste à la proportionnelle',
+	senate_majority: 'grands électeurs, scrutin majoritaire à deux tours'
+};
+
+function formatPerMille(value: number): string {
+	return `${(value / 10).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+}
+
+/**
+ * Procès-verbal public d'un scrutin tenu (P3-29) : candidatures, tours,
+ * sièges et issue du joueur. Rien n'existe avant le vote ; un second tour en
+ * attente ne montre que le premier.
+ */
+export function ballotReportView(
+	ballot: Ballot,
+	state: GameState,
+	content: Content
+): BallotReportView | null {
+	const report = ballot.report;
+	if (!report) return null;
+	const list = report.system === 'list' || report.system === 'senate_list';
+	const byId = new Map(
+		report.contestants.map((contestant) => [contestant.contestantId, contestant])
+	);
+	const nameOf = (contestant: BallotContestant): string => {
+		if (contestant.player) return list ? 'Votre liste' : 'Vous';
+		const leader = contestant.leaderId ? state.characters[contestant.leaderId] : undefined;
+		if (leader) return list ? `Liste de ${displayName(leader)}` : displayName(leader);
+		const party = contestant.partyId ? content.parties[contestant.partyId] : undefined;
+		if (!party) return list ? 'Liste sans étiquette' : 'Candidat sans étiquette';
+		return list ? `Liste ${party.acronym}` : `Candidat ${party.acronym}`;
+	};
+	const labelOf = (contestant: BallotContestant): string => {
+		const acronym = contestant.partyId
+			? (content.parties[contestant.partyId]?.acronym ?? contestant.partyId)
+			: 'sans étiquette';
+		return contestant.dissident ? `${acronym} dissident` : acronym;
+	};
+	const outcomeOf = (contestant: BallotContestant): string => {
+		switch (contestant.status) {
+			case 'won':
+				return list ? 'en tête' : 'élu';
+			case 'lost':
+				return list && contestant.seats > 0 ? 'opposition' : 'battu';
+			case 'qualified':
+				return 'qualifiée pour le second tour';
+			case 'merged': {
+				const host = contestant.mergedInto ? byId.get(contestant.mergedInto) : undefined;
+				return host ? `fusion avec ${nameOf(host)}` : 'fusion';
+			}
+			case 'withdrawn':
+				return 'retrait';
+			case 'eliminated':
+				return 'éliminée';
+			default: {
+				const unknown: never = contestant.status;
+				return String(unknown);
+			}
+		}
+	};
+	const rows = [...report.contestants]
+		.sort((a, b) => b.firstRound - a.firstRound)
+		.map((contestant) => ({
+			key: contestant.contestantId,
+			name: nameOf(contestant),
+			label: labelOf(contestant),
+			player: contestant.player,
+			mine: contestant.contestantId === report.playerContestantId,
+			firstRound: formatPerMille(contestant.firstRound),
+			firstRoundValue: contestant.firstRound / 10,
+			secondRound: contestant.secondRound === null ? null : formatPerMille(contestant.secondRound),
+			seats: contestant.seats,
+			outcome: outcomeOf(contestant),
+			winner: contestant.contestantId === report.winnerId
+		}));
+	const definition = content.elections[ballot.electionId];
+	const pending = report.stage === 'runoff_pending';
+	const seatsLabel = report.seats > 1 ? `${report.seats} sièges` : '1 siège';
+	let verdict: string | null = null;
+	if (report.playerRank !== null) {
+		const mine = report.playerContestantId ? byId.get(report.playerContestantId) : undefined;
+		const rank = report.playerRank > 1 ? ` (${report.playerRank}e de liste)` : '';
+		if (pending) verdict = 'Premier tour tenu : le second attend votre décision.';
+		else if (report.contestants.find((c) => c.player)?.status === 'withdrawn')
+			verdict = 'Vous vous êtes désisté avant le second tour.';
+		else if (report.playerElected) {
+			const head =
+				definition?.headGrant &&
+				report.playerRank === 1 &&
+				report.playerContestantId === report.winnerId;
+			verdict = head
+				? `Élu${rank} : votre liste l’emporte et le conseil vous élit ${content.mandates[definition.headGrant]?.label.toLocaleLowerCase('fr') ?? 'à sa tête'}.`
+				: list
+					? `Élu${rank}, ${report.playerContestantId === report.winnerId ? 'dans la majorité' : 'dans l’opposition'} (${mine?.seats ?? 0} siège(s) pour votre liste).`
+					: 'Élu.';
+		} else {
+			verdict = list
+				? `Non élu${rank} : votre liste obtient ${mine?.seats ?? 0} siège(s).`
+				: 'Battu.';
+		}
+	}
+	return {
+		ballotId: ballot.ballotId,
+		title: `${definition?.label ?? ballot.electionId} — ${report.place}`,
+		dateLabel: formatTurn(ballot.turn),
+		summary: `${REPORT_SYSTEMS[report.system]} · ${seatsLabel} · participation ${report.turnout} %`,
+		rows,
+		secondRound: report.secondRound,
+		pending,
+		showSeats: !pending && report.seats > 1,
+		verdict
+	};
+}
+
 function sharesText(ballot: Ballot, content: Content): string {
 	return (ballot.shares ?? [])
 		.slice(0, 3)
@@ -1541,18 +1868,17 @@ function deadlineLines(
 		const label = content.elections[campaign?.electionId ?? '']?.label ?? 'Élection';
 		const rival = result.opponentId ? state.characters[result.opponentId] : undefined;
 		const against = rival ? ` face à ${displayName(rival)}` : '';
+		const ballot = state.ballots.find((entry) => entry.ballotId === campaign?.ballotId);
+		const verdict = ballot ? ballotReportView(ballot, state, content)?.verdict : null;
 		lines.push({
 			kind: 'career',
 			text:
-				result.status === 'won'
-					? `${label} : vous l’emportez avec ${result.playerPercent} %${against}.`
-					: result.status === 'lost'
-						? `${label} : défaite avec ${result.playerPercent} %${against}. La notoriété progresse, la fatigue aussi.`
-						: `${label} : candidature invalidée (${result.reason ?? 'conditions non remplies'}).`
+				result.status === 'disqualified'
+					? `${label} : candidature invalidée (${result.reason ?? 'conditions non remplies'}).`
+					: `${label} : ${result.playerPercent} %${against}. ${verdict ?? (result.status === 'won' ? 'Élu.' : 'Battu.')}`
 		});
-		const definition = content.elections[campaign?.electionId ?? ''];
-		const refund = definition
-			? campaignRefund(definition, result.status, result.playerPercent, content)
+		const refund = campaign
+			? campaignRefundFor(campaign, result.status, state.ballots, content)
 			: 0;
 		if (refund > 0) {
 			lines.push({
@@ -1569,6 +1895,13 @@ function deadlineLines(
 					: `Avance de campagne de ${formatMoney(result.advance.cents)} perdue : le score n’atteint pas ${content.balance.campaigns.advanceRepayMinPercent} % des voix`
 			});
 		}
+	}
+	for (const campaignIdValue of record.runoffs) {
+		const campaign = state.campaigns.find((entry) => entry.campaignId === campaignIdValue);
+		lines.push({
+			kind: 'career',
+			text: `${electionName(campaign?.electionId ?? '', state, content)} : pas de majorité au premier tour, le second attend votre décision.`
+		});
 	}
 	for (const result of record.ballots) {
 		const ballot = state.ballots.find((entry) => entry.ballotId === result.ballotId);
@@ -1732,9 +2065,18 @@ function electionName(electionId: string, state: GameState, content: Content): s
 }
 
 /** Nom localisé d'un mandat (P3-16) : selon le scrutin qui y mène ; sans lieu pour un ministère. */
-function mandateName(mandateId: string, state: GameState, content: Content): string {
+function mandateName(
+	mandateId: string,
+	state: GameState,
+	content: Content,
+	portfolio: string | null = null
+): string {
 	const mandate = content.mandates[mandateId];
 	if (!mandate) return mandateId;
+	// Ministre (P3-35) : le portefeuille nomme la fonction.
+	const ministry = portfolio ? content.portfolios[portfolio] : undefined;
+	if (ministry)
+		return `Ministre — ${ministry.title.charAt(0).toUpperCase()}${ministry.title.slice(1)}`;
 	const election = mandate.election ? content.elections[mandate.election] : undefined;
 	return election
 		? `${mandate.label} (${placeOf(election.scope, state.player.territory, content)})`
@@ -1822,7 +2164,7 @@ function targetLabel(target: string, state: GameState, content: Content): string
 		if (upgradeId && definition) return upgradeLabel(upgradeId, state, content, true);
 	}
 	const mandate = state.mandates.find((entry) => entry.instanceId === target);
-	if (mandate) return mandateName(mandate.mandateId, state, content);
+	if (mandate) return mandateName(mandate.mandateId, state, content, mandate.portfolio);
 	const ballot = state.ballots.find((entry) => entry.ballotId === target);
 	if (ballot) {
 		const label = electionName(ballot.electionId, state, content);
@@ -1848,6 +2190,14 @@ function staffLines(record: StaffRecord | null, state: GameState, content: Conte
 			kind: 'career' as const,
 			text: `Candidatures reçues pour le poste « ${post(postId)} ».`
 		})),
+		// Contre-propositions sans réponse (P3-33).
+		...(record.counterLapsed ?? []).map((characterId) => {
+			const character = state.characters[characterId];
+			return {
+				kind: 'people' as const,
+				text: `${character ? displayName(character) : 'Un candidat'} n’a pas reçu de réponse à sa contre-proposition et retire sa candidature.`
+			};
+		}),
 		...record.searches.map((search) => ({
 			kind: 'career' as const,
 			text:
@@ -2149,8 +2499,71 @@ function buildOutcome(state: GameState, content: Content): OutcomeView | null {
 		text,
 		written,
 		chips,
-		details
+		details,
+		report: runoffReport(entry, state, content)
 	};
+}
+
+/** Meilleur score du joueur et seconds tours disputés, lus aux procès-verbaux (P3-29). */
+function bestBallotLine(
+	state: GameState,
+	content: Content
+): { readonly label: string; readonly value: string }[] {
+	const judged = state.campaigns.filter(
+		(campaign) => campaign.playerPercent !== null && campaign.status !== 'running'
+	);
+	if (judged.length === 0) return [];
+	const best = judged.reduce((top, campaign) =>
+		(campaign.playerPercent ?? 0) > (top.playerPercent ?? 0) ? campaign : top
+	);
+	const ballot = state.ballots.find((entry) => entry.ballotId === best.ballotId);
+	const runoffs = judged.filter(
+		(campaign) =>
+			state.ballots.find((entry) => entry.ballotId === campaign.ballotId)?.report?.secondRound ===
+			true
+	).length;
+	return [
+		{
+			label: 'Meilleur score',
+			value: `${best.playerPercent} % — ${content.elections[best.electionId]?.label ?? best.electionId}${ballot?.report ? `, ${ballot.report.place}` : ''} (${formatTurn(ballot?.turn ?? best.declaredTurn)})`
+		},
+		{ label: 'Seconds tours disputés', value: String(runoffs) }
+	];
+}
+
+const AMBITION_VERDICTS: Readonly<Record<AmbitionVerdict, string>> = {
+	pending: 'en cours',
+	achieved: 'atteinte',
+	missed: 'manquée',
+	betrayed: 'trahie'
+};
+
+/** Ambition de départ et son état, en clair (P3-38), sinon `null`. */
+function ambitionText(state: GameState, content: Content): string | null {
+	const ambition = state.player.ambition;
+	const verdict = ambitionVerdict(state, content);
+	if (!ambition || !verdict) return null;
+	const label = content.ambitions[ambition.ambitionId]?.label ?? ambition.ambitionId;
+	const when =
+		verdict === 'achieved' && ambition.achievedTurn !== null
+			? ` au ${formatTurn(ambition.achievedTurn)}`
+			: verdict === 'betrayed' && ambition.betrayedTurn !== null
+				? ` au ${formatTurn(ambition.betrayedTurn)}`
+				: '';
+	return `${label} — ${AMBITION_VERDICTS[verdict]}${when}`;
+}
+
+/** Procès-verbal tranché par un choix d'entre-deux-tours (P3-29), sinon `null`. */
+function runoffReport(
+	entry: ChoiceRecord,
+	state: GameState,
+	content: Content
+): BallotReportView | null {
+	const change = entry.politics.find((politics) => politics.kind === 'runoff');
+	if (!change) return null;
+	const campaign = state.campaigns.find((candidate) => candidate.campaignId === change.campaignId);
+	const ballot = state.ballots.find((candidate) => candidate.ballotId === campaign?.ballotId);
+	return ballot ? ballotReportView(ballot, state, content) : null;
 }
 
 /**
@@ -2243,12 +2656,50 @@ function campaignSentence(won: boolean, percent: number, rival: string): string 
 	return `Défaite nette : ${percent} %${against}. Les affiches restent sur les murs, les militants rentrent chez eux.`;
 }
 
+function reportChart(
+	ballotIdValue: string | null,
+	state: GameState,
+	content: Content
+): NoteChartView | null {
+	const ballot = state.ballots.find((entry) => entry.ballotId === ballotIdValue);
+	const report = ballot ? ballotReportView(ballot, state, content) : null;
+	return report ? { kind: 'report', report } : null;
+}
+
 function noteHighlights(
 	entry: HistoryEntry,
 	state: GameState,
 	content: Content
 ): NoteHighlightView[] {
 	const items: NoteHighlightView[] = [];
+	// Ambition de départ (P3-38) : saluée, ou constatée trahie, au trimestre où elle se joue.
+	const ambition = state.player.ambition;
+	const ambitionLabel = ambition ? content.ambitions[ambition.ambitionId]?.label : undefined;
+	if (ambition && ambitionLabel && ambition.achievedTurn === entry.turn + 1) {
+		items.push({
+			key: `ambition:${ambition.ambitionId}`,
+			kind: 'victory',
+			tone: 'gain',
+			title: `Ambition atteinte — ${ambitionLabel}`,
+			text: 'Le cap fixé à vingt-cinq ans est atteint. Reste à savoir ce que l’on fait d’un rêve réalisé.',
+			chart: null,
+			record: null,
+			chips: [],
+			details: []
+		});
+	} else if (ambition && ambitionLabel && ambition.betrayedTurn === entry.turn + 1) {
+		items.push({
+			key: `ambition:${ambition.ambitionId}`,
+			kind: 'defeat',
+			tone: 'cost',
+			title: `Ambition trahie — ${ambitionLabel}`,
+			text: 'Le jeune militant de vingt-cinq ans ne s’y serait pas reconnu. Le bilan s’en souviendra.',
+			chart: null,
+			record: null,
+			chips: [],
+			details: []
+		});
+	}
 	const record = {
 		won: state.campaigns.filter((campaign) => campaign.status === 'won').length,
 		lost: state.campaigns.filter((campaign) => campaign.status === 'lost').length
@@ -2284,12 +2735,25 @@ function noteHighlights(
 			tone: won ? 'gain' : 'cost',
 			title: `${won ? 'Victoire' : 'Défaite'} — ${label}`,
 			text: campaignSentence(won, result.playerPercent, rivalName),
-			chart: {
-				kind: 'duel',
-				playerPercent: result.playerPercent,
-				rival: rivalName || 'Adversaire'
-			},
+			chart: reportChart(campaign?.ballotId ?? null, state, content),
 			record,
+			chips: [],
+			details: []
+		});
+	}
+	// Premier tour sans vainqueur : le second attend la décision du joueur (P3-29).
+	for (const campaignIdValue of deadlines?.runoffs ?? []) {
+		const campaign = state.campaigns.find((candidate) => candidate.campaignId === campaignIdValue);
+		if (!campaign) continue;
+		ownBallots.add(campaign.ballotId);
+		items.push({
+			key: `runoff:${campaignIdValue}`,
+			kind: 'ballot',
+			tone: 'risk',
+			title: `Premier tour — ${electionName(campaign.electionId, state, content)}`,
+			text: 'Aucune majorité au premier tour : le second se joue dans quelques jours, et la décision vous revient.',
+			chart: reportChart(campaign.ballotId, state, content),
+			record: null,
 			chips: [],
 			details: []
 		});
@@ -2308,16 +2772,19 @@ function noteHighlights(
 			text: alternance
 				? `Le ${content.parties[result.governingAfter]?.name ?? result.governingAfter} forme le nouveau gouvernement ; le ${content.parties[result.governingBefore]?.name ?? result.governingBefore} passe dans l’opposition.`
 				: `Le ${winner} arrive en tête.`,
-			chart: ballot?.shares
-				? {
-						kind: 'shares',
-						rows: ballot.shares.slice(0, 5).map((share) => ({
-							label: content.parties[share.partyId]?.acronym ?? share.partyId,
-							percent: share.percent,
-							mine: share.partyId === mine
-						}))
-					}
-				: null,
+			// Procès-verbal du territoire, comme pour une candidature (P3-29) ; à défaut, les parts.
+			chart: ballot?.report
+				? reportChart(ballot.ballotId, state, content)
+				: ballot?.shares
+					? {
+							kind: 'shares',
+							rows: ballot.shares.slice(0, 5).map((share) => ({
+								label: content.parties[share.partyId]?.acronym ?? share.partyId,
+								percent: share.percent,
+								mine: share.partyId === mine
+							}))
+						}
+					: null,
 			record: null,
 			chips: [],
 			details: []
@@ -2367,7 +2834,9 @@ function noteHighlights(
 			text:
 				change.kind === 'hired'
 					? `${name} accepte le poste « ${post} »${member ? ` pour ${formatResource('politicalBudgetCents', member.salaryCents)} par trimestre` : ''} et se met au travail dès ce trimestre.`
-					: `${name} décline le poste « ${post} » et quitte la présélection. Aucune prime n’a été versée ; le poste reste à pourvoir.`,
+					: change.counterCents === null
+						? `${name} décline le poste « ${post} » et quitte la présélection. Aucune prime n’a été versée ; le poste reste à pourvoir.`
+						: `${name} décline le poste « ${post} », mais fait savoir qu’il accepterait ${formatResource('politicalBudgetCents', change.counterCents)} par trimestre. La proposition tient un trimestre ; sans réponse, il partira.`,
 			chart: null,
 			record: null,
 			chips: [],
@@ -3131,7 +3600,7 @@ function buildMoments(state: GameState, content: Content): SummaryView['moments'
 	const top = Math.max(0, ...ranks);
 	const seen = new Set<string>();
 	state.mandates.forEach((mandate, index) => {
-		const label = mandateName(mandate.mandateId, state, content);
+		const label = mandateName(mandate.mandateId, state, content, mandate.portfolio);
 		const first = !seen.has(mandate.mandateId);
 		seen.add(mandate.mandateId);
 		if (!first && ranks[index] !== top) return;
@@ -3262,7 +3731,24 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 	const paper =
 		regionalMedia(state.player.territory.regionId, content)?.name ?? 'La presse régionale';
 	return {
-		masthead: `${paper} · ${cause === 'prison' ? 'Chronique judiciaire' : 'Nécrologie'}`,
+		replay: {
+			seed: state.rng.seed,
+			origin: state.player.origin,
+			engagement: state.player.engagement,
+			region: state.player.territory.regionId,
+			ambition: state.player.ambition?.ambitionId ?? null
+		},
+		logbook: {
+			id: `${state.rng.seed}@${summary.lastTurn}`,
+			seed: state.rng.seed,
+			headline: obituary ? fill(obituary.headline) : `Fin de carrière à ${summary.age} ans`,
+			dates: `${formatTurn(state.player.birthTurn)} – ${formatTurn(summary.lastTurn)} · ${summary.age} ans`,
+			cause: CAUSE_LABELS[cause],
+			office: office ?? 'Aucun mandat',
+			ambition: ambitionText(state, content),
+			distinctions: distinctionsOf(state, content).map(({ id, label }) => ({ id, label }))
+		},
+		masthead: `${paper} · ${cause === 'prison' ? 'Chronique judiciaire' : cause === 'retirement' ? 'Portrait' : 'Nécrologie'}`,
 		title: obituary ? fill(obituary.headline) : `Fin de carrière à ${summary.age} ans`,
 		text: obituary ? fill(obituary.text) : '',
 		cause: CAUSE_LABELS[cause],
@@ -3278,12 +3764,16 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 				title: 'Parcours',
 				lines: [
 					{ label: 'Plus haute fonction', value: office ?? 'Aucun mandat' },
+					...(state.player.ambition
+						? [{ label: 'Ambition de départ', value: ambitionText(state, content) ?? '' }]
+						: []),
 					{ label: 'Mandats exercés', value: String(metrics.mandatesHeld) },
 					{ label: 'Années en fonction', value: String(metrics.yearsInOffice) },
 					{
 						label: 'Scrutins',
 						value: `${metrics.campaignsWon} gagné(s), ${metrics.campaignsLost} perdu(s)`
 					},
+					...bestBallotLine(state, content),
 					{ label: 'Partis', value: parties || 'Sans étiquette' },
 					{ label: 'Trimestres de carrière', value: String(summary.quartersPlayed) }
 				]
@@ -3410,6 +3900,30 @@ function buildWorld(state: GameState, plan: readonly PlanStep[], content: Conten
 		})),
 		parties,
 		governingParty: content.parties[world.governingPartyId]?.name ?? world.governingPartyId,
+		executive: (() => {
+			const president = state.characters[world.president.characterId];
+			const pmId = primeMinisterId(world);
+			const pm = pmId ? state.characters[pmId] : undefined;
+			const acronym = (partyId: string): string => content.parties[partyId]?.acronym ?? partyId;
+			const playerLeads =
+				partyLedByPlayer(state.player) === world.governingPartyId ||
+				state.mandates.some(
+					(mandate) => mandate.status === 'active' && mandate.mandateId === 'mandate.prime_minister'
+				);
+			return {
+				president: `${president ? displayName(president) : 'Le président'} (${acronym(world.president.partyId)})`,
+				primeMinister: playerLeads
+					? state.mandates.some(
+							(mandate) =>
+								mandate.status === 'active' && mandate.mandateId === 'mandate.prime_minister'
+						)
+						? `vous (${acronym(world.governingPartyId)})`
+						: `nommé par le président dans votre majorité (${acronym(world.governingPartyId)})`
+					: `${pm ? displayName(pm) : '—'} (${acronym(world.governingPartyId)})`,
+				cohabitation: cohabitation(world),
+				nextPresidential: `Présidentielle au ${formatTurn(world.president.termEndTurn)}`
+			};
+		})(),
 		affiliation:
 			memberParty && current
 				? `Membre du ${memberParty.name} depuis le ${formatTurn(current.fromTurn)}`
@@ -3430,7 +3944,9 @@ function careerPartsOf(state: GameState): CareerParts {
 		ballots: state.ballots,
 		campaigns: state.campaigns,
 		institutions: state.institutions,
-		promises: state.promises
+		promises: state.promises,
+		investitures: state.investitures,
+		appointment: state.appointment
 	};
 }
 
@@ -3467,7 +3983,9 @@ function buildInstitutions(
 		staff: state.staff,
 		facts: state.facts,
 		cases: state.cases,
-		promises: state.promises
+		promises: state.promises,
+		investitures: state.investitures,
+		appointment: state.appointment
 	};
 	const allowed = !action?.requires || evaluateCondition(conditionContext, action.requires);
 	const parameters = content.institutionParameterIds.flatMap(
@@ -3673,9 +4191,9 @@ function buildPromises(
 					const seats = election
 						? [
 								mandateName(election.grants, state, content),
-								...(election.bonusGrant
+								...(election.headGrant
 									? [
-											`${mandateName(election.bonusGrant.mandate, state, content)} à partir de ${election.bonusGrant.minPercent} %`
+											`${mandateName(election.headGrant, state, content)} pour la tête de la liste victorieuse`
 										]
 									: [])
 							].join(' ; ')
@@ -3777,8 +4295,18 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 	const label = (mandateId: string): string => mandateName(mandateId, state, content);
 	const resignActionId =
 		content.actionIds.find((id) => content.actions[id]?.target === 'mandate') ?? null;
+	const ballotActions = content.actionIds.filter((id) => content.actions[id]?.target === 'ballot');
 	const declareActionId =
-		content.actionIds.find((id) => content.actions[id]?.target === 'ballot') ?? null;
+		ballotActions.find((id) => candidacyRoleOf(content.actions[id]?.effects ?? []) === 'head') ??
+		null;
+	const investitureActionId =
+		content.actionIds.find((id) =>
+			content.actions[id]?.effects.some((effect) => effect.op === 'requestInvestiture')
+		) ?? null;
+	const listActionId =
+		ballotActions.find(
+			(id) => candidacyRoleOf(content.actions[id]?.effects ?? []) === 'colistier'
+		) ?? null;
 	// Avance de campagne (P3-23) : la famille dont les formats ciblent une candidature.
 	const advanceFamily = content.actionFamilyIds.find(
 		(familyId) => familyFormats(familyId, content)[0]?.target === 'campaign'
@@ -3803,25 +4331,33 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 						: ''
 				}`
 			: null;
+		const verdict = ballot ? (ballotReportView(ballot, state, content)?.verdict ?? null) : null;
+		const against = rival ? ` face à ${displayName(rival)}` : '';
 		const outcome =
 			campaign.status === 'won'
-				? `Victoire avec ${campaign.playerPercent} %${rival ? ` face à ${displayName(rival)}` : ''}`
+				? `Victoire avec ${campaign.playerPercent} %${against}${verdict ? ` — ${verdict}` : ''}`
 				: campaign.status === 'lost'
-					? `Défaite avec ${campaign.playerPercent} %${rival ? ` face à ${displayName(rival)}` : ''} : la carrière continue`
-					: campaign.status === 'disqualified'
-						? `Candidature invalidée : ${campaign.reason ?? 'conditions non remplies'}`
-						: null;
+					? `Défaite avec ${campaign.playerPercent} %${against} : la carrière continue`
+					: campaign.status === 'withdrawn'
+						? `Désistement entre les deux tours (${campaign.playerPercent} % au premier)`
+						: campaign.status === 'disqualified'
+							? `Candidature invalidée : ${campaign.reason ?? 'conditions non remplies'}`
+							: ballot?.report?.stage === 'runoff_pending'
+								? 'Premier tour tenu : le second attend votre décision'
+								: null;
 		return {
 			campaignId: campaign.campaignId,
 			label: electionName(campaign.electionId, state, content),
 			dateLabel: ballot ? formatTurn(ballot.turn) : '—',
 			declared: `Candidature déclarée au ${formatTurn(campaign.declaredTurn)}`,
 			investiture:
-				campaign.partyId === null
-					? 'Sans étiquette'
-					: campaign.invested
-						? `Investiture du ${content.parties[campaign.partyId]?.name ?? campaign.partyId}`
-						: 'Sans investiture : l’appareil du parti ne vous soutient pas',
+				campaign.role === 'colistier'
+					? `Colistier sur la liste du ${content.parties[campaign.partyId ?? '']?.name ?? 'premier parti'}, ${campaign.listRank}e de liste`
+					: campaign.partyId === null
+						? 'Sans étiquette'
+						: campaign.invested
+							? `Investiture du ${content.parties[campaign.partyId]?.name ?? campaign.partyId}`
+							: 'Sans investiture : l’appareil du parti ne vous soutient pas',
 			preparation: campaign.preparation,
 			opponent,
 			poll:
@@ -3877,7 +4413,9 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 	active.push(...unsorted.filter((mandate) => !active.includes(mandate)));
 	const main = mainMandate(state.mandates, content);
 	return {
-		mainFunction: main ? label(main.mandateId) : 'Sans mandat',
+		mainFunction: main
+			? mandateName(main.mandateId, state, content, main.portfolio)
+			: 'Sans mandat',
 		mandates: active.map((mandate) => {
 			const definition = content.mandates[mandate.mandateId];
 			const election = definition?.election ? content.elections[definition.election] : undefined;
@@ -3894,7 +4432,7 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 				: { addable: false, reason: null };
 			return {
 				instanceId: mandate.instanceId,
-				label: label(mandate.mandateId),
+				label: mandateName(mandate.mandateId, state, content, mandate.portfolio),
 				since: formatTurn(mandate.startTurn),
 				ends:
 					election && next
@@ -3940,7 +4478,71 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 							content
 						)
 					: { addable: false, reason: null };
+			const listOpen =
+				listActionId !== null &&
+				definition !== undefined &&
+				listSystem(effectiveSystem(definition, state.player.territory, content));
+			const place =
+				listOpen && !running
+					? addability(
+							state,
+							plan,
+							{ kind: 'action', id: listActionId, target: ballot.ballotId },
+							content
+						)
+					: { addable: false, reason: null };
+			const request = state.investitures.find((entry) => entry.ballotId === ballot.ballotId);
+			const appraisal =
+				definition?.investiture && state.player.partyId !== null && investitureActionId
+					? investitureAppraisal(
+							ballot.ballotId,
+							state.player,
+							state.resources.influence,
+							state.mandates,
+							content
+						)
+					: null;
+			const investitureStep = investitureActionId
+				? addability(
+						state,
+						plan,
+						{ kind: 'action', id: investitureActionId, target: ballot.ballotId },
+						content
+					)
+				: { addable: false, reason: null };
 			return {
+				investiture:
+					appraisal && investitureActionId
+						? {
+								actionId: investitureActionId,
+								appraisal: appraisal.label,
+								factors: appraisal.factors,
+								planned: plan.some(
+									(step) =>
+										step.kind === 'action' &&
+										step.id === investitureActionId &&
+										step.target === ballot.ballotId
+								),
+								addable: !request && investitureStep.addable,
+								reason: request ? null : investitureStep.reason,
+								status: request
+									? `${INVESTITURE_STATUS_TEXT[request.status].charAt(0).toUpperCase()}${INVESTITURE_STATUS_TEXT[request.status].slice(1)}${request.reasons.length > 0 ? ` (${request.reasons.join(', ')})` : ''}.`
+									: null
+							}
+						: null,
+				listPlace: listOpen
+					? {
+							actionId: listActionId,
+							planned: plan.some(
+								(step) =>
+									step.kind === 'action' &&
+									step.id === listActionId &&
+									step.target === ballot.ballotId
+							),
+							addable: place.addable,
+							reason: place.reason
+						}
+					: null,
 				stake: definition ? label(definition.grants) : '—',
 				campaign: running ? campaignView(running) : null,
 				candidacyPlanned: plan.some(
@@ -3973,9 +4575,32 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 				dateLabel: formatTurn(ballot.turn),
 				winner: content.parties[ballot.winnerPartyId ?? '']?.name ?? '—',
 				shares: sharesText(ballot, content),
-				early: ballot.early
+				early: ballot.early,
+				report: ballotReportView(ballot, state, content)
 			})),
 		declareActionId,
+		partyCareer: (() => {
+			const party = state.player.partyCareer;
+			if (!party || state.player.partyId === null) return null;
+			const appraisal = party.bid
+				? congressAppraisal(state.player, state.resources.influence, content)
+				: null;
+			return {
+				party: content.parties[state.player.partyId]?.name ?? state.player.partyId,
+				rank: PARTY_RANK_LABELS[party.rank],
+				since: `depuis le ${formatTurn(party.rankSince)}`,
+				congress: `Prochain congrès : ${formatTurn(party.nextCongressTurn)}`,
+				bid: party.bid
+					? `Candidature à la direction, ligne du ${PARTY_POSTURE_LABELS[party.bid.posture].toLocaleLowerCase('fr')} · ${party.bid.rallies} ralliement(s)`
+					: null,
+				appraisal: appraisal?.label ?? null,
+				factors: appraisal?.factors ?? [],
+				retry:
+					party.retryTurn !== null && party.retryTurn > party.nextCongressTurn
+						? `Nouvelle candidature possible au congrès du ${formatTurn(party.retryTurn)}`
+						: null
+			};
+		})(),
 		promises: buildPromises(state, plan, content),
 		media: buildMedia(state, plan, content),
 		pastCampaigns: state.campaigns
@@ -3985,7 +4610,7 @@ function buildCareer(state: GameState, plan: readonly PlanStep[], content: Conte
 		pastMandates: state.mandates
 			.filter((mandate) => mandate.status === 'ended')
 			.map((mandate) => ({
-				label: label(mandate.mandateId),
+				label: mandateName(mandate.mandateId, state, content, mandate.portfolio),
 				period: `${formatTurn(mandate.startTurn)} – ${formatTurn(mandate.endTurn ?? mandate.startTurn)} (${MANDATE_END_LABELS[mandate.endReason ?? 'term']})`
 			}))
 	};
@@ -4064,7 +4689,7 @@ function buildEntourage(
 	plan: readonly PlanStep[],
 	content: Content
 ): EntourageView {
-	const offerOf = (id: string): HireOffer | null => {
+	const offerOf = (id: string): HireOffer | 'counter' | null => {
 		for (const effect of content.actions[id]?.effects ?? [])
 			if (effect.op === 'hireStaff') return effect.offer ?? 'standard';
 		return null;
@@ -4160,33 +4785,49 @@ function buildEntourage(
 			: (state.shortlists[postId] ?? []).flatMap((entry) => {
 					const character = state.characters[entry.characterId];
 					if (!character || character.status !== 'active') return [];
-					const offers = offerActions.map((actionId): HireOfferView => {
+					// Contre-proposition (P3-33) : l'offre à son montant n'existe que pendant sa validité.
+					const offers = offerActions.flatMap((actionId): HireOfferView[] => {
 						const offer = offerOf(actionId)!;
-						const salary = offeredSalaryCents(postId, character.competence, offer, content);
-						const bonus = offerBonusCents(salary, offer, content);
+						if (offer === 'counter' && entry.counterOffer === null) return [];
+						const salary =
+							offer === 'counter'
+								? entry.counterOffer!.salaryCents
+								: offeredSalaryCents(postId, character.competence, offer, content);
+						const bonus = offer === 'counter' ? 0 : offerBonusCents(salary, offer, content);
 						const add = addability(
 							state,
 							plan,
 							{ kind: 'action', id: actionId, target: entry.characterId },
 							content
 						);
-						const interest = interestOf(
-							acceptancePercent(attraction, character.competence, offer, entry.interviews, content)
-						);
-						return {
-							actionId,
-							offer,
-							label: OFFER_LABELS[offer],
-							salary: `${formatResource('politicalBudgetCents', salary)} par trimestre`,
-							bonus:
-								bonus > 0
-									? `prime de ${formatResource('politicalBudgetCents', bonus)} à l’arrivée`
-									: null,
-							...interest,
-							planned: planned(actionId, entry.characterId),
-							addable: add.addable,
-							reason: add.reason
-						};
+						const interest =
+							offer === 'counter'
+								? { interest: 'acceptée à coup sûr', interestTone: 'good' as const }
+								: interestOf(
+										acceptancePercent(
+											attraction,
+											character.competence,
+											offer,
+											entry.interviews,
+											content
+										)
+									);
+						return [
+							{
+								actionId,
+								offer,
+								label: offer === 'counter' ? 'Accepter sa contre-proposition' : OFFER_LABELS[offer],
+								salary: `${formatResource('politicalBudgetCents', salary)} par trimestre`,
+								bonus:
+									bonus > 0
+										? `prime de ${formatResource('politicalBudgetCents', bonus)} à l’arrivée`
+										: null,
+								...interest,
+								planned: planned(actionId, entry.characterId),
+								addable: add.addable,
+								reason: add.reason
+							}
+						];
 					});
 					const vet = vetActionId
 						? addability(
@@ -4211,6 +4852,9 @@ function buildEntourage(
 								content.candidateProfiles.find((profile) => profile.id === entry.profileId)
 									?.label ?? '',
 							asked: `${formatResource('politicalBudgetCents', askedSalaryCents(postId, character.competence, content))} par trimestre`,
+							counter: entry.counterOffer
+								? `A décliné votre offre ; accepterait ${formatResource('politicalBudgetCents', entry.counterOffer.salaryCents)} par trimestre, réponse attendue avant la fin du ${formatTurn(entry.counterOffer.untilTurn)}.`
+								: null,
 							planned: offers.some((offer) => offer.planned),
 							offers,
 							interviews: entry.interviews,
@@ -4507,10 +5151,99 @@ export interface RegionOptionView {
 	readonly departments: string;
 }
 
+/** Terrain d'engagement exigé par une condition, au premier niveau ou dans un « tous » (P3-24). */
+export function engagementOf(condition: Condition | undefined): string | null {
+	if (!condition) return null;
+	if (condition.op === 'engagement') return condition.engagement;
+	if (condition.op === 'all') {
+		for (const inner of condition.conditions) {
+			const found = engagementOf(inner);
+			if (found) return found;
+		}
+	}
+	return null;
+}
+
+/** Étape des premiers pas (P3-40). */
+export interface FirstStepView {
+	readonly id: string;
+	readonly label: string;
+	readonly hint: string;
+	/** Onglet où agir. */
+	readonly tab: 'agenda' | 'world' | 'career' | 'dashboard';
+	readonly done: boolean;
+}
+
+/** Premiers pas guidés (P3-40) : objectifs successifs lus dans l'état, sans effet de jeu. */
+export interface FirstStepsView {
+	readonly steps: readonly FirstStepView[];
+	/** Étape en cours, `null` une fois tout accompli. */
+	readonly current: FirstStepView | null;
+	readonly doneCount: number;
+}
+
+function buildFirstSteps(state: GameState, content: Content): FirstStepsView {
+	const quarters = state.history.filter((entry) => entry.type === 'turn.resolved').length;
+	const municipal = state.campaigns.some(
+		(campaign) => content.elections[campaign.electionId]?.scope === 'local'
+	);
+	const steps: FirstStepView[] = [
+		{
+			id: 'plan',
+			label: 'Composer un premier trimestre',
+			hint: 'Choisissez deux ou trois activités dans l’agenda, puis validez « Trimestre suivant ».',
+			tab: 'agenda',
+			done: quarters >= 1
+		},
+		{
+			id: 'party',
+			label: 'Adhérer à un parti ou rester indépendant',
+			hint: 'Dans « Monde politique », comparez les partis : une carte ouvre l’investiture et l’appareil, l’indépendance garde les mains libres.',
+			tab: 'world',
+			done: state.player.affiliations.length > 0 || quarters >= 6
+		},
+		{
+			id: 'activists',
+			label: 'Réunir un noyau militant',
+			hint: 'Tracts, réunion de section et marché du dimanche font venir des militants ; un local les retient.',
+			tab: 'agenda',
+			done: state.player.activists >= 25
+		},
+		{
+			id: 'municipal',
+			label: 'Préparer les municipales',
+			hint: 'Dans l’onglet Carrière, conduisez votre liste ou demandez une place sur celle d’un parti avant la clôture des candidatures.',
+			tab: 'career',
+			done: municipal
+		},
+		{
+			id: 'pledge',
+			label: 'Prendre un engagement de campagne',
+			hint: 'Une promesse par scrutin au moins : elle vous suivra une fois élu, et même après.',
+			tab: 'career',
+			done: state.promises.length > 0
+		},
+		{
+			id: 'ballot',
+			label: 'Passer l’épreuve du scrutin',
+			hint: 'Préparez la campagne (porte-à-porte, meetings), puis découvrez le procès-verbal au soir du vote.',
+			tab: 'dashboard',
+			done: state.campaigns.some((campaign) => campaign.resultTurn !== null)
+		}
+	];
+	const current = steps.find((step) => !step.done) ?? null;
+	return { steps, current, doneCount: steps.filter((step) => step.done).length };
+}
+
 export function creationOptions(content: Content): {
 	readonly origins: readonly ProfileOptionView[];
 	readonly engagements: readonly ProfileOptionView[];
 	readonly regions: readonly RegionOptionView[];
+	readonly ambitions: readonly {
+		readonly id: string;
+		readonly label: string;
+		readonly description: string;
+	}[];
 	readonly defaults: Content['defaultProfile'];
 } {
 	const option = (entry: {
@@ -4525,14 +5258,16 @@ export function creationOptions(content: Content): {
 		effects: entry.effects.map((effect) => describeEffect(effectRange(effect), content)),
 		actions: content.actionIds
 			.map((id) => content.actions[id]!)
-			.filter(
-				(action) => action.requires?.op === 'engagement' && action.requires.engagement === entry.id
-			)
+			.filter((action) => engagementOf(action.requires) === entry.id)
 			.map((action) => action.label)
 	});
 	return {
 		origins: content.originIds.map((id) => option(content.origins[id]!)),
 		engagements: content.engagementIds.map((id) => option(content.engagements[id]!)),
+		ambitions: content.ambitionIds.map((id) => {
+			const ambition = content.ambitions[id]!;
+			return { id, label: ambition.label, description: ambition.description };
+		}),
 		regions: content.regionIds.map((id) => {
 			const region = content.regions[id]!;
 			return {
@@ -4750,7 +5485,21 @@ export function projectView(
 					available: choice.available,
 					reason: choice.reason
 				})),
-				advice: buildAdvice(state, pending.instanceId, pending.eventId, content)
+				advice: buildAdvice(state, pending.instanceId, pending.eventId, content),
+				appointment:
+					pending.eventId === content.balance.government.appointmentEvent && state.appointment
+						? state.appointment.mandateId === 'mandate.prime_minister'
+							? 'Matignon : le président vous propose de former le gouvernement.'
+							: state.appointment.portfolio
+								? `Portefeuille proposé : ${content.portfolios[state.appointment.portfolio]?.title ?? state.appointment.portfolio}.`
+								: 'Fonction proposée : un secrétariat d’État, première marche du gouvernement.'
+						: null,
+				report:
+					pending.eventId === content.balance.elections.contests.runoffEvent
+						? (state.ballots
+								.filter((ballot) => ballot.report?.stage === 'runoff_pending')
+								.map((ballot) => ballotReportView(ballot, state, content))[0] ?? null)
+						: null
 			}
 		: null;
 
@@ -4834,6 +5583,11 @@ export function projectView(
 		plan: {
 			steps,
 			pinnedCount: steps.filter((step) => step.pinned).length,
+			retiring: plan.some(
+				(step) =>
+					step.kind === 'action' &&
+					content.actions[step.id]?.effects.some((effect) => effect.op === 'retire') === true
+			),
 			adjustments: adjustments.find((entry) => entry.turn === state.turn)?.lines ?? [],
 			timeAvailable: preview.timeAvailable,
 			timeReserved: preview.timeReserved,
@@ -4881,10 +5635,12 @@ export function projectView(
 		career: buildCareer(state, plan, content),
 		supports: buildSupports(state, content),
 		entourage: buildEntourage(state, plan, content),
+		firstSteps: buildFirstSteps(state, content),
 		profile: {
 			origin: content.origins[state.player.origin]?.label ?? state.player.origin,
 			engagement: content.engagements[state.player.engagement]?.label ?? state.player.engagement,
-			family: describeFamily(state)
+			family: describeFamily(state),
+			ambition: ambitionText(state, content)
 		}
 	};
 }

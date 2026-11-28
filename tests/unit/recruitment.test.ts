@@ -99,7 +99,9 @@ describe('attractivité de la carrière', () => {
 					access: 'nomination',
 					status: 'active',
 					endTurn: null,
-					endReason: null
+					endReason: null,
+					side: null,
+					portfolio: null
 				}
 			],
 			[],
@@ -154,7 +156,7 @@ describe('offre et réponse du candidat', () => {
 		throw new Error('aucune seed trouvée');
 	}
 
-	it('un refus retire le candidat, ne verse ni salaire ni prime, et coûte le temps de l’entretien', () => {
+	it('un premier refus ne verse ni salaire ni prime et ouvre une contre-proposition (P3-33)', () => {
 		const { state, candidate, chance } = scenario('refuse', 90);
 		expect(chance).toBeLessThan(100);
 		// La prévision suppose l'accord : elle ne révèle rien de la décision.
@@ -166,19 +168,60 @@ describe('offre et réponse du candidat', () => {
 		expect(preview.valid).toBe(true);
 		const after = commit(state, [hire(candidate, 'staff.hire_generous')]);
 		expect(after.staff.filter((member) => member.status === 'active')).toHaveLength(0);
-		expect(after.shortlists[CHIEF]?.some((entry) => entry.characterId === candidate) ?? false).toBe(
-			false
-		);
-		const entry = after.history.at(-1)!;
-		if (entry.type !== 'turn.resolved') throw new Error('journal attendu');
-		expect(entry.steps[0]?.politics).toEqual([
-			{ kind: 'hireRefused', characterId: candidate, postId: CHIEF }
+		const entry = after.shortlists[CHIEF]?.find((item) => item.characterId === candidate);
+		expect(entry?.counterOffer).toMatchObject({ untilTurn: state.turn + 1 });
+		const journal = after.history.at(-1)!;
+		if (journal.type !== 'turn.resolved') throw new Error('journal attendu');
+		expect(journal.steps[0]?.politics).toEqual([
+			{
+				kind: 'hireRefused',
+				characterId: candidate,
+				postId: CHIEF,
+				counterCents: entry!.counterOffer!.salaryCents
+			}
 		]);
-		expect(entry.staff?.payroll).toEqual([]);
+		expect(journal.staff?.payroll).toEqual([]);
 		expect(after.relationships[candidate]?.memories.at(-1)?.text).toMatch(/décliné votre offre/u);
 		// Même seed, même issue ; le refus n'est jamais rejoué après reprise.
 		expect(commit(state, [hire(candidate, 'staff.hire_generous')])).toStrictEqual(after);
 		expect(gameStateSchema.safeParse(after).success).toBe(true);
+	});
+
+	it('accepte à coup sûr une offre au montant de la contre-proposition', () => {
+		const { state, candidate } = scenario('refuse', 90);
+		const refused = commit(state, [hire(candidate, 'staff.hire_generous')]);
+		const counter = refused.shortlists[CHIEF]!.find(
+			(item) => item.characterId === candidate
+		)!.counterOffer!;
+		const hired = commit(refused, [hire(candidate, 'staff.hire_counter')]);
+		expect(hired.staff).toMatchObject([
+			{
+				characterId: candidate,
+				status: 'active',
+				salaryCents: counter.salaryCents,
+				bonusDueCents: 0
+			}
+		]);
+	});
+
+	it('sans réponse ou après un second refus, le candidat s’en va', () => {
+		const { state, candidate } = scenario('refuse', 90);
+		const refused = commit(state, [hire(candidate, 'staff.hire_generous')]);
+		// Sans réponse : il part à la frontière du trimestre suivant.
+		const ignored = commit(refused);
+		expect(ignored.shortlists[CHIEF]?.some((item) => item.characterId === candidate) ?? false).toBe(
+			false
+		);
+		const journal = ignored.history.at(-1)!;
+		if (journal.type !== 'turn.resolved') throw new Error('journal attendu');
+		expect(journal.staff?.counterLapsed).toEqual([candidate]);
+		// Second refus d'une offre ordinaire : départ immédiat.
+		const again = commit(refused, [hire(candidate, 'staff.hire_low')]);
+		if (!again.staff.some((member) => member.characterId === candidate)) {
+			expect(again.shortlists[CHIEF]?.some((item) => item.characterId === candidate) ?? false).toBe(
+				false
+			);
+		}
 	});
 
 	it('annonce l’issue du recrutement dans la note du trimestre suivant (PT-B1-005)', () => {
@@ -188,7 +231,7 @@ describe('offre et réponse du candidat', () => {
 			item.key.startsWith('recruitment:')
 		);
 		expect(declined).toMatchObject({ title: 'Offre déclinée', tone: 'cost', kind: 'people' });
-		expect(declined?.text).toMatch(/décline le poste .* quitte la présélection/u);
+		expect(declined?.text).toMatch(/décline le poste .* accepterait .* par trimestre/u);
 
 		const accord = scenario('accept', 30);
 		const hired = commit(accord.state, [hire(accord.candidate, 'staff.hire_generous')]);

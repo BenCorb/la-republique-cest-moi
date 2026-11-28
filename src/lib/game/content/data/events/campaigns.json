@@ -1,6 +1,95 @@
 {
 	"events": [
 		{
+			"id": "election.investiture_refused",
+			"category": "campaign",
+			"title": "L’investiture vous échappe",
+			"text": "La commission d’investiture a tranché, entre deux sandwichs et un vote à main levée : un autre portera les couleurs du parti. Le courrier est poli, les motifs le sont moins. Il reste deux chemins : se ranger, ou se présenter quand même, sans étiquette ni moyens, et avec un appareil qui ne l’oubliera pas.",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 45,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [],
+			"choices": [
+				{
+					"id": "renounce",
+					"label": "S’incliner et soutenir le candidat investi",
+					"hints": ["Pas de campagne cette fois", "L’appareil s’en souviendra, en bien"],
+					"costs": [],
+					"effects": [{ "op": "investitureDecision", "decision": "renounce" }],
+					"outcome": [
+						"Vous serrez la main du candidat investi devant les photographes. Le sourire est un peu crispé, mais le parti note la discipline."
+					]
+				},
+				{
+					"id": "dissident",
+					"label": "Se présenter en dissident",
+					"hints": [
+						"Candidature sans étiquette ni moyens du parti",
+						"L’appareil vous tourne le dos"
+					],
+					"costs": [],
+					"effects": [{ "op": "investitureDecision", "decision": "dissident" }],
+					"outcome": [
+						"Vous déposez votre candidature à la préfecture, seul. Le parti publie un communiqué sec ; vos affiches, elles, sont déjà imprimées."
+					]
+				}
+			]
+		},
+		{
+			"id": "election.runoff",
+			"category": "campaign",
+			"title": "Entre les deux tours",
+			"text": "Les résultats du premier tour tombent dans une salle des fêtes qui sent le café froid. Le second tour a lieu dans quelques jours : il faut décider ce soir. Se maintenir, s’allier ou s’effacer, chaque option a ses calculatrices et ses rancunes.",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 50,
+			"cooldownTurns": 0,
+			"unique": false,
+			"actors": [],
+			"choices": [
+				{
+					"id": "maintain",
+					"label": "Se maintenir au second tour",
+					"hints": ["Vos électeurs restent les vôtres", "Les reports des éliminés décideront"],
+					"costs": [],
+					"effects": [{ "op": "runoffDecision", "decision": "maintain" }],
+					"outcome": [
+						"Vous maintenez votre candidature : au soir du second tour, le verdict tombe."
+					]
+				},
+				{
+					"id": "merge",
+					"label": "Fusionner avec la liste la plus proche",
+					"hints": [
+						"Les voix s’additionnent, pas toutes",
+						"Les places se négocient : la plus forte liste mène"
+					],
+					"costs": [],
+					"effects": [{ "op": "runoffDecision", "decision": "merge" }],
+					"outcome": [
+						"Une nuit de négociations, deux logos sur la même affiche, et un second tour à mener ensemble."
+					]
+				},
+				{
+					"id": "withdraw",
+					"label": "Se désister",
+					"hints": [
+						"Aucun siège pour vous cette fois",
+						"Vos voix se reportent selon les affinités"
+					],
+					"costs": [],
+					"effects": [{ "op": "runoffDecision", "decision": "withdraw" }],
+					"outcome": [
+						"Vous vous retirez de la course. Certains saluent un geste de responsabilité, d’autres comptent déjà les points."
+					]
+				}
+			]
+		},
+		{
 			"id": "campaign.old_photo",
 			"category": "campaign",
 			"title": "Une vieille photo ressort",
