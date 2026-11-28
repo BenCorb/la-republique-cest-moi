@@ -15,7 +15,7 @@ test.describe('coque d’accueil (build statique)', () => {
 		expect(errors).toEqual([]);
 	});
 
-	test('tient dans la fenêtre sans défilement horizontal', async ({ page }) => {
+	test('tient dans la fenêtre sans défilement horizontal', { tag: '@layout' }, async ({ page }) => {
 		await page.goto('./');
 		await expect(page.getByRole('heading', { name: 'Votre carrière politique' })).toBeVisible();
 		const overflow = await page.evaluate(
