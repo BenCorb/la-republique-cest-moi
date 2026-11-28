@@ -1292,6 +1292,8 @@ export interface PlayerView {
 	readonly world: WorldView;
 	/** Personnages rencontrés : actifs d'abord, puis par date de rencontre. */
 	readonly people: readonly PersonView[];
+	/** Premiers pas guidés (P3-40), sans aucun effet de jeu. */
+	readonly firstSteps: FirstStepsView;
 	/** Profil du personnage : origine, engagement et situation familiale. */
 	readonly profile: {
 		readonly origin: string;
@@ -5119,6 +5121,77 @@ export function engagementOf(condition: Condition | undefined): string | null {
 	return null;
 }
 
+/** Étape des premiers pas (P3-40). */
+export interface FirstStepView {
+	readonly id: string;
+	readonly label: string;
+	readonly hint: string;
+	/** Onglet où agir. */
+	readonly tab: 'agenda' | 'world' | 'career' | 'dashboard';
+	readonly done: boolean;
+}
+
+/** Premiers pas guidés (P3-40) : objectifs successifs lus dans l'état, sans effet de jeu. */
+export interface FirstStepsView {
+	readonly steps: readonly FirstStepView[];
+	/** Étape en cours, `null` une fois tout accompli. */
+	readonly current: FirstStepView | null;
+	readonly doneCount: number;
+}
+
+function buildFirstSteps(state: GameState, content: Content): FirstStepsView {
+	const quarters = state.history.filter((entry) => entry.type === 'turn.resolved').length;
+	const municipal = state.campaigns.some(
+		(campaign) => content.elections[campaign.electionId]?.scope === 'local'
+	);
+	const steps: FirstStepView[] = [
+		{
+			id: 'plan',
+			label: 'Composer un premier trimestre',
+			hint: 'Choisissez deux ou trois activités dans l’agenda, puis validez « Trimestre suivant ».',
+			tab: 'agenda',
+			done: quarters >= 1
+		},
+		{
+			id: 'party',
+			label: 'Adhérer à un parti ou rester indépendant',
+			hint: 'Dans « Monde politique », comparez les partis : une carte ouvre l’investiture et l’appareil, l’indépendance garde les mains libres.',
+			tab: 'world',
+			done: state.player.affiliations.length > 0 || quarters >= 6
+		},
+		{
+			id: 'activists',
+			label: 'Réunir un noyau militant',
+			hint: 'Tracts, réunion de section et marché du dimanche font venir des militants ; un local les retient.',
+			tab: 'agenda',
+			done: state.player.activists >= 25
+		},
+		{
+			id: 'municipal',
+			label: 'Préparer les municipales',
+			hint: 'Dans l’onglet Carrière, conduisez votre liste ou demandez une place sur celle d’un parti avant la clôture des candidatures.',
+			tab: 'career',
+			done: municipal
+		},
+		{
+			id: 'pledge',
+			label: 'Prendre un engagement de campagne',
+			hint: 'Une promesse par scrutin au moins : elle vous suivra une fois élu, et même après.',
+			tab: 'career',
+			done: state.promises.length > 0
+		},
+		{
+			id: 'ballot',
+			label: 'Passer l’épreuve du scrutin',
+			hint: 'Préparez la campagne (porte-à-porte, meetings), puis découvrez le procès-verbal au soir du vote.',
+			tab: 'dashboard',
+			done: state.campaigns.some((campaign) => campaign.resultTurn !== null)
+		}
+	];
+	const current = steps.find((step) => !step.done) ?? null;
+	return { steps, current, doneCount: steps.filter((step) => step.done).length };
+}
+
 export function creationOptions(content: Content): {
 	readonly origins: readonly ProfileOptionView[];
 	readonly engagements: readonly ProfileOptionView[];
@@ -5519,6 +5592,7 @@ export function projectView(
 		career: buildCareer(state, plan, content),
 		supports: buildSupports(state, content),
 		entourage: buildEntourage(state, plan, content),
+		firstSteps: buildFirstSteps(state, content),
 		profile: {
 			origin: content.origins[state.player.origin]?.label ?? state.player.origin,
 			engagement: content.engagements[state.player.engagement]?.label ?? state.player.engagement,

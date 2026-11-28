@@ -13,9 +13,18 @@
 		session: GameSession;
 		onNewCareer: () => void;
 		onImport: (text: string) => void;
+		/** Premiers pas masqués (P3-40), réactivables d'ici. */
+		firstStepsHidden?: boolean;
+		onShowFirstSteps?: () => void;
 	}
 
-	let { session, onNewCareer, onImport }: Props = $props();
+	let {
+		session,
+		onNewCareer,
+		onImport,
+		firstStepsHidden = false,
+		onShowFirstSteps
+	}: Props = $props();
 	const home = $derived(session.snapshot.home);
 	let fileInput: HTMLInputElement | undefined = $state();
 
@@ -54,6 +63,14 @@
 						{home.existing.ended ? 'Voir le bilan' : 'Reprendre la carrière'}
 					</button>
 				</div>
+			{/if}
+
+			{#if firstStepsHidden && onShowFirstSteps}
+				<p class="mt-4 text-sm">
+					<button type="button" class="btn-secondary btn-small" onclick={onShowFirstSteps}>
+						Réactiver les premiers pas
+					</button>
+				</p>
 			{/if}
 
 			{#if home.unreadable}

@@ -1165,6 +1165,14 @@ Textes : **décisions déléguées, provisoires** (ton relu par le créateur au 
 - **Mesure** (200 carrières par stratégie, seed `p3-25`) : aucune erreur ni violation ; toutes ces scènes atteintes (de 3 premiers pas au Sénat à 177 fêtes de section) ; durée active médiane 66 minutes.
 - `RULES_VERSION = '0.51.0'`. Tests : audit des faits du catalogue (appartement à prix d'ami), textes courts.
 
+### 8.4 quadragesies Décisions de P3-40 : premiers pas guidés (28 novembre 2026)
+
+Décision du créateur (ROADMAP §5.2 : objectifs guidés dans une vraie carrière) ; textes et ordre : **décisions déléguées, provisoires**.
+
+- **Six objectifs successifs**, lus dans l'état sans rien y écrire (`FirstStepsView`) : composer un premier trimestre ; adhérer à un parti ou rester indépendant (accompli à l'adhésion ou après six trimestres sans) ; réunir un noyau militant (25 militants) ; préparer les municipales (candidature municipale) ; prendre un engagement ; passer l'épreuve du scrutin. Aucun effet de jeu, aucune donnée dans la sauvegarde, aucun changement de règles.
+- **Affichage** : carte « Premiers pas · n/6 » au tableau de bord (liste cochée, bouton vers l'onglet où agir), bulle sur l'onglet concerné. Masquable d'un clic ; la préférence est propre au navigateur (`localStorage`, lecture protégée) et se réactive depuis l'accueil (« Réactiver les premiers pas »). Rien ne s'affiche au bilan.
+- **Tests** : E2E « premiers pas guidés » (bulle à l'agenda, progression après un trimestre, renvoi vers l'onglet, masquage, réactivation depuis l'accueil après rechargement).
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.

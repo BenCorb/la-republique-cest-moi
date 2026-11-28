@@ -19,6 +19,8 @@
 	import HomeScreen from '#lib/components/shell/HomeScreen.svelte';
 	import CreationScreen from '#lib/components/shell/CreationScreen.svelte';
 	import type { GameTab } from '#lib/components/shell/tabs.ts';
+	import FirstSteps from '#lib/components/shell/FirstSteps.svelte';
+	import { readFirstStepsHidden, writeFirstStepsHidden } from '#lib/game/app/browser.ts';
 	import { createBrowserSession, downloadExport } from '#lib/game/app/browser.ts';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 
@@ -31,6 +33,13 @@
 	let confirmingNewCareer = $state(false);
 	/** Écran de création ouvert, et profil choisi en attente de confirmation éventuelle. */
 	let creating = $state(false);
+	/** Premiers pas (P3-40) : préférence de ce navigateur. */
+	let firstStepsHidden = $state(readFirstStepsHidden());
+	function setFirstStepsHidden(hidden: boolean): void {
+		firstStepsHidden = hidden;
+		writeFirstStepsHidden(hidden);
+	}
+
 	let chosenProfile = $state<{
 		origin: string;
 		engagement: string;
@@ -101,11 +110,21 @@
 {:else if snapshot.screen === 'home'}
 	<HomeScreen
 		{session}
+		{firstStepsHidden}
+		onShowFirstSteps={() => setFirstStepsHidden(false)}
 		onNewCareer={startCareer}
 		onImport={(text: string) => session?.controller.importFile(text)}
 	/>
 {:else}
 	<GameLayout {session} {tab} onTab={(next: GameTab) => (tab = next)}>
+		{#if snapshot.view && !snapshot.view.summary && !firstStepsHidden}
+			<FirstSteps
+				steps={snapshot.view.firstSteps}
+				{tab}
+				onTab={(next: GameTab) => (tab = next)}
+				onHide={() => setFirstStepsHidden(true)}
+			/>
+		{/if}
 		{#if snapshot.view?.summary && tab !== 'journal'}
 			<CareerEnd
 				summary={snapshot.view.summary}

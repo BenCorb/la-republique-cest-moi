@@ -51,3 +51,23 @@ export function downloadExport(exported: ExportedSave): void {
 	link.click();
 	setTimeout(() => URL.revokeObjectURL(url), 0);
 }
+
+const FIRST_STEPS_KEY = 'la-republique-cest-moi:premiers-pas-masques';
+
+/** Premiers pas masqués (P3-40) : préférence de ce navigateur, jamais de l'état de jeu. */
+export function readFirstStepsHidden(): boolean {
+	try {
+		return globalThis.localStorage?.getItem(FIRST_STEPS_KEY) === '1';
+	} catch {
+		return false;
+	}
+}
+
+export function writeFirstStepsHidden(hidden: boolean): void {
+	try {
+		if (hidden) globalThis.localStorage?.setItem(FIRST_STEPS_KEY, '1');
+		else globalThis.localStorage?.removeItem(FIRST_STEPS_KEY);
+	} catch {
+		// Stockage indisponible : la préférence ne vaut que pour la session.
+	}
+}

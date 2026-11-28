@@ -1108,3 +1108,31 @@ test.describe('résultats et note de cabinet (P3-14)', () => {
 		);
 	});
 });
+
+test.describe('premiers pas guidés (P3-40)', () => {
+	test('guide les premiers objectifs, se masque et se réactive depuis l’accueil', async ({
+		page
+	}) => {
+		await startCareer(page, 'e2e-premiers-pas');
+		// Le lancement ouvre l'agenda : la bulle y indique le premier objectif.
+		const bubble = page.getByTestId('first-steps-bubble');
+		await expect(bubble).toContainText('Composer un premier trimestre');
+		await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
+		const card = page.getByTestId('first-steps');
+		await expect(card).toContainText('Premiers pas · 1/6');
+		await nextQuarter(page);
+		await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
+		await expect(card).toContainText('Premiers pas · 2/6');
+		await expect(card).toContainText('Adhérer à un parti ou rester indépendant');
+		await card.getByRole('button', { name: 'Aller à : Monde politique' }).click();
+		await expect(page.getByTestId('first-steps-bubble')).toBeVisible();
+		// Masqués, ils disparaissent partout, puis se réactivent depuis l'accueil.
+		await page.getByRole('button', { name: 'Masquer les premiers pas' }).click();
+		await expect(page.getByTestId('first-steps-bubble')).toHaveCount(0);
+		await page.reload();
+		await page.getByRole('button', { name: 'Réactiver les premiers pas' }).click();
+		await page.getByRole('button', { name: 'Reprendre la carrière' }).click();
+		await page.getByRole('button', { name: 'Tableau de bord', exact: true }).click();
+		await expect(page.getByTestId('first-steps')).toBeVisible();
+	});
+});
