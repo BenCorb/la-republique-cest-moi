@@ -1,7 +1,7 @@
 # 0001 — Organisation du dépôt et du travail pour la beta
 
 - **Date :** 2026-11-28
-- **Statut :** acceptée
+- **Statut :** acceptée ; la conservation des sauvegardes (« Conséquences ») est remplacée par [0002](0002-sauvegardes-beta.md)
 - **Décidée par :** créateur (passage en beta, nettoyage du dépôt) ; détails d’organisation délégués, provisoires
 
 ## Contexte

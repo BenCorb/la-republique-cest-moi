@@ -43,6 +43,7 @@ _À relever lors de l’audit (les « décisions déléguées, provisoires » de
 
 ## Chantier beta
 
+- Décisions du [dépouillement B-02](../playtests/2026-11-28-b-02-reference.md#décisions-par-retour) : D-04 (fait de financement occulte) → B-09 ; D-10 (affaires héritées) → B-13.
 - [ ] Audit : règles en vigueur condensées ci-dessus, décisions provisoires listées, partie jouée sur ce système
 - [ ] Problèmes UX/UI relevés (captures, retours de playtest)
 - [ ] Plan de consolidation validé par le créateur

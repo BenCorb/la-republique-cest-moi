@@ -29,7 +29,7 @@ Ne pas lire tous les documents à chaque session : partir de la fiche du systèm
 - Aléatoire seedé, état sérialisable, transitions déterministes, aucun `Math.random()` ou horloge réelle dans le moteur. Simulation accélérée et tests utilisent les mêmes transitions.
 - Catalogues JSON validés (schémas et références), identifiants stables, effets déclaratifs autorisés, aucun `eval`. Textes français, code et identifiants anglais.
 - Respecter les informations cachées dans les projections UI ; pas de jauge morale visible. Respecter l’ordre de tour et la production à partir de T+1 des nouveaux producteurs.
-- Sauvegardes versionnées et **conservées depuis la V1** : toute évolution de `GameState` incrémente `SAVE_VERSION` et ajoute une migration testée ; la sauvegarde témoin `tests/fixtures/save-v1.json` reste lisible. Jamais de double résolution d’un tour ou d’un choix bloquant. Ne pas effacer une sauvegarde incompatible ou invalide sans décision explicite.
+- Sauvegardes versionnées : toute évolution de `GameState` incrémente `SAVE_VERSION`. **Pendant la beta, pas de migration ni de conservation** ([décision 0002](docs/decisions/0002-sauvegardes-beta.md)) : une sauvegarde d’une version précédente est refusée avec un message, jamais effacée ni modifiée en silence. La conservation redevient obligatoire au passage en 1.0 publique, annoncé par le créateur. Jamais de double résolution d’un tour ou d’un choix bloquant.
 
 ## Méthode de travail
 

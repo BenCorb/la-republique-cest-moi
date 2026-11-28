@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- Maquette de discussion de la beta v2 (dépouillement B-02), non normative. Ouvrir dans un navigateur connecté : polices et icônes viennent de Google Fonts et jsDelivr. -->
+<title>Coque à six onglets</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@700&display=swap">
+<style>
+/* Maquette fidèle à DESIGN.md §2, §3, §10.10 et aux tokens de src/routes/layout.css.
+   Jeu en thème clair uniquement (color-scheme: light dans le jeu) : un seul thème, assumé. */
+:root{
+  --canvas:#f3f0e9;--surface:#fffdfa;--sidebar:#eae6de;--primary:#203957;--ink:#202a35;--muted:#565e68;--line:#d5d0c5;
+  --danger:#a32938;--positive:#286044;--warning:#80520d;
+  --gain-soft:#ecf3ee;--gain-line:#c5dacb;--cost-soft:#f8ecec;--cost-line:#e6c8cb;--risk-soft:#f7efe3;--risk-line:#e3cfae;
+  --res-influence:#6d3fa6;--res-budget:#1d5c96;--res-cash:#7a5b00;--res-time:#3d4f63;--res-popularity:#a3326e;--res-health:#0f6e66;
+  --res-stress:#b0450c;--res-exposure:#0b6a85;--res-justice:#6b4a33;--res-defense:#4b5e8a;--res-preparation:#5f6516;--res-electoral:#33557a;
+  --cat-field:#2f6b3a;--cat-party:#5b3a8c;--cat-media:#0b6a85;--cat-money:#7a5b00;--cat-personal:#0f6e66;--cat-institution:#203957;--cat-justice:#6b4a33;
+  --tri-blue:#203957;--tri-red:#b8293b;
+  --font-display:'Zilla Slab',Georgia,'Times New Roman',serif;
+  --font-sans:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{background:var(--canvas);color:var(--ink);font-family:var(--font-sans);font-size:14px;-webkit-font-smoothing:antialiased}
+.wrap{padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.caption{font-size:12px;color:var(--muted);margin:0 0 8px;display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
+.caption b{font-family:var(--font-display);color:var(--primary);font-size:15px}
+.shell{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--canvas);max-width:1440px;margin:0 auto}
+svg.lucide{width:1em;height:1em;stroke-width:2;flex:none;vertical-align:-0.125em}
+.tnum{font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance}
+.section-title{font-family:var(--font-display);font-weight:700;font-size:18px;color:var(--primary);display:flex;align-items:center;gap:8px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px}
+.muted{color:var(--muted)}
+.upper{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+button{font:inherit;cursor:pointer}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:4px;padding:8px 16px;font-size:14px;font-weight:500;border:1px solid transparent;transition:background .15s}
+.btn-primary{background:var(--primary);color:var(--surface)}.btn-primary:hover{background:#2f4a6b}
+.btn-secondary{background:var(--surface);color:var(--ink);border-color:var(--line)}.btn-secondary:hover{background:var(--sidebar)}
+.btn-small{padding:4px 8px;font-size:12px}
+/* Pastille (EffectChip) : icône = couleur de ressource, fond et chiffre = sens. */
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid;border-radius:999px;padding:1px 6px;font-size:12px;font-weight:600;white-space:nowrap;line-height:16px}
+.gain{background:var(--gain-soft);border-color:var(--gain-line);color:var(--positive)}
+.cost{background:var(--cost-soft);border-color:var(--cost-line);color:var(--danger)}
+.risk{background:var(--risk-soft);border-color:var(--risk-line);color:var(--warning)}
+.neutral{background:var(--surface);border-color:var(--line);color:var(--ink)}
+.tier{display:inline-block;border-radius:2px;padding:0 6px;font-size:11px;line-height:20px;font-weight:700;color:var(--surface);white-space:nowrap}
+.stamp{display:inline-block;transform:rotate(-2deg);border:2px solid;border-radius:2px;padding:0 8px;font-family:var(--font-display);font-size:12px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.avatar{display:inline-grid;place-items:center;border-radius:999px;color:var(--surface);font-weight:700;flex:none;box-shadow:0 0 0 1px var(--surface),0 0 0 3px var(--ring,var(--line))}
+.av-sm{width:28px;height:28px;font-size:12px}.av-md{width:40px;height:40px;font-size:14px}
+.meter{position:relative;height:6px;border-radius:999px;background:var(--sidebar);overflow:hidden}
+.meter>i{position:absolute;inset:0 auto 0 0;border-radius:999px}
+.meter>.tick{position:absolute;top:0;bottom:0;width:2px;background:var(--surface)}
+.meter>.ghost{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,currentColor 0 2px,transparent 2px 4px);opacity:.6}
+.hatch{background-image:repeating-linear-gradient(135deg,rgba(255,253,250,.28) 0 3px,transparent 3px 7px)}
+/* Coque */
+.idband{display:grid;grid-template-columns:200px minmax(0,1fr);align-items:center;min-height:36px;border-bottom:1px solid var(--line);background:var(--surface)}
+.brand{display:flex;align-items:center;gap:6px;padding:0 20px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary);white-space:nowrap;font-family:var(--font-sans)}
+.idrow{display:flex;align-items:center;gap:16px;padding:6px 16px;min-width:0;flex-wrap:wrap;font-size:14px}
+.fn{display:inline-flex;align-items:center;gap:4px;background:var(--primary);color:var(--surface);border-radius:999px;padding:1px 8px;font-size:12px;font-weight:600;white-space:nowrap}
+.ticker{margin-left:auto;display:flex;align-items:center;gap:8px;min-width:0;font-size:12px;max-width:460px}
+.ticker .media{font-family:var(--font-display);color:var(--primary);white-space:nowrap}
+.ticker .hl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.statband{display:grid;grid-template-columns:200px minmax(0,1fr);border-bottom:1px solid var(--line);background:var(--surface)}
+.datecell{padding:10px 20px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:4px;justify-content:center}
+.stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr))}
+.stat{padding:10px 14px;display:flex;flex-direction:column;gap:4px;justify-content:center;border-left:1px solid var(--line);min-width:0}
+.stat:first-child{border-left:0}
+.stat dt{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.stat dd{margin:0}
+.alertbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 20px;border-bottom:1px solid var(--line);background:var(--surface);font-size:14px;min-height:40px}
+.al-warn{display:flex;align-items:center;gap:8px;border:1px solid var(--warning);border-left-width:4px;border-radius:4px;padding:2px 10px;min-width:0}
+.al-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:12px;color:var(--muted);background:var(--surface)}
+.body{display:grid;grid-template-columns:200px minmax(0,1fr) 300px;min-height:640px}
+nav.tabs{background:var(--sidebar);border-right:1px solid var(--line);padding:12px}
+nav.tabs ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+nav.tabs button{display:flex;width:100%;align-items:center;gap:8px;border:0;background:transparent;border-radius:4px;padding:8px 12px;text-align:left;font-size:14px;color:var(--ink)}
+nav.tabs button:hover{background:var(--surface)}
+nav.tabs button[aria-current="page"]{background:var(--primary);color:var(--surface)}
+.navbadge{margin-left:auto;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:2px;padding:0 4px;background:var(--danger);color:var(--surface)}
+nav.tabs button[aria-current="page"] .navbadge{background:var(--surface);color:var(--danger)}
+.navnote{margin:12px 4px 0;font-size:11px;color:var(--muted);line-height:1.5;border-top:1px solid var(--line);padding-top:10px}
+main{padding:20px;min-width:0;display:flex;flex-direction:column;gap:16px}
+aside.carnet{background:var(--sidebar);border-left:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.timebar{display:flex;gap:2px;height:12px;border-radius:3px;overflow:hidden;background:var(--surface);border:1px solid var(--line)}
+.timebar.thick{height:28px;border-radius:6px;padding:2px;background:var(--sidebar)}
+.timebar>span{display:flex;align-items:center;justify-content:center;color:var(--surface);font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;border-radius:2px}
+.step{display:flex;overflow:hidden;border:1px solid var(--line);border-radius:4px;background:var(--surface)}
+.step .strip{width:4px;flex:none}
+.step .in{flex:1;min-width:0;display:flex;align-items:center;gap:6px;padding:4px 4px 4px 8px}
+.step .name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px;font-weight:500}
+.iconbtn{display:grid;place-items:center;width:24px;height:24px;border:0;border-radius:4px;background:transparent;color:var(--muted)}
+.iconbtn:hover{background:var(--sidebar)}
+.iconbtn.on{color:var(--primary)}
+.iconbtn.on svg{fill:currentColor}
+.controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:8px 20px;border-top:1px solid var(--line);background:var(--surface);font-size:14px}
+/* Agenda */
+.themes{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.theme{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:12px;color:var(--ink);text-align:center;line-height:1.2}
+.theme .ic{width:32px;height:32px;border-radius:6px;display:grid;place-items:center;color:var(--surface);font-size:18px}
+.theme[aria-pressed="true"]{border:2px solid var(--primary);background:var(--sidebar);padding:9px 3px 7px}
+.theme .n{font-size:11px;color:var(--muted)}
+.acards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.ac{height:196px;display:grid;grid-template-rows:4px 26px 40px 40px 22px 26px 26px;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden;text-align:left;padding:0;color:var(--ink)}
+.ac:hover{border-color:#b9b2a4}
+.ac[aria-pressed="true"]{outline:2px solid var(--primary);outline-offset:1px}
+.ac .row{display:flex;align-items:center;gap:4px;padding:0 8px;min-width:0;overflow:hidden}
+.ac .lbl{font-size:11px;color:var(--muted);width:34px;flex:none}
+.ac .t{font-family:var(--font-display);font-weight:700;color:var(--primary);font-size:14px;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;align-self:start}
+.kind{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:2px;padding:0 5px;line-height:16px;display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+.k-fix{background:var(--sidebar);color:var(--muted)}.k-ctx{background:var(--risk-soft);color:var(--warning)}.k-rot{background:#e6ebf1;color:var(--primary)}.k-opp{background:var(--cost-soft);color:var(--danger)}
+.empty{height:196px;border:1.5px dashed var(--line);border-radius:8px;display:grid;place-items:center;text-align:center;font-size:12px;color:var(--muted);padding:8px}
+.detail{display:flex;gap:16px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:0 8px 8px 0;padding:14px 16px}
+.fmt{font-size:12px;padding:3px 10px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--ink)}
+.fmt[aria-pressed="true"]{background:var(--primary);color:var(--surface);border-color:var(--primary)}
+/* Démarches */
+.dem{display:inline-flex;flex-direction:column;align-items:flex-end;gap:3px}
+.dem small{font-size:11px;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.grid5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.sub{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.kv{display:flex;justify-content:space-between;gap:8px;align-items:baseline;font-size:13px}
+.fold{display:flex;align-items:center;gap:8px;border:1px dashed var(--line);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--muted);background:transparent;width:100%;text-align:left}
+.clip{background:var(--surface);border:1px solid var(--line);box-shadow:0 1px 2px rgba(32,42,53,.08);padding:10px 12px;border-radius:2px}
+.clip .m{font-family:var(--font-display);color:var(--primary);font-size:13px}
+.partydot{width:10px;height:10px;border-radius:2px;display:inline-block;flex:none}
+@media (max-width:1100px){
+  .body{grid-template-columns:200px minmax(0,1fr)}
+  aside.carnet{grid-column:1/-1;border-left:0;border-top:1px solid var(--line)}
+  .stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .stat:nth-child(4){border-left:0}
+  .stat:nth-child(n+4){border-top:1px solid var(--line)}
+  .acards,.grid5{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .ticker{display:none}
+}
+@media (max-width:760px){
+  .idband,.statband,.body{grid-template-columns:minmax(0,1fr)}
+  .datecell{border-right:0;border-bottom:1px solid var(--line)}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stat{border-left:0;border-top:1px solid var(--line)}
+  nav.tabs{border-right:0;border-bottom:1px solid var(--line)}
+  nav.tabs ul{flex-direction:row;flex-wrap:wrap}
+  nav.tabs li{flex:1 1 30%}
+  .navnote{display:none}
+  .themes{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .acards,.grid2,.grid3,.grid4,.grid5{grid-template-columns:minmax(0,1fr)}
+  .ac,.empty{height:auto;min-height:150px}
+  .detail{flex-direction:column}
+  main{padding:16px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <p class="caption"><b>Maquette de discussion</b><span>Coque à six onglets · décisions des retours 1 à 6 · textes et chiffres d’exemple, icônes Lucide</span></p>
+  <div class="shell" id="shell">
+    <header>
+      <div style="height:4px;display:flex" aria-hidden="true"><span style="flex:1;background:var(--tri-blue)"></span><span style="flex:1;background:var(--surface)"></span><span style="flex:1;background:var(--tri-red)"></span></div>
+      <div class="idband">
+        <div class="brand"><i data-lucide="landmark"></i>La République, c’est moi !</div>
+        <div class="idrow">
+          <span class="fn"><i data-lucide="badge-check"></i>Conseillère municipale</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><i data-lucide="flag" class="muted"></i><span class="muted">Étiquette</span><b>PS</b></span>
+          <span style="display:inline-flex;align-items:center;gap:6px;min-width:0"><i data-lucide="map-pin" class="muted"></i><b>Villeneuve-sur-Lot</b><span class="muted">(Lot-et-Garonne, Aquitaine)</span></span>
+          <span class="ticker" aria-label="Presse du trimestre"><span class="media">La Dépêche du Lot</span><span class="hl">La conserverie annonce 80 suppressions de postes</span><span class="muted tnum">1/3</span></span>
+        </div>
+      </div>
+      <div class="statband">
+        <div class="datecell">
+          <span class="upper muted">Trimestre</span>
+          <span><span style="display:block;font-family:var(--font-display);font-weight:700;font-size:20px;line-height:1">Printemps 2001</span><span class="muted" style="font-size:12px">34 ans</span></span>
+        </div>
+        <dl class="stats" id="stats" style="margin:0"></dl>
+      </div>
+    </header>
+    <section class="alertbar" aria-label="Alertes">
+      <p class="al-warn" style="margin:0"><i data-lucide="triangle-alert" style="color:var(--warning)"></i><span class="upper" style="color:var(--warning)">À traiter</span><span>Municipales : dernier trimestre pour annoncer vos engagements.</span></p>
+      <span class="al-pill"><i data-lucide="info"></i>Information · 2</span>
+    </section>
+    <div class="body">
+      <nav class="tabs" aria-label="Écrans de la partie"><ul id="tabs"></ul><p class="navnote" id="navnote"></p></nav>
+      <main id="main" tabindex="-1"></main>
+      <aside class="carnet" aria-label="Plan du trimestre" id="carnet"></aside>
+    </div>
+    <div class="controls">
+      <span style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <button class="btn btn-secondary btn-small" type="button" id="retire" style="color:var(--danger)"><i data-lucide="door-open"></i>Se retirer de la vie politique</button>
+        <span>Temps utilisé : <b class="tnum" id="used">80</b>/100 <span class="muted">· Sauvegarde locale · enregistrée</span></span>
+      </span>
+      <span style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" type="button" id="next"><i data-lucide="play"></i>Trimestre suivant</button>
+      </span>
+    </div>
+    <div id="retireDialog" hidden style="border-top:1px solid var(--line);background:rgba(32,42,53,.5);padding:24px 16px;display:grid;place-items:center">
+      <div class="card" style="max-width:32rem;display:flex;flex-direction:column;gap:12px" role="dialog" aria-labelledby="retire-t">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 id="retire-t" style="font-size:20px;color:var(--ink)">Quitter la vie politique ?</h2><span class="stamp" style="color:var(--danger);border-color:var(--danger)">Définitif</span></div>
+        <p style="margin:0;line-height:1.5">Votre carrière s’achèvera à la fin de ce trimestre : votre plan est encore joué, puis tous vos mandats sont rendus et le bilan s’ouvre.</p>
+        <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-secondary" id="stay">Rester en politique</button><button type="button" class="btn" id="confirmRetire" style="background:var(--danger);color:var(--surface)">Annoncer ma retraite</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<script>
+const CAT={field:'var(--cat-field)',party:'var(--cat-party)',media:'var(--cat-media)',money:'var(--cat-money)',personal:'var(--cat-personal)',institution:'var(--cat-institution)',justice:'var(--cat-justice)'};
+const RES={inf:['megaphone','var(--res-influence)','Influence'],bud:['piggy-bank','var(--res-budget)','Budget politique'],cash:['wallet','var(--res-cash)','Argent'],pop:['thumbs-up','var(--res-popularity)','Popularité'],hp:['heart-pulse','var(--res-health)','Santé'],str:['zap','var(--res-stress)','Stress'],exp:['eye','var(--res-exposure)','Exposition'],jus:['gavel','var(--res-justice)','Risque judiciaire'],prep:['clipboard-check','var(--res-preparation)','Préparation'],time:['hourglass','var(--res-time)','Temps'],work:['hard-hat','var(--res-electoral)','Classes populaires'],mid:['house','var(--res-electoral)','Classes moyennes'],act:['flag','var(--res-influence)','Militants']};
+const ic=(n,style)=>`<i data-lucide="${n}"${style?` style="${style}"`:''}></i>`;
+/* chip(ressource, sens, texte, aléa) : la direction seule (↑, ↑↑, ↕) quand aucun collaborateur ne lit la ressource. */
+const chip=(r,s,t,dice)=>`<span class="chip ${s}" title="${RES[r][2]} : ${t}">${ic(RES[r][0],'color:'+RES[r][1])}<span class="tnum">${t}</span>${dice?ic('dices','color:var(--muted)'):''}</span>`;
+const time=t=>`<span class="chip neutral">${ic('hourglass','color:var(--res-time)')}<span class="tnum">${t}</span></span>`;
+const tier=(l,c)=>`<span class="tier" style="background:${c}">${l}</span>`;
+const avatar=(i,c,ring,size)=>`<span class="avatar av-${size||'sm'}" style="background:${c};--ring:${ring}" aria-hidden="true">${i}</span>`;
+const meter=(v,c,ticks,ghost)=>`<div class="meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${v}"><i style="width:${v}%;background:${c}"></i>${ghost?`<span class="ghost" style="left:${v}%;width:${ghost-v}%;color:${c}"></span>`:''}${(ticks||[]).map(t=>`<span class="tick" style="left:${t}%"></span>`).join('')}</div>`;
+
+const state={tab:'tri',theme:'terrain',sel:'terrain-1',fmt:{},signed:{'promise.conserverie':true},
+  steps:[{id:'terrain-0',label:'Distribuer des tracts',t:15,c:'field',pin:true},{id:'parti-0',label:'Réunion de section',t:10,c:'party',pin:false}]};
+const RESERVED=[{label:'Mandat',t:15,c:CAT.institution},{label:'Emploi',t:40,c:CAT.money}];
+const DEM={'promise.conserverie':'Annoncer : fonds pour la conserverie','promise.logements':'Annoncer : 200 logements sociaux','promise.mediateurs':'Annoncer : médiateurs de quartier','promise.navette':'Annoncer : navette gratuite','party.motion':'Déposer une motion loyale','job.quit':'Démissionner de l’emploi (préavis)','job.federation':'Accepter : fédération du parti','job.fulltime':'Passer à plein temps','job.friend':'Accepter : « conseillère » chez un ami','money.donate':'Verser 3 000 € à l’organisation','life.modest':'Passer au train de vie modeste','org.local':'Louer un local de campagne'};
+
+const THEMES=[
+ {id:'terrain',l:'Terrain',i:'footprints',c:'field',a:[
+  {n:'Distribuer des tracts',i:'file-text',k:'fix',d:'Un samedi matin au marché, entre le fromager et un militant adverse qui distribue exactement le même tract avec un autre logo.',f:[['',15,[['bud','cost','− 20 €']],[['inf','gain','↑'],['work','gain','↑']]]]},
+  {n:'Réunion publique',i:'mic',k:'fix',d:'Occuper le terrain : une salle des fêtes, une salle de congrès ou un Zénith, selon vos ambitions et votre budget.',f:[['Salle des fêtes',20,[['bud','cost','− 200 €']],[['inf','gain','↑'],['pop','gain','+ 1 à 2',1]]],['Congrès',30,[['bud','cost','− 2 000 €']],[['inf','gain','↑↑'],['pop','gain','+ 2 à 4',1]]],['Zénith',45,[['bud','cost','− 15 000 €']],[['inf','gain','↑↑'],['pop','gain','+ 4 à 7',1],['str','cost','↑↑']]]]},
+  {n:'Porte-à-porte',i:'door-open',k:'ctx',ctx:'liée aux municipales',d:'Les municipales sont dans trois trimestres : chaque palier d’immeuble compte, chaque chien de garde aussi.',f:[['',20,[],[['prep','gain','↑'],['pop','gain','+ 1 à 3',1],['str','cost','↑']]]]},
+  {n:'Marché du dimanche',i:'shopping-basket',k:'rot',d:'Serrer des mains entre deux cagettes de poireaux, goûter le saucisson, promettre un parking.',f:[['',10,[],[['pop','gain','+ 0 à 2',1]]]]},
+  {n:'Parrainer le club de foot',i:'trophy',k:'opp',d:'L’équipe des moins de 13 ans cherche un sponsor maillot. Votre nom, en lettres capitales, dans le dos du gardien.',f:[['',15,[['cash','cost','− 1 500 €']],[['pop','gain','+ 2 à 4',1],['work','gain','↑']]]]}]},
+ {id:'parti',l:'Parti',i:'vote',c:'party',a:[
+  {n:'Réunion de section',i:'armchair',k:'fix',d:'Ordre du jour : l’ordre du jour. Le café est tiède, les motions sont brûlantes.',f:[['',10,[],[['inf','gain','↑'],['act','gain','↑']]]]},
+  {n:'Université d’été',i:'sun',k:'ctx',ctx:'saison des universités d’été',d:'Trois jours de tables rondes, une photo de famille et des petites phrases au bar de l’hôtel.',f:[['',25,[['cash','cost','− 600 €']],[['inf','gain','↑↑'],['str','cost','↑']]]]},
+  {n:'Tracter avec le fédéral',i:'user-check',k:'rot',d:'Être vu à côté de la bonne personne, au bon moment, sur la bonne photo.',f:[['',15,[],[['inf','gain','↑']]]]},
+  {n:'Meeting du parti',i:'party-popper',k:'rot',d:'Applaudir au bon moment, au troisième rang, derrière les caméras.',f:[['',15,[],[['inf','gain','↑'],['act','gain','↑']]]]},
+  {n:'Dîner des éléphants',i:'utensils',k:'opp',d:'Une place s’est libérée à la table des anciens ministres. Ne pas reprendre de dessert avant eux.',f:[['',20,[['cash','cost','− 300 €']],[['inf','gain','↑↑']]]]}]},
+ {id:'medias',l:'Médias',i:'newspaper',c:'media',a:[
+  {n:'Vidéo pour les réseaux',i:'video',k:'fix',d:'Quarante prises pour avoir l’air spontané.',f:[['',10,[],[['pop','risk','− 1 à + 3',1],['exp','gain','↑']]]]},
+  {n:'Interview',i:'mic',k:'fix',d:'La presse régionale vous connaît ; la matinale nationale, pas encore.',f:[['Locale',10,[],[['pop','gain','+ 1 à 2',1]]],['Nationale',20,[],[['pop','gain','+ 2 à 4',1],['exp','gain','↑↑'],['str','cost','↑']]]]},
+  {n:'Déjeuner avec un journaliste',i:'wine',k:'rot',d:'Tout est off, sauf ce qui sera publié.',f:[['',15,[['cash','cost','− 90 €']],[['inf','gain','↑'],['exp','gain','↑']]]]},
+  {n:'Plateau télé',i:'tv',k:'rot',d:'Débat à six, temps de parole : quarante secondes. Un bon mot peut tout changer, un mauvais aussi.',f:[['',20,[],[['pop','risk','− 4 à + 5',1],['str','cost','↑']]]]},
+  {n:'Télé-réalité politique',i:'chef-hat',k:'opp',d:'« Les élus en cuisine » cherche un candidat. Le ridicule ne tue pas, paraît-il.',f:[['',30,[],[['pop','risk','− 8 à + 6',1],['exp','gain','↑↑']]]]}]},
+ {id:'mandat',l:'Mandat',i:'landmark',c:'institution',a:[
+  {n:'Question au conseil',i:'message-circle-question',k:'fix',d:'Poser la question, ignorer la réponse, publier le compte rendu.',f:[['',10,[],[['inf','gain','↑']]]]},
+  {n:'Tribune de l’opposition',i:'pen-line',k:'fix',d:'Un quart de page dans le bulletin municipal, entre les horaires de la déchetterie et le carnet rose.',f:[['',10,[],[['pop','gain','+ 0 à 2',1]]]]},
+  {n:'Visiter l’usine menacée',i:'factory',k:'ctx',ctx:'liée à la conserverie',d:'Les caméras seront là, les repreneurs moins.',f:[['',15,[],[['pop','gain','+ 2 à 4',1],['work','gain','↑↑'],['str','cost','↑']]]]},
+  {n:'Dénoncer le rond-point',i:'refresh-cw',k:'rot',d:'Un rond-point à 1,2 million d’euros : la tribune s’écrit toute seule.',f:[['',10,[],[['pop','gain','+ 1 à 2',1]]]]},
+  {n:'Accueillir la ville jumelle',i:'globe',k:'opp',d:'Une délégation arrive demain. Personne ne sait d’où exactement.',f:[['',20,[['bud','cost','− 800 €']],[['inf','gain','↑']]]]}]},
+ {id:'argent',l:'Réseau et argent',i:'coins',c:'money',a:[
+  {n:'Rencontrer des élus',i:'contact',k:'fix',d:'Le carnet d’adresses ne se remplit pas tout seul.',f:[['',15,[],[['inf','gain','↑']]]]},
+  {n:'Organiser une collecte',i:'banknote',k:'fix',d:'Remplir le budget politique : un dîner à prix libre, une levée de fonds, une grande soirée de donateurs.',f:[['Dîner',15,[],[['bud','gain','+ 700 à 900 €',1]]],['Levée de fonds',25,[],[['bud','gain','+ 2 500 à 3 000 €',1]]],['Grande soirée',40,[],[['bud','gain','+ 8 000 à 9 000 €',1],['str','cost','↑']]]]},
+  {n:'Golf avec la CCI',i:'flag-triangle-right',k:'rot',d:'Dix-huit trous, trois promesses, aucune trace écrite.',f:[['',20,[['cash','cost','− 150 €']],[['inf','gain','↑'],['jus','risk','↑']]]]}]},
+ {id:'perso',l:'Vie perso',i:'coffee',c:'personal',a:[
+  {n:'Dîner en famille',i:'house',k:'fix',d:'Votre fille vous demande votre nom.',f:[['',10,[],[['str','gain','↓']]]]},
+  {n:'Se reposer',i:'bed',k:'fix',d:'Le téléphone en silencieux, pour une fois.',f:[['',15,[],[['str','gain','↓↓'],['hp','gain','↑']]]]},
+  {n:'Partir en vacances',i:'plane',k:'rot',d:'Quelque part sans réseau, ce qui ne veut rien dire.',f:[['',30,[['cash','cost','− 1 500 €']],[['str','gain','↓↓'],['hp','gain','↑']]]]},
+  {n:'Marathon caritatif',i:'footprints',k:'opp',d:'42 km pour une bonne cause, et une photo à l’arrivée.',f:[['',20,[],[['pop','gain','+ 1 à 3',1],['hp','gain','↑']]]]}]},
+ {id:'equipe',l:'Équipe',i:'users',c:'institution',a:[
+  {n:'Entretien approfondi',i:'user-search',k:'fix',d:'Mieux connaître le candidat avant de lui faire une offre.',f:[['',15,[],[]]]},
+  {n:'Chercher un collaborateur',i:'search',k:'fix',d:'Pour un poste vacant : du vivier habituel à la chasse de tête.',f:[['Simple',10,[['bud','cost','− 800 €']],[]],['Ciblée',15,[['bud','cost','− 3 000 €']],[]],['Chasse de tête',20,[['bud','cost','− 10 000 €']],[]]]},
+  {n:'Séminaire d’équipe',i:'presentation',k:'rot',d:'Un gîte, un tableau de conférence, des tensions.',f:[['',20,[['bud','cost','− 1 000 €']],[['str','cost','↑']]]]}]}];
+const KIND={fix:['Toujours là','k-fix',''],ctx:['Contexte','k-ctx','triangle-alert'],rot:['Rotation','k-rot','refresh-cw'],opp:['Ce trimestre','k-opp','clock']};
+const TABS=[
+ {id:'tri',l:'Trimestre',i:'calendar-days',note:'Agenda, situation et fixe du trimestre.'},
+ {id:'pol',l:'Politique',i:'vote',badge:'Campagne',note:'Campagne en cours en tête, puis mandat et parti.'},
+ {id:'vie',l:'Vie privée',i:'house',note:'Emploi, santé et famille, patrimoine.'},
+ {id:'res',l:'Mon réseau',i:'users',note:'Équipe, organisation et financement, relations.'},
+ {id:'fr',l:'La France',i:'globe',note:'Partis, contexte national, presse.'},
+ {id:'jr',l:'Journal',i:'book-open',note:'Carnet de carrière.'}];
+
+const theme=id=>THEMES.find(t=>t.id===id);
+const actionOf=id=>{const [t,k]=id.split('-');return {th:theme(t),a:theme(t).a[+k]}};
+const used=()=>RESERVED.reduce((s,x)=>s+x.t,0)+state.steps.reduce((s,x)=>s+x.t,0);
+const demBtn=(id,label,note)=>state.signed[id]
+ ?`<span class="dem"><button type="button" class="btn btn-secondary btn-small" data-dem="${id}" aria-pressed="true" title="Annuler la démarche"><span class="stamp" style="color:var(--positive);border-color:var(--positive)">Signé</span>Annuler</button><small>${note||'Démarche · sans temps'}</small></span>`
+ :`<span class="dem"><button type="button" class="btn btn-secondary btn-small" data-dem="${id}" aria-pressed="false">${ic('stamp')}${label}</button><small>${note||'Démarche · sans temps'}</small></span>`;
+
+function renderStats(){
+ const cell=(r,label,val,extra)=>`<div class="stat"><dt style="color:${RES[r][1]}">${ic(RES[r][0])}<span>${label}</span></dt><dd style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span class="tnum" style="font-size:20px;font-weight:700;line-height:1">${val}</span>${extra.side||''}</dd><dd style="height:16px;display:flex;align-items:center">${extra.bottom||''}</dd></div>`;
+ const fc=(t,tone,arrow)=>`<span class="tnum" style="font-size:12px;display:flex;align-items:center;gap:2px;color:${tone}">${ic(arrow)}${t}<span class="muted">&nbsp;prévu</span></span>`;
+ document.getElementById('stats').innerHTML=
+  cell('inf','Influence','24',{bottom:fc('↑','var(--positive)','trending-up')})+
+  cell('bud','Budget','1 800 €',{bottom:fc('− 1 220 €','var(--danger)','trending-down')})+
+  cell('cash','Argent','4 200 €',{bottom:fc('+ 650 €','var(--positive)','trending-up')})+
+  cell('pop','Popularité','31',{side:'<span class="muted" style="font-size:12px">Discrète</span>',bottom:`<div style="width:100%">${meter(31,'var(--res-popularity)',[20,40,60,80])}</div>`})+
+  cell('hp','Santé','72',{side:'<span class="muted" style="font-size:12px">Bonne</span>',bottom:`<div style="width:100%">${meter(72,'var(--res-health)',[25,50,75])}</div>`})+
+  cell('str','Stress','38',{side:'<span class="muted tnum" style="font-size:12px">→ 44 · Tendu</span>',bottom:`<div style="width:100%">${meter(38,'var(--res-stress)',[30,60,80],44)}</div>`});
+}
+function renderTabs(){
+ document.getElementById('tabs').innerHTML=TABS.map(t=>`<li><button type="button" data-tab="${t.id}"${state.tab===t.id?' aria-current="page"':''}>${ic(t.i)}${t.l}${t.badge?`<span class="navbadge">${t.badge}</span>`:''}</button></li>`).join('');
+ document.getElementById('navnote').textContent=TABS.find(t=>t.id===state.tab).note;
+}
+function renderCarnet(){
+ const u=used(),left=100-u,reserved=RESERVED.reduce((s,x)=>s+x.t,0);
+ const signed=Object.keys(state.signed).filter(k=>state.signed[k]);
+ document.getElementById('used').textContent=u;
+ document.getElementById('carnet').innerHTML=`
+ <h2 class="section-title">${ic('clipboard-list')}Plan du trimestre</h2>
+ <p style="margin:0;display:flex;align-items:baseline;gap:6px" class="muted tnum"><span style="font-size:24px;font-weight:700;line-height:1;color:var(--res-time)">${left}</span>restants sur 100</p>
+ <div class="timebar">${RESERVED.map(r=>`<span class="hatch" style="flex:${r.t};background-color:${r.c}" title="${r.label} : ${r.t}"></span>`).join('')}${state.steps.map(s=>`<span style="flex:${s.t};background:${CAT[s.c]}" title="${s.label}"></span>`).join('')}<span style="flex:${left}"></span></div>
+ <p style="margin:0;font-size:12px" class="muted">${reserved} points réservés : mandat (15) et emploi à mi-temps (40).</p>
+ ${state.steps.length?`<ol style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px" aria-label="Activités du trimestre">${state.steps.map((s,i)=>`<li class="step"><span class="strip" style="background:${CAT[s.c]}"></span><div class="in"><span class="muted tnum" style="font-size:12px">${i+1}.</span><span class="name" title="${s.label}">${s.label}</span><span class="muted tnum" style="font-size:12px">${s.t}</span>${(s.k||'fix')==='fix'||s.k==='ctx'?`<button type="button" class="iconbtn${s.pin?' on':''}" data-pin="${i}" aria-pressed="${s.pin}" title="${s.pin?(s.k==='ctx'?'Épinglée tant que le contexte dure':'Épinglée : répétée chaque trimestre'):(s.k==='ctx'?'Épingler tant que le contexte dure':'Épingler : répéter chaque trimestre')}">${ic('pin')}</button>`:`<span class="iconbtn" style="cursor:default;opacity:.45" title="Action ${s.k==='opp'?'de ce trimestre seulement':'de rotation'} : elle ne s’épingle pas">${ic('pin-off')}</span>`}<button type="button" class="iconbtn" data-rm="${i}" title="Retirer">${ic('x')}</button></div></li>`).join('')}</ol>`:`<div style="border:1px dashed var(--line);border-radius:4px;padding:12px;text-align:center" class="muted">Aucune activité ce trimestre.</div>`}
+ <button type="button" class="btn btn-secondary btn-small" data-tab="tri">${ic('plus')}Ajouter une activité</button>
+ <div style="border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:6px">
+  <h3 style="font-size:15px;color:var(--primary);display:flex;align-items:center;gap:6px">${ic('stamp')}Démarches signées <span class="muted tnum" style="font-family:var(--font-sans);font-weight:400;font-size:12px">· ${signed.length}</span></h3>
+  ${signed.length?`<ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px">${signed.map(k=>`<li class="step"><span class="strip" style="background:var(--primary)"></span><div class="in"><span class="name" style="font-size:13px" title="${DEM[k]}">${DEM[k]}</span><button type="button" class="iconbtn" data-dem="${k}" title="Annuler">${ic('x')}</button></div></li>`).join('')}</ul>`:'<p class="muted" style="margin:0;font-size:12px">Aucune ce trimestre.</p>'}
+  <p class="muted" style="margin:0;font-size:12px">Sans temps. Elles s’appliquent à la fin du trimestre, dans l’ordre du tour.</p>
+ </div>`;
+}
+function tabTrimestre(){
+ const th=theme(state.theme);let cards='';
+ for(let k=0;k<5;k++){const a=th.a[k];if(!a){cards+=`<div class="empty">Emplacement libre<br>aucune autre action ce trimestre</div>`;continue}
+  const id=th.id+'-'+k,f=a.f[state.fmt[id]||0],kd=KIND[a.k],inPlan=state.steps.some(s=>s.id===id);
+  cards+=`<button type="button" class="ac" data-sel="${id}" aria-pressed="${state.sel===id}" style="${inPlan?'background:#f6f3ec':''}">
+   <span style="background:${CAT[th.c]}"></span>
+   <span class="row" style="justify-content:space-between"><span class="kind ${kd[1]}">${kd[2]?ic(kd[2]):''}${kd[0]}</span>${inPlan?ic('circle-check','color:var(--positive);font-size:16px'):''}</span>
+   <span class="row" style="gap:8px"><span style="width:32px;height:32px;border-radius:6px;background:${CAT[th.c]};color:var(--surface);display:grid;place-items:center;font-size:18px;flex:none">${ic(a.i)}</span><span class="muted" style="font-size:11px">${a.f.length>1?a.f.length+' formats':'1 format'}</span></span>
+   <span class="row"><span class="t">${a.n}</span></span>
+   <span class="row"><span class="lbl">Temps</span>${time(f[1])}</span>
+   <span class="row"><span class="lbl">Coût</span>${f[2].length?f[2].map(c=>chip(...c)).join(''):'<span class="muted" style="font-size:12px">aucun</span>'}</span>
+   <span class="row"><span class="lbl">Effet</span>${f[3].slice(0,2).map(c=>chip(...c)).join('')||'<span class="muted" style="font-size:12px">voir le détail</span>'}${f[3].length>2?`<span class="muted" style="font-size:11px">+${f[3].length-2}</span>`:''}</span>
+  </button>`}
+ let detail='';
+ if(state.sel&&state.sel.startsWith(th.id+'-')){const {a}=actionOf(state.sel),id=state.sel,fi=state.fmt[id]||0,f=a.f[fi],kd=KIND[a.k],inPlan=state.steps.some(s=>s.id===id),fits=f[1]<=100-used();
+  detail=`<div class="detail" style="--c:${CAT[th.c]}">
+   <span style="width:44px;height:44px;border-radius:8px;background:${CAT[th.c]};color:var(--surface);display:grid;place-items:center;font-size:24px;flex:none">${ic(a.i)}</span>
+   <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><h3 style="font-size:18px;color:var(--primary)">${a.n}</h3><span class="kind ${kd[1]}">${kd[2]?ic(kd[2]):''}${kd[0]}</span>${a.k==='opp'?'<span class="muted" style="font-size:12px">disparaît au prochain trimestre</span>':a.k==='rot'?'<span class="muted" style="font-size:12px">reviendra plus tard</span>':a.k==='ctx'?`<span class="muted" style="font-size:12px">${a.ctx}</span>`:''}</div>
+    <p style="margin:0;color:var(--muted);line-height:1.5;max-width:65ch">${a.d}</p>
+    ${a.f.length>1?`<div style="display:flex;gap:4px;flex-wrap:wrap">${a.f.map((x,j)=>`<button type="button" class="fmt" data-fmt="${id}" data-j="${j}" aria-pressed="${j===fi}">${x[0]} · ${x[1]}</button>`).join('')}</div>`:''}
+    <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">${time(f[1])}${f[2].map(c=>chip(...c)).join('')}${f[3].map(c=>chip(...c)).join('')}</div>
+    <p style="margin:0;font-size:12px" class="muted">${ic('info')} Coûts exacts. Effets : fourchette de la communication (Inès Barreau) et de la trésorerie (Paul Ricard) ; direction seule pour l’influence et le stress, faute de conseil politique et de cabinet.</p>
+   </div>
+   <span style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;align-self:center">${inPlan?`<button type="button" class="btn btn-secondary" data-unplan="${id}">${ic('circle-check','color:var(--positive)')}Au programme · retirer</button>`:fits?`<button type="button" class="btn btn-primary" data-plan="${id}">${ic('plus')}Ajouter au trimestre</button>`:`<button type="button" class="btn btn-secondary" disabled style="color:var(--muted)">Pas assez de temps</button><small class="muted" style="font-size:11px">Il manque ${f[1]-(100-used())} points</small>`}</span>
+  </div>`}
+ else detail=`<div class="detail" style="--c:var(--line)"><p class="muted" style="margin:0">Choisissez une carte pour voir le détail et l’ajouter au trimestre.</p></div>`;
+ return `<section style="display:flex;flex-direction:column;gap:12px" aria-labelledby="agenda-t">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap"><h2 class="section-title" id="agenda-t">${ic('calendar-days')}Agenda</h2><span class="muted" style="font-size:12px">5 cartes par thème · la rotation change chaque trimestre</span></div>
+  <div class="timebar thick">${RESERVED.map(r=>`<span class="hatch" style="flex:${r.t};background-color:${r.c}">${r.label} · ${r.t}</span>`).join('')}${state.steps.map((s,i)=>`<span style="flex:${s.t};background:${CAT[s.c]};cursor:pointer" data-rm="${i}" title="Retirer">${s.label} · ${s.t}</span>`).join('')}<span style="flex:${100-used()}"></span></div>
+  <div class="themes" role="group" aria-label="Thèmes de l’agenda">${THEMES.map(t=>{const n=state.steps.filter(s=>s.id.startsWith(t.id+'-')).length;return `<button type="button" class="theme" data-theme="${t.id}" aria-pressed="${state.theme===t.id}"><span class="ic" style="background:${CAT[t.c]}">${ic(t.i)}</span>${t.l}${n?`<span class="n">${n} au plan</span>`:''}</button>`}).join('')}</div>
+  <div class="acards">${cards}</div>
+  ${detail}
+ </section>
+ <section class="grid2">
+  <div class="card" style="display:flex;flex-direction:column;gap:8px"><h2 class="section-title" style="font-size:16px">${ic('scale')}Fixe ce trimestre</h2>
+   <div class="kv"><span>Indemnité de conseillère</span>${chip('cash','gain','+ 450 €')}</div>
+   <div class="kv"><span>Salaire, correspondante (mi-temps)</span>${chip('cash','gain','+ 1 100 €')}</div>
+   <div class="kv"><span>Train de vie confortable</span>${chip('cash','cost','− 900 €')}</div>
+   <div class="kv"><span>Salaires de l’équipe</span>${chip('bud','cost','− 1 200 €')}</div>
+   <p class="muted" style="margin:0;font-size:12px">Revenus et charges certains, hors actions.</p></div>
+  <div class="card" style="display:flex;flex-direction:column;gap:8px"><h2 class="section-title" style="font-size:16px">${ic('users-round')}Soutiens</h2>
+   ${[['work','Classes populaires',42,'Favorables'],['mid','Classes moyennes',28,'Réservées'],['act','Militants',55,'Mobilisés']].map(s=>`<div style="display:grid;grid-template-columns:minmax(0,1fr) 90px;gap:8px;align-items:center;font-size:13px"><span style="display:flex;align-items:center;gap:6px">${ic(RES[s[0]][0],'color:'+RES[s[0]][1])}${s[1]}</span><span class="muted" style="font-size:12px;text-align:right">${s[3]}</span><div style="grid-column:1/-1">${meter(s[2],RES[s[0]][1],[20,40,60,80])}</div></div>`).join('')}
+   <button type="button" class="fold">${ic('chevron-right')}Tendances et courbes</button></div>
+ </section>`;
+}
+function tabPolitique(){
+ const promise=(id,theme,i,label,origin,eff)=>`<div class="sub"><div style="display:flex;justify-content:space-between;gap:4px;flex-wrap:wrap"><span class="kind k-fix">${ic(i)}${theme}</span><span class="kind ${origin==='ctx'?'k-ctx':'k-rot'}">${origin==='ctx'?'Sujet du moment':'Tiré au sort'}</span></div><h3 style="font-size:14px;color:var(--primary);line-height:1.25;min-height:36px">${label}</h3><div style="display:flex;gap:4px;flex-wrap:wrap">${eff}</div><div style="display:flex;justify-content:flex-end;margin-top:auto">${demBtn(id,'Annoncer','Sans temps')}</div></div>`;
+ const made=['promise.conserverie','promise.logements','promise.mediateurs','promise.navette'].filter(k=>state.signed[k]).length;
+ const poll=[['PS','Martel (vous)',31,'var(--cat-party)',1],['RPR','Dutreuil (sortant)',36,'#33557a'],['FN','Bastien',14,'#565e68'],['LVD','Garnier',9,'var(--cat-field)'],['PCF','Roux',7,'var(--danger)']];
+ return `<section class="card" style="display:flex;flex-direction:column;gap:12px;border-top:4px solid var(--cat-field)">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h2 class="section-title">${ic('clipboard-check')}Municipales · Villeneuve-sur-Lot</h2><span class="stamp" style="color:var(--danger);border-color:var(--danger)">Campagne</span></div>
+  <p class="muted" style="margin:0;font-size:13px">Scrutin en hiver 2002, dans 3 trimestres · tête de liste · fonction visée : mairie</p>
+  <div class="grid2">
+   <div style="display:flex;flex-direction:column;gap:6px"><div class="kv"><span style="display:flex;align-items:center;gap:6px">${ic('clipboard-check','color:var(--res-preparation)')}Préparation</span><span><b class="tnum">46</b> <span class="muted" style="font-size:12px">Correcte</span></span></div>${meter(46,'var(--res-preparation)',[25,50,75])}</div>
+   <div style="display:flex;flex-direction:column;gap:4px"><span class="upper muted">Sondage local · marge ± 4</span>${poll.map(p=>`<div style="display:grid;grid-template-columns:150px minmax(0,1fr) 40px;gap:6px;align-items:center;font-size:12px${p[4]?';font-weight:700':''}"><span style="display:flex;align-items:center;gap:6px;min-width:0"><span class="partydot" style="background:${p[3]}"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p[0]} · ${p[1]}</span></span><div class="meter" style="height:8px"><i style="width:${p[2]*2.2}%;background:${p[3]}"></i></div><span class="tnum" style="text-align:right">${p[2]} %</span></div>`).join('')}</div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px"><h3 style="font-size:16px;color:var(--primary)">Engagements <span class="tnum" style="font-family:var(--font-sans);font-weight:400;font-size:13px;color:var(--muted)">${made}/3</span></h3><span class="muted" style="font-size:12px">4 thèmes tirés pour cette campagne : 2 sujets du moment, 2 au hasard</span></div>
+  <div class="grid4">
+   ${promise('promise.conserverie','Emploi','factory','Créer un fonds municipal pour sauver la conserverie','ctx',chip('work','gain','↑↑')+chip('bud','cost','coût au mandat'))}
+   ${promise('promise.logements','Logement','house','Construire 200 logements sociaux','ctx',chip('work','gain','↑')+chip('mid','risk','↕'))}
+   ${promise('promise.mediateurs','Sécurité','shield','Recruter des médiateurs de quartier','rot',chip('mid','gain','↑'))}
+   ${promise('promise.navette','Transports','bus','Rendre la navette du centre gratuite','rot',chip('pop','gain','+ 1 à 3',1)+chip('bud','cost','coût au mandat'))}
+  </div>
+  <button type="button" class="fold">${ic('chevron-right')}Listes adverses et règles du second tour (fusion, désistement)</button>
+ </section>
+ <section class="grid2">
+  <div class="card" style="display:flex;flex-direction:column;gap:8px"><h2 class="section-title" style="font-size:16px">${ic('landmark')}Mandat</h2>
+   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><div><b>Conseillère municipale</b> ${tier('Opposition','var(--cat-institution)')}<div class="muted" style="font-size:12px">Villeneuve-sur-Lot · jusqu’en 2002</div></div><span style="display:flex;gap:4px">${time('15 / trim.')}${chip('cash','gain','+ 450 €')}</span></div>
+   <button type="button" class="fold">${ic('chevron-right')}Mandats passés · aucun</button></div>
+  <div class="card" style="display:flex;flex-direction:column;gap:8px;border-left:4px solid var(--cat-party);border-radius:0 8px 8px 0"><h2 class="section-title" style="font-size:16px">${ic('vote')}Parti des Synthèses</h2>
+   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><div><b>Militante de section</b> ${tier('Appui correct','var(--res-influence)')}<div class="muted" style="font-size:12px">Congrès dans 2 trimestres · 3 motions en lice</div></div>${demBtn('party.motion','Déposer une motion')}</div>
+   <button type="button" class="fold">${ic('chevron-right')}Courants, investitures, quitter le parti</button></div>
+ </section>`;
+}
+function tabVie(){
+ const job=(id,title,mode,t,pay,eff,risk)=>`<div class="sub" style="${risk?'border-color:var(--risk-line)':''}"><div style="display:flex;justify-content:space-between;gap:4px"><span class="kind k-fix">${mode}</span>${risk?'<span class="kind k-ctx">'+ic('gavel')+'Complaisance</span>':''}</div><h3 style="font-size:14px;color:var(--primary);line-height:1.25;min-height:36px">${title}</h3><div style="display:flex;gap:4px;flex-wrap:wrap">${time(t+' / trim.')}${chip('cash','gain',pay)}${eff}</div>${risk?`<p style="margin:0;font-size:12px;color:var(--warning)">Peu d’heures, beaucoup d’argent : on parlera d’emploi fictif.</p>`:''}<div style="display:flex;justify-content:flex-end;margin-top:auto">${demBtn(id,'Accepter','Démarche · effet au trimestre prochain')}</div></div>`;
+ return `<section class="card" style="display:flex;flex-direction:column;gap:12px">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h2 class="section-title">${ic('briefcase')}Emploi</h2>${demBtn('job.quit','Démissionner','Préavis : vous travaillez encore ce trimestre')}</div>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--canvas)"><span style="width:36px;height:36px;border-radius:6px;background:var(--cat-money);color:var(--surface);display:grid;place-items:center;font-size:18px">${ic('newspaper')}</span><div style="flex:1;min-width:0"><b>Correspondante de presse, La Dépêche du Lot</b><div class="muted" style="font-size:12px">Mi-temps · depuis le printemps 2001</div></div><span style="display:flex;gap:4px;flex-wrap:wrap">${time('40 / trim.')}${chip('cash','gain','+ 1 100 €')}${chip('exp','gain','↑')}</span>${demBtn('job.fulltime','Passer à plein temps','70 points · + 2 000 €')}</div>
+  <span class="upper muted">Offres selon votre parcours : presse locale, Parti des Synthèses, classe moyenne</span>
+  <div class="grid3">${job('job.federation','Chargée de mission à la fédération','Mi-temps',40,'+ 1 300 €',chip('inf','gain','↑'))}${job('job.friend','« Conseillère » chez un ami du maire','Mi-temps',10,'+ 2 400 €',chip('jus','risk','↑↑'),1)}${job('job.mairie','Agente territoriale à temps partiel','Mi-temps',40,'+ 1 000 €',chip('mid','gain','↑'))}</div>
+ </section>
+ <section class="grid2">
+  <div class="card" style="display:flex;flex-direction:column;gap:10px"><h2 class="section-title" style="font-size:16px">${ic('heart-pulse')}Santé et famille</h2>
+   <div class="kv"><span style="display:flex;align-items:center;gap:6px">${ic('heart-pulse','color:var(--res-health)')}Santé</span><span><b class="tnum">72</b> <span class="muted" style="font-size:12px">Bonne</span></span></div>${meter(72,'var(--res-health)',[25,50,75])}
+   <div class="kv"><span style="display:flex;align-items:center;gap:6px">${ic('zap','color:var(--res-stress)')}Stress</span><span><b class="tnum">38</b> <span class="muted" style="font-size:12px">→ 44 · Tendu</span></span></div>${meter(38,'var(--res-stress)',[30,60,80],44)}
+   <div style="display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:8px">
+    ${[['TM','Thomas Martel','Conjoint','Patient',['var(--res-health)','#4b5e8a']],['LM','Léa Martel','Fille, 9 ans','Délaissée',['var(--res-health)','#a3326e']]].map(p=>`<div style="display:flex;align-items:center;gap:10px">${avatar(p[0],p[4][1],p[4][0])}<div style="flex:1;min-width:0"><b style="font-size:13px">${p[1]}</b><div class="muted" style="font-size:12px">${p[2]}</div></div><span style="font-size:12px;color:${p[3]==='Délaissée'?'var(--danger)':'var(--positive)'}">${p[3]}</span></div>`).join('')}
+   </div></div>
+  <div class="card" style="display:flex;flex-direction:column;gap:10px"><h2 class="section-title" style="font-size:16px">${ic('coins')}Patrimoine</h2>
+   <div class="kv"><span>Valeur nette</span><b class="tnum" style="font-size:18px">86 400 €</b></div>
+   <div class="kv"><span>Argent disponible</span><b class="tnum">4 200 €</b></div>
+   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:8px"><div><span>Train de vie</span> ${tier('Confortable','var(--res-cash)')}<div class="muted" style="font-size:12px">− 900 € par trimestre</div></div>${demBtn('life.modest','Passer au modeste')}</div>
+   <button type="button" class="fold">${ic('chevron-right')}Biens : un appartement, une voiture · investir</button></div>
+ </section>`;
+}
+function tabReseau(){
+ const post=(n,i,who,init,c,comp,compL,reads,lvl)=>{const L={0:['Direction seule','var(--danger)','var(--cost-soft)'],1:['Fourchette','var(--warning)','var(--risk-soft)'],2:['Fourchette resserrée','var(--positive)','var(--gain-soft)']}[lvl];
+  return `<div class="sub" style="${who?'':'border-style:dashed;background:transparent'}"><div style="display:flex;align-items:center;gap:6px">${ic(i,'color:var(--primary);font-size:16px')}<b style="font-size:13px">${n}</b></div>
+  ${who?`<div style="display:flex;align-items:center;gap:8px">${avatar(init,c,'var(--res-budget)')}<div style="min-width:0"><div style="font-size:13px;font-weight:600">${who}</div>${tier(compL,comp>70?'var(--positive)':'var(--res-electoral)')}</div></div>`:'<div class="muted" style="font-size:13px;min-height:34px">Poste vacant</div>'}
+  <div style="font-size:12px;display:flex;align-items:center;gap:4px;flex-wrap:wrap"><span class="muted">Prévoit</span>${reads.map(r=>ic(RES[r][0],'color:'+RES[r][1])).join('')}<span class="muted">${reads.map(r=>RES[r][2].toLowerCase()).join(', ')}</span></div>
+  <span class="kind" style="background:${L[2]};color:${L[1]};align-self:flex-start">${L[0]}</span>
+  ${who?'':`<button type="button" class="btn btn-secondary btn-small" data-tab="tri" data-theme-go="equipe">${ic('search')}Chercher (agenda)</button>`}</div>`};
+ const rel=(i,n,role,att,tone,c,ring)=>`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--sidebar)">${avatar(i,c,ring)}<div style="flex:1;min-width:0"><b style="font-size:13px">${n}</b><div class="muted" style="font-size:12px">${role}</div></div><span style="font-size:12px;color:${tone}">${att}</span></div>`;
+ return `<section class="card" style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap"><h2 class="section-title">${ic('users')}Votre équipe</h2><span style="font-size:12px" class="muted">Masse salariale 1 200 € / trimestre · ${tier('Équipe en construction','var(--res-electoral)')}</span></div>
+  <div class="grid5">${post('Cabinet','calendar-clock','','', '',0,'',['str','hp'],0)}${post('Communication','megaphone','Inès Barreau','IB','#a3326e',58,'Confirmée',['pop','exp'],1)}${post('Trésorerie','piggy-bank','Paul Ricard','PR','#7a5b00',82,'Expert',['bud','cash'],2)}${post('Conseil politique','chess-knight','','','',0,'',['inf','act'],0)}${post('Juridique','gavel','','','',0,'',['jus'],0)}</div>
+ </section>
+ <section class="grid2">
+  <div class="card" style="display:flex;flex-direction:column;gap:10px"><h2 class="section-title" style="font-size:16px">${ic('building')}Organisation et financement</h2>
+   <div class="kv"><span style="display:flex;align-items:center;gap:6px">${ic('flag','color:var(--res-influence)')}Militants actifs</span><span><b class="tnum">34</b> <span class="muted" style="font-size:12px">sur 50 places</span></span></div>${meter(68,'var(--res-influence)',[25,50,75])}
+   <div class="kv"><span style="display:flex;align-items:center;gap:6px">${ic('piggy-bank','color:var(--res-budget)')}Budget politique</span><b class="tnum">1 800 €</b></div>
+   <div style="border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px">
+    <div class="kv"><span>Dons légaux en 2001</span><span class="tnum"><b>${state.signed['money.donate']?'6 000':'3 000'}</b> / 7 500 € <span class="muted" style="font-size:12px">plafond</span></span></div>${meter(state.signed['money.donate']?80:40,'var(--res-budget)',[])}
+    <div style="display:flex;justify-content:flex-end">${demBtn('money.donate','Verser 3 000 €','Sans temps · depuis votre argent personnel')}</div>
+    <p class="muted" style="margin:0;font-size:12px">Au-delà du plafond, payer une action de votre poche reste possible, avec un risque judiciaire.</p>
+   </div>
+   <div style="display:flex;justify-content:flex-end">${demBtn('org.local','Louer un local','Démarche · − 300 € par trimestre')}</div></div>
+  <div class="card" style="display:flex;flex-direction:column;gap:4px"><h2 class="section-title" style="font-size:16px;margin-bottom:4px">${ic('handshake')}Relations</h2>
+   ${rel('SL','Sophie Lenoir','Première fédérale · PS','Bienveillante','var(--positive)','#6d3fa6','var(--primary)')}
+   ${rel('JD','Jean Dutreuil','Maire sortant · RPR','Méfiant','var(--danger)','#33557a','var(--danger)')}
+   ${rel('MK','Marc Keller','Journaliste · La Dépêche du Lot','Curieux','var(--warning)','#0f6e66','var(--res-exposure)')}
+   <button type="button" class="fold" style="margin-top:6px">${ic('chevron-right')}12 autres contacts · traits connus et « ? »</button></div>
+ </section>`;
+}
+function tabFrance(){
+ const P=[['PS','Parti des Synthèses',27,'var(--cat-party)',1],['RPR','Rassemblement pour la Réélection',24,'#33557a'],['FN','Front du Non',13,'#565e68'],['UDF','Union des Démocrates Flottants',11,'#0b6a85'],['LVD','Les Verts Divisés',8,'var(--cat-field)'],['PCF','Parti Camarade Français',7,'var(--danger)'],['CPNA','Chasse, Pêche, Nature et Apéro',5,'#7a5b00'],['LTI','Lutte Toujours Intransigeante',5,'#b0450c']];
+ return `<section class="grid2">
+  <div class="card" style="display:flex;flex-direction:column;gap:6px"><h2 class="section-title" style="font-size:16px;margin-bottom:4px">${ic('chart-bar')}Intentions de vote</h2>
+   ${P.map(p=>`<div style="display:grid;grid-template-columns:minmax(0,190px) minmax(0,1fr) 40px;gap:8px;align-items:center;font-size:13px${p[4]?';font-weight:700':''}"><span style="display:flex;align-items:center;gap:6px;min-width:0"><span class="partydot" style="background:${p[3]}"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${p[1]}">${p[1]}</span></span><div class="meter" style="height:10px"><i style="width:${p[2]*3}%;background:${p[3]}"></i></div><span class="tnum" style="text-align:right">${p[2]} %</span></div>`).join('')}
+   <p class="muted" style="margin:4px 0 0;font-size:12px">Sondage publié · marge ± 3 points · le Front du Non est sous cordon sanitaire</p></div>
+  <div class="card" style="display:flex;flex-direction:column;gap:8px"><h2 class="section-title" style="font-size:16px">${ic('flag')}Contexte national</h2>
+   <div class="kv"><span>Gouvernement</span><b>Parti des Synthèses</b></div>
+   <div class="kv"><span>Économie</span>${tier('Ralentissement','var(--warning)')}</div>
+   <div class="kv"><span>Climat social</span>${tier('Tendu','var(--danger)')}</div>
+   <div class="kv"><span>Stabilité du gouvernement</span>${tier('Solide','var(--positive)')}</div>
+   <div style="border-top:1px solid var(--line);padding-top:8px"><span class="upper muted">Préoccupations</span><div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">${['Emploi','Logement','Sécurité'].map((x,i)=>`<span class="chip neutral">${i+1}. ${x}</span>`).join('')}</div></div></div>
+ </section>
+ <section style="display:flex;flex-direction:column;gap:8px"><h2 class="section-title" style="font-size:16px">${ic('newspaper')}La presse du trimestre</h2>
+  <div class="grid3">
+   <article class="clip"><div class="m">La Dépêche du Lot</div><h3 style="font-size:15px;margin:4px 0">La conserverie annonce 80 suppressions de postes</h3><span class="chip risk">${ic('triangle-alert')}Local</span></article>
+   <article class="clip"><div class="m">Le Quotidien national</div><h3 style="font-size:15px;margin:4px 0">Le gouvernement promet une « grande concertation » sur la concertation</h3><span class="chip neutral">Ambiance</span></article>
+   <article class="clip"><div class="m">La Dépêche du Lot</div><h3 style="font-size:15px;margin:4px 0">Claire Martel, l’opposante qui tracte plus vite que son ombre</h3><span class="chip gain">${ic('thumbs-up')}Vous concerne</span></article>
+  </div></section>`;
+}
+function tabJournal(){
+ const E=[['Printemps 2001','Vous acceptez un mi-temps de correspondante de presse.','briefcase'],['Hiver 2001','Vous payez 1 200 € de votre poche pour le meeting de rentrée.','gavel',1],['Automne 2000','Inès Barreau rejoint votre équipe à la communication.','user-plus'],['Été 2000','Université d’été : la photo avec le premier secrétaire fait le tour de la section.','sun'],['Printemps 2000','Vous adhérez au Parti des Synthèses. Carte n° 004 712.','vote']];
+ return `<section class="card"><h2 class="section-title" style="margin-bottom:8px">${ic('book-open')}Journal de carrière</h2>
+  ${E.map(e=>`<div style="display:grid;grid-template-columns:110px 24px minmax(0,1fr);gap:8px;padding:8px 0;border-bottom:1px solid var(--sidebar);align-items:baseline"><span class="muted" style="font-size:12px">${e[0]}</span>${ic(e[2],'color:'+(e[3]?'var(--warning)':'var(--primary)'))}<span>${e[1]}${e[3]?' <span class="chip risk">'+ic('gavel')+'Choix douteux</span>':''}</span></div>`).join('')}</section>`;
+}
+function render(){
+ renderStats();renderTabs();renderCarnet();
+ document.getElementById('main').innerHTML={tri:tabTrimestre,pol:tabPolitique,vie:tabVie,res:tabReseau,fr:tabFrance,jr:tabJournal}[state.tab]();
+ if(window.lucide)lucide.createIcons();
+}
+document.getElementById('shell').addEventListener('click',e=>{
+ const t=e.target.closest('[data-tab],[data-theme],[data-sel],[data-fmt],[data-plan],[data-unplan],[data-rm],[data-pin],[data-dem]');if(!t)return;
+ const d=t.dataset;
+ if(d.tab){state.tab=d.tab;if(d.themeGo){state.theme=d.themeGo;state.sel=null}document.getElementById('main').scrollTop=0}
+ else if(d.theme){state.theme=d.theme;state.sel=null}
+ else if(d.sel){state.sel=d.sel}
+ else if(d.fmt){state.fmt[d.fmt]=+d.j}
+ else if(d.plan){const {th,a}=actionOf(d.plan),f=a.f[state.fmt[d.plan]||0];if(f[1]<=100-used()&&!state.steps.some(s=>s.id===d.plan))state.steps.push({id:d.plan,label:a.n+(f[0]?' ('+f[0].toLowerCase()+')':''),t:f[1],c:th.c,k:a.k,pin:false})}
+ else if(d.unplan){state.steps=state.steps.filter(s=>s.id!==d.unplan)}
+ else if(d.rm!==undefined){state.steps.splice(+d.rm,1)}
+ else if(d.pin!==undefined){state.steps[+d.pin].pin=!state.steps[+d.pin].pin}
+ else if(d.dem){state.signed[d.dem]=!state.signed[d.dem]}
+ render();
+});
+render();
+let retiring=false;
+const dlg=document.getElementById('retireDialog'),rb=document.getElementById('retire'),nb=document.getElementById('next');
+function syncRetire(){
+ rb.innerHTML=retiring?'<i data-lucide="undo-2"></i>Retraite annoncée · annuler':'<i data-lucide="door-open"></i>Se retirer de la vie politique';
+ nb.innerHTML=retiring?'<i data-lucide="flag"></i>Jouer mon dernier trimestre':'<i data-lucide="play"></i>Trimestre suivant';
+ nb.style.background=retiring?'var(--danger)':'';
+ if(window.lucide)lucide.createIcons();
+}
+rb.addEventListener('click',()=>{if(retiring){retiring=false;syncRetire()}else{dlg.hidden=false;document.getElementById('stay').focus()}});
+document.getElementById('stay').addEventListener('click',()=>{dlg.hidden=true;rb.focus()});
+document.getElementById('confirmRetire').addEventListener('click',()=>{retiring=true;dlg.hidden=true;syncRetire();rb.focus()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!dlg.hidden){dlg.hidden=true;rb.focus()}});
+</script>
