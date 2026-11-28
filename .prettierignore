@@ -11,10 +11,7 @@ bun.lockb
 # Documents de conception rédigés à la main (ne pas reformater)
 /AGENTS.md
 /CLAUDE.md
-/GAME_DESIGN.md
-/ARCHITECTURE.md
-/DESIGN.md
-/ROADMAP.md
+/docs/
 
 # Sorties de tests
 /test-results/
