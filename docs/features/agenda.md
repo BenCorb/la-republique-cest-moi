@@ -21,7 +21,7 @@ Composer le plan du trimestre avec le temps disponible : actions thématiques, f
 
 - Moteur (`src/lib/game/engine/`) : `plan.ts` (`previewPlan`, `carryOverPlan`), `scale.ts`, `conditions.ts`, `effects.ts`
 - Contenu (`src/lib/game/content/data/`) : `actions.json`, `balance.json`
-- Projection (`src/lib/game/app/view-model.ts`) : `PlanView`, `PlanStepView`, `CatalogItemView`, `ActionGroupView`, `ActionFormatView`
+- Projection (`src/lib/game/app/`, module `view/agenda.ts`) : `PlanView`, `PlanStepView`, `CatalogItemView`, `ActionGroupView`, `ActionFormatView`
 - Interface (`src/lib/components/`) : `agenda/Agenda.svelte`, `agenda/PlanPanel.svelte`, `agenda/TimeBar.svelte`, `shell/PlanNotebook.svelte`, `shell/PlanSheet.svelte`
 - Tests (`tests/`) : `unit/plan.test.ts`, `unit/agenda.test.ts`, `unit/scale.test.ts`
 

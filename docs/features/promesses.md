@@ -18,7 +18,7 @@ Engagements pris en campagne, suivis une fois élu : tenus, partiellement tenus 
 
 - Moteur (`src/lib/game/engine/`) : `promises.ts`
 - Contenu (`src/lib/game/content/data/`) : `promises.json`, `data/events/promises.json`
-- Projection (`src/lib/game/app/view-model.ts`) : `PromisesView`, `PledgeView`, `PromiseOfferView`, `PromiseCampaignView`
+- Projection (`src/lib/game/app/`, module `view/promises.ts`) : `PromisesView`, `PledgeView`, `PromiseOfferView`, `PromiseCampaignView`
 - Interface (`src/lib/components/`) : `career/PromisesCard.svelte`
 - Tests (`tests/`) : `unit/promises.test.ts`
 

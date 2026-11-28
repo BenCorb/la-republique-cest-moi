@@ -20,7 +20,7 @@ Le cœur satirique : les actes douteux laissent des faits, qui peuvent devenir d
 
 - Moteur (`src/lib/game/engine/`) : `justice.ts`
 - Contenu (`src/lib/game/content/data/`) : `justice.json`, `data/events/justice.json`
-- Projection (`src/lib/game/app/view-model.ts`) : `JusticeView`, `CaseView`, `FactView`
+- Projection (`src/lib/game/app/`, module `view/justice.ts`) : `JusticeView`, `CaseView`, `FactView`
 - Interface (`src/lib/components/`) : `dashboard/Dashboard.svelte` (jauges, dossiers), `journal/Journal.svelte`
 - Tests (`tests/`) : `unit/justice.test.ts`, `unit/capabilities.test.ts`
 

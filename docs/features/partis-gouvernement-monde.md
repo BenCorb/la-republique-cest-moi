@@ -20,7 +20,7 @@ La France alternative qui vit sans le joueur : huit partis fictifs, contexte nat
 
 - Moteur (`src/lib/game/engine/`) : `world.ts`, `party.ts`, `government.ts`
 - Contenu (`src/lib/game/content/data/`) : `world.json`
-- Projection (`src/lib/game/app/view-model.ts`) : `WorldView`, `PartyView`, `PartyCareerView`, `AdvanceOfferView`, `IndicatorView`
+- Projection (`src/lib/game/app/`, module `view/world.ts`) : `WorldView`, `PartyView`, `PartyCareerView`, `AdvanceOfferView`, `IndicatorView`
 - Interface (`src/lib/components/`) : `world/WorldPanel.svelte`
 - Tests (`tests/`) : `unit/world.test.ts`, `unit/party.test.ts`, `unit/government.test.ts`
 

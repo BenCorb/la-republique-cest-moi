@@ -18,7 +18,7 @@ Les figures persistantes : alliés, rivaux, dirigeants ; traits en partie caché
 
 - Moteur (`src/lib/game/engine/`) : `characters.ts`
 - Contenu (`src/lib/game/content/data/`) : `cast.json`, `traits.json`
-- Projection (`src/lib/game/app/view-model.ts`) : `PersonView`
+- Projection (`src/lib/game/app/`, module `view/people.ts`) : `PersonView`
 - Interface (`src/lib/components/`) : `people/RelationsPanel.svelte`, `common/Avatar.svelte`
 - Tests (`tests/`) : `unit/characters.test.ts`, `unit/rivals.test.ts`
 

@@ -19,7 +19,7 @@ Cinq médias fictifs et la presse régionale : fil d’actualité fondé sur les
 
 - Moteur (`src/lib/game/engine/`) : `press.ts`
 - Contenu (`src/lib/game/content/data/`) : `media.json`, `data/events/press.json`, `data/events/media.json`
-- Projection (`src/lib/game/app/view-model.ts`) : `MediaView`, `MediaOutletView`, `MediaActionView`, `PressItemView`
+- Projection (`src/lib/game/app/`, module `view/media.ts`) : `MediaView`, `MediaOutletView`, `MediaActionView`, `PressItemView`
 - Interface (`src/lib/components/`) : `career/MediaCard.svelte`, `news/NewsPanel.svelte`, `shell/PressTicker.svelte`, `shell/press-rotation.ts`
 - Tests (`tests/`) : `unit/press.test.ts`, `unit/regional-press.test.ts`, `unit/press-rotation.test.ts`
 

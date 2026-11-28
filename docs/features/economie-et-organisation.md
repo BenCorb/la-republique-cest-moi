@@ -18,7 +18,7 @@ Influence, budget politique et argent personnel ; les améliorations de l’orga
 
 - Moteur (`src/lib/game/engine/`) : `economy.ts`, `selectors.ts`
 - Contenu (`src/lib/game/content/data/`) : `upgrades.json`, `balance.json`
-- Projection (`src/lib/game/app/view-model.ts`) : `ResourceView`, `ProducerView`, `OrganisationGroupView`, `UpgradeView`
+- Projection (`src/lib/game/app/`, module `view/organisation.ts`) : `ResourceView`, `ProducerView`, `OrganisationGroupView`, `UpgradeView`
 - Interface (`src/lib/components/`) : `organisation/Organisation.svelte`, `common/ResourceTile.svelte`, `common/ResourceIcon.svelte`, `shell/HeaderStat.svelte`
 - Tests (`tests/`) : `unit/economy.test.ts`, `unit/organisation.test.ts`
 

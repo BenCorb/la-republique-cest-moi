@@ -22,7 +22,7 @@ Ce qui est commun à tous les écrans : en-tête, onglets, alertes, carnet du pl
 
 - Moteur (`src/lib/game/engine/`) : —
 - Contenu (`src/lib/game/content/data/`) : —
-- Projection (`src/lib/game/app/view-model.ts`) : `PlayerView`, `Alert`, `ChipView`, `TrendView` ; `app/format.ts`
+- Projection (`src/lib/game/app/`, module `view/shared.ts`, `view/dashboard.ts`, `view-model.ts`) : `PlayerView`, `Alert`, `ChipView`, `TrendView` ; `app/format.ts`
 - Interface (`src/lib/components/`) : `shell/*` (GameLayout, GameShell, HeaderStat, AlertBar, SaveBanner, tabs.ts), `common/*` (identity.ts, EffectChip, StatBar, ScoreBars, Sparkline…), `dashboard/*`, `routes/+page.svelte`, `routes/layout.css`
 - Tests (`tests/`) : `unit/interface.test.ts`, `unit/visual-identity.test.ts`, `unit/controller.test.ts`, `e2e/game.e2e.ts`
 
@@ -41,7 +41,6 @@ _À relever lors de l’audit (les « décisions déléguées, provisoires » de
 
 ## Limites connues
 
-- `app/view-model.ts` monolithique (≈ 5 600 lignes) : à découper par système.
 - Pas d’audit automatisé d’accessibilité ; zoom à 125 % non testé.
 
 ## Chantier beta

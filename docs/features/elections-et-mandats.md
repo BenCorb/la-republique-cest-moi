@@ -22,7 +22,7 @@ Le calendrier électoral, les candidatures libres, l’investiture, la campagne,
 
 - Moteur (`src/lib/game/engine/`) : `career.ts`, `ballots.ts`
 - Contenu (`src/lib/game/content/data/`) : `career.json`
-- Projection (`src/lib/game/app/view-model.ts`) : `CareerView`, `BallotView`, `CampaignView`, `MandateView`, `BallotReportView`, `ballotReportView`
+- Projection (`src/lib/game/app/`, module `view/career.ts`) : `CareerView`, `BallotView`, `CampaignView`, `MandateView`, `BallotReportView`, `ballotReportView`
 - Interface (`src/lib/components/`) : `career/CareerPanel.svelte`, `career/BallotReport.svelte`
 - Tests (`tests/`) : `unit/career.test.ts`, `unit/campaigns.test.ts`, `unit/ballots.test.ts`, `unit/investiture.test.ts`, `scenarios/alpha.test.ts`
 
