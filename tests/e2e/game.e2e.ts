@@ -690,67 +690,69 @@ test.describe('parcours de jeu', () => {
 		);
 	});
 
-	test('présente ressources, pastilles et alertes au style P3-26, contrastes AA', async ({
-		page
-	}) => {
-		await startCareer(page);
-		// En-tête : tuiles d'identité, date en calendrier, jauges en barres nommées.
-		await expect(page.getByTestId('resource-influence')).toBeVisible();
-		await expect(page.getByRole('meter', { name: 'Stress' }).first()).toBeVisible();
+	test(
+		'présente ressources, pastilles et alertes au style P3-26, contrastes AA',
+		{ tag: '@layout' },
+		async ({ page }) => {
+			await startCareer(page);
+			// En-tête : tuiles d'identité, date en calendrier, jauges en barres nommées.
+			await expect(page.getByTestId('resource-influence')).toBeVisible();
+			await expect(page.getByRole('meter', { name: 'Stress' }).first()).toBeVisible();
 
-		// Agenda : coûts et effets en pastilles, phrase complète gardée pour l'accessibilité.
-		await page.getByRole('button', { name: 'Agenda', exact: true }).click();
-		const row = page.getByTestId('action-network.meet_officials');
-		await expect(row.locator('[data-sense="gain"]').first()).toBeVisible();
-		await expect(row).toContainText('points de temps');
-		await expect(page.getByRole('meter', { name: 'Temps utilisé' })).toBeVisible();
+			// Agenda : coûts et effets en pastilles, phrase complète gardée pour l'accessibilité.
+			await page.getByRole('button', { name: 'Agenda', exact: true }).click();
+			const row = page.getByTestId('action-network.meet_officials');
+			await expect(row.locator('[data-sense="gain"]').first()).toBeVisible();
+			await expect(row).toContainText('points de temps');
+			await expect(page.getByRole('meter', { name: 'Temps utilisé' })).toBeVisible();
 
-		// Contrastes AA du texte visible (4,5:1), contrôles désactivés exceptés (WCAG 1.4.3).
-		for (const tab of ['Agenda', 'Tableau de bord']) {
-			await page.getByRole('button', { name: tab, exact: true }).click();
-			const failures = await page.evaluate(() => {
-				const parse = (color: string): number[] =>
-					(color.match(/[\d.]+/g) ?? []).map(Number).concat(1).slice(0, 4);
-				const luminance = ([r, g, b]: number[]): number => {
-					const channel = (value: number): number => {
-						const c = value / 255;
-						return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+			// Contrastes AA du texte visible (4,5:1), contrôles désactivés exceptés (WCAG 1.4.3).
+			for (const tab of ['Agenda', 'Tableau de bord']) {
+				await page.getByRole('button', { name: tab, exact: true }).click();
+				const failures = await page.evaluate(() => {
+					const parse = (color: string): number[] =>
+						(color.match(/[\d.]+/g) ?? []).map(Number).concat(1).slice(0, 4);
+					const luminance = ([r, g, b]: number[]): number => {
+						const channel = (value: number): number => {
+							const c = value / 255;
+							return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+						};
+						return 0.2126 * channel(r!) + 0.7152 * channel(g!) + 0.0722 * channel(b!);
 					};
-					return 0.2126 * channel(r!) + 0.7152 * channel(g!) + 0.0722 * channel(b!);
-				};
-				const background = (element: Element | null): number[] | null => {
-					for (let node = element; node; node = node.parentElement) {
-						const style = getComputedStyle(node);
-						if (style.backgroundImage !== 'none') return null;
-						const color = parse(style.backgroundColor);
-						if (color[3]! >= 1) return color;
-						if (color[3]! > 0) return null;
+					const background = (element: Element | null): number[] | null => {
+						for (let node = element; node; node = node.parentElement) {
+							const style = getComputedStyle(node);
+							if (style.backgroundImage !== 'none') return null;
+							const color = parse(style.backgroundColor);
+							if (color[3]! >= 1) return color;
+							if (color[3]! > 0) return null;
+						}
+						return [255, 255, 255, 1];
+					};
+					const issues: string[] = [];
+					const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+					for (let text = walker.nextNode(); text; text = walker.nextNode()) {
+						const element = text.parentElement;
+						if (!element || !text.textContent?.trim()) continue;
+						if (element.closest('.sr-only, [disabled], [aria-hidden="true"] svg')) continue;
+						const rect = element.getBoundingClientRect();
+						if (rect.width === 0 || rect.height === 0) continue;
+						const style = getComputedStyle(element);
+						if (Number(style.opacity) < 1 || style.visibility === 'hidden') continue;
+						const back = background(element);
+						if (!back) continue;
+						const fore = parse(style.color);
+						const [a, b] = [luminance(fore), luminance(back)];
+						const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+						if (ratio < 4.5)
+							issues.push(`${text.textContent.trim().slice(0, 40)} (${ratio.toFixed(2)})`);
 					}
-					return [255, 255, 255, 1];
-				};
-				const issues: string[] = [];
-				const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-				for (let text = walker.nextNode(); text; text = walker.nextNode()) {
-					const element = text.parentElement;
-					if (!element || !text.textContent?.trim()) continue;
-					if (element.closest('.sr-only, [disabled], [aria-hidden="true"] svg')) continue;
-					const rect = element.getBoundingClientRect();
-					if (rect.width === 0 || rect.height === 0) continue;
-					const style = getComputedStyle(element);
-					if (Number(style.opacity) < 1 || style.visibility === 'hidden') continue;
-					const back = background(element);
-					if (!back) continue;
-					const fore = parse(style.color);
-					const [a, b] = [luminance(fore), luminance(back)];
-					const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-					if (ratio < 4.5)
-						issues.push(`${text.textContent.trim().slice(0, 40)} (${ratio.toFixed(2)})`);
-				}
-				return issues;
-			});
-			expect(failures, tab).toEqual([]);
+					return issues;
+				});
+				expect(failures, tab).toEqual([]);
+			}
 		}
-	});
+	);
 
 	test('coupe les animations sous prefers-reduced-motion', async ({ page }) => {
 		await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -764,186 +766,206 @@ test.describe('parcours de jeu', () => {
 		expect(Math.max(...durations)).toBeLessThan(0.01);
 	});
 
-	test('reste lisible sans défilement horizontal en cours de partie', async ({ page }) => {
-		await startCareer(page);
-		for (const tab of [
-			'Tableau de bord',
-			'Agenda',
-			'Carrière',
-			'Monde politique',
-			'Entourage',
-			'Relations',
-			'Organisation',
-			'Patrimoine',
-			'Journal'
-		]) {
-			await page.getByRole('button', { name: tab, exact: true }).click();
-			const overflow = await page.evaluate(
-				() => document.documentElement.scrollWidth - document.documentElement.clientWidth
-			);
-			expect(overflow, tab).toBeLessThanOrEqual(0);
-			// Seules les colonnes défilent : jamais la page entière (textes « sr-only » contenus).
-			const vertical = await page.evaluate(
-				() => document.documentElement.scrollHeight - document.documentElement.clientHeight
-			);
-			expect(vertical, tab).toBeLessThanOrEqual(0);
-			await expect(page.getByRole('button', { name: 'Trimestre suivant' })).toBeInViewport();
+	test(
+		'reste lisible sans défilement horizontal en cours de partie',
+		{ tag: '@layout' },
+		async ({ page }) => {
+			await startCareer(page);
+			for (const tab of [
+				'Tableau de bord',
+				'Agenda',
+				'Carrière',
+				'Monde politique',
+				'Entourage',
+				'Relations',
+				'Organisation',
+				'Patrimoine',
+				'Journal'
+			]) {
+				await page.getByRole('button', { name: tab, exact: true }).click();
+				const overflow = await page.evaluate(
+					() => document.documentElement.scrollWidth - document.documentElement.clientWidth
+				);
+				expect(overflow, tab).toBeLessThanOrEqual(0);
+				// Seules les colonnes défilent : jamais la page entière (textes « sr-only » contenus).
+				const vertical = await page.evaluate(
+					() => document.documentElement.scrollHeight - document.documentElement.clientHeight
+				);
+				expect(vertical, tab).toBeLessThanOrEqual(0);
+				await expect(page.getByRole('button', { name: 'Trimestre suivant' })).toBeInViewport();
+			}
 		}
-	});
+	);
 });
 
 test.describe('plan permanent (P3-13)', () => {
-	test('montre le carnet du trimestre dans chaque onglet et le modifie sur place', async ({
-		page
-	}) => {
-		await startCareer(page, 'e2e-carnet');
-		await page
-			.getByRole('button', { name: 'Ajouter « Rencontrer des élus locaux » au plan' })
-			.click();
-		const notebook = page.getByTestId('plan-notebook');
-		for (const tab of [
-			'Tableau de bord',
-			'Agenda',
-			'Carrière',
-			'Monde politique',
-			'Actualités',
-			'Entourage',
-			'Relations',
-			'Organisation',
-			'Patrimoine',
-			'Journal'
-		]) {
-			await page.getByRole('button', { name: tab, exact: true }).click();
-			await expect(notebook, tab).toBeVisible();
-			await expect(notebook.getByTestId('notebook-step'), tab).toHaveCount(1);
+	test(
+		'montre le carnet du trimestre dans chaque onglet et le modifie sur place',
+		{ tag: '@layout' },
+		async ({ page }) => {
+			await startCareer(page, 'e2e-carnet');
+			await page
+				.getByRole('button', { name: 'Ajouter « Rencontrer des élus locaux » au plan' })
+				.click();
+			const notebook = page.getByTestId('plan-notebook');
+			for (const tab of [
+				'Tableau de bord',
+				'Agenda',
+				'Carrière',
+				'Monde politique',
+				'Actualités',
+				'Entourage',
+				'Relations',
+				'Organisation',
+				'Patrimoine',
+				'Journal'
+			]) {
+				await page.getByRole('button', { name: tab, exact: true }).click();
+				await expect(notebook, tab).toBeVisible();
+				await expect(notebook.getByTestId('notebook-step'), tab).toHaveCount(1);
+			}
+			// Épingler puis retirer depuis le carnet, sans passer par l'agenda.
+			await notebook
+				.getByRole('button', {
+					name: 'Épingler « Rencontrer des élus locaux » : répéter chaque trimestre'
+				})
+				.click();
+			await expect(page.getByTestId('plan-repeat')).toHaveText(
+				'1 activité ce trimestre, toutes répétées ensuite'
+			);
+			await notebook
+				.getByRole('button', { name: 'Retirer « Rencontrer des élus locaux »' })
+				.click();
+			await expect(notebook).toContainText('Aucune activité ce trimestre.');
+			await expect(page.getByTestId('time-remaining')).toContainText('100 restants sur 100');
 		}
-		// Épingler puis retirer depuis le carnet, sans passer par l'agenda.
-		await notebook
-			.getByRole('button', {
-				name: 'Épingler « Rencontrer des élus locaux » : répéter chaque trimestre'
-			})
-			.click();
-		await expect(page.getByTestId('plan-repeat')).toHaveText(
-			'1 activité ce trimestre, toutes répétées ensuite'
-		);
-		await notebook.getByRole('button', { name: 'Retirer « Rencontrer des élus locaux »' }).click();
-		await expect(notebook).toContainText('Aucune activité ce trimestre.');
-		await expect(page.getByTestId('time-remaining')).toContainText('100 restants sur 100');
-	});
+	);
 
-	test('ouvre le panneau sans perdre l’onglet ni le défilement', async ({ page }) => {
-		await startCareer(page, 'e2e-panneau');
-		await page.getByRole('button', { name: 'Agenda', exact: true }).click();
-		const main = page.locator('#contenu');
-		await main.evaluate((element) => element.scrollTo(0, 300));
-		const before = await main.evaluate((element) => element.scrollTop);
-		expect(before).toBeGreaterThan(0);
+	test(
+		'ouvre le panneau sans perdre l’onglet ni le défilement',
+		{ tag: '@layout' },
+		async ({ page }) => {
+			await startCareer(page, 'e2e-panneau');
+			await page.getByRole('button', { name: 'Agenda', exact: true }).click();
+			const main = page.locator('#contenu');
+			await main.evaluate((element) => element.scrollTo(0, 300));
+			const before = await main.evaluate((element) => element.scrollTop);
+			expect(before).toBeGreaterThan(0);
 
-		await page.getByRole('button', { name: 'Modifier le plan' }).click();
-		const sheet = page.getByRole('dialog', { name: 'Modifier le plan' });
-		await expect(sheet).toBeVisible();
-		await sheet.getByRole('searchbox', { name: 'Rechercher une activité' }).fill('free lance');
-		await expect(sheet.getByText('Aucune activité ne correspond.')).toBeVisible();
-		await sheet.getByRole('searchbox', { name: 'Rechercher une activité' }).fill('free-lance');
-		await sheet
-			.getByRole('button', { name: 'Ajouter « Accepter des missions en free-lance » au plan' })
-			.click();
-		await expect(sheet.getByRole('list', { name: 'Étapes du plan' })).toContainText(
-			'Accepter des missions en free-lance'
-		);
-		await page.keyboard.press('Escape');
-		await expect(sheet).toBeHidden();
+			await page.getByRole('button', { name: 'Modifier le plan' }).click();
+			const sheet = page.getByRole('dialog', { name: 'Modifier le plan' });
+			await expect(sheet).toBeVisible();
+			await sheet.getByRole('searchbox', { name: 'Rechercher une activité' }).fill('free lance');
+			await expect(sheet.getByText('Aucune activité ne correspond.')).toBeVisible();
+			await sheet.getByRole('searchbox', { name: 'Rechercher une activité' }).fill('free-lance');
+			await sheet
+				.getByRole('button', { name: 'Ajouter « Accepter des missions en free-lance » au plan' })
+				.click();
+			await expect(sheet.getByRole('list', { name: 'Étapes du plan' })).toContainText(
+				'Accepter des missions en free-lance'
+			);
+			await page.keyboard.press('Escape');
+			await expect(sheet).toBeHidden();
 
-		await expect(page.getByRole('button', { name: 'Agenda', exact: true })).toHaveAttribute(
-			'aria-current',
-			'page'
-		);
-		expect(await main.evaluate((element) => element.scrollTop)).toBe(before);
-		await expect(page.getByTestId('plan-notebook').getByTestId('notebook-step')).toHaveCount(1);
-	});
+			await expect(page.getByRole('button', { name: 'Agenda', exact: true })).toHaveAttribute(
+				'aria-current',
+				'page'
+			);
+			expect(await main.evaluate((element) => element.scrollTop)).toBe(before);
+			await expect(page.getByTestId('plan-notebook').getByTestId('notebook-step')).toHaveCount(1);
+		}
+	);
 
-	test('regroupe les alertes dans un bandeau sous l’en-tête', async ({ page }) => {
-		await startCareer(page);
-		const bar = page.getByTestId('alert-bar');
-		for (const tab of ['Tableau de bord', 'Agenda', 'Journal'])
-			await page.getByRole('button', { name: tab, exact: true }).click();
-		await expect(bar).toBeVisible();
-		const infos = bar.getByRole('button', { name: /information/ });
-		await expect(infos).toHaveAttribute('aria-expanded', 'false');
-		await infos.click();
-		await expect(infos).toHaveAttribute('aria-expanded', 'true');
-		await expect(page.locator('#alert-bar-list')).toContainText('Élections municipales');
-		await page.keyboard.press('Escape');
-		await expect(page.locator('#alert-bar-list')).toBeHidden();
-	});
+	test(
+		'regroupe les alertes dans un bandeau sous l’en-tête',
+		{ tag: '@layout' },
+		async ({ page }) => {
+			await startCareer(page);
+			const bar = page.getByTestId('alert-bar');
+			for (const tab of ['Tableau de bord', 'Agenda', 'Journal'])
+				await page.getByRole('button', { name: tab, exact: true }).click();
+			await expect(bar).toBeVisible();
+			const infos = bar.getByRole('button', { name: /information/ });
+			await expect(infos).toHaveAttribute('aria-expanded', 'false');
+			await infos.click();
+			await expect(infos).toHaveAttribute('aria-expanded', 'true');
+			await expect(page.locator('#alert-bar-list')).toContainText('Élections municipales');
+			await page.keyboard.press('Escape');
+			await expect(page.locator('#alert-bar-list')).toBeHidden();
+		}
+	);
 
-	test('fait tourner les titres du trimestre dans l’en-tête', async ({ page }, testInfo) => {
-		test.setTimeout(60_000);
-		// Dernier trimestre à trois articles d'ambiance, dans trois médias différents.
-		const content = loadContentFromFiles();
-		const base = createGame({ seed: 'e2e-fil' }, content);
-		const played = transition(base, commitTurn(), content);
-		if (!played.ok) throw new Error(played.error.message);
-		const ambient = (mediaId: string, headlineId: string) => ({
-			mediaId,
-			topic: 'ambient' as const,
-			tone: 'neutral' as const,
-			headlineId,
-			subjectId: null,
-			detail: null,
-			supports: [],
-			exposure: 0
-		});
-		const history = played.state.history.map((entry) =>
-			entry.type === 'turn.resolved' && entry.turn === base.turn
-				? {
-						...entry,
-						press: {
-							relations: [],
-							articles: [
-								ambient('media.horizon', 'headline.ambient_pothole'),
-								ambient('media.gazette', 'headline.ambient_pool'),
-								ambient('media.bocage', 'headline.ambient_poll')
-							]
+	test(
+		'fait tourner les titres du trimestre dans l’en-tête',
+		{ tag: '@layout' },
+		async ({ page }, testInfo) => {
+			test.setTimeout(60_000);
+			// Dernier trimestre à trois articles d'ambiance, dans trois médias différents.
+			const content = loadContentFromFiles();
+			const base = createGame({ seed: 'e2e-fil' }, content);
+			const played = transition(base, commitTurn(), content);
+			if (!played.ok) throw new Error(played.error.message);
+			const ambient = (mediaId: string, headlineId: string) => ({
+				mediaId,
+				topic: 'ambient' as const,
+				tone: 'neutral' as const,
+				headlineId,
+				subjectId: null,
+				detail: null,
+				supports: [],
+				exposure: 0
+			});
+			const history = played.state.history.map((entry) =>
+				entry.type === 'turn.resolved' && entry.turn === base.turn
+					? {
+							...entry,
+							press: {
+								relations: [],
+								articles: [
+									ambient('media.horizon', 'headline.ambient_pothole'),
+									ambient('media.gazette', 'headline.ambient_pool'),
+									ambient('media.bocage', 'headline.ambient_poll')
+								]
+							}
 						}
-					}
-				: entry
-		);
-		const state = { ...played.state, history };
-		const exported = exportSave(createEnvelope(state, content, '2026-11-26T10:00:00.000Z'));
-		const file = testInfo.outputPath(exported.fileName);
-		writeFileSync(file, exported.text);
+					: entry
+			);
+			const state = { ...played.state, history };
+			const exported = exportSave(createEnvelope(state, content, '2026-11-26T10:00:00.000Z'));
+			const file = testInfo.outputPath(exported.fileName);
+			writeFileSync(file, exported.text);
 
-		await page.goto('./');
-		await page.getByTestId('import-input').setInputFiles(file);
-		await settleDecisions(page);
-		const feed = page.getByRole('banner').getByTestId('press-item');
-		const next = feed.getByTestId('press-next');
-		await expect(next).toHaveText('1/3');
-		const first = await feed.innerText();
-		// Rotation automatique, sans clic : environ 6 s pour un titre court, plus s’il défile.
-		await page.mouse.move(5, 600);
-		await expect(next).toHaveText('2/3', { timeout: 25_000 });
-		expect(await feed.innerText()).not.toBe(first);
-		// Survol : pause sur place, sans retour au début ; le compteur fait avancer à la main.
-		const title = feed.getByTestId('press-title');
-		const progress = (): Promise<number> =>
-			title.evaluate((element) => Number(element.getAnimations()[0]?.currentTime ?? 0));
-		await page.waitForTimeout(1500);
-		const before = await progress();
-		expect(before).toBeGreaterThan(0);
-		await feed.hover();
-		const paused = await progress();
-		expect(paused).toBeGreaterThanOrEqual(before);
-		await page.waitForTimeout(1000);
-		expect(await progress()).toBe(paused);
-		await next.click();
-		await expect(next).toHaveText('3/3');
-		await next.click();
-		await expect(next).toHaveText('1/3');
-		await page.waitForTimeout(7000);
-		await expect(next).toHaveText('1/3');
-	});
+			await page.goto('./');
+			await page.getByTestId('import-input').setInputFiles(file);
+			await settleDecisions(page);
+			const feed = page.getByRole('banner').getByTestId('press-item');
+			const next = feed.getByTestId('press-next');
+			await expect(next).toHaveText('1/3');
+			const first = await feed.innerText();
+			// Rotation automatique, sans clic : environ 6 s pour un titre court, plus s’il défile.
+			await page.mouse.move(5, 600);
+			await expect(next).toHaveText('2/3', { timeout: 25_000 });
+			expect(await feed.innerText()).not.toBe(first);
+			// Survol : pause sur place, sans retour au début ; le compteur fait avancer à la main.
+			const title = feed.getByTestId('press-title');
+			const progress = (): Promise<number> =>
+				title.evaluate((element) => Number(element.getAnimations()[0]?.currentTime ?? 0));
+			await page.waitForTimeout(1500);
+			const before = await progress();
+			expect(before).toBeGreaterThan(0);
+			await feed.hover();
+			const paused = await progress();
+			expect(paused).toBeGreaterThanOrEqual(before);
+			await page.waitForTimeout(1000);
+			expect(await progress()).toBe(paused);
+			await next.click();
+			await expect(next).toHaveText('3/3');
+			await next.click();
+			await expect(next).toHaveText('1/3');
+			await page.waitForTimeout(7000);
+			await expect(next).toHaveText('1/3');
+		}
+	);
 
 	test('garde le plan à un clic sous 1 100 px', async ({ page }) => {
 		await page.setViewportSize({ width: 1024, height: 768 });

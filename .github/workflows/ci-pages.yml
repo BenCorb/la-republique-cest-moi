@@ -1,7 +1,8 @@
 # Vérification continue et déploiement GitHub Pages.
 #
-# - À chaque push et pull request : contrôles, tests unitaires, build statique et
-#   tests navigateur, ces derniers sous un sous-répertoire (comme un site de projet).
+# - À chaque push et pull request : contrôles, tests unitaires et simulation, build
+#   statique et tests navigateur (sous un sous-répertoire, comme un site de projet), en
+#   trois jobs parallèles ; rien de tout cela quand seule la documentation change.
 # - Déploiement : uniquement sur déclenchement manuel (« Run workflow », option
 #   « deploy »), après succès des vérifications. Aucune publication automatique.
 #
@@ -32,13 +33,44 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  verify:
-    name: Vérifications et tests
+  # Les fichiers ignorés par Prettier et lus par aucun test (docs/, AGENTS.md, CLAUDE.md)
+  # ne déclenchent pas les vérifications. Au moindre doute (déclenchement manuel, base
+  # introuvable), tout est vérifié.
+  changes:
+    name: Détection des changements
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      # Sous-répertoire de test : vérifie les chemins comme sur <compte>.github.io/<dépôt>/.
-      BASE_PATH: /${{ github.event.repository.name }}
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ] || [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed="$(git diff --name-only "$BASE...$HEAD")"
+          printf '%s\n' "$changed"
+          if printf '%s\n' "$changed" | grep -qvE '^(docs/|AGENTS\.md$|CLAUDE\.md$)'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  checks:
+    name: Typage, lint et catalogues
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -51,14 +83,52 @@ jobs:
       - run: npm run check
       - run: npm run lint
       - run: npm run content:validate
+
+  unit:
+    name: Tests unitaires et simulation
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
       - run: npm run test
       - run: npm run simulate -- --runs 25 --seed ci-p1-10 --strategy all --max-turns 400 --format json --output /tmp/lrcm-simulation-ci.json
+
+  e2e:
+    name: Build et tests navigateur
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Sous-répertoire de test : vérifie les chemins comme sur <compte>.github.io/<dépôt>/.
+      BASE_PATH: /${{ github.event.repository.name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
       - run: npm run build
 
       - name: Installer Chromium pour Playwright
         run: npx playwright install --with-deps chromium
 
+      # Le build vient d'être fait avec le même BASE_PATH : Playwright ne le refait pas.
       - run: npm run test:e2e
+        env:
+          PLAYWRIGHT_PREBUILT: '1'
 
       - name: Rapport Playwright en cas d'échec
         if: failure()
@@ -69,6 +139,30 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  # Contrôle exigé par la protection de main : il garde le nom historique et réussit si
+  # chaque job a réussi, ou a été sauté parce que seule la documentation a changé.
+  verify:
+    name: Vérifications et tests
+    needs: [changes, checks, unit, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          CHANGES: ${{ needs.changes.result }}
+          CODE: ${{ needs.changes.outputs.code }}
+          RESULTS: ${{ needs.checks.result }} ${{ needs.unit.result }} ${{ needs.e2e.result }}
+        run: |
+          echo "Détection : $CHANGES (code modifié : $CODE) ; jobs : $RESULTS"
+          [ "$CHANGES" = success ] || exit 1
+          for result in $RESULTS; do
+            if [ "$CODE" = true ]; then
+              [ "$result" = success ] || exit 1
+            else
+              [ "$result" = success ] || [ "$result" = skipped ] || exit 1
+            fi
+          done
 
   build-pages:
     name: Build GitHub Pages
