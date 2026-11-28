@@ -15,16 +15,23 @@
 		engagements: readonly ProfileOptionView[];
 		regions: readonly RegionOptionView[];
 		defaults: { readonly origin: string; readonly engagement: string; readonly region: string };
-		onStart: (origin: string, engagement: string, region: string) => void;
+		ambitions: readonly {
+			readonly id: string;
+			readonly label: string;
+			readonly description: string;
+		}[];
+		onStart: (origin: string, engagement: string, region: string, ambition: string | null) => void;
 		onCancel: () => void;
 	}
 
-	let { origins, engagements, regions, defaults, onStart, onCancel }: Props = $props();
+	let { origins, engagements, regions, ambitions, defaults, onStart, onCancel }: Props = $props();
 	// Valeurs de départ figées à l'ouverture de l'écran ; le joueur les modifie ensuite.
 	const initial = (() => ({ ...defaults }))();
 	let origin = $state(initial.origin);
 	let engagement = $state(initial.engagement);
 	let region = $state(initial.region);
+	/** Ambition de départ (P3-38), facultative : chaîne vide pour « aucune ». */
+	let ambition = $state('');
 	const regionDetail = $derived(regions.find((entry) => entry.id === region));
 </script>
 
@@ -113,11 +120,39 @@
 			{/if}
 		</fieldset>
 
+		{#if ambitions.length > 0}
+			<fieldset class="card p-6" data-testid="ambitions">
+				<legend class="section-title px-1">Ambition (facultative)</legend>
+				<p class="mt-1 text-sm text-muted">
+					Un cap pour la carrière, sans aucun avantage : il est rappelé au dossier et jugé au bilan.
+				</p>
+				<div class="mt-3 grid gap-2 md:grid-cols-2">
+					<label class="flex cursor-pointer gap-3 rounded border border-line p-3">
+						<input type="radio" name="ambition" value="" bind:group={ambition} />
+						<span class="font-semibold">Aucune, on verra bien</span>
+					</label>
+					{#each ambitions as option (option.id)}
+						<label class="flex cursor-pointer gap-3 rounded border border-line p-3">
+							<input type="radio" name="ambition" value={option.id} bind:group={ambition} />
+							<span>
+								<span class="block font-semibold">{option.label}</span>
+								<span class="block text-xs text-muted">{option.description}</span>
+							</span>
+						</label>
+					{/each}
+				</div>
+			</fieldset>
+		{/if}
+
 		<div class="flex flex-wrap justify-end gap-3">
 			<button type="button" class="btn-secondary" onclick={onCancel}>
 				<ArrowLeft class="size-4" aria-hidden="true" /> Retour
 			</button>
-			<button type="button" class="btn-primary" onclick={() => onStart(origin, engagement, region)}>
+			<button
+				type="button"
+				class="btn-primary"
+				onclick={() => onStart(origin, engagement, region, ambition === '' ? null : ambition)}
+			>
 				<Play class="size-4" aria-hidden="true" /> Commencer la carrière
 			</button>
 		</div>

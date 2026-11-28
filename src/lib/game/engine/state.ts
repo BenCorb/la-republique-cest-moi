@@ -83,6 +83,14 @@ export interface PlayerState {
 	readonly activists: number;
 	/** Carrière dans le parti (P3-34), `null` sans adhésion. */
 	readonly partyCareer: PartyCareer | null;
+	/** Ambition de départ (P3-38), `null` si aucune n'a été choisie. */
+	readonly ambition: {
+		readonly ambitionId: string;
+		/** Trimestre où l'objectif a été atteint, sinon `null`. */
+		readonly achievedTurn: Turn | null;
+		/** Trimestre où l'ambition a été trahie, sinon `null`. */
+		readonly betrayedTurn: Turn | null;
+	} | null;
 }
 
 export type PartyRank = 'member' | 'cadre' | 'leader';
@@ -1193,6 +1201,8 @@ export interface NewGameConfig {
 	readonly engagement?: string;
 	/** Région d'origine (P3-16) ; à défaut, celle du profil par défaut. */
 	readonly region?: string;
+	/** Ambition de départ (P3-38), facultative. */
+	readonly ambition?: string;
 }
 
 export function createGame(config: NewGameConfig, content: Content): GameState {
@@ -1221,6 +1231,10 @@ export function createGame(config: NewGameConfig, content: Content): GameState {
 		ineligibleUntil: null,
 		lifestyle: content.wealth.defaultLifestyle,
 		partyCareer: null,
+		ambition:
+			config.ambition && content.ambitions[config.ambition]
+				? { ambitionId: config.ambition, achievedTurn: null, betrayedTurn: null }
+				: null,
 		partyId: null,
 		affiliations: [],
 		supports: startingSupports(content),

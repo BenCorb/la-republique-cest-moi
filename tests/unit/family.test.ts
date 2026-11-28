@@ -353,7 +353,8 @@ describe('projection du profil et de la famille', () => {
 		expect(view.profile).toEqual({
 			origin: 'Héritiers',
 			engagement: 'Presse',
-			family: 'célibataire'
+			family: 'célibataire',
+			ambition: null
 		});
 		// Les membres de la famille ouvrent la liste des relations.
 		expect(

@@ -45,6 +45,7 @@ import { effectiveContent, resolveReforms } from './reforms.ts';
 import { resolveActivists } from './activists.ts';
 import { partyLedByPlayer } from './party.ts';
 import { resolveGovernment } from './government.ts';
+import { updateAmbition } from './ambition.ts';
 import { resolveStaffFrontier, resolveStaffProduction } from './staff.ts';
 import { resolveFamily } from './family.ts';
 import type {
@@ -588,6 +589,12 @@ export function transition(
 	command: GameCommand,
 	content: Content
 ): TransitionResult {
+	const result = dispatch(state, command, content);
+	// Ambition de départ (P3-38) : constatée après chaque commande réussie.
+	return result.ok ? { ...result, state: updateAmbition(result.state, content) } : result;
+}
+
+function dispatch(state: GameState, command: GameCommand, content: Content): TransitionResult {
 	switch (command.type) {
 		case 'commitTurn':
 			return commitTurn(state, command, content);

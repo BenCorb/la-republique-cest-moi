@@ -18,6 +18,7 @@ const context: ConditionContext = {
 		exposure: 0,
 		defense: 0,
 		ineligibleUntil: null,
+		ambition: null,
 		lifestyle: 'lifestyle.test_modest',
 		partyId: null,
 		partyCareer: null,

@@ -1926,6 +1926,13 @@ export function validateContent(raw: RawContent): ContentValidation {
 	issues.push(
 		...crossCheckTerritory(profileData.territory, profileData.defaults.region, refs, knownIds)
 	);
+	profileData.ambitions.forEach((ambition, index) => {
+		const path = `ambitions[${index}]`;
+		issues.push(...conditionIssues(ambition.goal, refs, 'profiles.json', `${path}.goal`));
+		if (ambition.betrayal) {
+			issues.push(...conditionIssues(ambition.betrayal, refs, 'profiles.json', `${path}.betrayal`));
+		}
+	});
 	const postList = entourageCatalog.data.posts;
 	issues.push(...crossCheckEntourage(postList, refs, knownIds));
 	issues.push(
@@ -2057,6 +2064,10 @@ export function validateContent(raw: RawContent): ContentValidation {
 			originIds: profileData.origins.map((origin) => origin.id),
 			engagements,
 			engagementIds: profileData.engagements.map((engagement) => engagement.id),
+			ambitions: Object.fromEntries(
+				profileData.ambitions.map((ambition) => [ambition.id, ambition])
+			),
+			ambitionIds: profileData.ambitions.map((ambition) => ambition.id),
 			defaultProfile: profileData.defaults,
 			territory: profileData.territory,
 			regions: Object.fromEntries(

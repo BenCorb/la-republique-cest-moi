@@ -270,6 +270,7 @@ export class GameController {
 			origin?: string;
 			engagement?: string;
 			region?: string;
+			ambition?: string;
 		} = {}
 	): StartResult {
 		this.home = this.readHome();
@@ -280,7 +281,8 @@ export class GameController {
 				seed: this.deps.newSeed(),
 				...(options.origin ? { origin: options.origin } : {}),
 				...(options.engagement ? { engagement: options.engagement } : {}),
-				...(options.region ? { region: options.region } : {})
+				...(options.region ? { region: options.region } : {}),
+				...(options.ambition ? { ambition: options.ambition } : {})
 			},
 			this.deps.content
 		);

@@ -57,6 +57,8 @@ export function readStat(context: ConditionContext, stat: StatId): number {
 			return context.world.indicators.stability;
 		case 'player.affiliated':
 			return context.player.partyId === null ? 0 : 1;
+		case 'player.mandatesHeld':
+			return context.mandates.length;
 		case 'player.partyBidOpen':
 			return partyBidIssue(context.player, context.turn) === null ? 1 : 0;
 		case 'player.partyBid':

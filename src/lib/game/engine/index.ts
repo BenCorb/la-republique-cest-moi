@@ -10,9 +10,10 @@
  */
 
 /** Version des règles du moteur, enregistrée plus tard dans les sauvegardes. */
-export const RULES_VERSION = '0.46.0';
+export const RULES_VERSION = '0.47.0';
 
 export { candidacyRoleOf } from './plan.ts';
+export { ambitionVerdict, updateAmbition, type AmbitionVerdict } from './ambition.ts';
 export { congressAppraisal, partyLedByPlayer, resolvePartyCareer } from './party.ts';
 export { governmentPost, governmentStature, resolveGovernment } from './government.ts';
 export { cohabitation, primeMinisterId } from './world.ts';

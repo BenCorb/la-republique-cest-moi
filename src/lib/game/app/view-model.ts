@@ -112,6 +112,8 @@ import {
 	type MandateInstance,
 	campaignPoll,
 	campaignRefundFor,
+	ambitionVerdict,
+	type AmbitionVerdict,
 	cohabitation,
 	partyLedByPlayer,
 	primeMinisterId,
@@ -1294,6 +1296,8 @@ export interface PlayerView {
 		readonly origin: string;
 		readonly engagement: string;
 		readonly family: string;
+		/** Ambition de départ et son état (P3-38), sinon `null`. */
+		readonly ambition: string | null;
 	};
 	readonly career: CareerView;
 	readonly supports: SupportsView;
@@ -2498,6 +2502,28 @@ function bestBallotLine(
 	];
 }
 
+const AMBITION_VERDICTS: Readonly<Record<AmbitionVerdict, string>> = {
+	pending: 'en cours',
+	achieved: 'atteinte',
+	missed: 'manquée',
+	betrayed: 'trahie'
+};
+
+/** Ambition de départ et son état, en clair (P3-38), sinon `null`. */
+function ambitionText(state: GameState, content: Content): string | null {
+	const ambition = state.player.ambition;
+	const verdict = ambitionVerdict(state, content);
+	if (!ambition || !verdict) return null;
+	const label = content.ambitions[ambition.ambitionId]?.label ?? ambition.ambitionId;
+	const when =
+		verdict === 'achieved' && ambition.achievedTurn !== null
+			? ` au ${formatTurn(ambition.achievedTurn)}`
+			: verdict === 'betrayed' && ambition.betrayedTurn !== null
+				? ` au ${formatTurn(ambition.betrayedTurn)}`
+				: '';
+	return `${label} — ${AMBITION_VERDICTS[verdict]}${when}`;
+}
+
 /** Procès-verbal tranché par un choix d'entre-deux-tours (P3-29), sinon `null`. */
 function runoffReport(
 	entry: ChoiceRecord,
@@ -2617,6 +2643,34 @@ function noteHighlights(
 	content: Content
 ): NoteHighlightView[] {
 	const items: NoteHighlightView[] = [];
+	// Ambition de départ (P3-38) : saluée, ou constatée trahie, au trimestre où elle se joue.
+	const ambition = state.player.ambition;
+	const ambitionLabel = ambition ? content.ambitions[ambition.ambitionId]?.label : undefined;
+	if (ambition && ambitionLabel && ambition.achievedTurn === entry.turn + 1) {
+		items.push({
+			key: `ambition:${ambition.ambitionId}`,
+			kind: 'victory',
+			tone: 'gain',
+			title: `Ambition atteinte — ${ambitionLabel}`,
+			text: 'Le cap fixé à vingt-cinq ans est atteint. Reste à savoir ce que l’on fait d’un rêve réalisé.',
+			chart: null,
+			record: null,
+			chips: [],
+			details: []
+		});
+	} else if (ambition && ambitionLabel && ambition.betrayedTurn === entry.turn + 1) {
+		items.push({
+			key: `ambition:${ambition.ambitionId}`,
+			kind: 'defeat',
+			tone: 'cost',
+			title: `Ambition trahie — ${ambitionLabel}`,
+			text: 'Le jeune militant de vingt-cinq ans ne s’y serait pas reconnu. Le bilan s’en souviendra.',
+			chart: null,
+			record: null,
+			chips: [],
+			details: []
+		});
+	}
 	const record = {
 		won: state.campaigns.filter((campaign) => campaign.status === 'won').length,
 		lost: state.campaigns.filter((campaign) => campaign.status === 'lost').length
@@ -3664,6 +3718,9 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 				title: 'Parcours',
 				lines: [
 					{ label: 'Plus haute fonction', value: office ?? 'Aucun mandat' },
+					...(state.player.ambition
+						? [{ label: 'Ambition de départ', value: ambitionText(state, content) ?? '' }]
+						: []),
 					{ label: 'Mandats exercés', value: String(metrics.mandatesHeld) },
 					{ label: 'Années en fonction', value: String(metrics.yearsInOffice) },
 					{
@@ -5052,6 +5109,11 @@ export function creationOptions(content: Content): {
 	readonly origins: readonly ProfileOptionView[];
 	readonly engagements: readonly ProfileOptionView[];
 	readonly regions: readonly RegionOptionView[];
+	readonly ambitions: readonly {
+		readonly id: string;
+		readonly label: string;
+		readonly description: string;
+	}[];
 	readonly defaults: Content['defaultProfile'];
 } {
 	const option = (entry: {
@@ -5074,6 +5136,10 @@ export function creationOptions(content: Content): {
 	return {
 		origins: content.originIds.map((id) => option(content.origins[id]!)),
 		engagements: content.engagementIds.map((id) => option(content.engagements[id]!)),
+		ambitions: content.ambitionIds.map((id) => {
+			const ambition = content.ambitions[id]!;
+			return { id, label: ambition.label, description: ambition.description };
+		}),
 		regions: content.regionIds.map((id) => {
 			const region = content.regions[id]!;
 			return {
@@ -5444,7 +5510,8 @@ export function projectView(
 		profile: {
 			origin: content.origins[state.player.origin]?.label ?? state.player.origin,
 			engagement: content.engagements[state.player.engagement]?.label ?? state.player.engagement,
-			family: describeFamily(state)
+			family: describeFamily(state),
+			ambition: ambitionText(state, content)
 		}
 	};
 }

@@ -238,6 +238,12 @@
 			<p class="text-sm" data-testid="profile">
 				{view.profile.origin} · {view.profile.engagement} · {view.profile.family}
 			</p>
+			{#if view.profile.ambition}
+				<p class="text-sm" data-testid="ambition">
+					<span class="text-muted">Ambition :</span>
+					{view.profile.ambition}
+				</p>
+			{/if}
 			<p class="text-sm" data-testid="territory">
 				<span class="text-muted">Votre terre d’élection :</span>
 				<span class="font-semibold">{view.territory.town}</span>, {view.territory.description.toLocaleLowerCase(

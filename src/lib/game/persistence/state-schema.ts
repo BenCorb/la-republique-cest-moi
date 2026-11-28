@@ -438,6 +438,13 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 		defense: int,
 		ineligibleUntil: int.nullable(),
 		lifestyle: id,
+		ambition: z
+			.strictObject({
+				ambitionId: id,
+				achievedTurn: int.nullable(),
+				betrayedTurn: int.nullable()
+			})
+			.nullable(),
 		partyCareer: z
 			.strictObject({
 				rank: z.enum(['member', 'cadre', 'leader']),

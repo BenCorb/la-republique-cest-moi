@@ -1345,5 +1345,45 @@
 				"La Motte-Fleurie"
 			]
 		}
-	}
+	},
+	"ambitions": [
+		{
+			"id": "ambition.mayor_for_life",
+			"label": "Maire à vie",
+			"description": "Une écharpe, une mairie, et la ferme intention de ne plus jamais la quitter.",
+			"goal": { "op": "holdsMandate", "mandate": "mandate.mayor" }
+		},
+		{
+			"id": "ambition.minister",
+			"label": "Ministre",
+			"description": "Un maroquin, une voiture avec chauffeur et un portrait dans les manuels d’éducation civique.",
+			"goal": {
+				"op": "any",
+				"conditions": [
+					{ "op": "holdsMandate", "mandate": "mandate.minister" },
+					{ "op": "holdsMandate", "mandate": "mandate.prime_minister" }
+				]
+			}
+		},
+		{
+			"id": "ambition.matignon",
+			"label": "Matignon",
+			"description": "Rien de moins que l’hôtel de la rue de Varenne et son jardin, le plus grand de Paris après l’Élysée.",
+			"goal": { "op": "holdsMandate", "mandate": "mandate.prime_minister" }
+		},
+		{
+			"id": "ambition.fortune",
+			"label": "Fortune faite",
+			"description": "La politique comme ascenseur social, et l’ascenseur jusqu’au dernier étage : un patrimoine d’un million d’euros.",
+			"goal": { "op": "gte", "stat": "player.netWorthCents", "value": 100000000 }
+		},
+		{
+			"id": "ambition.clean_hands",
+			"label": "Les mains propres",
+			"description": "Exercer des mandats sans jamais rien avoir à se reprocher. Une ambition rare, et plus difficile qu’elle n’en a l’air.",
+			"goal": { "op": "gte", "stat": "player.mandatesHeld", "value": 1 },
+			"judgeAtEnd": true,
+			"betrayal": { "op": "gte", "stat": "player.facts", "value": 1 }
+		}
+	]
 }

@@ -1122,6 +1122,16 @@ Recommandation A2 de l'audit, retenue par le créateur ; détails : **décisions
 - **Interface** : la validation d'un plan qui contient la retraite ouvre une confirmation (« Quitter la vie politique ? ») ; « Année suivante » et « Jusqu’à une alerte » sont fermés tant que la retraite est au plan.
 - `RULES_VERSION = '0.46.0'`. Tests : `tests/unit/retirement.test.ts` (mandats rendus, fin unique, invariants, sauvegarde, bilan ; indicateur du plan) ; catalogue de test complété d'un portrait générique.
 
+### 8.4 sextrigesies Décisions de P3-38 : ambition de départ (28 novembre 2026)
+
+Décision du créateur (ROADMAP §5.2 : rappel au dossier et jugement au bilan, sans fin de partie ni bonus) ; détails : **décisions déléguées, provisoires**.
+
+- **Catalogue** (`profiles.json` › `ambitions`) : cinq ambitions, chacune avec un objectif (condition), éventuellement jugé seulement en fin de carrière, et une trahison facultative : « Maire à vie » (mairie), « Ministre » (ministère ou Matignon), « Matignon », « Fortune faite » (patrimoine d'un million d'euros), « Les mains propres » (au moins un mandat sans aucun fait au registre, jugé à la fin ; trahie au premier fait). Statistique `player.mandatesHeld`.
+- **État** : `PlayerState.ambition` (`null` sans choix) avec les trimestres d'objectif atteint et de trahison. Choisie à la création (option « Aucune » par défaut), sans aucun effet ni tirage : l'état de départ est identique à celui d'une carrière sans ambition.
+- **Constat** (`engine/ambition.ts`) après chaque commande réussie (trimestre ou décision) : trahison définitive, sinon objectif atteint (définitif lui aussi). **Jugement** : en cours, atteinte, manquée (fin de carrière sans l'objectif) ou trahie.
+- **Interface** : choix facultatif à la création, ambition et état au profil du tableau de bord, fait marquant de la note (« Ambition atteinte » ou « trahie »), ligne « Ambition de départ » au bilan.
+- `RULES_VERSION = '0.47.0'`. Tests : `tests/unit/ambition.test.ts` (facultative et sans effet, objectif atteint et conservé, mains propres jugées à la fin ou trahies).
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.

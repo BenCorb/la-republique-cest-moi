@@ -1417,7 +1417,22 @@ export const profileCatalogSchema = z.strictObject({
 	origins: z.array(originSchema).min(1),
 	engagements: z.array(engagementSchema).min(1),
 	defaults: z.strictObject({ origin: contentId, engagement: contentId, region: contentId }),
-	territory: territorySchema
+	territory: territorySchema,
+	ambitions: z
+		.array(
+			z.strictObject({
+				id: contentId.refine(
+					(value) => value.startsWith('ambition.'),
+					'identifiant « ambition.nom »'
+				),
+				label: frenchText,
+				description: frenchText,
+				goal: conditionSchema,
+				judgeAtEnd: z.boolean().optional(),
+				betrayal: conditionSchema.optional()
+			})
+		)
+		.default([])
 });
 
 export const activistsBalanceSchema: z.ZodType<ActivistsBalance> = z

@@ -132,6 +132,8 @@ export const STAT_IDS = [
 	'player.affiliated',
 	/** Rang dans le parti (P3-34) : 0 sans parti, 1 militant, 2 cadre, 3 chef. */
 	'player.partyRank',
+	/** Mandats exercés au cours de la carrière, terminés compris (P3-38). */
+	'player.mandatesHeld',
 	/** Trimestres à Matignon depuis la nomination (P3-36), −1 hors de Matignon. */
 	'player.pmTurns',
 	/** Candidature à la direction possible au prochain congrès (P3-34), 1 ou 0. */
@@ -1172,6 +1174,22 @@ export interface GovernmentBalance {
 	readonly appointmentEvent: string;
 }
 
+/**
+ * Ambition de départ (P3-38), sans aucun bonus : rappelée au dossier, saluée
+ * quand l'objectif est atteint, jugée au bilan (atteinte, manquée, trahie).
+ */
+export interface AmbitionDefinition {
+	readonly id: string;
+	readonly label: string;
+	readonly description: string;
+	/** Objectif : atteint dès qu'il est vrai (ou seulement en fin de carrière). */
+	readonly goal: Condition;
+	/** Jugé seulement en fin de carrière (« les mains propres »). */
+	readonly judgeAtEnd?: boolean | undefined;
+	/** Trahison de l'ambition, définitive dès qu'elle est vraie. */
+	readonly betrayal?: Condition | undefined;
+}
+
 /** Portefeuille ministériel jouable (P3-35). */
 export interface PortfolioDefinition {
 	readonly id: string;
@@ -2106,6 +2124,9 @@ export interface Content {
 	readonly originIds: readonly string[];
 	readonly engagements: Readonly<Record<string, EngagementDefinition>>;
 	readonly engagementIds: readonly string[];
+	/** Ambitions de départ, facultatives (P3-38). */
+	readonly ambitions: Readonly<Record<string, AmbitionDefinition>>;
+	readonly ambitionIds: readonly string[];
 	/** Profil retenu quand la création n'en précise pas (tests, simulateur). */
 	readonly defaultProfile: {
 		readonly origin: string;
