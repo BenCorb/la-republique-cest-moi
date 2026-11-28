@@ -1150,6 +1150,14 @@ test.describe('retraite et carnet des carrières (P3-37, P3-41)', () => {
 		await expect(confirm).toBeVisible();
 		await confirm.getByRole('button', { name: 'Confirmer la retraite' }).click();
 		await expect(page.getByText(/Portrait/u).first()).toBeVisible();
+		// Partage (P3-42) : seed affichée, retour téléchargé avec une note.
+		await expect(page.getByTestId('career-seed')).toHaveText('Seed de la partie : e2e-carnet');
+		await page.getByRole('button', { name: 'Exporter un retour' }).click();
+		const feedback = page.getByTestId('feedback-dialog');
+		await feedback.getByLabel('Votre note (facultative)').fill('Partie très drôle.');
+		const download = page.waitForEvent('download');
+		await feedback.getByRole('button', { name: 'Télécharger le retour' }).click();
+		expect((await download).suggestedFilename()).toBe('retour-e2e-carnet.json');
 		// Le carnet, à l'accueil, garde la carrière, puis s'efface sur demande.
 		await page.goto('./');
 		const logbook = page.getByTestId('logbook');
@@ -1157,5 +1165,22 @@ test.describe('retraite et carnet des carrières (P3-37, P3-41)', () => {
 		await expect(logbook).toContainText('Seed : e2e-carnet');
 		await logbook.getByRole('button', { name: 'Vider le carnet' }).click();
 		await expect(logbook.getByTestId('logbook-entry')).toHaveCount(0);
+	});
+});
+
+test.describe('rejouer une partie (P3-42)', () => {
+	test('relance la même seed et le même profil après confirmation', async ({ page }) => {
+		await startCareer(page, 'e2e-rejouer');
+		await page
+			.getByRole('button', { name: 'Ajouter « Se retirer de la vie politique » au plan' })
+			.click();
+		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		await page
+			.getByTestId('retire-dialog')
+			.getByRole('button', { name: 'Confirmer la retraite' })
+			.click();
+		await page.getByRole('button', { name: 'Rejouer cette partie' }).click();
+		await page.getByRole('button', { name: 'Remplacer et commencer' }).click();
+		await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 25 ans');
 	});
 });

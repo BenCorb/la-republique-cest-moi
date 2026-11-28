@@ -271,6 +271,8 @@ export class GameController {
 			engagement?: string;
 			region?: string;
 			ambition?: string;
+			/** Seed imposée pour rejouer une partie (P3-42). */
+			seed?: string;
 		} = {}
 	): StartResult {
 		this.home = this.readHome();
@@ -278,7 +280,7 @@ export class GameController {
 		if (hasExisting && !options.replaceExisting) return 'needs_confirmation';
 		const state = createGame(
 			{
-				seed: this.deps.newSeed(),
+				seed: options.seed ?? this.deps.newSeed(),
 				...(options.origin ? { origin: options.origin } : {}),
 				...(options.engagement ? { engagement: options.engagement } : {}),
 				...(options.region ? { region: options.region } : {}),

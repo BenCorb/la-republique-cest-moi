@@ -455,6 +455,14 @@ export interface SummaryView {
 	}[];
 	/** Fiche du carnet des carrières (P3-41), archivée dans ce navigateur. */
 	readonly logbook: LogbookEntry;
+	/** Pour rejouer la même partie (P3-42) : seed et profil de départ. */
+	readonly replay: {
+		readonly seed: string;
+		readonly origin: string;
+		readonly engagement: string;
+		readonly region: string;
+		readonly ambition: string | null;
+	};
 }
 
 /**
@@ -3723,6 +3731,13 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 	const paper =
 		regionalMedia(state.player.territory.regionId, content)?.name ?? 'La presse régionale';
 	return {
+		replay: {
+			seed: state.rng.seed,
+			origin: state.player.origin,
+			engagement: state.player.engagement,
+			region: state.player.territory.regionId,
+			ambition: state.player.ambition?.ambitionId ?? null
+		},
 		logbook: {
 			id: `${state.rng.seed}@${summary.lastTurn}`,
 			seed: state.rng.seed,

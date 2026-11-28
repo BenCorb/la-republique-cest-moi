@@ -1182,6 +1182,14 @@ Recommandation B2 de l'audit ; détails : **décisions déléguées, provisoires
 - **Accueil** : carte « Carnet des carrières » (fiches, distinctions déjà obtenues avec leur nombre, retrait d'une fiche, « Vider le carnet »). Affichage seul : aucun bonus, aucun déblocage.
 - **Tests** : `tests/unit/logbook.test.ts` (ajout unique, ordre, distinctions, retrait, contenu illisible, limite) ; E2E « retraite et carnet des carrières » (confirmation de la retraite, bilan, fiche à l'accueil, vidage).
 
+### 8.4 duoquadragesies Décisions de P3-42 : partage entre amis (28 novembre 2026)
+
+Recommandations B3 et B4 de l'audit ; détails : **décisions déléguées, provisoires**.
+
+- **Seed au bilan** (« Seed de la partie : … ») et bouton « Rejouer cette partie » : nouvelle carrière avec la même seed, la même origine, le même terrain d'engagement, la même région et la même ambition (`SummaryView.replay`), après la confirmation habituelle de remplacement de la sauvegarde. `newCareer` accepte une seed imposée ; le paramètre d'adresse `?seed=…` reste disponible.
+- **« Exporter un retour »** : une fenêtre de note libre, puis le téléchargement d'un seul fichier JSON (`retour-<seed>.json` : format, version, note et sauvegarde complète). Aucun serveur, rien n'est envoyé.
+- **Tests** : contrôleur (seed imposée) ; E2E (seed affichée et retour téléchargé au bilan ; rejouer après confirmation).
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.

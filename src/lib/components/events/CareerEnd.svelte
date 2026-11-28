@@ -12,9 +12,20 @@
 		onNewCareer: () => void;
 		onExport: () => void;
 		onJournal: () => void;
+		/** Rejouer la même seed et le même profil (P3-42). */
+		onReplay?: () => void;
+		/** Exporter un retour : sauvegarde et note libre (P3-42). */
+		onFeedback?: (note: string) => void;
 	}
 
-	let { summary, onNewCareer, onExport, onJournal }: Props = $props();
+	let { summary, onNewCareer, onExport, onJournal, onReplay, onFeedback }: Props = $props();
+	let feedbackDialog: HTMLDialogElement | undefined = $state();
+	let note = $state('');
+
+	function sendFeedback(): void {
+		onFeedback?.(note);
+		feedbackDialog?.close();
+	}
 </script>
 
 <article
@@ -107,5 +118,40 @@
 		<button type="button" class="btn-secondary" onclick={onExport}>
 			<Download class="size-4" aria-hidden="true" /> Exporter
 		</button>
+		{#if onReplay}
+			<button type="button" class="btn-secondary" onclick={onReplay}> Rejouer cette partie </button>
+		{/if}
+		{#if onFeedback}
+			<button type="button" class="btn-secondary" onclick={() => feedbackDialog?.showModal()}>
+				Exporter un retour
+			</button>
+		{/if}
 	</div>
+	<p class="mt-3 text-center font-mono text-xs text-muted" data-testid="career-seed">
+		Seed de la partie : {summary.replay.seed}
+	</p>
 </article>
+
+<dialog
+	bind:this={feedbackDialog}
+	aria-labelledby="feedback-title"
+	data-testid="feedback-dialog"
+	class="m-auto w-[min(32rem,92vw)] rounded-lg border border-line bg-surface p-5 text-ink shadow-lg backdrop:bg-ink/50"
+>
+	<h2 id="feedback-title" class="font-serif text-xl font-semibold">Exporter un retour</h2>
+	<p class="mt-2 text-sm text-muted">
+		Un fichier avec la sauvegarde complète et votre note, à envoyer à qui vous voulez. Rien ne part
+		sur Internet.
+	</p>
+	<label class="mt-3 flex flex-col gap-1 text-sm">
+		<span class="font-semibold">Votre note (facultative)</span>
+		<textarea class="min-h-28 rounded border border-line bg-canvas p-2" bind:value={note}
+		></textarea>
+	</label>
+	<div class="mt-4 flex justify-end gap-2">
+		<button type="button" class="btn-secondary" onclick={() => feedbackDialog?.close()}>
+			Annuler
+		</button>
+		<button type="button" class="btn-primary" onclick={sendFeedback}>Télécharger le retour</button>
+	</div>
+</dialog>

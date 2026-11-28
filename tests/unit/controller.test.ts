@@ -32,6 +32,13 @@ function controller(
 }
 
 describe('accueil et nouvelle carrière', () => {
+	it('rejoue une partie avec la seed imposée (P3-42)', () => {
+		const game = controller();
+		expect(game.newCareer({ seed: 'à rejouer', origin: 'origin.neutral' })).toBe('started');
+		const exported = game.exportCurrent()!;
+		expect(exported.text).toContain('"seed": "à rejouer"');
+	});
+
 	it('démarre sans sauvegarde, crée une carrière au T1 2000 et la sauvegarde', () => {
 		const storage = new MemoryStorage();
 		const game = controller(storage);

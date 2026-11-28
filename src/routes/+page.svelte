@@ -20,7 +20,11 @@
 	import CreationScreen from '#lib/components/shell/CreationScreen.svelte';
 	import type { GameTab } from '#lib/components/shell/tabs.ts';
 	import FirstSteps from '#lib/components/shell/FirstSteps.svelte';
-	import { readFirstStepsHidden, writeFirstStepsHidden } from '#lib/game/app/browser.ts';
+	import {
+		downloadFeedback,
+		readFirstStepsHidden,
+		writeFirstStepsHidden
+	} from '#lib/game/app/browser.ts';
 	import { addToLogbook, readLogbook, removeFromLogbook } from '#lib/game/app/logbook.ts';
 	import { createBrowserSession, downloadExport } from '#lib/game/app/browser.ts';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
@@ -55,6 +59,7 @@
 		engagement: string;
 		region: string;
 		ambition?: string;
+		seed?: string;
 	} | null>(null);
 
 	onMount(() => {
@@ -91,6 +96,39 @@
 		creating = false;
 		session?.controller.newCareer({ ...(chosenProfile ?? {}), replaceExisting: true });
 		tab = 'agenda';
+	}
+
+	/** Rejouer la même partie (P3-42) : même seed, même profil, après confirmation. */
+	function replayCareer(
+		replay: {
+			seed: string;
+			origin: string;
+			engagement: string;
+			region: string;
+			ambition: string | null;
+		} | null
+	): void {
+		if (!session || !replay) return;
+		chosenProfile = {
+			seed: replay.seed,
+			origin: replay.origin,
+			engagement: replay.engagement,
+			region: replay.region,
+			...(replay.ambition ? { ambition: replay.ambition } : {})
+		};
+		const result = session.controller.newCareer(chosenProfile);
+		if (result === 'needs_confirmation') {
+			confirmingNewCareer = true;
+			return;
+		}
+		tab = 'agenda';
+	}
+
+	/** Retour de partie (P3-42) : sauvegarde et note dans un fichier, sans serveur. */
+	function exportFeedback(note: string): void {
+		const exported = session?.controller.exportCurrent();
+		const seed = snapshot?.view?.summary?.replay.seed ?? 'partie';
+		if (exported) downloadFeedback(exported, note, seed);
 	}
 
 	function exportGame(): void {
@@ -143,6 +181,8 @@
 				onNewCareer={startCareer}
 				onExport={exportGame}
 				onJournal={() => (tab = 'journal')}
+				onReplay={() => replayCareer(snapshot?.view?.summary?.replay ?? null)}
+				onFeedback={(note: string) => exportFeedback(note)}
 			/>
 		{:else if tab === 'dashboard'}
 			<Dashboard {session} />
