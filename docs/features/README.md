@@ -33,7 +33,7 @@ Statuts : **à auditer** → **audité** → **en chantier** → **consolidé**.
 | [institutions](institutions.md) | Réformes institutionnelles | à auditer |
 | [bilan-et-carnet](bilan-et-carnet.md) | Bilan, carnet, seed et partage | à auditer |
 | [interface-coque](interface-coque.md) | Coque, composants partagés, identité visuelle | à auditer |
-| [sauvegarde](sauvegarde.md) | Sauvegarde, migrations, import/export | à auditer |
+| [sauvegarde](sauvegarde.md) | Sauvegarde, refus des anciennes versions, import/export | en chantier (B-03) |
 | [equilibrage](equilibrage.md) | Simulateur, mesures, réglages | à auditer |
 
 ## Modèle d’une fiche
