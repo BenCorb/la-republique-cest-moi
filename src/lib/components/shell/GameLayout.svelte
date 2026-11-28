@@ -23,6 +23,7 @@
 	import { quarterHeadlines } from './press-rotation.ts';
 	import { TAB_LABELS, type GameTab } from './tabs.ts';
 	import TurnControls from './TurnControls.svelte';
+	import { setOpen } from '#lib/components/tabs/sections.svelte.ts';
 
 	/**
 	 * Coque de partie (DESIGN.md §3) : en-tête avec date, âge, ressources et jauges ;
@@ -110,7 +111,13 @@
 							</span>
 						</span>
 					</span>
-					<PressTicker items={headlines} onOpen={() => onTab('france')} />
+					<PressTicker
+						items={headlines}
+						onOpen={() => {
+							setOpen('press', true);
+							onTab('france');
+						}}
+					/>
 				</div>
 			</div>
 			<!-- Bande des indicateurs : date dans la colonne de la navigation, puis six cellules égales. -->

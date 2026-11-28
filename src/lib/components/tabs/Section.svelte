@@ -23,7 +23,7 @@
 </script>
 
 <section class="flex flex-col gap-3" aria-labelledby="section-{id}" data-testid="section-{id}">
-	<h2 id="section-{id}" class="m-0">
+	<h2 id="section-{id}" class="m-0" aria-label={title}>
 		<button
 			type="button"
 			class="flex w-full items-center gap-3 rounded-lg border border-line bg-surface px-4 py-3 text-left hover:border-primary"
