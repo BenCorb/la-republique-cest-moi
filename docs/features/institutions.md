@@ -17,7 +17,7 @@ Cinq paramètres réformables (cumul, indépendance de la justice, transparence,
 
 - Moteur (`src/lib/game/engine/`) : `reforms.ts`
 - Contenu (`src/lib/game/content/data/`) : `institutions.json`, `data/events/institutions.json`
-- Projection (`src/lib/game/app/view-model.ts`) : `InstitutionsView`, `InstitutionParameterView`, `ReformOptionView`
+- Projection (`src/lib/game/app/`, module `view/world.ts`) : `InstitutionsView`, `InstitutionParameterView`, `ReformOptionView`
 - Interface (`src/lib/components/`) : `world/InstitutionsCard.svelte`
 - Tests (`tests/`) : `unit/reforms.test.ts`
 

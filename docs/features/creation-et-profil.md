@@ -21,7 +21,7 @@ Le point de départ : origine sociale, profession, terrain d’engagement, terri
 
 - Moteur (`src/lib/game/engine/`) : `state.ts` (`createGame`), `family.ts`, `territory.ts`, `ambition.ts`
 - Contenu (`src/lib/game/content/data/`) : `profiles.json`
-- Projection (`src/lib/game/app/view-model.ts`) : `ProfileOptionView`, `RegionOptionView`, `TerritoryView`, `FirstStepsView`, `creationOptions`
+- Projection (`src/lib/game/app/`, module `view/creation.ts`) : `ProfileOptionView`, `RegionOptionView`, `TerritoryView`, `FirstStepsView`, `creationOptions`
 - Interface (`src/lib/components/`) : `shell/HomeScreen.svelte`, `shell/CreationScreen.svelte`, `shell/FirstSteps.svelte`
 - Tests (`tests/`) : `unit/family.test.ts`, `unit/territory.test.ts`, `unit/ambition.test.ts`, `unit/engagement.test.ts`, `unit/state.test.ts`, `e2e/home.e2e.ts`
 

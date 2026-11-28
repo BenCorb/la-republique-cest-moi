@@ -19,7 +19,7 @@ Popularité auprès des groupes électoraux, appuis d’influence (militants, ap
 
 - Moteur (`src/lib/game/engine/`) : `supports.ts`, `activists.ts`
 - Contenu (`src/lib/game/content/data/`) : `supports.json`
-- Projection (`src/lib/game/app/view-model.ts`) : `SupportsView`, `SupportGroupView`, `ActivistsView`, `ActivistLeverView`
+- Projection (`src/lib/game/app/`, module `view/supports.ts`, `view/organisation.ts`) : `SupportsView`, `SupportGroupView`, `ActivistsView`, `ActivistLeverView`
 - Interface (`src/lib/components/`) : `career/SupportsCard.svelte`, `organisation/Organisation.svelte`
 - Tests (`tests/`) : `unit/supports.test.ts`, `unit/activists.test.ts`
 

@@ -20,7 +20,7 @@ La boucle trimestrielle : préparer un plan, avancer d’un trimestre ou accél�
 
 - Moteur (`src/lib/game/engine/`) : `turn.ts`, `acceleration.ts`, `commands.ts`, `calendar.ts`
 - Contenu (`src/lib/game/content/data/`) : `balance.json` (paramètres d’alerte)
-- Projection (`src/lib/game/app/view-model.ts`) : `summarizeSpan`, `QuarterNoteView`, `OutcomeView`, `SummaryView`
+- Projection (`src/lib/game/app/`, module `view/note.ts`, `view/journal.ts`) : `summarizeSpan`, `SpanSummaryView`, `QuarterNoteView`, `OutcomeView`, `JournalTurnView`
 - Interface (`src/lib/components/`) : `shell/TurnControls.svelte`, `events/NoteDialog.svelte`, `dashboard/SpanSummary.svelte`
 - Tests (`tests/`) : `scenarios/acceleration.test.ts`, `scenarios/determinism.test.ts`, `unit/acceleration-alerts.test.ts`, `unit/outcome-note.test.ts`, `unit/calendar.test.ts`
 

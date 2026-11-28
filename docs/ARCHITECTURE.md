@@ -55,8 +55,9 @@ src/
                           (contrôles croisés), load.ts / load-node.ts, version.ts, data/*.json, data/events/*.json
     persistence/          envelope.ts (SAVE_VERSION), migrations.ts, state-schema.ts, local-storage.ts,
                           import-export.ts
-    app/                  view-model.ts (projectView → PlayerView), controller.ts, session.svelte.ts,
-                          format.ts, logbook.ts, browser.ts (seule frontière navigateur)
+    app/                  view-model.ts (PlayerView, projectView, ré-exports), view/ (une projection par
+                          système : agenda, career, entourage, justice, media, note, journal, shared…),
+                          controller.ts, session.svelte.ts, format.ts, logbook.ts, browser.ts (frontière navigateur)
     simulation/           simulateur par lots (stratégies, rapports JSON/CSV)
   lib/components/         common/ (composants partagés, identity.ts), shell/ (coque, en-tête, plan, alertes),
                           un dossier par écran : dashboard, agenda, career, world, news, entourage,
@@ -139,7 +140,7 @@ Les règles de chaque système (économie, santé, scrutins, justice, presse…)
 
 ## 9. Interface, projection et informations cachées
 
-- `PlayerView` (`app/view-model.ts`, `projectView(state, plan, content)`, pure) est **la seule source des composants**. Elle ne contient ni PRNG, ni seed de tirage, ni probabilités, ni effets ou suites des choix, ni traits cachés (test dédié). Les données restent inspectables par un utilisateur technique : règle d’expérience, pas protection anti-triche.
+- `PlayerView` (`app/view-model.ts`, `projectView(state, plan, content)`, pure) est **la seule source des composants**. Chaque système a son module de projection dans `app/view/` ; `view/shared.ts` regroupe pastilles, libellés et descriptions communs, et ne dépend d’aucun autre module. Les composants importent toujours depuis `view-model.ts`, qui ré-exporte l’API publique. Elle ne contient ni PRNG, ni seed de tirage, ni probabilités, ni effets ou suites des choix, ni traits cachés (test dédié). Les données restent inspectables par un utilisateur technique : règle d’expérience, pas protection anti-triche.
 - `GameController` (`app/controller.ts`, TypeScript pur à dépendances injectées) : brouillon de plan local non sauvegardé ; chaque transition réussie est sauvegardée aussitôt ; tant qu’une sauvegarde a échoué, aucune transition sauf « Continuer sans sauvegarder » explicite ; une sauvegarde existante n’est remplacée qu’après confirmation ; un événement `storage` d’un autre onglet bloque les écritures jusqu’au rechargement.
 - `GameSession` (`app/session.svelte.ts`) expose un instantané réactif ; `app/browser.ts` est la seule frontière navigateur (stockage, horloge d’affichage, seed, téléchargement).
 - Toujours visibles : temps restant, coûts, production prévue, alertes, commandes d’avance. Distinguer conséquences certaines (actions) et tendances incertaines (événements). Navigation clavier, contrastes, pas d’information portée par la seule couleur. Décision bloquante dans un `<dialog>` qu’Échap ne ferme pas.
@@ -194,7 +195,6 @@ Cas incontournables : même seed et commandes → égalité structurelle ; previ
 
 État au tag `v1.0.0` (1 072 tests unitaires et de scénarios, 86 tests E2E, `RULES_VERSION = '0.52.0'`). Les limites propres à un système sont dans sa fiche.
 
-- **`app/view-model.ts` (≈ 5 600 lignes)** concentre toutes les projections : à découper par système avant les grands chantiers d’interface (premier chantier technique de la beta, sans changement de comportement).
 - **Projection recalculée en entier** à chaque changement du contrôleur ; acceptable aux tailles mesurées (quelques ms), à mémoriser si le journal grossit.
 - **Écriture de sauvegarde** : relit et valide la sauvegarde existante pour décider de la copie précédente.
 - **Paquet client** : catalogue et Zod validés dans le navigateur ; une validation au seul build allégerait la page.

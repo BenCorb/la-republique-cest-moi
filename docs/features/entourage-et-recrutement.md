@@ -20,7 +20,7 @@ Les postes clés (cabinet, communication, trésorerie, conseil politique, affair
 
 - Moteur (`src/lib/game/engine/`) : `staff.ts`, `recruitment.ts`
 - Contenu (`src/lib/game/content/data/`) : `entourage.json`
-- Projection (`src/lib/game/app/view-model.ts`) : `EntourageView`, `PostView`, `StaffPersonView`, `CandidateView`, `PostSearchView`, `HireOfferView`
+- Projection (`src/lib/game/app/`, module `view/entourage.ts`) : `EntourageView`, `PostView`, `StaffPersonView`, `CandidateView`, `PostSearchView`, `HireOfferView`
 - Interface (`src/lib/components/`) : `entourage/EntouragePanel.svelte`
 - Tests (`tests/`) : `unit/staff.test.ts`, `unit/recruitment.test.ts`, `unit/recruitment-search.test.ts`
 

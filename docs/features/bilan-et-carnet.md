@@ -19,7 +19,7 @@ La fin d’une vie politique : nécrologie, distinctions fondées sur l’histor
 
 - Moteur (`src/lib/game/engine/`) : `legacy.ts`
 - Contenu (`src/lib/game/content/data/`) : `epitaphs.json`
-- Projection (`src/lib/game/app/view-model.ts`) : `LogbookEntry`, bilan dans `PlayerView`
+- Projection (`src/lib/game/app/`, module `view/legacy.ts`) : `LogbookEntry`, bilan dans `PlayerView`
 - Interface (`src/lib/components/`) : `events/CareerEnd.svelte`, `shell/LogbookCard.svelte`, `app/logbook.ts`
 - Tests (`tests/`) : `unit/legacy.test.ts`, `unit/logbook.test.ts`
 

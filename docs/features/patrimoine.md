@@ -18,7 +18,7 @@ Ce que devient l’argent personnel : actifs, revenus passifs, valeur nette, tra
 
 - Moteur (`src/lib/game/engine/`) : `wealth.ts`
 - Contenu (`src/lib/game/content/data/`) : `wealth.json`, `upgrades.json`
-- Projection (`src/lib/game/app/view-model.ts`) : `WealthView`, `AssetView`
+- Projection (`src/lib/game/app/`, module `view/wealth.ts`) : `WealthView`, `AssetView`
 - Interface (`src/lib/components/`) : `wealth/Wealth.svelte`
 - Tests (`tests/`) : `unit/wealth.test.ts`
 

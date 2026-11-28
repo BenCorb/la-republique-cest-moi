@@ -22,7 +22,7 @@ Les situations écrites qui interrompent ou colorent la carrière : brèves, dil
 
 - Moteur (`src/lib/game/engine/`) : `events.ts`, `effects.ts`, `conditions.ts`, `eras.ts`
 - Contenu (`src/lib/game/content/data/`) : `data/events/*.json` (19 fichiers), `cast.json` ; validation dans `content/validate.ts`
-- Projection (`src/lib/game/app/view-model.ts`) : `DecisionView`, `ChoiceView`, `AdviceView`
+- Projection (`src/lib/game/app/`, module `view/events.ts`) : `DecisionView`, `ChoiceView`, `AdviceView`
 - Interface (`src/lib/components/`) : `events/DecisionDialog.svelte`
 - Tests (`tests/`) : `unit/events.test.ts`, `unit/narrative-catalog.test.ts`, `unit/repetition.test.ts`, `unit/eras.test.ts`, `unit/content-catalog.test.ts`, `unit/capabilities.test.ts`, `scenarios/real-catalog.test.ts`
 
