@@ -6,15 +6,22 @@
  *   l'origine, donc le stockage.
  * - Avant chaque écriture, la sauvegarde actuelle, si elle est valide, est
  *   conservée comme copie précédente.
- * - Une sauvegarde existante illisible, endommagée, incompatible ou issue d'une
- *   version future n'est jamais écrasée sans demande explicite
+ * - Une sauvegarde existante illisible, endommagée, incompatible, d'une version
+ *   précédente de la beta ou d'une version future n'est jamais écrasée sans
+ *   demande explicite
  *   (`overwriteUnreadable`) : AGENTS.md interdit de l'effacer silencieusement.
  * - Toute erreur d'écriture (quota, stockage indisponible) est renvoyée : le jeu
  *   ne doit jamais prétendre avoir sauvegardé.
  * Le stockage est injecté (`KeyValueStorage`) : testable sans navigateur.
  */
 import type { Content } from '../content/types.ts';
-import { parseSaveText, serializeEnvelope, type SaveEnvelope, type SaveError } from './envelope.ts';
+import {
+	parseSaveText,
+	serializeEnvelope,
+	type ReadOptions,
+	type SaveEnvelope,
+	type SaveError
+} from './envelope.ts';
 
 /** Sous-ensemble de l'API `Storage` du navigateur. */
 export interface KeyValueStorage {
@@ -48,7 +55,6 @@ export type LoadOutcome =
 			readonly source: 'current' | 'backup';
 			/** Problème de la sauvegarde courante lorsque la copie précédente a été utilisée. */
 			readonly currentError: SaveError | null;
-			readonly migratedFrom: number | null;
 	  }
 	| {
 			readonly status: 'error';
@@ -82,7 +88,7 @@ function writeError(
 	return { ok: false, error: { code, message, existing } };
 }
 
-export interface WriteOptions {
+export interface WriteOptions extends ReadOptions {
 	/** Écrase une sauvegarde existante illisible ou incompatible (décision explicite du joueur). */
 	readonly overwriteUnreadable?: boolean;
 }
@@ -100,7 +106,7 @@ export function writeSave(
 
 	let backedUp = false;
 	if (current.value !== null) {
-		const existing = parseSaveText(current.value, content);
+		const existing = parseSaveText(current.value, content, options);
 		if (existing.ok) {
 			try {
 				storage.setItem(BACKUP_KEY, current.value);
@@ -131,7 +137,28 @@ export function writeSave(
 	return { ok: true, backedUp };
 }
 
-export function readSave(storage: KeyValueStorage, content: Content): LoadOutcome {
+/**
+ * Texte brut de la sauvegarde refusée par `readSave` (courante, sinon copie
+ * précédente), pour l'exporter telle quelle ; `null` si aucune ne l'est.
+ */
+export function readRefusedSaveText(
+	storage: KeyValueStorage,
+	content: Content,
+	options: ReadOptions = {}
+): string | null {
+	for (const key of [SAVE_KEY, BACKUP_KEY]) {
+		const stored = safeGet(storage, key);
+		if (!stored.ok || stored.value === null) continue;
+		if (!parseSaveText(stored.value, content, options).ok) return stored.value;
+	}
+	return null;
+}
+
+export function readSave(
+	storage: KeyValueStorage,
+	content: Content,
+	options: ReadOptions = {}
+): LoadOutcome {
 	const current = safeGet(storage, SAVE_KEY);
 	const backup = safeGet(storage, BACKUP_KEY);
 	if (!current.ok || !backup.ok) {
@@ -146,25 +173,24 @@ export function readSave(storage: KeyValueStorage, content: Content): LoadOutcom
 		};
 	}
 
-	const currentResult = current.value === null ? null : parseSaveText(current.value, content);
+	const currentResult =
+		current.value === null ? null : parseSaveText(current.value, content, options);
 	if (currentResult?.ok) {
 		return {
 			status: 'loaded',
 			envelope: currentResult.envelope,
 			source: 'current',
-			currentError: null,
-			migratedFrom: currentResult.migratedFrom
+			currentError: null
 		};
 	}
 
-	const backupResult = backup.value === null ? null : parseSaveText(backup.value, content);
+	const backupResult = backup.value === null ? null : parseSaveText(backup.value, content, options);
 	if (backupResult?.ok) {
 		return {
 			status: 'loaded',
 			envelope: backupResult.envelope,
 			source: 'backup',
-			currentError: currentResult && !currentResult.ok ? currentResult.error : null,
-			migratedFrom: backupResult.migratedFrom
+			currentError: currentResult && !currentResult.ok ? currentResult.error : null
 		};
 	}
 	if (currentResult === null && backupResult === null) return { status: 'empty' };

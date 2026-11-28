@@ -1,5 +1,6 @@
 /** Sauvegarde locale, export et import : API publique de la persistance. */
 export {
+	FIRST_BETA_SAVE_VERSION,
 	MAX_SAVE_BYTES,
 	SAVE_FORMAT,
 	SAVE_VERSION,
@@ -7,17 +8,18 @@ export {
 	parseSaveText,
 	readEnvelope,
 	serializeEnvelope,
+	type ReadOptions,
 	type ReadResult,
 	type SaveEnvelope,
 	type SaveError,
 	type SaveErrorCode
 } from './envelope.ts';
-export { MIGRATIONS, migrateEnvelope, type Migration, type RawEnvelope } from './migrations.ts';
 export {
 	BACKUP_KEY,
 	SAVE_KEY,
 	STORAGE_PREFIX,
 	browserStorage,
+	readRefusedSaveText,
 	readSave,
 	writeSave,
 	type KeyValueStorage,
@@ -27,5 +29,5 @@ export {
 	type WriteOptions,
 	type WriteResult
 } from './local-storage.ts';
-export { exportSave, importSave, type ExportedSave } from './import-export.ts';
+export { exportRawSave, exportSave, importSave, type ExportedSave } from './import-export.ts';
 export { gameStateSchema } from './state-schema.ts';

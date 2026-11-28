@@ -6,8 +6,7 @@
  */
 import type { Content } from '../content/types.ts';
 import { quarterOf, yearOf } from '../engine/index.ts';
-import { MIGRATIONS, type Migration } from './migrations.ts';
-import { parseSaveText, type ReadResult, type SaveEnvelope } from './envelope.ts';
+import { parseSaveText, type ReadOptions, type ReadResult, type SaveEnvelope } from './envelope.ts';
 
 export interface ExportedSave {
 	readonly fileName: string;
@@ -24,10 +23,21 @@ export function exportSave(envelope: SaveEnvelope): ExportedSave {
 	};
 }
 
-export function importSave(
-	text: string,
-	content: Content,
-	migrations: Readonly<Record<number, Migration>> = MIGRATIONS
-): ReadResult {
-	return parseSaveText(text, content, migrations);
+export function importSave(text: string, content: Content, options: ReadOptions = {}): ReadResult {
+	return parseSaveText(text, content, options);
+}
+
+/**
+ * Export d'une sauvegarde refusée (illisible, préversion, version précédente de
+ * la beta), telle qu'elle est stockée, octet pour octet : le joueur la garde
+ * avant de commencer une nouvelle partie (décision 0002). Rien n'est validé ni
+ * corrigé.
+ */
+export function exportRawSave(text: string): ExportedSave {
+	const version = /"saveVersion"\s*:\s*(\d{1,6})/u.exec(text)?.[1];
+	return {
+		fileName: `la-republique-cest-moi-sauvegarde-${version ? `v${version}` : 'illisible'}.json`,
+		mimeType: 'application/json',
+		text
+	};
 }
