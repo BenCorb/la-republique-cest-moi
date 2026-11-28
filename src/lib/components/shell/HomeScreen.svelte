@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Play, RotateCcw, Upload } from '@lucide/svelte';
+	import { Download, Play, RotateCcw, Upload } from '@lucide/svelte';
+	import { downloadExport } from '#lib/game/app/browser.ts';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 	import GameShell from './GameShell.svelte';
 	import SaveBanner from './SaveBanner.svelte';
@@ -34,6 +35,11 @@
 	}: Props = $props();
 	const home = $derived(session.snapshot.home);
 	let fileInput: HTMLInputElement | undefined = $state();
+
+	function exportRefused(): void {
+		const exported = session.controller.exportRefused();
+		if (exported) downloadExport(exported);
+	}
 
 	async function readFile(event: Event): Promise<void> {
 		const input = event.currentTarget as HTMLInputElement;
@@ -84,9 +90,13 @@
 				<div role="alert" class="mt-6 rounded border border-danger bg-canvas p-4 text-sm">
 					<p class="font-semibold text-danger">{home.unreadable.message}</p>
 					<p class="mt-1">
-						Elle est conservée telle quelle. Elle ne sera remplacée que si vous commencez une
-						nouvelle carrière ou importez une sauvegarde, après confirmation.
+						Elle est conservée telle quelle : vous pouvez l’exporter pour la garder. Elle ne sera
+						remplacée que si vous commencez une nouvelle carrière ou importez une sauvegarde, après
+						confirmation.
 					</p>
+					<button type="button" class="btn-secondary btn-small mt-3" onclick={exportRefused}>
+						<Download class="size-4" aria-hidden="true" /> Exporter cette sauvegarde
+					</button>
 				</div>
 			{/if}
 
@@ -128,8 +138,8 @@
 
 	{#snippet status()}
 		<p>
-			Alpha · sauvegardée dans ce navigateur ; une mise à jour du jeu peut rendre une partie en
-			cours illisible
+			Beta · sauvegardée dans ce navigateur ; une mise à jour de la beta peut empêcher de reprendre
+			une partie en cours
 		</p>
 	{/snippet}
 </GameShell>

@@ -30,7 +30,7 @@ import { createWorld } from './world.ts';
 import { startingParameters } from './reforms.ts';
 import { createTerritory, territoryEffects, type TerritoryState } from './territory.ts';
 
-/** Version du format de l'état, à incrémenter avec une migration explicite. */
+/** Version interne du format de l'état ; la compatibilité des sauvegardes suit `SAVE_VERSION` (persistance). */
 export const STATE_SCHEMA_VERSION = 1;
 
 /** Premier tour d'une partie : T1 2000. */

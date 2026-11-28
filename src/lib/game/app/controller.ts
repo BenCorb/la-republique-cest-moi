@@ -43,8 +43,10 @@ import {
 } from '../engine/index.ts';
 import {
 	createEnvelope,
+	exportRawSave,
 	exportSave,
 	importSave,
+	readRefusedSaveText,
 	readSave,
 	writeSave,
 	type ExportedSave,
@@ -749,6 +751,18 @@ export class GameController {
 	exportCurrent(): ExportedSave | null {
 		if (!this.state) return null;
 		return exportSave(createEnvelope(this.state, this.deps.content, this.deps.now()));
+	}
+
+	/**
+	 * Exporte, telle qu'elle est stockée, la sauvegarde refusée à l'accueil
+	 * (version précédente de la beta, préversion, illisible) : lecture seule,
+	 * le stockage n'est pas modifié (décision 0002).
+	 */
+	exportRefused(): ExportedSave | null {
+		const { storage, content } = this.deps;
+		if (!storage) return null;
+		const text = readRefusedSaveText(storage, content);
+		return text === null ? null : exportRawSave(text);
 	}
 
 	// -- Import -------------------------------------------------------------

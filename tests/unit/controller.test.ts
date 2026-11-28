@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { GameController } from '../../src/lib/game/app/controller.ts';
-import { SAVE_KEY, readSave, type KeyValueStorage } from '../../src/lib/game/persistence/index.ts';
+import {
+	BACKUP_KEY,
+	SAVE_KEY,
+	createEnvelope,
+	exportSave,
+	readSave,
+	type KeyValueStorage
+} from '../../src/lib/game/persistence/index.ts';
+import { createGame } from '../../src/lib/game/engine/index.ts';
 import type { Content } from '../../src/lib/game/content/types.ts';
 import { fixtureContent, withEvents } from '../fixtures/content.ts';
 
@@ -88,6 +96,50 @@ describe('accueil et nouvelle carrière', () => {
 		expect(storage.items.get(SAVE_KEY)).toBe('{ cassé');
 		expect(game.newCareer({ replaceExisting: true })).toBe('started');
 		expect(readSave(storage, fixtureContent).status).toBe('loaded');
+	});
+});
+
+describe('sauvegarde d’une ancienne version (décision 0002)', () => {
+	/** Sauvegarde valide ramenée à une version antérieure (ici la préversion, format 1). */
+	function oldSave(seed: string): string {
+		const envelope = createEnvelope(createGame({ seed }, fixtureContent), fixtureContent, 'x');
+		return exportSave({ ...envelope, saveVersion: 1 }).text;
+	}
+
+	it('la refuse à l’accueil, l’exporte telle quelle et ne la remplace que sur confirmation', () => {
+		const storage = new MemoryStorage();
+		const current = oldSave('courante');
+		const previous = oldSave('précédente');
+		storage.items.set(SAVE_KEY, current);
+		storage.items.set(BACKUP_KEY, previous);
+		const game = controller(storage);
+		const { home } = game.snapshot();
+		expect(home.existing).toBeNull();
+		expect(home.unreadable?.code).toBe('outdated_rules');
+		expect(game.resume()).toBe(false);
+
+		const exported = game.exportRefused();
+		expect(exported?.text).toBe(current);
+		expect(exported?.fileName).toBe('la-republique-cest-moi-sauvegarde-v1.json');
+		expect(game.newCareer()).toBe('needs_confirmation');
+		expect(storage.items.get(SAVE_KEY)).toBe(current);
+		expect(storage.items.get(BACKUP_KEY)).toBe(previous);
+
+		expect(game.newCareer({ replaceExisting: true })).toBe('started');
+		expect(readSave(storage, fixtureContent).status).toBe('loaded');
+		// La copie précédente, illisible elle aussi, n'a pas été touchée.
+		expect(storage.items.get(BACKUP_KEY)).toBe(previous);
+	});
+
+	it('refuse l’import d’une ancienne version sans rien écrire', () => {
+		const storage = new MemoryStorage();
+		const game = controller(storage);
+		expect(game.importFile(oldSave('importée'))).toBe('invalid');
+		expect(game.snapshot().notice).toMatchObject({ level: 'error' });
+		expect(game.snapshot().notice?.text).toMatch(/préversion/u);
+		expect(game.snapshot().screen).toBe('home');
+		expect(storage.items.size).toBe(0);
+		expect(game.exportRefused()).toBeNull();
 	});
 });
 

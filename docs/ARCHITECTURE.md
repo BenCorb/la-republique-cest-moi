@@ -53,7 +53,7 @@ src/
                           random.ts, calendar.ts, selectors.ts, + un module par système (voir fiches)
     content/              types.ts (seul module lisible par le moteur), schemas.ts (Zod), validate.ts
                           (contrôles croisés), load.ts / load-node.ts, version.ts, data/*.json, data/events/*.json
-    persistence/          envelope.ts (SAVE_VERSION), migrations.ts, state-schema.ts, local-storage.ts,
+    persistence/          envelope.ts (SAVE_VERSION), state-schema.ts, local-storage.ts,
                           import-export.ts
     app/                  view-model.ts (PlayerView, projectView, ré-exports), view/ (une projection par
                           système : agenda, career, entourage, justice, media, note, journal, shared…),
@@ -71,7 +71,7 @@ Correspondance système → fichiers : voir la fiche du système dans [features/
 
 ## 4. Modèle de données
 
-L’état complet est défini dans `engine/state.ts` (`GameState`, `STATE_SCHEMA_VERSION = 1`) et son schéma de lecture dans `persistence/state-schema.ts`, typé contre lui : toute modification de `GameState` impose de mettre à jour le schéma (la compilation l’exige) **et** d’ajouter une migration (§10).
+L’état complet est défini dans `engine/state.ts` (`GameState`, `STATE_SCHEMA_VERSION = 1`) et son schéma de lecture dans `persistence/state-schema.ts`, typé contre lui : toute modification de `GameState` impose de mettre à jour le schéma (la compilation l’exige) **et** d’incrémenter `SAVE_VERSION` (§10 ; pas de migration pendant la beta).
 
 - **Ressources** : `influence`, `politicalBudgetCents`, `personalCashCents` ; entiers ≥ 0, jamais fusionnés. La valeur nette du patrimoine est dérivée (liquidités + actifs).
 - **Joueur** : naissance (tour), santé, stress, notoriété, soutiens, affiliation, éligibilité, convictions internes. **Aucun score moral présenté au joueur** ; actes et conséquences vivent dans l’historique et le registre des faits.
@@ -159,9 +159,9 @@ interface SaveEnvelope {
 }
 ```
 
-- **Lecture validée, dans l’ordre** : taille ≤ 5 Mo → JSON → format → version (future : refus `future_version` ; ancienne : migrations pures et séquentielles `N → N+1`) → schéma Zod strict → invariants → références au catalogue. Aucune réparation silencieuse. Une sauvegarde de préversion (format 1) est refusée avec un message explicite, jamais modifiée ni effacée.
-- **Règle beta ([décision 0002](decisions/0002-sauvegardes-beta.md)) : toute évolution de `GameState` incrémente `SAVE_VERSION`, sans migration.** Une sauvegarde d’une version précédente est refusée avec un message (« version précédente de la beta »), proposée à l’export, jamais effacée ni modifiée. La sauvegarde témoin `tests/fixtures/save-v1.json` n’a plus à rester lisible. *Jusqu’à la livraison de B-03, le chargement applique encore la chaîne de migrations décrite ci-dessus.* Les migrations redeviennent obligatoires à partir de la 1.0 publique.
-- **Stockage** : clés `la-republique-cest-moi:save` et `:save:previous` (origine partagée sur GitHub Pages). La sauvegarde courante valide devient la copie précédente avant écriture. Une sauvegarde illisible, incompatible ou future n’est jamais écrasée sans décision explicite du joueur. Quota et échecs d’écriture remontent (`quota_exceeded`, `storage_unavailable`, `write_failed`) : rien n’est présenté comme sauvegardé à tort.
+- **Lecture validée, dans l’ordre** : taille ≤ 5 Mo → JSON → format → version (future : refus `future_version` ; préversion, format 1 : refus `outdated_rules` ; version précédente de la beta : refus `previous_version`) → schéma Zod strict → invariants → références au catalogue. Aucune réparation silencieuse. Une sauvegarde de préversion (format 1) est refusée avec un message explicite, jamais modifiée ni effacée.
+- **Règle beta ([décision 0002](decisions/0002-sauvegardes-beta.md)) : toute évolution de `GameState` incrémente `SAVE_VERSION`, sans migration.** Une sauvegarde d’une version précédente est refusée (`previous_version`, « version précédente de la beta », avant toute lecture de l’état), proposée à l’export telle qu’elle est stockée (`exportRefused`), jamais effacée ni modifiée ; elle n’est remplacée que par une nouvelle partie ou un import confirmés. Même refus à l’import. La chaîne de migrations est retirée ; les migrations redeviennent obligatoires à partir de la 1.0 publique. La sauvegarde témoin `tests/fixtures/save-v1.json` sert de cas « ancienne version refusée » (version courante injectable, `ReadOptions.saveVersion`, réservée aux tests).
+- **Stockage** : clés `la-republique-cest-moi:save` et `:save:previous` (origine partagée sur GitHub Pages). La sauvegarde courante valide devient la copie précédente avant écriture. Une sauvegarde illisible, incompatible, ancienne ou future n’est jamais écrasée sans décision explicite du joueur ; la lecture n’écrit jamais. Quota et échecs d’écriture remontent (`quota_exceeded`, `storage_unavailable`, `write_failed`) : rien n’est présenté comme sauvegardé à tort.
 - **Export / import** : fichier `la-republique-cest-moi-AAAA-Tn.json` ; l’import applique la même validation et n’écrit rien sans décision de l’interface.
 - Ajout de contenu : ne jamais recycler un identifiant ; conserver les définitions historiques nécessaires ou prévoir alias et migration.
 - Plus longue sauvegarde mesurée : ≈ 1,2 million de caractères, sous la moitié du quota usuel.
@@ -173,7 +173,7 @@ interface SaveEnvelope {
 | Unitaire (Vitest)  | Calendrier, PRNG, validation, plan, économie, santé, prédicats, effets, un fichier par système |
 | Scénario moteur    | Déterminisme, carrière complète, reprise de sauvegarde, accélération, catalogue réel         |
 | Contenu            | Schémas, références, textes résolus pour toutes les distributions d’acteurs, choix de repli  |
-| Sauvegarde         | Aller-retour, migrations, données invalides, décision en attente, quota, non-double application |
+| Sauvegarde         | Aller-retour, ancienne version refusée, données invalides, décision en attente, quota, non-double application |
 | E2E (Playwright)   | Parcours de jeu contre le build statique, à la racine et sous `BASE_PATH`                    |
 | Simulation Node    | Lots seedés par stratégie, rapport JSON/CSV, seeds problématiques                            |
 

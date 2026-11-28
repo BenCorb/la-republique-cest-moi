@@ -1,4 +1,4 @@
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { commitTurn, createGame, transition, turnOf } from '../../src/lib/game/engine/index.ts';
 import { formatResource } from '../../src/lib/game/app/format.ts';
@@ -422,31 +422,65 @@ test.describe('parcours de jeu', () => {
 		);
 	});
 
-	test('refuse explicitement une sauvegarde d’une ancienne version, sans l’effacer', async ({
+	test('refuse une sauvegarde d’une ancienne version, l’exporte et ne la remplace que sur confirmation', async ({
 		page
-	}) => {
+	}, testInfo) => {
+		// Décision 0002 : une version antérieure n'est jamais migrée. La seule version
+		// antérieure possible aujourd'hui est la préversion (format 1) ; les versions
+		// précédentes de la beta suivent le même chemin (tests unitaires).
 		await startCareer(page, 'e2e-ancienne');
 		const key = 'la-republique-cest-moi:save';
-		const old = await page.evaluate((saveKey) => {
-			const envelope = JSON.parse(localStorage.getItem(saveKey) ?? '{}') as {
-				rulesVersion: string;
-				state: Record<string, unknown>;
-			};
-			envelope.rulesVersion = '0.7.0';
-			delete envelope.state.world;
-			const raw = JSON.stringify(envelope);
-			localStorage.setItem(saveKey, raw);
-			localStorage.removeItem(`${saveKey}:previous`);
-			return raw;
+		const stored = await page.evaluate((saveKey) => {
+			const envelope = JSON.parse(localStorage.getItem(saveKey) ?? '{}') as Record<string, unknown>;
+			const current = JSON.stringify({ ...envelope, saveVersion: 1 });
+			const previous = JSON.stringify({ ...envelope, saveVersion: 1, savedAt: 'avant' });
+			localStorage.setItem(saveKey, current);
+			localStorage.setItem(`${saveKey}:previous`, previous);
+			return { current, previous };
 		}, key);
+		const readStorage = () =>
+			page.evaluate(
+				(saveKey) => ({
+					current: localStorage.getItem(saveKey),
+					previous: localStorage.getItem(`${saveKey}:previous`)
+				}),
+				key
+			);
 
 		await page.reload();
-		await expect(page.getByRole('alert')).toContainText(
-			'créée par une autre version de développement du jeu (règles 0.7.0'
-		);
-		await expect(page.getByRole('alert')).toContainText('Elle est conservée telle quelle.');
+		const alert = page.getByRole('alert');
+		await expect(alert).toContainText('vient d’une préversion du jeu');
+		await expect(alert).toContainText('vous pouvez l’exporter pour la garder');
 		await expect(page.getByRole('button', { name: 'Reprendre la carrière' })).toHaveCount(0);
-		expect(await page.evaluate((saveKey) => localStorage.getItem(saveKey), key)).toBe(old);
+
+		// Export : le fichier est la sauvegarde stockée, octet pour octet.
+		const download = page.waitForEvent('download');
+		await alert.getByRole('button', { name: 'Exporter cette sauvegarde' }).click();
+		const file = await download;
+		expect(file.suggestedFilename()).toBe('la-republique-cest-moi-sauvegarde-v1.json');
+		const exportedPath = testInfo.outputPath('exportee.json');
+		await file.saveAs(exportedPath);
+		expect(readFileSync(exportedPath, 'utf8')).toBe(stored.current);
+
+		// Import du même fichier : même refus, rien n'est écrit.
+		await page.getByTestId('import-input').setInputFiles(exportedPath);
+		await expect(page.getByRole('alert').first()).toContainText('préversion');
+		expect(await readStorage()).toEqual(stored);
+
+		// Nouvelle partie : confirmation demandée ; une annulation ne touche à rien.
+		await page.getByRole('button', { name: 'Nouvelle carrière' }).click();
+		await page.getByRole('button', { name: 'Commencer la carrière' }).click();
+		const confirm = page.getByRole('dialog', { name: 'Commencer une nouvelle carrière ?' });
+		await expect(confirm).toBeVisible();
+		await confirm.getByRole('button', { name: 'Annuler' }).click();
+		expect(await readStorage()).toEqual(stored);
+
+		await page.getByRole('button', { name: 'Commencer la carrière' }).click();
+		await page.getByRole('button', { name: 'Remplacer et commencer' }).click();
+		await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 25 ans');
+		const after = await readStorage();
+		expect(after.current).not.toBe(stored.current);
+		expect(after.previous).toBe(stored.previous);
 	});
 
 	test('accélère une année sans arrêt inutile, résume la période et la reprend', async ({
