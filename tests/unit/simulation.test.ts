@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { parseSimulationArgs } from '../../scripts/simulate.ts';
 import { loadContentFromFiles } from '../../src/lib/game/content/load-node.ts';
 import { loadContent } from '../../src/lib/game/content/load.ts';
@@ -16,6 +16,9 @@ import {
 	simulateCareer,
 	simulationReportToCsv
 } from '../../src/lib/game/simulation/index.ts';
+
+// Lots simulés : le runner de la CI est deux à trois fois plus lent qu'un poste local.
+vi.setConfig({ testTimeout: 60_000 });
 
 const content = loadContent();
 

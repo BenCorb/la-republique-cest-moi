@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { loadContent } from '../../src/lib/game/content/load.ts';
 import type { Content, HeadlineDefinition } from '../../src/lib/game/content/types.ts';
 import {
@@ -25,6 +25,9 @@ import { createRng } from '../../src/lib/game/engine/random.ts';
 import { createEnvelope, exportSave, importSave } from '../../src/lib/game/persistence/index.ts';
 import { simulateBatch } from '../../src/lib/game/simulation/index.ts';
 import { withEvents } from '../fixtures/content.ts';
+
+// Lots simulés : le runner de la CI est deux à trois fois plus lent qu'un poste local.
+vi.setConfig({ testTimeout: 60_000 });
 
 /** Anti-répétition et instrumentation du contenu (P3-15, PT-P3-09-016). */
 const content = loadContent();
