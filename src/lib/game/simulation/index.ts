@@ -43,10 +43,11 @@ import {
 	type GameState,
 	type PendingEventView,
 	type PlanStep,
-	type TurnPlan
+	type TurnPlan,
+	netWorth
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 23;
+export const SIMULATION_REPORT_VERSION = 24;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -128,6 +129,12 @@ export interface SimulationRun {
 	>;
 	/** Scrutins du joueur tranchés au second tour (P3-29). */
 	readonly runoffs: number;
+	/**
+	 * Part de la fortune consacrée aux débouchés politiques et de prestige
+	 * (dons, avances, mécénat, fondation, médias), en % de cette dépense plus la
+	 * valeur nette finale (P3-39).
+	 */
+	readonly fortuneSpentPercent: number;
 	/** Plus haut statut atteint dans un parti (P3-34). */
 	readonly partyRankPeak: 'none' | 'member' | 'cadre' | 'leader';
 	/** Adversaires différents affrontés et plus grand nombre d'affrontements avec le même. */
@@ -822,9 +829,15 @@ const STRATEGY_WISHES: Readonly<
 		action('campaign.rally'),
 		action('campaign.canvass'),
 		action('party.section_meeting'),
+		// Familles en trois formats (P3-39) : le plus grand format accessible d'abord.
+		action('activism.zenith'),
+		action('activism.congress_hall'),
 		action('activism.public_meeting'),
+		action('organization.fundraising_gala'),
+		action('organization.fundraising_dinner'),
 		action('organization.fundraising'),
 		action('network.meet_officials'),
+		action('wealth.patronage'),
 		// Le plus grand format accessible (P3-23) : un seul passe par trimestre.
 		action('personal.donate_major'),
 		action('personal.donate_sustained'),
@@ -841,6 +854,10 @@ const STRATEGY_WISHES: Readonly<
 		purchase('wealth.sme_shares'),
 		purchase('wealth.country_house'),
 		purchase('wealth.local_media'),
+		// Débouchés de la fortune (P3-39) : fondation, hebdomadaire national, mécénat.
+		purchase('wealth.foundation'),
+		purchase('wealth.national_media'),
+		action('wealth.patronage'),
 		action('lifestyle.adopt_comfortable'),
 		purchase('network.think_tank'),
 		purchase('organization.donor_file'),
@@ -857,6 +874,7 @@ const STRATEGY_WISHES: Readonly<
 		purchase('organization.local_office'),
 		action('network.meet_officials'),
 		action('organization.gala'),
+		action('organization.fundraising_dinner'),
 		action('organization.fundraising'),
 		action('personal.freelance')
 	]
@@ -1177,6 +1195,33 @@ function finalizeRun(
 				];
 			})
 		),
+		fortuneSpentPercent: (() => {
+			const outlets = (kind: 'action' | 'purchase', id: string): boolean =>
+				kind === 'purchase'
+					? ['wealth.foundation', 'wealth.local_media', 'wealth.national_media'].includes(id)
+					: content.actions[id]?.scale?.family === 'family.donation' ||
+						content.actions[id]?.scale?.family === 'family.campaign_advance' ||
+						id === 'wealth.patronage';
+			const spent = state.history.reduce(
+				(total, entry) =>
+					entry.type !== 'turn.resolved'
+						? total
+						: total +
+							entry.steps.reduce(
+								(sum, step) =>
+									outlets(step.kind, step.id)
+										? sum -
+											step.changes
+												.filter((change) => change.resource === 'personalCashCents')
+												.reduce((cash, change) => cash + Math.min(0, change.delta), 0)
+										: sum,
+								0
+							),
+				0
+			);
+			const remaining = Math.max(0, netWorth(state.resources, state.upgrades));
+			return spent + remaining > 0 ? Math.round((spent * 100) / (spent + remaining)) : 0;
+		})(),
 		partyRankPeak: (() => {
 			const ranks = state.history.flatMap((entry) =>
 				entry.type === 'turn.resolved'

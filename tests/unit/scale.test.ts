@@ -373,7 +373,13 @@ describe('validation des familles (P3-23)', () => {
 describe('catalogue réel (P3-23)', () => {
 	it('décline le don personnel et l’avance de campagne en trois formats, aux rendements décroissants', () => {
 		const content = loadContentFromFiles();
-		expect(content.actionFamilyIds).toEqual(['family.donation', 'family.campaign_advance']);
+		// Collecte et meeting en trois formats depuis P3-39.
+		expect(content.actionFamilyIds).toEqual([
+			'family.fundraising',
+			'family.public_meeting',
+			'family.donation',
+			'family.campaign_advance'
+		]);
 		const donation = ['personal.donate', 'personal.donate_sustained', 'personal.donate_major'].map(
 			(id) => content.actions[id]!
 		);

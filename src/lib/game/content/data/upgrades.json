@@ -232,6 +232,42 @@
 			}
 		},
 		{
+			"id": "wealth.foundation",
+			"family": "personal",
+			"ownedLabel": "Votre fondation",
+			"label": "Créer une fondation",
+			"description": "Une fondation reconnue d’utilité publique, un conseil d’administration de gens respectables et des colloques sur « l’avenir des territoires ». L’argent y entre plus facilement qu’il n’en sort.",
+			"treasury": "personalCashCents",
+			"timeCost": 15,
+			"maxOwned": 1,
+			"price": [{ "resource": "personalCashCents", "amount": 5000000 }],
+			"upkeep": [{ "resource": "personalCashCents", "amount": 150000 }],
+			"production": [{ "resource": "influence", "amount": 2 }]
+		},
+		{
+			"id": "wealth.national_media",
+			"family": "personal",
+			"ownedLabel": "Votre hebdomadaire national",
+			"label": "Racheter La Gazette fouineuse",
+			"description": "L’hebdomadaire satirique national, au bord du dépôt de bilan. Les ventes rapportent un peu ; la rédaction, réputée indomptable, le reste.",
+			"treasury": "personalCashCents",
+			"timeCost": 15,
+			"maxOwned": 1,
+			"price": [{ "resource": "personalCashCents", "amount": 60000000 }],
+			"upkeep": [{ "resource": "personalCashCents", "amount": 500000 }],
+			"production": [],
+			"asset": {
+				"annualYieldPercent": 3,
+				"annualGrowthPercent": 0,
+				"volatilityPercent": 8,
+				"economySensitivityPercent": 2,
+				"failurePerMille": 4,
+				"salePercent": 75,
+				"stressPerTurn": 1,
+				"media": "media.gazette"
+			}
+		},
+		{
 			"id": "wealth.local_media",
 			"family": "personal",
 			"ownedLabel": "Votre quotidien régional",

@@ -1132,6 +1132,17 @@ Décision du créateur (ROADMAP §5.2 : rappel au dossier et jugement au bilan, 
 - **Interface** : choix facultatif à la création, ambition et état au profil du tableau de bord, fait marquant de la note (« Ambition atteinte » ou « trahie »), ligne « Ambition de départ » au bilan.
 - `RULES_VERSION = '0.47.0'`. Tests : `tests/unit/ambition.test.ts` (facultative et sans effet, objectif atteint et conservé, mains propres jugées à la fin ou trahies).
 
+### 8.4 septtrigesies Décisions de P3-39 : débouchés de l’argent (28 novembre 2026)
+
+Recommandation B5 de l'audit et revue des actions (§8) ; chiffres : **décisions déléguées, provisoires**.
+
+- **Collecte en trois formats** (`family.fundraising`, mécanisme de P3-23) : « Organiser une collecte » (modeste, inchangée), « Organiser un dîner de levée de fonds » (200 € de frais, 600 à 1 500 € recueillis, comité local ou collaborateur), « Organiser une grande soirée de donateurs » (1 000 € de frais, 2 500 à 6 000 €, section et collaborateur).
+- **Réunion publique et meeting en trois formats** (`family.public_meeting`) : réunion publique (modeste, inchangée), « Remplir une salle de congrès » (1 500 €, 10 à 20 d'influence), « Remplir un Zénith » (6 000 €, 25 à 40 d'influence, exposition + 8). Le meeting de campagne reste propre aux candidatures ; le meeting holographique reste l'action des années 2030, hors famille.
+- **Prestige** : action « Financer un mécénat culturel » (10 000 € d'argent personnel : influence + 4, classes moyennes et électeurs aisés) ; amélioration « Créer une fondation » (50 000 €, 1 500 € par trimestre, 2 d'influence par trimestre).
+- **Médias** : rachat élargi à l'hebdomadaire national « La Gazette fouineuse » (600 000 €, actif du patrimoine lié au média), en plus du quotidien régional.
+- **Simulation** : l'ambitieuse prend le plus grand format accessible de chaque famille et finance du mécénat ; la patrimoniale crée une fondation, rachète l'hebdomadaire et finance du mécénat ; la mixte organise des dîners. Rapport v24 avec `fortuneSpentPercent` (dépense consacrée aux débouchés, en % de cette dépense plus la valeur nette finale). Mesure (60 carrières, seed `p3-39`) : aucune erreur ni violation ; part dépensée médiane 39 % (patrimoniale), 23 % (ambitieuse), 19 % (aléatoire), 2 % (mixte), 0 % (prudente) ; argent personnel final médian de la patrimoniale de 238 533 € à 14 304 €. Durée active médiane 69 minutes. Équilibre fin et stratégie dominante à vérifier en P3-09.
+- `RULES_VERSION = '0.48.0'`. Validation du catalogue : chaque famille a exactement trois formats de même catégorie.
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.

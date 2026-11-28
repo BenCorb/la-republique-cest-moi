@@ -51,6 +51,16 @@
 	],
 	"families": [
 		{
+			"id": "family.fundraising",
+			"label": "Organiser une collecte",
+			"description": "Remplir le budget politique en trois formats : un dîner à prix libre, un dîner de levée de fonds, une grande soirée de donateurs."
+		},
+		{
+			"id": "family.public_meeting",
+			"label": "Réunion publique et meeting",
+			"description": "Occuper le terrain en trois formats : une salle des fêtes, une salle de congrès, un Zénith."
+		},
+		{
 			"id": "family.donation",
 			"label": "Verser un don à son organisation",
 			"description": "Transférer une partie de ses économies au budget politique, en trois formats. Plafond annuel, tous formats confondus.",
@@ -66,6 +76,126 @@
 		}
 	],
 	"actions": [
+		{
+			"id": "organization.fundraising_dinner",
+			"category": "political_finance",
+			"label": "Organiser un dîner de levée de fonds",
+			"description": "Cent couverts à 150 €, un traiteur qui économise sur le fromage et un discours qui insiste sur « l’effort de chacun ». Les chèques suivent le dessert.",
+			"timeCost": 30,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 20000 }],
+			"requires": {
+				"op": "any",
+				"conditions": [
+					{ "op": "gte", "stat": "player.activists", "value": 25 },
+					{ "op": "gte", "stat": "player.staff", "value": 1 }
+				]
+			},
+			"unavailableReason": "Il faut un comité local (25 militants) ou un collaborateur pour organiser cela.",
+			"scale": { "family": "family.fundraising", "format": "sustained" },
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "politicalBudgetCents",
+					"min": 60000,
+					"max": 150000
+				},
+				{ "op": "addStat", "stat": "player.stress", "value": 2 },
+				{ "op": "addSupport", "group": "support.business", "value": 1 }
+			]
+		},
+		{
+			"id": "organization.fundraising_gala",
+			"category": "political_finance",
+			"label": "Organiser une grande soirée de donateurs",
+			"description": "Un hôtel particulier, un quatuor à cordes et des donateurs qui comptent bien qu’on se souvienne de leur nom. Le trésorier compte, lui, jusqu’à tard dans la nuit.",
+			"timeCost": 40,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 100000 }],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{ "op": "gte", "stat": "player.activists", "value": 100 },
+					{ "op": "gte", "stat": "player.staff", "value": 1 }
+				]
+			},
+			"unavailableReason": "Il faut une section implantée (100 militants) et au moins un collaborateur pour organiser cela.",
+			"scale": { "family": "family.fundraising", "format": "major" },
+			"effects": [
+				{
+					"op": "addResourceRandom",
+					"resource": "politicalBudgetCents",
+					"min": 250000,
+					"max": 600000
+				},
+				{ "op": "addStat", "stat": "player.stress", "value": 3 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 3 },
+				{ "op": "addSupport", "group": "support.business", "value": 2 }
+			]
+		},
+		{
+			"id": "activism.congress_hall",
+			"category": "activism",
+			"label": "Remplir une salle de congrès",
+			"description": "Mille cinq cents sièges, des drapeaux distribués à l’entrée et une sono qui, pour une fois, fonctionne. Les cars de militants arrivent à l’heure, presque.",
+			"timeCost": 40,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 150000 }],
+			"requires": {
+				"op": "any",
+				"conditions": [
+					{ "op": "gte", "stat": "player.activists", "value": 25 },
+					{ "op": "gte", "stat": "player.staff", "value": 1 }
+				]
+			},
+			"unavailableReason": "Il faut un comité local (25 militants) ou un collaborateur pour organiser cela.",
+			"scale": { "family": "family.public_meeting", "format": "sustained" },
+			"effects": [
+				{ "op": "addResourceRandom", "resource": "influence", "min": 10, "max": 20 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 4 },
+				{ "op": "addStat", "stat": "player.stress", "value": 3 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 1 }
+			]
+		},
+		{
+			"id": "activism.zenith",
+			"category": "activism",
+			"label": "Remplir un Zénith",
+			"description": "Six mille personnes, un écran géant, une entrée sur une musique trop forte et des journalistes qui comptent les rangées vides. Il n’y en a pas : vous avez affrété des cars.",
+			"timeCost": 50,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "politicalBudgetCents", "amount": 600000 }],
+			"requires": {
+				"op": "all",
+				"conditions": [
+					{ "op": "gte", "stat": "player.activists", "value": 100 },
+					{ "op": "gte", "stat": "player.staff", "value": 1 }
+				]
+			},
+			"unavailableReason": "Il faut une section implantée (100 militants) et au moins un collaborateur pour organiser cela.",
+			"scale": { "family": "family.public_meeting", "format": "major" },
+			"effects": [
+				{ "op": "addResourceRandom", "resource": "influence", "min": 25, "max": 40 },
+				{ "op": "addStat", "stat": "player.exposure", "value": 8 },
+				{ "op": "addStat", "stat": "player.stress", "value": 5 },
+				{ "op": "addSupport", "group": "support.working_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 }
+			]
+		},
+		{
+			"id": "wealth.patronage",
+			"category": "wealth",
+			"label": "Financer un mécénat culturel",
+			"description": "Un festival de musique baroque, une restauration de chapelle ou une exposition au musée municipal : votre nom en petits caractères sur l’affiche, et en grand dans les remerciements.",
+			"timeCost": 10,
+			"maxPerTurn": 1,
+			"costs": [{ "resource": "personalCashCents", "amount": 1000000 }],
+			"effects": [
+				{ "op": "addResource", "resource": "influence", "value": 4 },
+				{ "op": "addSupport", "group": "support.middle_class", "value": 2 },
+				{ "op": "addSupport", "group": "support.wealthy", "value": 1 }
+			]
+		},
 		{
 			"id": "personal.retire",
 			"category": "personal",
@@ -636,6 +766,7 @@
 				"value": 10
 			},
 			"unavailableReason": "Il faut au moins 10 points d’influence pour espérer remplir une salle.",
+			"scale": { "family": "family.public_meeting", "format": "modest" },
 			"effects": [
 				{
 					"op": "addResourceRandom",
@@ -684,6 +815,7 @@
 				"value": 5
 			},
 			"unavailableReason": "Il faut au moins 5 points d’influence pour que quelqu’un se déplace.",
+			"scale": { "family": "family.fundraising", "format": "modest" },
 			"effects": [
 				{
 					"op": "addResourceRandom",
