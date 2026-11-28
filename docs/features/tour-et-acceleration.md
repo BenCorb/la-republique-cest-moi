@@ -55,5 +55,5 @@ _Audit de B-04, avant mise en œuvre ; tiré du code._
 - Décisions du [dépouillement B-02](../playtests/2026-11-28-b-02-reference.md#décisions-par-retour) : D-07 (tour par tour) → B-04 ; D-08 (retraite) → B-04, B-05.
 - [x] Audit : règles en vigueur condensées ci-dessus, décisions provisoires listées (B-04)
 - [ ] Problèmes UX/UI relevés (captures, retours de playtest)
-- [ ] Plan de consolidation validé par le créateur
+- [x] Plan de consolidation validé par le créateur (28 novembre 2026, B-04) : « Année suivante », « Jusqu’à une alerte », état d’accélération et résumé de période retirés de l’interface et du contrôleur ; moteur d’accélération conservé (simulation, tests) ; bouton « Se retirer de la vie politique » à gauche de la barre du bas, confirmé au clic, annulable depuis le carnet ; `personal.retire` reste le mécanisme (5 points jusqu’à B-05) mais quitte l’agenda ; note de cabinet raccourcie hors B-04.
 - [ ] Mise en œuvre, tests et fiche à jour

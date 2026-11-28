@@ -57,5 +57,12 @@ _Audit de B-04, avant mise en œuvre ; tiré du code._
 - Décisions du [dépouillement B-02](../playtests/2026-11-28-b-02-reference.md#décisions-par-retour) : D-02 (six onglets, carnet, résumé puis détail) → B-04 ; référence visuelle : [maquette de la coque](../maquettes/2026-11-28-coque-beta-v2.html).
 - [x] Audit : règles en vigueur condensées ci-dessus, décisions provisoires listées (B-04)
 - [ ] Problèmes UX/UI relevés (captures, retours de playtest)
-- [ ] Plan de consolidation validé par le créateur
+- [x] Plan de consolidation validé par le créateur (28 novembre 2026, B-04) :
+  - Trimestre (onglet par défaut et après chaque tour) : agenda, « Fixe ce trimestre », situation, soutiens et tendances ;
+  - Politique : élections et campagnes, mandats, parti, médias ;
+  - Vie privée : santé et stress, exposition et justice, patrimoine (emploi avec B-10) ;
+  - Mon réseau : équipe, organisation et financement, relations ;
+  - La France : contexte, partis et intentions de vote, institutions, presse ;
+  - Journal ;
+  - chaque section s’ouvre sur une ligne de résumé calculée par la projection, le détail à la demande ; carnet inchangé à droite.
 - [ ] Mise en œuvre, tests et fiche à jour
