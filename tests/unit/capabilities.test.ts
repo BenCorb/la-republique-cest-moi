@@ -117,6 +117,7 @@ describe('capacités exigées par les infractions (P3-12)', () => {
 
 	it('audite chaque fait du catalogue : impossible sans pouvoir, possible avec', () => {
 		expect(factSources.map((source) => source.label).sort()).toEqual([
+			'chain.developer_opening › flat',
 			'entourage.creative_accounting › accept',
 			'finance.donor_favour › call',
 			'finance.expense_report › charge',

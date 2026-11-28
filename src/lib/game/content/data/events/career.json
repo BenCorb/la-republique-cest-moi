@@ -1634,6 +1634,627 @@
 					"value": 5
 				}
 			]
+		},
+		{
+			"id": "chain.developer_mall",
+			"category": "career",
+			"title": "Un centre commercial aux portes de la ville",
+			"text": "{developer} déroule une maquette sur votre bureau : un centre commercial, quatre cents emplois promis et un rond-point offert. Il ne lui manque qu’un avis favorable, et peut-être un ami.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": true,
+			"actors": [
+				{
+					"role": "developer",
+					"tags": ["developer"]
+				}
+			],
+			"choices": [
+				{
+					"id": "back",
+					"label": "Soutenir le projet",
+					"hints": ["Des emplois annoncés", "Les commerçants du centre-ville grincent"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 1
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": -1
+						},
+						{
+							"op": "addRelation",
+							"role": "developer",
+							"value": 10,
+							"memory": "Vous avez soutenu son centre commercial."
+						}
+					],
+					"outcome": [
+						"Le permis avance, la maquette trône dans le hall de la mairie, et {developer} vous tutoie désormais."
+					],
+					"followUp": {
+						"eventId": "chain.developer_opening",
+						"delayTurns": 4
+					}
+				},
+				{
+					"id": "refuse",
+					"label": "Défendre les commerces du centre",
+					"hints": ["Le centre-ville vous remercie", "Un promoteur vexé"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": -2
+						},
+						{
+							"op": "addRelation",
+							"role": "developer",
+							"value": -10,
+							"memory": "Vous avez enterré son centre commercial."
+						}
+					],
+					"outcome": [
+						"Le projet part dans la commune voisine. {developer} vous croise au marché sans vous voir."
+					]
+				}
+			],
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "any",
+						"conditions": [
+							{
+								"op": "holdsMandate",
+								"mandate": "mandate.mayor"
+							},
+							{
+								"op": "holdsMandate",
+								"mandate": "mandate.regional_councillor"
+							}
+						]
+					},
+					{
+						"op": "capability",
+						"capability": "public_office"
+					}
+				]
+			}
+		},
+		{
+			"id": "chain.developer_opening",
+			"category": "career",
+			"title": "L’inauguration du centre commercial",
+			"text": "Ruban, fanfare et parking plein : le centre ouvre. En coupant le ruban, {developer} glisse qu’un appartement du programme voisin pourrait vous être réservé « à prix d’ami ».",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": false,
+			"actors": [
+				{
+					"role": "developer",
+					"tags": ["developer"]
+				}
+			],
+			"choices": [
+				{
+					"id": "flat",
+					"label": "Accepter l’appartement à prix d’ami",
+					"hints": ["Une affaire en or", "Les promoteurs ont parfois de la mémoire"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "personalCashCents",
+							"value": 2000000
+						},
+						{
+							"op": "addRelation",
+							"role": "developer",
+							"value": 10,
+							"memory": "Vous avez accepté son appartement à prix d’ami."
+						},
+						{
+							"op": "recordFact",
+							"offense": "offense.conflict_of_interest",
+							"severity": 2,
+							"accomplices": ["developer"]
+						}
+					],
+					"outcome": [
+						"Un acte notarié discret, un prix « négocié ». {developer} garde une copie de tout, par habitude."
+					],
+					"followUp": {
+						"eventId": "chain.developer_audit",
+						"delayTurns": 6
+					}
+				},
+				{
+					"id": "pay",
+					"label": "Décliner et couper le ruban",
+					"hints": ["Rien à se reprocher", "Le promoteur s’étonne"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 2
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Vous coupez le ruban sous les flashs. {developer} range son offre avec un sourire pincé."
+					]
+				}
+			],
+			"when": {
+				"op": "capability",
+				"capability": "public_office"
+			}
+		},
+		{
+			"id": "chain.developer_audit",
+			"category": "career",
+			"title": "Les magistrats financiers épluchent le centre commercial",
+			"text": "Les magistrats financiers épluchent le dossier du centre commercial : permis, rond-point offert, et quelques transactions immobilières dans le voisinage. {developer} ne répond plus au téléphone.",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": false,
+			"actors": [
+				{
+					"role": "developer",
+					"tags": ["developer"]
+				}
+			],
+			"choices": [
+				{
+					"id": "cooperate",
+					"label": "Collaborer pleinement",
+					"hints": ["La transparence rassure", "Tout finit par se savoir"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 4
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 1
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 3
+						}
+					],
+					"outcome": [
+						"Vous remettez tous les documents. Le rapport sera sévère pour la procédure, moins pour vous."
+					]
+				},
+				{
+					"id": "deny",
+					"label": "Dénoncer un acharnement",
+					"hints": ["Les fidèles serrent les rangs", "Les magistrats aussi"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 6
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						},
+						{
+							"op": "addRelation",
+							"role": "developer",
+							"value": -5,
+							"memory": "Vous l’avez laissé seul face aux magistrats."
+						}
+					],
+					"outcome": [
+						"Votre communiqué parle d’un « dossier monté de toutes pièces ». Les magistrats, eux, poursuivent leur lecture."
+					]
+				}
+			]
+		},
+		{
+			"id": "unique.mayor_first_council",
+			"category": "career",
+			"title": "Votre premier conseil municipal en maire",
+			"text": "La salle du conseil, l’écharpe qui gratte, et vingt-sept élus qui attendent votre premier ordre du jour. Le doyen de l’opposition a préparé sa question.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 8,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": true,
+			"actors": [],
+			"choices": [
+				{
+					"id": "open",
+					"label": "Ouvrir la séance par une main tendue",
+					"hints": ["Un climat apaisé", "L’opposition prend ses aises"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 2
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 1
+						}
+					],
+					"outcome": [
+						"Vous saluez l’opposition par son nom. Le doyen range sa question pour une autre fois."
+					]
+				},
+				{
+					"id": "firm",
+					"label": "Imposer d’emblée votre programme",
+					"hints": ["Une autorité installée", "Une opposition remontée"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Six délibérations votées en une heure. L’opposition quitte la salle au troisième point."
+					]
+				}
+			],
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.mayor"
+			}
+		},
+		{
+			"id": "unique.region_first_session",
+			"category": "career",
+			"title": "Votre première session au conseil régional",
+			"text": "Un hémicycle moderne, des écrans partout et un budget en milliards. Vous découvrez que la région s’occupe des lycées, des trains et surtout d’elle-même.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 8,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": true,
+			"actors": [],
+			"choices": [
+				{
+					"id": "transport",
+					"label": "Rejoindre la commission des transports",
+					"hints": ["Des dossiers concrets", "Des usagers exigeants"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 1
+						}
+					],
+					"outcome": ["Les horaires du TER deviennent votre lecture du soir."]
+				},
+				{
+					"id": "budget",
+					"label": "Rejoindre la commission des finances",
+					"hints": ["Le cœur du pouvoir régional", "Des nuits de tableaux"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
+					],
+					"outcome": ["Vous apprenez à lire un budget primitif, puis à le contester."]
+				}
+			],
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.regional_councillor"
+			}
+		},
+		{
+			"id": "unique.deputy_maiden_speech",
+			"category": "career",
+			"title": "Votre premier discours dans l’hémicycle",
+			"text": "Deux minutes à la tribune de l’Assemblée, un hémicycle à moitié vide et un huissier qui vous regarde comme un nouveau. Le discours est prêt ; le trac aussi.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 8,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": true,
+			"actors": [],
+			"choices": [
+				{
+					"id": "bold",
+					"label": "Oser une formule",
+					"hints": ["Elle peut faire le tour des rédactions", "Ou se retourner contre vous"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResourceRandom",
+							"resource": "influence",
+							"min": -2,
+							"max": 6
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 3
+						}
+					],
+					"outcome": [
+						"Votre formule déclenche des applaudissements sur vos bancs et des quolibets en face. La presse la reprend, plus ou moins fidèlement."
+					]
+				},
+				{
+					"id": "sober",
+					"label": "Rester sobre et technique",
+					"hints": ["Sérieux remarqué", "Personne ne s’en souviendra"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Un discours sans éclat mais sans faute. Le président de groupe vous félicite d’un signe de tête."
+					]
+				}
+			],
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.deputy"
+			}
+		},
+		{
+			"id": "unique.senator_luxembourg",
+			"category": "career",
+			"title": "Premiers pas au palais du Luxembourg",
+			"text": "Les dorures, le jardin et un restaurant où l’on parle bas. Un sénateur chevronné vous prend par le bras : « Ici, mon cher, on a le temps. »",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 8,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": true,
+			"actors": [],
+			"choices": [
+				{
+					"id": "mentor",
+					"label": "Écouter le vieux sénateur",
+					"hints": ["Des réseaux précieux", "Un rythme sénatorial"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -2
+						}
+					],
+					"outcome": ["Il vous présente à tout le monde, et vous apprend à ne jamais vous presser."]
+				},
+				{
+					"id": "hurry",
+					"label": "Déposer votre première proposition de loi",
+					"hints": ["Un nouveau qui se montre", "Les anciens sourient"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 2
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 1
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 1
+						}
+					],
+					"outcome": [
+						"Votre proposition est renvoyée en commission, où elle prendra le temps du Sénat."
+					]
+				}
+			],
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.senator"
+			}
+		},
+		{
+			"id": "unique.minister_handover",
+			"category": "career",
+			"title": "La passation de pouvoirs",
+			"text": "Dans la cour du ministère, votre prédécesseur vous remet les dossiers, le code du coffre et un conseil glissé à l’oreille : « Méfiez-vous du directeur de cabinet. »",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 8,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": true,
+			"actors": [],
+			"choices": [
+				{
+					"id": "keep",
+					"label": "Garder l’équipe en place",
+					"hints": ["Continuité assurée", "Des fidélités incertaines"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -1
+						}
+					],
+					"outcome": [
+						"Le directeur de cabinet vous remercie de votre confiance. Vous ne saurez jamais s’il fallait s’en méfier."
+					]
+				},
+				{
+					"id": "clean",
+					"label": "Faire place nette",
+					"hints": ["Une équipe à vous", "Des débuts chaotiques"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 3
+						}
+					],
+					"outcome": [
+						"Trois directeurs remplacés en une semaine : l’administration vous observe, prudemment."
+					]
+				}
+			],
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.minister"
+			}
+		},
+		{
+			"id": "unique.pm_first_night",
+			"category": "career",
+			"title": "Première nuit à Matignon",
+			"text": "L’hôtel de Matignon dort, sauf vous. Un huissier apporte un dossier marqué « urgent » et le café de deux heures du matin. Le jardin, dans le noir, paraît immense.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 8,
+			"priority": 8,
+			"cooldownTurns": 8,
+			"unique": true,
+			"actors": [],
+			"choices": [
+				{
+					"id": "work",
+					"label": "Lire tous les dossiers",
+					"hints": ["Maîtrise totale", "Une fatigue qui s’installe"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 4
+						}
+					],
+					"outcome": [
+						"À l’aube, vous connaissez chaque dossier. Vos ministres, eux, découvrent que vous les avez lus."
+					]
+				},
+				{
+					"id": "garden",
+					"label": "Faire un tour dans le jardin",
+					"hints": ["Un moment pour soi", "Le premier de longtemps"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -4
+						}
+					],
+					"outcome": [
+						"Vous marchez jusqu’au fond du parc. Les gardes vous saluent ; le pays, lui, attend demain."
+					]
+				}
+			],
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.prime_minister"
+			}
 		}
 	]
 }

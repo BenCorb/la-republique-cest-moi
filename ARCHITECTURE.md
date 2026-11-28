@@ -1155,6 +1155,16 @@ Revue des actions de l'audit (§8) et retour PT-B2-002 ; chiffres et textes : **
 - **Seconde partie (28 novembre 2026)** : douze titres d'entretien de plus (six neutres, trois favorables, trois critiques) ; la demande d'augmentation a deux variantes (`renegotiation.variants` : offre de la concurrence, titre et salaire), choisies par empreinte du collaborateur et du trimestre, désormais environ 1,4 fois chacune par carrière au lieu de 4,2 fois la même ; **ligne éditoriale** (`press.editorialSwingPercent`, 15 %) : par empreinte du média, du sujet et du trimestre, un article sur sept est durci et un sur sept adouci d'un cran, sans tirage. Titres jamais utilisés sur 2 500 carrières : 8 au lieu de 48 (combinaisons rares : satire d'un entretien, rachat favorable, appels et doutes judiciaires favorables). Variété mesurée (rapport v25) : actions distinctes par carrière de 7 (prudente) à 22 (ambitieuse), l'action la plus fréquente au plus 52 % des actions (le repos de la prudente). Durée active médiane 71 minutes. P3-24 est terminé.
 - `RULES_VERSION = '0.50.0'` (0.49.0 pour la première partie). Tests mis à jour : agenda (actions du territoire, comice hors saison), terrains d'engagement, audit des faits du catalogue, stratégies.
 
+### 8.4 novotrigesies Décisions de P3-25 : contenu, vague 2 (28 novembre 2026)
+
+Textes : **décisions déléguées, provisoires** (ton relu par le créateur au grand playtest).
+
+- **Chaînes à personnages récurrents** (acteurs transmis d'une étape à l'autre) : le promoteur Bernard Lagarde (étiquette `developer`) — centre commercial, inauguration avec un appartement à prix d'ami (prise illégale d'intérêts, capacité « fonction publique »), contrôle des magistrats financiers ; la journaliste Lucie Fontaine (`investigative`) — questions, enquête publiée, procès en diffamation (au prix de 5 000 €). Chaque chaîne est unique dans une carrière.
+- **Événements uniques par fonction** : premier conseil municipal en maire, première session régionale, premier discours à l'Assemblée, premiers pas au Sénat, passation de pouvoirs au ministère, première nuit à Matignon.
+- **Militants et équipe** : fête de la section (50 militants), croissance de la base (200 militants), séminaire d'équipe (deux collaborateurs), rivalités dans l'équipe (trois collaborateurs).
+- **Mesure** (200 carrières par stratégie, seed `p3-25`) : aucune erreur ni violation ; toutes ces scènes atteintes (de 3 premiers pas au Sénat à 177 fêtes de section) ; durée active médiane 66 minutes.
+- `RULES_VERSION = '0.51.0'`. Tests : audit des faits du catalogue (appartement à prix d'ami), textes courts.
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.

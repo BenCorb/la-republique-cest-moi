@@ -211,6 +211,140 @@
 					"value": -6000
 				}
 			]
+		},
+		{
+			"id": "organization.section_party",
+			"category": "organization",
+			"title": "La fête de la section",
+			"text": "Grillades, tombola et chansons de lutte : la section fête ses cinquante adhérents. On vous réclame un discours, et une tournée.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"cooldownTurns": 16,
+			"unique": false,
+			"actors": [],
+			"choices": [
+				{
+					"id": "speech",
+					"label": "Faire un discours enflammé",
+					"hints": ["Les militants s’enthousiasment", "Une soirée qui finit tard"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 1
+						}
+					],
+					"outcome": [
+						"Vous parlez debout sur une chaise. Les militants reprennent votre slogan jusqu’au parking."
+					]
+				},
+				{
+					"id": "round",
+					"label": "Offrir une tournée et écouter",
+					"hints": ["Les militants se sentent entendus", "La caisse en pâtit"],
+					"costs": [
+						{
+							"resource": "politicalBudgetCents",
+							"amount": 10000
+						}
+					],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -1
+						}
+					],
+					"outcome": [
+						"Vous écoutez les doléances jusqu’à minuit. Trois idées sont bonnes ; vous les notez."
+					]
+				}
+			],
+			"when": {
+				"op": "gte",
+				"stat": "player.activists",
+				"value": 50
+			},
+			"maxOccurrences": 2
+		},
+		{
+			"id": "organization.growing_pains",
+			"category": "organization",
+			"title": "La base grandit trop vite",
+			"text": "Deux cents militants, des réunions où l’on ne s’entend plus et des querelles de préséance entre anciens et nouveaux. Il faut organiser la croissance.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 4,
+			"priority": 8,
+			"cooldownTurns": 16,
+			"unique": false,
+			"actors": [],
+			"choices": [
+				{
+					"id": "structure",
+					"label": "Créer des groupes thématiques",
+					"hints": ["Chacun trouve sa place", "De la bureaucratie militante"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": 2
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 1
+						}
+					],
+					"outcome": ["Groupes, référents et un tableau des permanences : la base respire."]
+				},
+				{
+					"id": "trust",
+					"label": "Faire confiance aux anciens",
+					"hints": ["Les fidèles apprécient", "Les nouveaux se sentent tenus à l’écart"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": -1
+						},
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": 2
+						}
+					],
+					"outcome": [
+						"Les anciens tiennent la boutique. Quelques nouveaux s’en vont, d’autres patientent."
+					]
+				}
+			],
+			"when": {
+				"op": "gte",
+				"stat": "player.activists",
+				"value": 200
+			},
+			"maxOccurrences": 2
 		}
 	]
 }
