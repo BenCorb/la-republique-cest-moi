@@ -40,7 +40,7 @@ import {
 } from '../content/types.ts';
 import { yearOf, type Turn } from './calendar.ts';
 import { applyGauge } from './effects.ts';
-import { nextInt, type RngState } from './random.ts';
+import { hashSeed, nextInt, type RngState } from './random.ts';
 import type {
 	Article,
 	Campaign,
@@ -168,7 +168,9 @@ export function articleTone(
 	media: MediaDefinition,
 	relation: number,
 	owned: boolean,
-	content: Content
+	content: Content,
+	/** Ligne éditoriale de l'article (P3-24) : −1, 0 ou +1. */
+	editorial = 0
 ): ArticleTone {
 	const threshold = content.press.toneThreshold;
 	// Un cran par seuil de relation, deux pour une relation très marquée ; un média
@@ -177,8 +179,22 @@ export function articleTone(
 	const shift = owned
 		? 1 + Math.max(0, strong)
 		: (relation >= threshold ? 1 : relation <= -threshold ? -1 : 0) + strong;
-	const tone = shiftTone(base, shift);
+	const tone = shiftTone(base, shift + editorial);
 	return media.kind === 'satirical' && tone === 'favorable' ? 'neutral' : tone;
+}
+
+/** Ligne éditoriale d'un article (P3-24), par empreinte : −1, 0 ou +1, sans tirage. */
+export function editorialSwing(
+	mediaId: string,
+	topic: string,
+	subjectId: string | null,
+	turn: number,
+	content: Content
+): number {
+	const percent = content.press.editorialSwingPercent;
+	if (percent <= 0) return 0;
+	const roll = hashSeed(`${mediaId}:${topic}:${subjectId ?? ''}:${turn}`) % 100;
+	return roll < percent ? -1 : roll >= 100 - percent ? 1 : 0;
 }
 
 /** Effet d'un article sur chaque groupe lecteur (entier borné, 0 pour la neutralité). */
@@ -584,7 +600,14 @@ export function resolvePress(
 		if (!media) continue;
 		const isOwned = owned.has(media.id) && subject.topic !== 'ownership';
 		const relation = world.media[media.id]?.relation ?? 0;
-		const tone = articleTone(subject.tone, media, relation, isOwned, content);
+		const tone = articleTone(
+			subject.tone,
+			media,
+			relation,
+			isOwned,
+			content,
+			editorialSwing(media.id, subject.topic, subject.subjectId, inputs.turn, content)
+		);
 		const headlines = headlineCandidates(
 			subject.topic,
 			tone,

@@ -985,6 +985,7 @@ export const pressBalanceSchema: z.ZodType<PressBalance> = z.strictObject({
 	nationalMandateRank: positiveInt,
 	regionalNationalPercent: percent,
 	toneThreshold: safeInt.refine((value) => value >= 1 && value <= 100, 'de 1 à 100'),
+	editorialSwingPercent: z.number().int().min(0).max(50),
 	toneEffects: z.strictObject({ critical: toneEffect, neutral: toneEffect, favorable: toneEffect }),
 	maxEffect: positiveInt,
 	criticalExposure: nonNegativeInt,
@@ -1240,7 +1241,8 @@ export const entourageBalanceSchema: z.ZodType<EntourageBalance> = z
 		renegotiation: z.strictObject({
 			stepCompetence: positiveInt,
 			minTurns: positiveInt,
-			event: contentId
+			event: contentId,
+			variants: z.array(contentId).optional()
 		})
 	})
 	.refine((balance) => balance.fairAdviceCompetence <= balance.preciseAdviceCompetence, {

@@ -12,7 +12,12 @@
 			"cooldownTurns": 0,
 			"unique": false,
 			"subject": "staff",
-			"actors": [{ "role": "collaborator", "tags": ["staff"] }],
+			"actors": [
+				{
+					"role": "collaborator",
+					"tags": ["staff"]
+				}
+			],
 			"choices": [
 				{
 					"id": "grant",
@@ -20,7 +25,10 @@
 					"hints": ["La masse salariale s’alourdit", "{collaborator} se sent reconnu"],
 					"costs": [],
 					"effects": [
-						{ "op": "grantRaise", "role": "collaborator" },
+						{
+							"op": "grantRaise",
+							"role": "collaborator"
+						},
 						{
 							"op": "addRelation",
 							"role": "collaborator",
@@ -47,6 +55,124 @@
 					],
 					"outcome": [
 						"{collaborator} hoche la tête sans un mot. La demande reviendra, peut-être pas sous la même forme."
+					]
+				}
+			]
+		},
+		{
+			"id": "event.staff.raise_poached",
+			"category": "entourage",
+			"title": "Une offre de la concurrence",
+			"text": "{collaborator} pose sur votre bureau une lettre à en-tête d’un cabinet concurrent : « Je préfère rester, mais à ces conditions. » La somme est soulignée deux fois.",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 30,
+			"cooldownTurns": 0,
+			"unique": false,
+			"subject": "staff",
+			"actors": [
+				{
+					"role": "collaborator",
+					"tags": ["staff"]
+				}
+			],
+			"choices": [
+				{
+					"id": "grant",
+					"label": "Accorder l’augmentation",
+					"hints": ["La masse salariale s’alourdit", "{collaborator} se sent reconnu"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "grantRaise",
+							"role": "collaborator"
+						},
+						{
+							"op": "addRelation",
+							"role": "collaborator",
+							"value": 5,
+							"memory": "Vous avez reconnu ses progrès par une augmentation."
+						}
+					],
+					"outcome": [
+						"{collaborator} déchire la lettre devant vous, avec un sens du spectacle qui coûte cher."
+					]
+				},
+				{
+					"id": "refuse",
+					"label": "Refuser pour l’instant",
+					"hints": ["Le budget est préservé", "{collaborator} pourrait accepter l’autre offre"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "collaborator",
+							"value": -12,
+							"memory": "Vous avez refusé sa demande d’augmentation."
+						}
+					],
+					"outcome": [
+						"{collaborator} range la lettre dans sa poche, sans rien dire. Le cabinet concurrent rappellera."
+					]
+				}
+			]
+		},
+		{
+			"id": "event.staff.raise_promotion",
+			"category": "entourage",
+			"title": "Un titre, et le salaire qui va avec",
+			"text": "{collaborator} a fait le travail d’un directeur pendant trois mois sans en avoir le titre ni la fiche de paie. La conversation commence par « Je ne demande pas grand-chose ».",
+			"blocking": true,
+			"trigger": "followUp",
+			"weight": 0,
+			"priority": 30,
+			"cooldownTurns": 0,
+			"unique": false,
+			"subject": "staff",
+			"actors": [
+				{
+					"role": "collaborator",
+					"tags": ["staff"]
+				}
+			],
+			"choices": [
+				{
+					"id": "grant",
+					"label": "Accorder l’augmentation",
+					"hints": ["La masse salariale s’alourdit", "{collaborator} se sent reconnu"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "grantRaise",
+							"role": "collaborator"
+						},
+						{
+							"op": "addRelation",
+							"role": "collaborator",
+							"value": 5,
+							"memory": "Vous avez reconnu ses progrès par une augmentation."
+						}
+					],
+					"outcome": [
+						"{collaborator} obtient le titre et la fiche de paie. Les autres membres de l’équipe ont déjà remarqué."
+					]
+				},
+				{
+					"id": "refuse",
+					"label": "Refuser pour l’instant",
+					"hints": ["Le budget est préservé", "{collaborator} se sent peu reconnu"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addRelation",
+							"role": "collaborator",
+							"value": -12,
+							"memory": "Vous avez refusé sa demande d’augmentation."
+						}
+					],
+					"outcome": [
+						"{collaborator} hoche la tête et retourne à son bureau, un peu moins vite qu’avant."
 					]
 				}
 			]
@@ -125,7 +251,10 @@
 			"priority": 5,
 			"cooldownTurns": 16,
 			"unique": false,
-			"when": { "op": "capability", "capability": "political_activity" },
+			"when": {
+				"op": "capability",
+				"capability": "political_activity"
+			},
 			"actors": [
 				{
 					"role": "treasurer",

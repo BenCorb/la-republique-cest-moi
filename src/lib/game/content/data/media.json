@@ -339,6 +339,78 @@
 	],
 	"headlines": [
 		{
+			"id": "headline.interview_dinner_table",
+			"topic": "interview",
+			"tone": "neutral",
+			"text": "Entretien : « Je parle de la France comme on en parle à table »"
+		},
+		{
+			"id": "headline.interview_long_term",
+			"topic": "interview",
+			"tone": "neutral",
+			"text": "Entretien : « Je ne raisonne pas en mandats, mais en décennies »"
+		},
+		{
+			"id": "headline.interview_no_comment",
+			"topic": "interview",
+			"tone": "neutral",
+			"text": "Entretien : quarante minutes, trois idées et un « sans commentaire »"
+		},
+		{
+			"id": "headline.interview_childhood",
+			"topic": "interview",
+			"tone": "neutral",
+			"text": "Entretien : de son enfance à son ambition, « un fil continu »"
+		},
+		{
+			"id": "headline.interview_method",
+			"topic": "interview",
+			"tone": "neutral",
+			"text": "Entretien : « Ma méthode ? Écouter, puis décider, puis réécouter »"
+		},
+		{
+			"id": "headline.interview_doubts",
+			"topic": "interview",
+			"tone": "neutral",
+			"text": "Entretien : « Le doute est une force, à condition de ne pas l’avoir trop souvent »"
+		},
+		{
+			"id": "headline.interview_candid",
+			"topic": "interview",
+			"tone": "favorable",
+			"text": "Entretien : une sincérité qui tranche avec les éléments de langage"
+		},
+		{
+			"id": "headline.interview_ideas",
+			"topic": "interview",
+			"tone": "favorable",
+			"text": "Grand entretien : des idées, enfin, et même des chiffres"
+		},
+		{
+			"id": "headline.interview_rising",
+			"topic": "interview",
+			"tone": "favorable",
+			"text": "Entretien : la confirmation d’une ambition qui monte"
+		},
+		{
+			"id": "headline.interview_slogans",
+			"topic": "interview",
+			"tone": "critical",
+			"text": "Entretien : des slogans en guise de réponses"
+		},
+		{
+			"id": "headline.interview_contradiction",
+			"topic": "interview",
+			"tone": "critical",
+			"text": "Entretien : trois contradictions en vingt minutes, un record de la saison"
+		},
+		{
+			"id": "headline.interview_dodges",
+			"topic": "interview",
+			"tone": "critical",
+			"text": "Entretien : chaque question esquivée avec une rare élégance"
+		},
+		{
 			"id": "headline.justice_critical",
 			"topic": "justice",
 			"tone": "critical",
@@ -1273,6 +1345,7 @@
 		"nationalMandateRank": 40,
 		"regionalNationalPercent": 50,
 		"toneThreshold": 20,
+		"editorialSwingPercent": 15,
 		"toneEffects": {
 			"critical": -3,
 			"neutral": 0,

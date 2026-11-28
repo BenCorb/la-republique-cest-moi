@@ -735,6 +735,11 @@ export interface PressBalance {
 	readonly regionalNationalPercent: number;
 	/** Relation au-delà de laquelle un média adoucit sa tonalité (et en deçà de l'opposé, la durcit). */
 	readonly toneThreshold: number;
+	/**
+	 * Ligne éditoriale (P3-24) : part des articles durcis, et autant d'adoucis,
+	 * d'un cran, par empreinte du média, du sujet et du trimestre (sans tirage).
+	 */
+	readonly editorialSwingPercent: number;
 	/** Effet de base d'un article sur chaque groupe touché, par tonalité. */
 	readonly toneEffects: Readonly<Record<ArticleTone, number>>;
 	/** Effet maximal d'un article sur un groupe, en valeur absolue. */
@@ -1524,6 +1529,8 @@ export interface RenegotiationBalance {
 	readonly minTurns: number;
 	/** Événement bloquant de la demande (rôle `collaborator`). */
 	readonly event: string;
+	/** Variantes de la demande (P3-24), choisies sans tirage avec l'événement principal. */
+	readonly variants?: readonly string[] | undefined;
 }
 
 /** Offre d'embauche (P3-20). */

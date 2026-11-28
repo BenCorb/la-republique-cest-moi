@@ -1295,25 +1295,30 @@ function crossCheckRecruitment(
 			}
 		}
 	});
-	const event = events.find((entry) => entry.event.id === entourage.renegotiation.event);
-	if (!event) {
-		issues.push({
-			source: 'balance.json',
-			path: 'entourage.renegotiation.event',
-			message: `événement inconnu : ${entourage.renegotiation.event}`
-		});
-	} else if (
-		!event.event.blocking ||
-		event.event.trigger !== 'followUp' ||
-		event.event.subject !== 'staff' ||
-		!event.event.actors.some((slot) => slot.role === 'collaborator')
-	) {
-		issues.push({
-			source: event.source,
-			path: `events[${event.index}]`,
-			message:
-				'la renégociation est un événement bloquant « followUp » de sujet « staff » avec un rôle « collaborator »'
-		});
+	for (const requestId of [
+		entourage.renegotiation.event,
+		...(entourage.renegotiation.variants ?? [])
+	]) {
+		const event = events.find((entry) => entry.event.id === requestId);
+		if (!event) {
+			issues.push({
+				source: 'balance.json',
+				path: 'entourage.renegotiation',
+				message: `événement inconnu : ${requestId}`
+			});
+		} else if (
+			!event.event.blocking ||
+			event.event.trigger !== 'followUp' ||
+			event.event.subject !== 'staff' ||
+			!event.event.actors.some((slot) => slot.role === 'collaborator')
+		) {
+			issues.push({
+				source: event.source,
+				path: `events[${event.index}]`,
+				message:
+					'la renégociation est un événement bloquant « followUp » de sujet « staff » avec un rôle « collaborator »'
+			});
+		}
 	}
 	for (const { source, index, event: definition } of events) {
 		const raises =
@@ -1847,6 +1852,7 @@ export function validateContent(raw: RawContent): ContentValidation {
 				...promisesCatalog.data.promises.map((promise) => promise.dilemmaEvent),
 				...Object.values(promisesCatalog.data.balance.recallEvents),
 				balance.data.entourage.renegotiation.event,
+				...(balance.data.entourage.renegotiation.variants ?? []),
 				balance.data.elections.contests.runoffEvent,
 				balance.data.campaigns.investiture.refusedEvent,
 				balance.data.government.appointmentEvent

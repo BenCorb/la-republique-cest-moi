@@ -45,7 +45,7 @@ import { applyCareerEffect, type CareerParts } from './career.ts';
 import { addRelation, generatePerson, meet } from './characters.ts';
 import { evaluateCondition, type ConditionContext } from './conditions.ts';
 import { gaugeKey } from './effects.ts';
-import { nextInt, type RngState } from './random.ts';
+import { hashSeed, nextInt, type RngState } from './random.ts';
 import type {
 	Character,
 	PlayerState,
@@ -1044,8 +1044,10 @@ export function resolveStaffFrontier(
 					: entry
 			)
 		};
+		// Variantes (P3-24) : choisies par empreinte du collaborateur et du trimestre.
+		const requests = [renegotiation.event, ...(renegotiation.variants ?? [])];
 		scheduled.push({
-			eventId: renegotiation.event,
+			eventId: requests[hashSeed(`${member.characterId}:${turn}`) % requests.length]!,
 			dueTurn: turn,
 			sourceInstanceId: `staff:${member.characterId}`,
 			actors: { [STAFF_ROLE]: member.characterId }

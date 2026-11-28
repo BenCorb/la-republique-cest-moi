@@ -136,6 +136,10 @@ export interface SimulationRun {
 	 * valeur nette finale (P3-39).
 	 */
 	readonly fortuneSpentPercent: number;
+	/** Actions distinctes accomplies dans la carrière (P3-24). */
+	readonly distinctActions: number;
+	/** Part de l'action la plus fréquente parmi toutes les actions accomplies, en % (P3-24). */
+	readonly topActionSharePercent: number;
 	/** Événements ordinaires éligibles par trimestre, 10e centile (P3-24). */
 	readonly eligibleEventsP10: number;
 	/** Part des trimestres sous la cible de huit événements éligibles, en % (P3-24). */
@@ -1141,6 +1145,21 @@ function finalizeRun(
 	const summary = careerSummary(state);
 	const sortedEligible = [...eligible].sort((a, b) => a - b);
 	return {
+		...(() => {
+			const counts = new Map<string, number>();
+			for (const entry of state.history) {
+				if (entry.type !== 'turn.resolved') continue;
+				for (const step of entry.steps) {
+					if (step.kind === 'action') counts.set(step.id, (counts.get(step.id) ?? 0) + 1);
+				}
+			}
+			const total = [...counts.values()].reduce((sum, value) => sum + value, 0);
+			const top = Math.max(0, ...counts.values());
+			return {
+				distinctActions: counts.size,
+				topActionSharePercent: total > 0 ? Math.round((top * 100) / total) : 0
+			};
+		})(),
 		eligibleEventsP10: percentile(sortedEligible, 0.1),
 		quartersBelowEligibleTarget: eligible.length
 			? Math.round((eligible.filter((count) => count < 8).length * 100) / eligible.length)

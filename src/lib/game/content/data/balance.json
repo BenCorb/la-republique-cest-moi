@@ -252,7 +252,8 @@
 		"renegotiation": {
 			"stepCompetence": 15,
 			"minTurns": 4,
-			"event": "event.staff.raise_request"
+			"event": "event.staff.raise_request",
+			"variants": ["event.staff.raise_poached", "event.staff.raise_promotion"]
 		}
 	},
 	"family": {

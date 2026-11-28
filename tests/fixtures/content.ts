@@ -1718,6 +1718,7 @@ export const fixtureMedia = {
 		nationalMandateRank: 40,
 		regionalNationalPercent: 50,
 		toneThreshold: 30,
+		editorialSwingPercent: 0,
 		toneEffects: { critical: 0, neutral: 0, favorable: 0 },
 		maxEffect: 5,
 		criticalExposure: 0,
