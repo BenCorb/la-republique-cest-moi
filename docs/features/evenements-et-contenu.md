@@ -46,7 +46,7 @@ _Aucune relevée à la V1._
 
 ## Chantier beta
 
-- Décisions du [dépouillement B-02](../playtests/2026-11-28-b-02-reference.md#décisions-par-retour) : D-12 (guides de contenu, relecture par échantillon) → B-06, B-16.
+- Décisions du [dépouillement B-02](../playtests/2026-11-28-b-02-reference.md#décisions-par-retour) : D-12 (guides de contenu, relecture par échantillon) → B-06, B-16a, B-16b, B-16c.
 - [ ] Audit : règles en vigueur condensées ci-dessus, décisions provisoires listées, partie jouée sur ce système
 - [ ] Problèmes UX/UI relevés (captures, retours de playtest)
 - [ ] Plan de consolidation validé par le créateur

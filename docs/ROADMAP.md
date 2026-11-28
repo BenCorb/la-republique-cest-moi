@@ -15,7 +15,7 @@ Contraintes : `AGENTS.md`. Sauvegardes : non conservées pendant la beta, sans m
 ## 2. État
 
 **Chantier en cours :** aucun ; B-02 dépouillé (décisions D-01 à D-12).
-**Prochaine étape :** B-03 (sauvegardes de beta), puis B-04, B-05 et B-11, qui livrent ensemble la refonte visuelle. B-06 et B-07 peuvent avancer en parallèle (fichiers distincts).
+**Prochaine étape :** B-03 (sauvegardes de beta), puis B-04, B-05 et B-11, qui livrent ensemble la refonte visuelle. En parallèle : B-06 (guide de contenu) dès maintenant, puis B-16a (vague 1 de contenu) et B-07 (fichiers distincts).
 
 | ID | Chantier | Fiche(s) | Décisions | Dépend de | Critère de fin | État |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -39,12 +39,14 @@ Contraintes : `AGENTS.md`. Sauvegardes : non conservées pendant la beta, sans m
 | **Lot 4 — Campagnes** | | | | | | |
 | B-14 | Promesses tirées | promesses | D-06 | B-05 | Déclinaisons par thème, scrutin et couleur politique ; quatre thèmes tirés à la déclaration ; annonce en démarche ; `docs/content/promesses.md` | à faire |
 | B-15 | Fusions de listes | elections-et-mandats | D-01 | B-05 | Choix du partenaire ; acceptation ou refus ; une tentative ; veto du parti ; coût d’une fusion contre-nature | à faire |
-| **Lot 5 — Contenu et validation** | | | | | | |
-| B-16 | Production de contenu | evenements-et-contenu | D-12 | B-06, B-11, B-13, B-14 | Rotation remplie dans chaque thème, opportunités, emplois, événements d’origine, promesses ; fiches par type ; relecture par échantillon faite | à faire |
-| B-17 | Équilibrage de la beta v2 | equilibrage | — | B-08 à B-16 | Simulation sur les nouvelles règles ; écart entre origines jouable ; accès à Matignon tranché ; durée simulée dans 60–90 min | à faire |
+| **Contenu (en vagues, au fil des chantiers) et validation** | | | | | | |
+| B-16a | Contenu, vague 1 : événements et presse | evenements-et-contenu, medias-et-presse | D-12 | B-06 | Événements, brèves et titres de presse dans les formats V1 ; ton du rush relu ; relecture par échantillon faite. Pendant B-04, B-05 et B-11 : ne pas toucher aux fichiers qu’ils modifient | à faire |
+| B-16b | Contenu, vague 2 : actions de rotation et opportunités | agenda | D-02, D-12 | B-08, B-11 | Au moins cinq cartes par thème hors classiques, opportunités, calibrage par `content:report` ; converties en fourchettes par B-12 | à faire |
+| B-16c | Contenu, vague 3 : emplois, origines, promesses | creation-et-profil, promesses | D-05, D-06, D-10, D-12 | B-10, B-13, B-14 | Offres d’emploi par parcours, événements d’origine, déclinaisons de promesses ; fiches par type livrées | à faire |
+| B-17 | Équilibrage de la beta v2 | equilibrage | — | B-08 à B-15, B-16c | Simulation sur les nouvelles règles ; écart entre origines jouable ; accès à Matignon tranché ; durée simulée dans 60–90 min | à faire |
 | B-18 | Playtest de la beta v2 | toutes | — | B-17 | Deux carrières chronométrées (milieu populaire, grande bourgeoisie) ; retours triés par fiche | à faire |
 
-**Ordre et dépendances (délégué, provisoire, à valider par le créateur).** D’abord ce qui change la forme de tout le reste : sauvegardes, coque, démarches, puis l’agenda en cartes, avancé dans le lot 1 pour livrer d’un bloc la refonte visuelle (décision déléguée au 28 novembre 2026 : les cartes lisent les montants du catalogue, que B-08 recalera sans les refaire). Puis l’économie, parce que ses barèmes conditionnent l’emploi, les origines, les fourchettes et le rapport d’équilibrage. Puis les effets incertains et les origines, les campagnes, et enfin le contenu en volume, l’équilibrage et le playtest. Chaque chantier commence par l’audit de sa fiche (§3) : les fiches qu’il touche en sortent consolidées.
+**Ordre et dépendances (délégué, provisoire, à valider par le créateur).** D’abord ce qui change la forme de tout le reste : sauvegardes, coque, démarches, puis l’agenda en cartes, avancé dans le lot 1 pour livrer d’un bloc la refonte visuelle (décision déléguée au 28 novembre 2026 : les cartes lisent les montants du catalogue, que B-08 recalera sans les refaire). Puis l’économie, parce que ses barèmes conditionnent l’emploi, les origines, les fourchettes et le rapport d’équilibrage. Puis les effets incertains et les origines, les campagnes, et enfin l’équilibrage et le playtest. Le contenu se produit en trois vagues (B-16a, b, c) dès que le guide commun (B-06) et le format de chaque système existent : les montants ne bloquent pas, B-08 recale tout le catalogue d’un coup ; deux modifications simultanées d’un même fichier restent interdites. Chaque chantier commence par l’audit de sa fiche (§3) : les fiches qu’il touche en sortent consolidées.
 
 **Hors beta v2.** Les fiches peu touchées par B-02 (justice hors D-04, institutions, médias et presse, santé et fin, bilan et carnet, soutiens et militants, sauvegarde hors B-03) seront consolidées après la beta v2, dans un ordre fixé après B-18.
 
