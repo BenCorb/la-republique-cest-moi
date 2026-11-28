@@ -4,6 +4,8 @@
 **Statut :** cadrage avant prototype ; wireframes et valeurs visuelles indicatifs.  
 **Références :** [GAME_DESIGN.md](GAME_DESIGN.md), [ARCHITECTURE.md](ARCHITECTURE.md), [ROADMAP.md](ROADMAP.md).
 
+> **Beta (28 novembre 2026).** Ce document est désormais dans `docs/`. Les renvois à `ARCHITECTURE.md` (sections « bis », « ter »… et §8.4 x), à `ROADMAP.md` §5 et à `PLAYTEST.md` visent l’archive figée [archive/v1/](archive/v1/README.md) ; l’état de chaque système est dans [features/](features/README.md).
+
 ## 1. Intention
 
 Un outil de gestion politique à l’apparence institutionnelle, dont le sérieux contraste avec l’absurdité des événements. Le joueur doit avoir l’impression de consulter les dossiers de son propre cabinet, pas de jouer à un clicker coloré. **Révisé le 26 novembre 2026 (demande du créateur) :** le jeu devient un dossier de cabinet *mis en scène*, plus ludique et moins textuel, par les icônes, les jauges et les pastilles, sans illustrations dessinées (§10). L’interface sert d’abord à prendre des décisions, à comprendre les conséquences du trimestre et à lire des histoires.

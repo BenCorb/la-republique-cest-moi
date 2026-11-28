@@ -13,14 +13,10 @@ compte, aucune IA au runtime ; les sauvegardes restent dans le navigateur.
 - **Jouer :** <https://bencorb.github.io/la-republique-cest-moi/>
 - **Code source :** <https://github.com/BenCorb/la-republique-cest-moi>
 
-> **État actuel : V1 en cours de finition (phase 3).** Les phases 0 à 2 (bootstrap, prototype,
-> alpha) sont terminées. En phase 3, la justice, le patrimoine, les promesses, les médias, les
-> réformes institutionnelles, les époques, l’interface et le bilan définitifs sont intégrés à
-> `main` ; l’équilibrage par simulation (P3-09) est fait, il reste à le valider par une partie
-> chronométrée, puis vient la livraison (P3-10). Le site publié montre l’état de `main` au 26 novembre 2026
-> (phase 3 intégrée, avant P3-10) ; il n’est redéployé que sur demande. Pendant le développement, une sauvegarde écrite par
-> d’anciennes règles est refusée, sans être effacée. L’avancement fait foi dans
-> [ROADMAP.md](ROADMAP.md).
+> **État actuel : beta.** La V1 est livrée (tag `v1.0.0`) ; la beta consolide les
+> fonctionnalités une par une et retravaille l’interface. Les sauvegardes sont conservées d’une
+> version à l’autre depuis la V1. Le site publié n’est redéployé que sur demande. L’avancement fait
+> foi dans [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Jouer
 
@@ -59,14 +55,17 @@ tout reste dans le navigateur.
 
 ## Documents de référence
 
-| Document                           | Rôle                                                  |
-| ---------------------------------- | ----------------------------------------------------- |
-| [AGENTS.md](AGENTS.md)             | Règles communes de développement (Codex, Claude Code) |
-| [GAME_DESIGN.md](GAME_DESIGN.md)   | Référence fonctionnelle                               |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Contrats techniques, ordre du tour, tests, sauvegarde |
-| [DESIGN.md](DESIGN.md)             | Direction artistique et interface                     |
-| [ROADMAP.md](ROADMAP.md)           | Phases, tâches et critères d’acceptation              |
-| [PLAYTEST.md](PLAYTEST.md)         | Protocoles et résultats des essais humains            |
+| Document                                      | Rôle                                                         |
+| --------------------------------------------- | ------------------------------------------------------------ |
+| [AGENTS.md](AGENTS.md)                        | Règles communes de développement (Codex, Claude Code)        |
+| [docs/ROADMAP.md](docs/ROADMAP.md)            | Feuille de route beta et état d’avancement                   |
+| [docs/features/](docs/features/README.md)     | Une fiche par fonctionnalité : règles, code, tests, chantier |
+| [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md)    | Référence fonctionnelle                                      |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)  | Contrats techniques en vigueur                               |
+| [docs/DESIGN.md](docs/DESIGN.md)              | Direction artistique et interface                            |
+| [docs/decisions/](docs/decisions/README.md)   | Décisions transversales                                      |
+| [docs/playtests/](docs/playtests/README.md)   | Playtests de la beta                                         |
+| [docs/archive/v1/](docs/archive/v1/README.md) | Historique des phases 0 à 3 (lecture seule)                  |
 
 ## Prérequis
 
@@ -92,6 +91,7 @@ npm run test:e2e:install
 | Commande                   | Fonction                                                           |
 | -------------------------- | ------------------------------------------------------------------ |
 | `npm run dev`              | Serveur de développement (http://localhost:5173)                   |
+| `npm run verify`           | Enchaîne check, lint, content:validate, test et build              |
 | `npm run check`            | Diagnostics TypeScript et Svelte (avertissements bloquants)        |
 | `npm run lint`             | Formatage Prettier vérifié puis ESLint                             |
 | `npm run format`           | Reformate les fichiers (hors documents de conception)              |
@@ -124,7 +124,11 @@ signalée dans `problemSeeds` et fait échouer la commande.
 Vérification complète avant de rendre une tâche :
 
 ```bash
-npm run check && npm run lint && npm run content:validate && npm run test && npm run build && npm run test:e2e
+npm run verify
+```
+
+```bash
+npm run test:e2e
 ```
 
 ## Build et déploiement
@@ -183,13 +187,14 @@ Les règles communes sont dans [AGENTS.md](AGENTS.md) (importé par `CLAUDE.md`)
 documents, tâches courtes et testées, conventions Git et procédure de reprise entre assistants. En
 résumé :
 
-- une branche par tâche de la feuille de route : `feat/p3-09-equilibrage` ;
+- une branche et une pull request par chantier de la feuille de route : `feat/b-04-agenda` ;
 - des commits [Conventional Commits](https://www.conventionalcommits.org/fr/) :
   `feat(engine): ajouter le calendrier trimestriel` ;
 - une pull request vers `main`, fusionnée après CI verte ;
-- `ROADMAP.md` mis à jour uniquement lorsque le critère d’une tâche est vérifié ;
+- la fiche du système (`docs/features/`) mise à jour dans la même pull request ;
+- `docs/ROADMAP.md` mis à jour uniquement lorsque le critère d’un chantier est vérifié ;
 - le dépôt ne doit pas vivre dans un dossier synchronisé (iCloud Drive, Dropbox…) : les copies
-  « nom 2.ext » qu’il crée cassent les vérifications (ARCHITECTURE §15.4).
+  « nom 2.ext » qu’il crée cassent les vérifications (`docs/ARCHITECTURE.md` §13).
 
 ## Structure
 
@@ -212,6 +217,7 @@ scripts/
   benchmark.ts            # npm run benchmark
   serve-static.ts         # npm run serve:static
 .github/workflows/        # CI et déploiement GitHub Pages
+docs/                     # GDD, architecture, design, feuille de route, fiches, décisions, playtests, archive
 tests/
   unit/                   # Vitest (Node)
   scenarios/              # scénarios moteur sur plusieurs trimestres (Vitest)

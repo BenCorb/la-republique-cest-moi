@@ -5,6 +5,8 @@
 **Statut :** référence de la V1 en cours (phase 3, rush V1) ; prototype et alpha livrés  
 **Titre de travail :** La République, c’est moi ! (sans sous-titre)
 
+> **Beta (28 novembre 2026).** Ce document est désormais dans `docs/`. Les renvois à `ARCHITECTURE.md` (sections « bis », « ter »… et §8.4 x), à `ROADMAP.md` §5 et à `PLAYTEST.md` visent l’archive figée [archive/v1/](archive/v1/README.md) ; l’état de chaque système est dans [features/](features/README.md).
+
 > Ce document constitue la référence de conception du jeu. Il rassemble les décisions du brainstorming et les traduit en règles de gameplay exploitables par Codex. Les valeurs numériques proposées sont des hypothèses de prototypage, et non des engagements d’équilibrage. Les décisions encore ouvertes sont signalées en fin de document. En cas de doute, privilégier la simplicité, la qualité des histoires et la rejouabilité plutôt que la multiplication des systèmes.
 
 ## 1. Vision du jeu
