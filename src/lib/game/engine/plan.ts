@@ -1006,6 +1006,8 @@ export function executePlan(
 					throw new Error(`Départ non développé : ${step.id}`);
 				} else if (resolved.kind === 'fact') {
 					throw new Error(`Fait hors événement : ${step.id}`);
+				} else if (resolved.kind === 'retire') {
+					// Retraite (P3-37) : tranchée par la résolution du trimestre.
 				} else {
 					// Le candidat décide à l'exécution, selon l'attractivité du moment (P3-20).
 					const decision: HiringDecision | null =

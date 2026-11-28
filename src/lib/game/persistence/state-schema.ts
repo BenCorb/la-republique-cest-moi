@@ -698,7 +698,8 @@ export const gameStateSchema: z.ZodType<GameState> = z.strictObject({
 	end: z
 		.discriminatedUnion('reason', [
 			z.strictObject({ turn: int, reason: z.literal('death'), cause: deathCause }),
-			z.strictObject({ turn: int, reason: z.literal('prison'), caseId: id })
+			z.strictObject({ turn: int, reason: z.literal('prison'), caseId: id }),
+			z.strictObject({ turn: int, reason: z.literal('retirement') })
 		])
 		.nullable()
 });

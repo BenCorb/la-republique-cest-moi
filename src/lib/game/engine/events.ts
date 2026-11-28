@@ -358,6 +358,8 @@ function applyAutomaticEffects(
 			throw new Error(`Embauche ou renvoi hors du plan : ${resolved.effect.op}`);
 		} else if (resolved.kind === 'release') {
 			throw new Error('Départ d’un élément de l’organisation hors du plan.');
+		} else if (resolved.kind === 'retire') {
+			throw new Error('Retraite hors du plan.');
 		} else if (resolved.kind === 'lifestyle') {
 			player = { ...player, lifestyle: resolved.effect.lifestyle };
 		} else if (resolved.kind === 'fact') {

@@ -48,6 +48,8 @@ export type EffectRange =
 	| { readonly kind: 'mandate'; readonly change: 'grant' | 'end'; readonly mandate: string }
 	| { readonly kind: 'earlyElection'; readonly election: string; readonly delayTurns: number }
 	| { readonly kind: 'candidacy' }
+	/** Retraite choisie (P3-37). */
+	| { readonly kind: 'retire' }
 	/** Réponse à une proposition d'entrée au gouvernement (P3-35). */
 	| { readonly kind: 'appointment'; readonly decision: 'accept' | 'decline' }
 	/** Candidature à la direction du parti et ralliements (P3-34). */
@@ -124,6 +126,7 @@ export type ResolvedEffect =
 	| { readonly kind: 'family'; readonly effect: FamilyEffect; readonly rng: RngState }
 	/** Départ de l'exemplaire ciblé, appliqué par le plan (actions seulement). */
 	| { readonly kind: 'release'; readonly rng: RngState }
+	| { readonly kind: 'retire'; readonly rng: RngState }
 	/** Fait inscrit au registre par le moteur d'événements (P3-01). */
 	| { readonly kind: 'fact'; readonly effect: FactEffect; readonly rng: RngState }
 	/** Embauche ou présélection d'un acteur au poste lié à l'événement (P3-12). */
@@ -217,6 +220,8 @@ export function effectRange(effect: Effect): EffectRange {
 			return { kind: 'investiture', decision: 'request' };
 		case 'appointment':
 			return { kind: 'appointment', decision: effect.decision };
+		case 'retire':
+			return { kind: 'retire' };
 		case 'investitureDecision':
 			return { kind: 'investiture', decision: effect.decision };
 		case 'hireStaff':
@@ -325,6 +330,8 @@ export function resolveEffect(effect: Effect, rng: RngState): ResolvedEffect {
 			return { kind: 'staffAction', effect, rng };
 		case 'releaseUpgrade':
 			return { kind: 'release', rng };
+		case 'retire':
+			return { kind: 'retire', rng };
 		case 'staffLeaves':
 		case 'grantRaise':
 			return { kind: 'people', effect, rng };

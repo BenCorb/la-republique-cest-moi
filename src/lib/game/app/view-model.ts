@@ -214,6 +214,8 @@ export interface PlanView {
 	readonly steps: readonly PlanStepView[];
 	/** Étapes épinglées, seules répétées aux trimestres suivants (P3-11). */
 	readonly pinnedCount: number;
+	/** Le plan contient la retraite (P3-37) : confirmation exigée, accélération fermée. */
+	readonly retiring: boolean;
 	/** Retraits automatiques du trimestre en cours, avec leur motif (P3-11). */
 	readonly adjustments: readonly string[];
 	readonly timeAvailable: number;
@@ -1317,7 +1319,8 @@ const SOURCE_LABELS: { readonly [K in WellbeingSource]: string } = {
 const CAUSE_LABELS = {
 	health_failure: 'Épuisement : la santé a fini par céder.',
 	natural_causes: 'Mort naturelle.',
-	prison: 'Condamnation définitive à de la prison ferme.'
+	prison: 'Condamnation définitive à de la prison ferme.',
+	retirement: 'Retraite choisie : vous quittez la vie politique.'
 } as const;
 
 function amounts(list: readonly ResourceAmount[], sign: 1 | -1): string[] {
@@ -1494,6 +1497,8 @@ function describeEffect(range: EffectRange, content: Content): string {
 			return RUNOFF_LABELS[range.decision];
 		case 'appointment':
 			return range.decision === 'accept' ? 'Entrée au gouvernement' : 'Proposition déclinée';
+		case 'retire':
+			return 'Fin de carrière : retraite de la vie politique';
 		case 'partyBid':
 			return `Candidature à la direction : ${PARTY_POSTURE_LABELS[range.posture]}`;
 		case 'rally':
@@ -3643,7 +3648,7 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 	const paper =
 		regionalMedia(state.player.territory.regionId, content)?.name ?? 'La presse régionale';
 	return {
-		masthead: `${paper} · ${cause === 'prison' ? 'Chronique judiciaire' : 'Nécrologie'}`,
+		masthead: `${paper} · ${cause === 'prison' ? 'Chronique judiciaire' : cause === 'retirement' ? 'Portrait' : 'Nécrologie'}`,
 		title: obituary ? fill(obituary.headline) : `Fin de carrière à ${summary.age} ans`,
 		text: obituary ? fill(obituary.text) : '',
 		cause: CAUSE_LABELS[cause],
@@ -5384,6 +5389,11 @@ export function projectView(
 		plan: {
 			steps,
 			pinnedCount: steps.filter((step) => step.pinned).length,
+			retiring: plan.some(
+				(step) =>
+					step.kind === 'action' &&
+					content.actions[step.id]?.effects.some((effect) => effect.op === 'retire') === true
+			),
 			adjustments: adjustments.find((entry) => entry.turn === state.turn)?.lines ?? [],
 			timeAvailable: preview.timeAvailable,
 			timeReserved: preview.timeReserved,

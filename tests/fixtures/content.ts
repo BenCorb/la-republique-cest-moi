@@ -1826,6 +1826,13 @@ export const fixtureEpitaphs = {
 			criteria: [],
 			headline: 'Prison à {age} ans',
 			text: 'Rideau.'
+		},
+		{
+			id: 'obituary.retirement',
+			causes: ['retirement'],
+			criteria: [],
+			headline: 'Retraite à {age} ans',
+			text: 'Après {years} ans de vie publique.'
 		}
 	],
 	distinctions: [

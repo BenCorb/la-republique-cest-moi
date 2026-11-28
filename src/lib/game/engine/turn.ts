@@ -32,7 +32,7 @@ import { chooseEvent, resolveEventFrontier } from './events.ts';
 import { resolveWellbeing } from './health.ts';
 import { executePlan, previewPlan } from './plan.ts';
 import { resolveCharacters } from './characters.ts';
-import { mandateIncome, reservedTime, resolveDeadlines } from './career.ts';
+import { endMandates, mandateIncome, reservedTime, resolveDeadlines } from './career.ts';
 import { applyGauge } from './effects.ts';
 import { RESOURCE_IDS, type ResourceId } from '../content/types.ts';
 import { resolveWorld } from './world.ts';
@@ -157,10 +157,19 @@ function commitTurn(
 	);
 	const nextTurn = resolvedTurn + 1;
 
+	// Retraite choisie (P3-37) : la carrière s'achève à la fin de T, comme un décès,
+	// sans aucune échéance ni événement à la frontière.
+	const retired = command.plan.steps.some(
+		(step) =>
+			step.kind === 'action' &&
+			content.actions[step.id]?.effects.some((effect) => effect.op === 'retire') === true
+	);
+
 	// 4 bis. Personnages puis monde (sauf décès) : ils évoluent même si le joueur ne fait rien.
-	const people = wellbeing.record.deathCause
-		? null
-		: resolveCharacters(production.entourage.characters, nextTurn, wellbeing.rng, content);
+	const people =
+		wellbeing.record.deathCause || retired
+			? null
+			: resolveCharacters(production.entourage.characters, nextTurn, wellbeing.rng, content);
 	const world = people
 		? resolveWorld(
 				production.world,
@@ -491,10 +500,12 @@ function commitTurn(
 	// 7. Phase suivante.
 	const end: EndState | null = wellbeing.record.deathCause
 		? { turn: resolvedTurn, reason: 'death', cause: wellbeing.record.deathCause }
-		: (justice?.end ??
-			(frontier?.deathCause
-				? { turn: nextTurn, reason: 'death', cause: frontier.deathCause }
-				: null));
+		: retired
+			? { turn: resolvedTurn, reason: 'retirement' }
+			: (justice?.end ??
+				(frontier?.deathCause
+					? { turn: nextTurn, reason: 'death', cause: frontier.deathCause }
+					: null));
 	const events = frontier?.events ?? { ...state.events, pending: [], scheduled: [] };
 	return {
 		ok: true,
@@ -518,7 +529,10 @@ function commitTurn(
 				frontier?.shortlists ?? settled?.entourage.shortlists ?? production.entourage.shortlists,
 			searches:
 				settled?.entourage.searches ?? team?.entourage.searches ?? production.entourage.searches,
-			mandates: frontier?.career.mandates ?? settled?.career.mandates ?? production.career.mandates,
+			// Retraite : démission de tous les mandats en cours (P3-37).
+			mandates: retired
+				? endMandates(production.career.mandates, () => true, 'resigned', resolvedTurn).mandates
+				: (frontier?.career.mandates ?? settled?.career.mandates ?? production.career.mandates),
 			ballots: frontier?.career.ballots ?? settled?.career.ballots ?? production.career.ballots,
 			campaigns:
 				frontier?.career.campaigns ?? settled?.career.campaigns ?? production.career.campaigns,

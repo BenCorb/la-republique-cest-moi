@@ -280,6 +280,8 @@ export type Effect =
 	| { readonly op: 'runoffDecision'; readonly decision: RunoffDecision }
 	| { readonly op: 'requestInvestiture' }
 	| { readonly op: 'partyBid'; readonly posture: PartyPosture }
+	/** Se retirer de la vie politique (P3-37) : fin de carrière choisie. */
+	| { readonly op: 'retire' }
 	| { readonly op: 'appointment'; readonly decision: 'accept' | 'decline' }
 	| { readonly op: 'rallySupport'; readonly value: number }
 	| { readonly op: 'investitureDecision'; readonly decision: 'dissident' | 'renounce' }
@@ -594,7 +596,7 @@ export const LEGACY_METRICS = [
 export type LegacyMetric = (typeof LEGACY_METRICS)[number];
 
 /** Causes de fin de carrière (décès ou prison ferme). */
-export const END_CAUSES = ['health_failure', 'natural_causes', 'prison'] as const;
+export const END_CAUSES = ['health_failure', 'natural_causes', 'prison', 'retirement'] as const;
 export type EndCauseId = (typeof END_CAUSES)[number];
 
 export interface LegacyCriterion {

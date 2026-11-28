@@ -211,6 +211,7 @@ export const effectSchema: z.ZodType<Effect> = z.union([
 	}),
 	z.strictObject({ op: z.literal('requestInvestiture') }),
 	z.strictObject({ op: z.literal('partyBid'), posture: z.enum(PARTY_POSTURES) }),
+	z.strictObject({ op: z.literal('retire') }),
 	z.strictObject({ op: z.literal('appointment'), decision: z.enum(['accept', 'decline']) }),
 	z.strictObject({ op: z.literal('rallySupport'), value: positiveInt }),
 	z.strictObject({

@@ -1132,7 +1132,9 @@ export type EndState =
 			readonly cause: DeathCause;
 	  }
 	/** Condamnation définitive à de la prison ferme (P3-01). */
-	| { readonly turn: Turn; readonly reason: 'prison'; readonly caseId: string };
+	| { readonly turn: Turn; readonly reason: 'prison'; readonly caseId: string }
+	/** Retraite choisie (P3-37) : le joueur quitte la vie politique. */
+	| { readonly turn: Turn; readonly reason: 'retirement' };
 
 export interface GameState {
 	readonly schemaVersion: typeof STATE_SCHEMA_VERSION;

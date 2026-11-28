@@ -67,6 +67,16 @@
 	],
 	"actions": [
 		{
+			"id": "personal.retire",
+			"category": "personal",
+			"label": "Se retirer de la vie politique",
+			"description": "Une dernière conférence de presse, quelques larmes contenues et la promesse de « rester disponible ». La carrière s’achève à la fin du trimestre : tous les mandats sont rendus et le bilan s’ouvre. Irréversible.",
+			"timeCost": 5,
+			"maxPerTurn": 1,
+			"costs": [],
+			"effects": [{ "op": "retire" }]
+		},
+		{
 			"id": "matignon.general_policy",
 			"category": "mandate",
 			"label": "Prononcer le discours de politique générale",

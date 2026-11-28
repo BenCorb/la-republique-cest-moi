@@ -1112,6 +1112,16 @@ Décision du créateur (ROADMAP §5.2 : Premier ministre au plus en V1) ; chiffr
 - **Simulation** : Matignon atteint dans 20 carrières sur 60 (seed `p3-36` : 8 ambitieuses sur 12, 6 mixtes, 4 prudentes, 2 patrimoniales), aucune erreur ni violation, durée active médiane 76 minutes. **À revoir en P3-09** : sommet sans doute trop accessible sur une carrière de soixante ans.
 - `RULES_VERSION = '0.45.0'`. Tests : `tests/unit/government.test.ts` (appel du chef du parti majoritaire, conditions de censure et de renvoi) ; les deux événements rares sont déclarés au scénario du catalogue réel.
 
+### 8.4 quintrigesies Décisions de P3-37 : fin de carrière choisie (28 novembre 2026)
+
+Recommandation A2 de l'audit, retenue par le créateur ; détails : **décisions déléguées, provisoires**.
+
+- **Action** « Se retirer de la vie politique » (`personal.retire`, effet `retire`, 5 points de temps), toujours disponible en phase de planification, donc jamais pendant un choix bloquant.
+- **Résolution** : le trimestre est joué normalement (étapes, économie, revenus, santé), puis la carrière s'achève à sa fin comme après un décès (`end = { turn: T, reason: 'retirement' }`) : aucun personnage, monde, échéance, événement ni presse à la frontière ; tous les mandats en cours prennent fin (« démission »). Toute commande est ensuite refusée : aucune double résolution, y compris après reprise.
+- **Bilan** : nouvelle cause de fin `retirement` (« Retraite choisie : vous quittez la vie politique. »), bandeau « Portrait » au lieu de « Nécrologie », deux portraits au catalogue (l'un générique, l'autre pour un ancien membre du gouvernement) ; les distinctions s'appliquent comme pour toute fin.
+- **Interface** : la validation d'un plan qui contient la retraite ouvre une confirmation (« Quitter la vie politique ? ») ; « Année suivante » et « Jusqu’à une alerte » sont fermés tant que la retraite est au plan.
+- `RULES_VERSION = '0.46.0'`. Tests : `tests/unit/retirement.test.ts` (mandats rendus, fin unique, invariants, sauvegarde, bilan ; indicateur du plan) ; catalogue de test complété d'un portrait générique.
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.

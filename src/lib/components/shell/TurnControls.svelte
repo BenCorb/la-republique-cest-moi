@@ -55,7 +55,19 @@
 		return `${activities}, dont ${pinned} répétée${pinned > 1 ? 's' : ''} ensuite`;
 	});
 
+	let confirmRetire: HTMLDialogElement | undefined = $state();
+
+	/** La retraite (P3-37) se confirme : elle clôt la carrière. */
 	function commit(): void {
+		if (view?.plan.retiring) {
+			confirmRetire?.showModal();
+			return;
+		}
+		proceed();
+	}
+
+	function proceed(): void {
+		confirmRetire?.close();
 		if (session.controller.commitTurn()) onTab('dashboard');
 		else onTab('agenda');
 	}
@@ -109,7 +121,7 @@
 				<button
 					type="button"
 					class="btn-secondary"
-					disabled={blockedReason !== null}
+					disabled={blockedReason !== null || view.plan.retiring}
 					aria-describedby={blockedReason ? 'advance-blocked' : undefined}
 					onclick={() => accelerate(4)}
 				>
@@ -118,7 +130,7 @@
 				<button
 					type="button"
 					class="btn-secondary"
-					disabled={blockedReason !== null}
+					disabled={blockedReason !== null || view.plan.retiring}
 					aria-describedby={blockedReason ? 'advance-blocked' : undefined}
 					onclick={() => accelerate(40)}
 				>
@@ -136,4 +148,22 @@
 			{/if}
 		</div>
 	</footer>
+	<dialog
+		bind:this={confirmRetire}
+		aria-labelledby="retire-title"
+		data-testid="retire-dialog"
+		class="m-auto w-[min(32rem,92vw)] rounded-lg border border-line bg-surface p-5 text-ink shadow-lg backdrop:bg-ink/50"
+	>
+		<h2 id="retire-title" class="font-serif text-xl font-semibold">Quitter la vie politique ?</h2>
+		<p class="mt-3 text-sm leading-relaxed">
+			Votre carrière s’achèvera à la fin de ce trimestre : tous vos mandats seront rendus et le
+			bilan s’ouvrira. Ce choix est définitif.
+		</p>
+		<div class="mt-5 flex justify-end gap-2">
+			<button type="button" class="btn-secondary" onclick={() => confirmRetire?.close()}>
+				Rester en politique
+			</button>
+			<button type="button" class="btn-danger" onclick={proceed}>Confirmer la retraite</button>
+		</div>
+	</dialog>
 {/if}
