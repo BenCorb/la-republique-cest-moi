@@ -44,10 +44,11 @@ import {
 	type PendingEventView,
 	type PlanStep,
 	type TurnPlan,
+	eligibleRandomEvents,
 	netWorth
 } from '../engine/index.ts';
 
-export const SIMULATION_REPORT_VERSION = 24;
+export const SIMULATION_REPORT_VERSION = 25;
 export const SIMULATION_STRATEGIES = [
 	'prudent',
 	'ambitious',
@@ -135,6 +136,10 @@ export interface SimulationRun {
 	 * valeur nette finale (P3-39).
 	 */
 	readonly fortuneSpentPercent: number;
+	/** Événements ordinaires éligibles par trimestre, 10e centile (P3-24). */
+	readonly eligibleEventsP10: number;
+	/** Part des trimestres sous la cible de huit événements éligibles, en % (P3-24). */
+	readonly quartersBelowEligibleTarget: number;
 	/** Plus haut statut atteint dans un parti (P3-34). */
 	readonly partyRankPeak: 'none' | 'member' | 'cadre' | 'leader';
 	/** Adversaires différents affrontés et plus grand nombre d'affrontements avec le même. */
@@ -1049,7 +1054,10 @@ export function chooseSimulationDecision(
 		const pool = safe.length > 0 ? safe : available;
 		return pool.reduce((best, choice) => (visibleCost(choice) < visibleCost(best) ? choice : best));
 	}
-	if (strategy === 'ambitious') return available[available.length - 1]!;
+	// L'ambitieuse est opportuniste (P3-24) : elle cède aux tentations qui se présentent.
+	if (strategy === 'ambitious') {
+		return available.find((choice) => isRiskyChoice(choice)) ?? available[available.length - 1]!;
+	}
 	if (strategy === 'mixed') return available[(turn + view.remaining) % available.length]!;
 	return available[hashSeed(`${seed}:${view.instanceId}`) % available.length]!;
 }
@@ -1127,10 +1135,16 @@ function finalizeRun(
 	invariantViolations: readonly string[],
 	error: string | null,
 	content: Content,
-	peakPopularity: number
+	peakPopularity: number,
+	eligible: readonly number[] = []
 ): SimulationRun {
 	const summary = careerSummary(state);
+	const sortedEligible = [...eligible].sort((a, b) => a - b);
 	return {
+		eligibleEventsP10: percentile(sortedEligible, 0.1),
+		quartersBelowEligibleTarget: eligible.length
+			? Math.round((eligible.filter((count) => count < 8).length * 100) / eligible.length)
+			: 0,
 		seed,
 		strategy,
 		status,
@@ -1363,8 +1377,11 @@ export function simulateCareer(
 	let activeAlertIds = new Set<string>();
 	let error: string | null = null;
 	let violations = checkInvariants(state, content);
+	const eligible: number[] = [];
 
 	while (state.end === null && state.turn < maxTurns && error === null && violations.length === 0) {
+		// Couverture (P3-24) : événements ordinaires éligibles au début de chaque trimestre.
+		eligible.push(eligibleRandomEvents(state, content).length);
 		const plan = chooseSimulationPlan(state, strategy, seed, content);
 		const preview = previewPlan(state, plan, content);
 		if (!preview.valid) {
@@ -1424,7 +1441,8 @@ export function simulateCareer(
 		violations,
 		error,
 		content,
-		peakPopularity
+		peakPopularity,
+		eligible
 	);
 }
 

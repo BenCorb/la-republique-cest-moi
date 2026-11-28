@@ -171,7 +171,12 @@ export function articleTone(
 	content: Content
 ): ArticleTone {
 	const threshold = content.press.toneThreshold;
-	const shift = owned ? 1 : relation >= threshold ? 1 : relation <= -threshold ? -1 : 0;
+	// Un cran par seuil de relation, deux pour une relation très marquée ; un média
+	// possédé adoucit toujours d'un cran (P3-24 : tous les titres deviennent possibles).
+	const strong = relation >= 2 * threshold ? 1 : relation <= -2 * threshold ? -1 : 0;
+	const shift = owned
+		? 1 + Math.max(0, strong)
+		: (relation >= threshold ? 1 : relation <= -threshold ? -1 : 0) + strong;
 	const tone = shiftTone(base, shift);
 	return media.kind === 'satirical' && tone === 'favorable' ? 'neutral' : tone;
 }
@@ -275,7 +280,15 @@ function subjectsOf(
 			topic: 'election',
 			subjectId: campaign.campaignId,
 			detail: campaign.status,
-			tone: campaign.status === 'won' ? 'favorable' : 'neutral',
+			// Tonalité selon le score (P3-24) : large victoire, victoire étroite, défaite honorable ou lourde.
+			tone:
+				campaign.status === 'won'
+					? (campaign.playerPercent ?? 0) >= 55
+						? 'favorable'
+						: 'neutral'
+					: (campaign.playerPercent ?? 0) >= 40
+						? 'neutral'
+						: 'critical',
 			mediaId: null
 		});
 	}
@@ -311,7 +324,8 @@ function subjectsOf(
 				topic: 'lifestyle',
 				subjectId: null,
 				detail: null,
-				tone: 'critical',
+				// Train de vie aisé : on en parle ; fastueux : on le reproche (P3-24).
+				tone: lifestyle.level > content.press.lifestyleLevel ? 'critical' : 'neutral',
 				mediaId: null
 			});
 		}

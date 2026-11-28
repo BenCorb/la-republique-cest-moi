@@ -1,6 +1,148 @@
 {
 	"events": [
 		{
+			"id": "mandate.public_contract_friend",
+			"category": "career",
+			"title": "Un marché public pour un vieil ami",
+			"text": "Le marché de réfection de la voirie arrive en commission d’appel d’offres. Un ami d’enfance, entrepreneur de travaux publics, vous rappelle les étés passés ensemble et sa trésorerie difficile.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.mayor"
+					},
+					{
+						"op": "capability",
+						"capability": "local_power"
+					}
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "favour",
+					"label": "Orienter la commission vers lui",
+					"hints": ["Un ami reconnaissant", "Les marchés publics ont parfois de la mémoire"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "politicalBudgetCents",
+							"value": 50000
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 1
+						},
+						{
+							"op": "recordFact",
+							"offense": "offense.favoritism",
+							"severity": 2
+						}
+					],
+					"outcome": [
+						"La commission retient « l’offre la mieux-disante ». Votre ami vous offre un repas, puis un don à votre association de financement."
+					]
+				},
+				{
+					"id": "fair",
+					"label": "Laisser jouer la concurrence",
+					"hints": ["Rien à se reprocher", "Une amitié refroidie"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 1
+						}
+					],
+					"outcome": [
+						"Une entreprise de la ville voisine l’emporte. Votre ami ne répond plus à vos messages, mais le service juridique dort tranquille."
+					]
+				}
+			]
+		},
+		{
+			"id": "mandate.municipal_flat",
+			"category": "career",
+			"title": "Un logement municipal pour un ami",
+			"text": "Un trois-pièces de la ville se libère, rue de la Mairie, loyer modéré. Un ami fidèle de vos campagnes cherche justement à se loger, et la liste d’attente compte deux cents noms.",
+			"blocking": true,
+			"trigger": "random",
+			"weight": 3,
+			"priority": 8,
+			"maxOccurrences": 2,
+			"cooldownTurns": 16,
+			"unique": false,
+			"when": {
+				"op": "all",
+				"conditions": [
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.mayor"
+					},
+					{
+						"op": "capability",
+						"capability": "local_power"
+					}
+				]
+			},
+			"actors": [],
+			"choices": [
+				{
+					"id": "give",
+					"label": "Lui réserver le logement",
+					"hints": ["Un militant gratifié", "Les listes d’attente ont parfois de la mémoire"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": 2
+						},
+						{
+							"op": "recordFact",
+							"offense": "offense.favoritism",
+							"severity": 1
+						}
+					],
+					"outcome": [
+						"Les clés changent de main un vendredi soir. Sur la liste d’attente, personne n’a rien vu, pour l’instant."
+					]
+				},
+				{
+					"id": "list",
+					"label": "Respecter la liste d’attente",
+					"hints": ["Équité préservée", "Un ami déçu"],
+					"costs": [],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 1
+						},
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": -1
+						}
+					],
+					"outcome": [
+						"Une famille attendait depuis trois ans ; elle emménage. Votre ami, lui, se plaint à la section."
+					]
+				}
+			]
+		},
+		{
 			"id": "mandate.roundabout_inauguration",
 			"category": "career",
 			"title": "Le rond-point de la discorde",
@@ -11,7 +153,10 @@
 			"priority": 0,
 			"cooldownTurns": 20,
 			"unique": false,
-			"when": { "op": "holdsMandate", "mandate": "mandate.mayor" },
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.mayor"
+			},
 			"actors": [],
 			"choices": [
 				{
@@ -20,29 +165,67 @@
 					"hints": ["Le mécène s’en souviendra", "Les anciens beaucoup moins"],
 					"costs": [],
 					"effects": [
-						{ "op": "addResource", "resource": "politicalBudgetCents", "value": 300000 },
-						{ "op": "addSupport", "group": "support.business", "value": 4 },
-						{ "op": "addSupport", "group": "support.working_class", "value": -3 }
+						{
+							"op": "addResource",
+							"resource": "politicalBudgetCents",
+							"value": 300000
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 4
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": -3
+						}
 					]
 				},
 				{
 					"id": "local_hero",
 					"label": "Hommage à l’ancien garde champêtre",
 					"hints": ["Émotion garantie au marché"],
-					"costs": [{ "resource": "politicalBudgetCents", "amount": 50000 }],
+					"costs": [
+						{
+							"resource": "politicalBudgetCents",
+							"amount": 50000
+						}
+					],
 					"effects": [
-						{ "op": "addSupport", "group": "support.working_class", "value": 3 },
-						{ "op": "addSupport", "group": "support.middle_class", "value": 2 }
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 2
+						}
 					]
 				},
 				{
 					"id": "consultation",
 					"label": "Lancer une consultation citoyenne",
 					"hints": ["Prend du temps", "Personne ne pourra vous le reprocher"],
-					"costs": [{ "resource": "influence", "amount": 2 }],
+					"costs": [
+						{
+							"resource": "influence",
+							"amount": 2
+						}
+					],
 					"effects": [
-						{ "op": "addSupport", "group": "support.activists", "value": 3 },
-						{ "op": "addStat", "stat": "player.stress", "value": 2 }
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
 					]
 				}
 			]
@@ -61,8 +244,14 @@
 			"when": {
 				"op": "any",
 				"conditions": [
-					{ "op": "holdsMandate", "mandate": "mandate.mayor" },
-					{ "op": "holdsMandate", "mandate": "mandate.municipal_councillor" }
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.mayor"
+					},
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.municipal_councillor"
+					}
 				]
 			},
 			"actors": [],
@@ -71,8 +260,19 @@
 					"id": "pay",
 					"label": "Payer une tournée exceptionnelle",
 					"hints": ["Problème réglé, budget entamé"],
-					"costs": [{ "resource": "politicalBudgetCents", "amount": 150000 }],
-					"effects": [{ "op": "addSupport", "group": "support.middle_class", "value": 3 }]
+					"costs": [
+						{
+							"resource": "politicalBudgetCents",
+							"amount": 150000
+						}
+					],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 3
+						}
+					]
 				},
 				{
 					"id": "gloves",
@@ -80,10 +280,26 @@
 					"hints": ["Belle image", "Dos fragile"],
 					"costs": [],
 					"effects": [
-						{ "op": "addSupport", "group": "support.working_class", "value": 4 },
-						{ "op": "addResource", "resource": "influence", "value": 2 },
-						{ "op": "addStat", "stat": "player.health", "value": -2 },
-						{ "op": "addStat", "stat": "player.exposure", "value": 4 }
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 4
+						},
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.health",
+							"value": -2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 4
+						}
 					]
 				},
 				{
@@ -91,7 +307,13 @@
 					"label": "Accuser la communauté de communes",
 					"hints": ["Ça ne coûte rien", "Ça ne règle rien"],
 					"costs": [],
-					"effects": [{ "op": "addSupport", "group": "support.middle_class", "value": -2 }]
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": -2
+						}
+					]
 				}
 			]
 		},
@@ -109,8 +331,14 @@
 			"when": {
 				"op": "any",
 				"conditions": [
-					{ "op": "holdsMandate", "mandate": "mandate.deputy" },
-					{ "op": "holdsMandate", "mandate": "mandate.senator" }
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.deputy"
+					},
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.senator"
+					}
 				]
 			},
 			"actors": [],
@@ -121,20 +349,49 @@
 					"hints": ["L’appareil apprécie la discipline"],
 					"costs": [],
 					"effects": [
-						{ "op": "addSupport", "group": "support.apparatus", "value": 4 },
-						{ "op": "addSupport", "group": "support.business", "value": 2 }
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": 4
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 2
+						}
 					]
 				},
 				{
 					"id": "oppose",
 					"label": "Prendre la parole contre",
 					"hints": ["Un extrait qui tourne en ligne", "Le groupe fera la tête"],
-					"costs": [{ "resource": "influence", "amount": 2 }],
+					"costs": [
+						{
+							"resource": "influence",
+							"amount": 2
+						}
+					],
 					"effects": [
-						{ "op": "addSupport", "group": "support.apparatus", "value": -5 },
-						{ "op": "addSupport", "group": "support.working_class", "value": 3 },
-						{ "op": "addSupport", "group": "support.activists", "value": 3 },
-						{ "op": "addStat", "stat": "player.exposure", "value": 6 }
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": -5
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 6
+						}
 					]
 				},
 				{
@@ -142,7 +399,13 @@
 					"label": "Être opportunément aux toilettes",
 					"hints": ["Personne ne vous en voudra vraiment"],
 					"costs": [],
-					"effects": [{ "op": "addStat", "stat": "player.stress", "value": -2 }]
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -2
+						}
+					]
 				}
 			]
 		},
@@ -157,11 +420,23 @@
 			"priority": 0,
 			"cooldownTurns": 16,
 			"unique": false,
-			"when": { "op": "holdsMandate", "mandate": "mandate.deputy" },
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.deputy"
+			},
 			"actors": [],
 			"effects": [
-				{ "op": "addResourceRandom", "resource": "influence", "min": 1, "max": 4 },
-				{ "op": "addSupport", "group": "support.middle_class", "value": 1 }
+				{
+					"op": "addResourceRandom",
+					"resource": "influence",
+					"min": 1,
+					"max": 4
+				},
+				{
+					"op": "addSupport",
+					"group": "support.middle_class",
+					"value": 1
+				}
 			]
 		},
 		{
@@ -178,14 +453,28 @@
 			"when": {
 				"op": "any",
 				"conditions": [
-					{ "op": "holdsMandate", "mandate": "mandate.deputy" },
-					{ "op": "holdsMandate", "mandate": "mandate.senator" }
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.deputy"
+					},
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.senator"
+					}
 				]
 			},
 			"actors": [],
 			"effects": [
-				{ "op": "addSupport", "group": "support.apparatus", "value": 2 },
-				{ "op": "addStat", "stat": "player.stress", "value": -3 }
+				{
+					"op": "addSupport",
+					"group": "support.apparatus",
+					"value": 2
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": -3
+				}
 			]
 		},
 		{
@@ -199,7 +488,10 @@
 			"priority": 0,
 			"cooldownTurns": 20,
 			"unique": false,
-			"when": { "op": "holdsMandate", "mandate": "mandate.regional_councillor" },
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.regional_councillor"
+			},
 			"actors": [],
 			"choices": [
 				{
@@ -208,17 +500,40 @@
 					"hints": ["Fatigant", "Les usagers s’en souviendront"],
 					"costs": [],
 					"effects": [
-						{ "op": "addSupport", "group": "support.working_class", "value": 3 },
-						{ "op": "addSupport", "group": "support.middle_class", "value": 3 },
-						{ "op": "addStat", "stat": "player.stress", "value": 4 }
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 4
+						}
 					]
 				},
 				{
 					"id": "study",
 					"label": "Commander une étude sur la ponctualité",
 					"hints": ["Résultats dans dix-huit mois"],
-					"costs": [{ "resource": "politicalBudgetCents", "amount": 100000 }],
-					"effects": [{ "op": "addSupport", "group": "support.apparatus", "value": 2 }]
+					"costs": [
+						{
+							"resource": "politicalBudgetCents",
+							"amount": 100000
+						}
+					],
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.apparatus",
+							"value": 2
+						}
+					]
 				}
 			]
 		},
@@ -236,8 +551,14 @@
 			"when": {
 				"op": "all",
 				"conditions": [
-					{ "op": "holdsMandate", "mandate": "mandate.minister" },
-					{ "op": "capability", "capability": "public_office" }
+					{
+						"op": "holdsMandate",
+						"mandate": "mandate.minister"
+					},
+					{
+						"op": "capability",
+						"capability": "public_office"
+					}
 				]
 			},
 			"actors": [],
@@ -248,10 +569,26 @@
 					"hints": ["Des amis puissants", "Un dossier qui pourrait ressortir"],
 					"costs": [],
 					"effects": [
-						{ "op": "addSupport", "group": "support.business", "value": 6 },
-						{ "op": "addResource", "resource": "politicalBudgetCents", "value": 500000 },
-						{ "op": "addSupport", "group": "support.activists", "value": -4 },
-						{ "op": "recordFact", "offense": "offense.conflict_of_interest", "severity": 1 }
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": 6
+						},
+						{
+							"op": "addResource",
+							"resource": "politicalBudgetCents",
+							"value": 500000
+						},
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": -4
+						},
+						{
+							"op": "recordFact",
+							"offense": "offense.conflict_of_interest",
+							"severity": 1
+						}
 					]
 				},
 				{
@@ -259,7 +596,13 @@
 					"label": "Écouter poliment, ne rien promettre",
 					"hints": ["Le juste milieu"],
 					"costs": [],
-					"effects": [{ "op": "addResource", "resource": "influence", "value": 2 }]
+					"effects": [
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 2
+						}
+					]
 				},
 				{
 					"id": "leak",
@@ -267,10 +610,26 @@
 					"hints": ["Coup d’éclat", "Matignon n’aime pas les surprises"],
 					"costs": [],
 					"effects": [
-						{ "op": "addSupport", "group": "support.working_class", "value": 4 },
-						{ "op": "addSupport", "group": "support.business", "value": -6 },
-						{ "op": "addIndicator", "indicator": "stability", "value": -2 },
-						{ "op": "addStat", "stat": "player.exposure", "value": 8 }
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 4
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": -6
+						},
+						{
+							"op": "addIndicator",
+							"indicator": "stability",
+							"value": -2
+						},
+						{
+							"op": "addStat",
+							"stat": "player.exposure",
+							"value": 8
+						}
 					]
 				}
 			]
@@ -286,11 +645,22 @@
 			"priority": 0,
 			"cooldownTurns": 24,
 			"unique": false,
-			"when": { "op": "holdsMandate", "mandate": "mandate.minister" },
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.minister"
+			},
 			"actors": [],
 			"effects": [
-				{ "op": "addSupport", "group": "support.working_class", "value": -4 },
-				{ "op": "addStat", "stat": "player.stress", "value": 3 }
+				{
+					"op": "addSupport",
+					"group": "support.working_class",
+					"value": -4
+				},
+				{
+					"op": "addStat",
+					"stat": "player.stress",
+					"value": 3
+				}
 			]
 		},
 		{
@@ -304,7 +674,10 @@
 			"priority": 0,
 			"cooldownTurns": 24,
 			"unique": false,
-			"when": { "op": "holdsMandate", "mandate": "mandate.municipal_councillor" },
+			"when": {
+				"op": "holdsMandate",
+				"mandate": "mandate.municipal_councillor"
+			},
 			"actors": [],
 			"choices": [
 				{
@@ -313,8 +686,16 @@
 					"hints": ["Les enfants ravis", "L’harmonie vexée"],
 					"costs": [],
 					"effects": [
-						{ "op": "addSupport", "group": "support.working_class", "value": 2 },
-						{ "op": "addSupport", "group": "support.activists", "value": -1 }
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 2
+						},
+						{
+							"op": "addSupport",
+							"group": "support.activists",
+							"value": -1
+						}
 					]
 				},
 				{
@@ -322,7 +703,13 @@
 					"label": "L’harmonie municipale, par fidélité",
 					"hints": ["Les anciens apprécient"],
 					"costs": [],
-					"effects": [{ "op": "addSupport", "group": "support.middle_class", "value": 2 }]
+					"effects": [
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 2
+						}
+					]
 				}
 			]
 		},
@@ -337,7 +724,11 @@
 			"priority": 0,
 			"cooldownTurns": 8,
 			"unique": false,
-			"when": { "op": "gte", "stat": "player.campaigning", "value": 1 },
+			"when": {
+				"op": "gte",
+				"stat": "player.campaigning",
+				"value": 1
+			},
 			"actors": [],
 			"choices": [
 				{
@@ -346,18 +737,37 @@
 					"hints": ["Préparation de campagne", "Fatigue"],
 					"costs": [],
 					"effects": [
-						{ "op": "prepareCampaign", "value": 4 },
-						{ "op": "addStat", "stat": "player.stress", "value": 2 }
+						{
+							"op": "prepareCampaign",
+							"value": 4
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 2
+						}
 					]
 				},
 				{
 					"id": "chicken",
 					"label": "Offrir les poulets rôtis à la file d’attente",
 					"hints": ["Coûteux", "Très efficace"],
-					"costs": [{ "resource": "politicalBudgetCents", "amount": 80000 }],
+					"costs": [
+						{
+							"resource": "politicalBudgetCents",
+							"amount": 80000
+						}
+					],
 					"effects": [
-						{ "op": "prepareCampaign", "value": 6 },
-						{ "op": "addSupport", "group": "support.working_class", "value": 2 }
+						{
+							"op": "prepareCampaign",
+							"value": 6
+						},
+						{
+							"op": "addSupport",
+							"group": "support.working_class",
+							"value": 2
+						}
 					]
 				},
 				{
@@ -365,7 +775,13 @@
 					"label": "Faire la grasse matinée",
 					"hints": ["Repos mérité", "L’adversaire occupe le terrain"],
 					"costs": [],
-					"effects": [{ "op": "addStat", "stat": "player.stress", "value": -3 }]
+					"effects": [
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": -3
+						}
+					]
 				}
 			]
 		},
@@ -380,7 +796,11 @@
 			"priority": 0,
 			"cooldownTurns": 20,
 			"unique": false,
-			"when": { "op": "gte", "stat": "player.popularity", "value": 25 },
+			"when": {
+				"op": "gte",
+				"stat": "player.popularity",
+				"value": 25
+			},
 			"actors": [],
 			"choices": [
 				{
@@ -392,8 +812,16 @@
 					"hints": ["Les riverains contents", "Les opérateurs moins"],
 					"costs": [],
 					"effects": [
-						{ "op": "addSupport", "group": "support.middle_class", "value": 3 },
-						{ "op": "addSupport", "group": "support.business", "value": -2 }
+						{
+							"op": "addSupport",
+							"group": "support.middle_class",
+							"value": 3
+						},
+						{
+							"op": "addSupport",
+							"group": "support.business",
+							"value": -2
+						}
 					]
 				},
 				{
@@ -405,8 +833,16 @@
 					"hints": ["Une soirée entière", "Respect gagné"],
 					"costs": [],
 					"effects": [
-						{ "op": "addResource", "resource": "influence", "value": 3 },
-						{ "op": "addStat", "stat": "player.stress", "value": 3 }
+						{
+							"op": "addResource",
+							"resource": "influence",
+							"value": 3
+						},
+						{
+							"op": "addStat",
+							"stat": "player.stress",
+							"value": 3
+						}
 					]
 				}
 			]
@@ -422,11 +858,24 @@
 			"priority": 0,
 			"cooldownTurns": 20,
 			"unique": false,
-			"when": { "op": "gte", "stat": "player.mandates", "value": 1 },
+			"when": {
+				"op": "gte",
+				"stat": "player.mandates",
+				"value": 1
+			},
 			"actors": [],
 			"effects": [
-				{ "op": "addResourceRandom", "resource": "influence", "min": 0, "max": 5 },
-				{ "op": "addSupport", "group": "support.middle_class", "value": 1 }
+				{
+					"op": "addResourceRandom",
+					"resource": "influence",
+					"min": 0,
+					"max": 5
+				},
+				{
+					"op": "addSupport",
+					"group": "support.middle_class",
+					"value": 1
+				}
 			]
 		}
 	]

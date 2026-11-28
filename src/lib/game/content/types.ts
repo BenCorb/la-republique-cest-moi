@@ -134,6 +134,8 @@ export const STAT_IDS = [
 	'player.partyRank',
 	/** Mandats exercés au cours de la carrière, terminés compris (P3-38). */
 	'player.mandatesHeld',
+	/** Siège d'assemblée locale dans l'opposition (P3-24), 1 ou 0. */
+	'player.councilOpposition',
 	/** Trimestres à Matignon depuis la nomination (P3-36), −1 hors de Matignon. */
 	'player.pmTurns',
 	/** Candidature à la direction possible au prochain congrès (P3-34), 1 ou 0. */

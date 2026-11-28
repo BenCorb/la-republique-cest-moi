@@ -126,6 +126,8 @@ describe('capacités exigées par les infractions (P3-12)', () => {
 			'government.official_car › take',
 			'institutions.transparency_audit › omit',
 			'mandate.lobby_breakfast › sign',
+			'mandate.municipal_flat › give',
+			'mandate.public_contract_friend › favour',
 			'personal.family_job_request › hire',
 			'personal.family_job_request › replace',
 			'relations.donor_returns › accept',

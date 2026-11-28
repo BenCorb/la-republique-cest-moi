@@ -1163,3 +1163,27 @@ export function describePendingEvent(state: GameState, content: Content): Pendin
 		remaining: state.events.pending.length - 1
 	};
 }
+
+/**
+ * Événements ordinaires éligibles dans cet état (P3-24, mesure de couverture) :
+ * mêmes filtres que le tirage (époque, fenêtre, conditions, acteurs, poste,
+ * plafonds et délais), hors événements déjà en attente. Sans tirage.
+ */
+export function eligibleRandomEvents(state: GameState, content: Content): string[] {
+	const pool: CastPool = { characters: state.characters, relationships: state.relationships };
+	return content.eventIds.filter((id) => {
+		const definition = content.events[id];
+		if (!definition || definition.trigger !== 'random') return false;
+		const occurrence = state.events.occurrences[id];
+		if (definition.unique && occurrence) return false;
+		if (occurrence && state.turn - occurrence.lastTurn < definition.cooldownTurns) return false;
+		const cap = definition.maxOccurrences ?? content.balance.events.maxOccurrences;
+		if (occurrence && cap > 0 && occurrence.count >= cap) return false;
+		if (state.events.pending.some((instance) => instance.eventId === id)) return false;
+		if (!inEras(definition.eras, state.turn, content)) return false;
+		if (!inWindow(definition, state.turn) || !conditionHolds(definition, state)) return false;
+		if (!actorsAvailable(definition, pool)) return false;
+		if (definition.subject === 'post' && !bindEventPost(state.staff, state, content)) return false;
+		return bindWorldVariables(definition, {}, state.player, state.world, content) !== null;
+	});
+}

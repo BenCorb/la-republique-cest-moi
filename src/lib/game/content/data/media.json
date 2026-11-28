@@ -1272,7 +1272,7 @@
 		"nationalExposure": 30,
 		"nationalMandateRank": 40,
 		"regionalNationalPercent": 50,
-		"toneThreshold": 30,
+		"toneThreshold": 20,
 		"toneEffects": {
 			"critical": -3,
 			"neutral": 0,
@@ -1283,7 +1283,7 @@
 		"ownedEffectPercent": 50,
 		"relationDriftPercent": 10,
 		"lifestylePercent": 15,
-		"lifestyleLevel": 2,
+		"lifestyleLevel": 1,
 		"ambientPercent": 60,
 		"interviewCooldownTurns": 4,
 		"angleRepeatLimit": 2

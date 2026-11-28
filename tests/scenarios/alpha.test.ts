@@ -86,7 +86,8 @@ describe('alpha : trajectoires distinctes', { timeout: LONG_SCENARIO_TIMEOUT }, 
 	it('distingue nettement les stratégies', () => {
 		// Le patrimonial ne fait pas campagne ; le mixte enchaîne les candidatures.
 		expect(mean(byStrategy('patrimonial').map((run) => run.campaigns))).toBe(0);
-		expect(mean(byStrategy('mixed').map((run) => run.campaigns))).toBeGreaterThan(
+		// Ministre ou à Matignon (P3-35, P3-36), le mixte cesse de se présenter : au moins autant.
+		expect(mean(byStrategy('mixed').map((run) => run.campaigns))).toBeGreaterThanOrEqual(
 			mean(byStrategy('prudent').map((run) => run.campaigns))
 		);
 		// L'ambitieux s'use plus vite que le prudent.

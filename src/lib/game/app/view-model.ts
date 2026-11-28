@@ -21,6 +21,7 @@ import {
 	type ActionDefinition,
 	type ActionFamilyDefinition,
 	type ActionFormat,
+	type Condition,
 	type PromiseDefinition,
 	type PromiseMode,
 	type PromiseStatus,
@@ -5105,6 +5106,19 @@ export interface RegionOptionView {
 	readonly departments: string;
 }
 
+/** Terrain d'engagement exigé par une condition, au premier niveau ou dans un « tous » (P3-24). */
+export function engagementOf(condition: Condition | undefined): string | null {
+	if (!condition) return null;
+	if (condition.op === 'engagement') return condition.engagement;
+	if (condition.op === 'all') {
+		for (const inner of condition.conditions) {
+			const found = engagementOf(inner);
+			if (found) return found;
+		}
+	}
+	return null;
+}
+
 export function creationOptions(content: Content): {
 	readonly origins: readonly ProfileOptionView[];
 	readonly engagements: readonly ProfileOptionView[];
@@ -5128,9 +5142,7 @@ export function creationOptions(content: Content): {
 		effects: entry.effects.map((effect) => describeEffect(effectRange(effect), content)),
 		actions: content.actionIds
 			.map((id) => content.actions[id]!)
-			.filter(
-				(action) => action.requires?.op === 'engagement' && action.requires.engagement === entry.id
-			)
+			.filter((action) => engagementOf(action.requires) === entry.id)
 			.map((action) => action.label)
 	});
 	return {
