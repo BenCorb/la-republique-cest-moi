@@ -1,19 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Agenda from '#lib/components/agenda/Agenda.svelte';
 	import ConfirmDialog from '#lib/components/common/ConfirmDialog.svelte';
-	import Dashboard from '#lib/components/dashboard/Dashboard.svelte';
 	import CareerEnd from '#lib/components/events/CareerEnd.svelte';
 	import DecisionDialog from '#lib/components/events/DecisionDialog.svelte';
 	import NoteDialog from '#lib/components/events/NoteDialog.svelte';
 	import Journal from '#lib/components/journal/Journal.svelte';
-	import NewsPanel from '#lib/components/news/NewsPanel.svelte';
-	import Organisation from '#lib/components/organisation/Organisation.svelte';
-	import Wealth from '#lib/components/wealth/Wealth.svelte';
-	import WorldPanel from '#lib/components/world/WorldPanel.svelte';
-	import CareerPanel from '#lib/components/career/CareerPanel.svelte';
-	import EntouragePanel from '#lib/components/entourage/EntouragePanel.svelte';
-	import RelationsPanel from '#lib/components/people/RelationsPanel.svelte';
+	import FranceTab from '#lib/components/tabs/FranceTab.svelte';
+	import NetworkTab from '#lib/components/tabs/NetworkTab.svelte';
+	import PoliticsTab from '#lib/components/tabs/PoliticsTab.svelte';
+	import PrivateTab from '#lib/components/tabs/PrivateTab.svelte';
+	import QuarterTab from '#lib/components/tabs/QuarterTab.svelte';
 	import GameLayout from '#lib/components/shell/GameLayout.svelte';
 	import GameShell from '#lib/components/shell/GameShell.svelte';
 	import HomeScreen from '#lib/components/shell/HomeScreen.svelte';
@@ -34,7 +30,7 @@
 	 * client (ARCHITECTURE.md §12). Les onglets ne font pas passer le temps.
 	 */
 	let session = $state<GameSession | null>(null);
-	let tab = $state<GameTab>('dashboard');
+	let tab = $state<GameTab>('quarter');
 	let confirmingNewCareer = $state(false);
 	/** Écran de création ouvert, et profil choisi en attente de confirmation éventuelle. */
 	let creating = $state(false);
@@ -88,14 +84,14 @@
 			return;
 		}
 		creating = false;
-		tab = 'agenda';
+		tab = 'quarter';
 	}
 
 	function confirmCareer(): void {
 		confirmingNewCareer = false;
 		creating = false;
 		session?.controller.newCareer({ ...(chosenProfile ?? {}), replaceExisting: true });
-		tab = 'agenda';
+		tab = 'quarter';
 	}
 
 	/** Rejouer la même partie (P3-42) : même seed, même profil, après confirmation. */
@@ -121,7 +117,7 @@
 			confirmingNewCareer = true;
 			return;
 		}
-		tab = 'agenda';
+		tab = 'quarter';
 	}
 
 	/** Retour de partie (P3-42) : sauvegarde et note dans un fichier, sans serveur. */
@@ -184,24 +180,16 @@
 				onReplay={() => replayCareer(snapshot?.view?.summary?.replay ?? null)}
 				onFeedback={(note: string) => exportFeedback(note)}
 			/>
-		{:else if tab === 'dashboard'}
-			<Dashboard {session} />
-		{:else if tab === 'agenda'}
-			<Agenda {session} />
-		{:else if tab === 'career'}
-			<CareerPanel {session} />
-		{:else if tab === 'world'}
-			<WorldPanel {session} />
-		{:else if tab === 'news'}
-			<NewsPanel {session} />
-		{:else if tab === 'entourage'}
-			<EntouragePanel {session} />
-		{:else if tab === 'relations'}
-			<RelationsPanel {session} />
-		{:else if tab === 'organisation'}
-			<Organisation {session} />
-		{:else if tab === 'wealth'}
-			<Wealth {session} />
+		{:else if tab === 'quarter'}
+			<QuarterTab {session} />
+		{:else if tab === 'politics'}
+			<PoliticsTab {session} />
+		{:else if tab === 'private'}
+			<PrivateTab {session} />
+		{:else if tab === 'network'}
+			<NetworkTab {session} />
+		{:else if tab === 'france'}
+			<FranceTab {session} />
 		{:else}
 			<Journal {session} />
 		{/if}
@@ -210,13 +198,11 @@
 	<!-- Note de cabinet d'abord (P3-14), puis décision et son résultat. -->
 	{#if snapshot.note && snapshot.view && !snapshot.view.summary}
 		<NoteDialog
-			mode={snapshot.note}
 			note={snapshot.view.quarterNote}
-			acceleration={snapshot.acceleration}
 			decisionPending={snapshot.view.decision !== null}
 			onPrepare={() => {
 				session?.controller.dismissNote();
-				tab = 'agenda';
+				tab = 'quarter';
 			}}
 			onJournal={() => {
 				session?.controller.dismissNote();
@@ -253,7 +239,7 @@
 		danger
 		onConfirm={() => {
 			session?.controller.confirmImport();
-			tab = 'dashboard';
+			tab = 'quarter';
 		}}
 		onCancel={() => session?.controller.cancelImport()}
 	/>

@@ -2,19 +2,15 @@
 	import {
 		BadgeCheck,
 		BookOpen,
+		CalendarDays,
 		ClipboardList,
-		Briefcase,
-		Calendar,
 		Flag,
-		Award,
+		HeartPulse,
 		Landmark,
-		LayoutDashboard,
 		MapPin,
-		Newspaper,
+		Network,
 		OctagonExclamationPoint,
-		Users,
-		UsersRound,
-		Wallet
+		Vote
 	} from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
 	import AlertBar from './AlertBar.svelte';
@@ -25,13 +21,13 @@
 	import PlanSheet from './PlanSheet.svelte';
 	import PressTicker from './PressTicker.svelte';
 	import { quarterHeadlines } from './press-rotation.ts';
-	import type { GameTab } from './tabs.ts';
+	import { TAB_LABELS, type GameTab } from './tabs.ts';
 	import TurnControls from './TurnControls.svelte';
 
 	/**
 	 * Coque de partie (DESIGN.md §3) : en-tête avec date, âge, ressources et jauges ;
-	 * navigation à gauche ; contenu central défilant ; alertes et presse à droite
-	 * (repliées dans le contenu sous 1 100 px) ; barre d'avance toujours visible.
+	 * six onglets à gauche (D-02) ; contenu central défilant ; carnet du plan à
+	 * droite (replié en bouton sous 1 100 px) ; barre du bas toujours visible.
 	 */
 	interface Props {
 		session: GameSession;
@@ -52,17 +48,13 @@
 	/** Fil tournant de l'en-tête : titres du dernier trimestre publié (P3-13). */
 	const headlines = $derived(quarterHeadlines(view?.press ?? []));
 
-	const tabs: { id: GameTab; label: string; icon: typeof Calendar }[] = [
-		{ id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
-		{ id: 'agenda', label: 'Agenda', icon: Calendar },
-		{ id: 'career', label: 'Carrière', icon: Award },
-		{ id: 'world', label: 'Monde politique', icon: Flag },
-		{ id: 'news', label: 'Actualités', icon: Newspaper },
-		{ id: 'entourage', label: 'Entourage', icon: UsersRound },
-		{ id: 'relations', label: 'Relations', icon: Users },
-		{ id: 'organisation', label: 'Organisation', icon: Briefcase },
-		{ id: 'wealth', label: 'Patrimoine', icon: Wallet },
-		{ id: 'journal', label: 'Journal', icon: BookOpen }
+	const tabs: { id: GameTab; icon: typeof CalendarDays }[] = [
+		{ id: 'quarter', icon: CalendarDays },
+		{ id: 'politics', icon: Vote },
+		{ id: 'private', icon: HeartPulse },
+		{ id: 'network', icon: Network },
+		{ id: 'france', icon: Flag },
+		{ id: 'journal', icon: BookOpen }
 	];
 </script>
 
@@ -118,7 +110,7 @@
 							</span>
 						</span>
 					</span>
-					<PressTicker items={headlines} onOpen={() => onTab('news')} />
+					<PressTicker items={headlines} onOpen={() => onTab('france')} />
 				</div>
 			</div>
 			<!-- Bande des indicateurs : date dans la colonne de la navigation, puis six cellules égales. -->
@@ -200,7 +192,7 @@
 								onclick={() => onTab(item.id)}
 							>
 								<item.icon class="size-4 shrink-0" aria-hidden="true" />
-								{item.label}
+								{TAB_LABELS[item.id]}
 							</button>
 						</li>
 					{/each}

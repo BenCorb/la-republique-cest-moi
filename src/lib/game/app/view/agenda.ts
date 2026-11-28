@@ -31,8 +31,18 @@ export interface PlanView {
 	readonly steps: readonly PlanStepView[];
 	/** Étapes épinglées, seules répétées aux trimestres suivants (P3-11). */
 	readonly pinnedCount: number;
-	/** Le plan contient la retraite (P3-37) : confirmation exigée, accélération fermée. */
+	/** Le plan contient la retraite (P3-37, annoncée depuis la barre du bas, D-08). */
 	readonly retiring: boolean;
+	/**
+	 * Retraite (D-08) : action du catalogue, position au plan si elle est annoncée,
+	 * possibilité de l'annoncer ; `null` si le catalogue n'en a pas.
+	 */
+	readonly retirement: {
+		readonly actionId: string;
+		readonly planIndex: number | null;
+		readonly addable: boolean;
+		readonly reason: string | null;
+	} | null;
 	/** Retraits automatiques du trimestre en cours, avec leur motif (P3-11). */
 	readonly adjustments: readonly string[];
 	readonly timeAvailable: number;
