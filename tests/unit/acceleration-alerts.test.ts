@@ -13,7 +13,7 @@ import {
 	type HistoryEntry,
 	type TurnPlan
 } from '../../src/lib/game/engine/index.ts';
-import { projectView, summarizeSpan } from '../../src/lib/game/app/view-model.ts';
+import { projectView } from '../../src/lib/game/app/view-model.ts';
 import {
 	fixtureActions,
 	fixtureBalance,
@@ -223,30 +223,5 @@ describe('alertes d’entourage et de budget', () => {
 
 	it('n’émet aucune alerte hors de la planification', () => {
 		expect(accelerationAlerts({ ...base, phase: 'decision' }, EMPTY, catalog)).toEqual([]);
-	});
-});
-
-describe('résumé groupé d’une période', () => {
-	it('additionne les variations et reprend le journal de la période seulement', () => {
-		const start = commit(createGame({ seed: 'résumé' }, catalog));
-		const plan: TurnPlan = { steps: [{ kind: 'action', id: 'test.fixed', pinned: true }] };
-		const run = accelerate(start, { plan, maxTurns: 3 }, catalog);
-		const summary = summarizeSpan(start, run.state, catalog);
-
-		expect(summary).toMatchObject({ turns: 3, period: 'du T2 2000 au T4 2000', decisions: 0 });
-		expect(summary.quarters.map((quarter) => quarter.label)).toEqual([
-			'T4 2000',
-			'T3 2000',
-			'T2 2000'
-		]);
-		expect(summary.changes[0]).toEqual({ name: 'Influence', text: '+ 6' });
-		expect(summary.changes.map((change) => change.name)).toEqual([
-			'Influence',
-			'Budget politique',
-			'Argent personnel',
-			'Santé',
-			'Stress',
-			'Popularité'
-		]);
 	});
 });

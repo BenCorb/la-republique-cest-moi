@@ -201,22 +201,6 @@ describe('retrait automatique du plan (P3-11)', () => {
 		});
 	});
 
-	it('s’arrête sur un plan devenu vide quand toutes les activités sont ponctuelles', async () => {
-		const game = newController('accélération-ponctuelle', new MemoryStorage());
-		game.addStep(random);
-		await game.accelerate(4);
-		expect(game.snapshot().acceleration).toMatchObject({
-			turnsAdvanced: 1,
-			stopReason: 'empty_plan'
-		});
-		// Un plan vide au lancement ne déclenche pas le garde-fou.
-		await game.accelerate(2);
-		expect(game.snapshot().acceleration).toMatchObject({
-			turnsAdvanced: 2,
-			stopReason: 'limit_reached'
-		});
-	});
-
 	it('n’enregistre pas le brouillon : la reprise repart d’un plan vide', () => {
 		const storage = new MemoryStorage();
 		const game = newController('reprise', storage);

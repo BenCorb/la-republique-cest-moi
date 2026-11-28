@@ -2,7 +2,6 @@
 	import BallotReport from '#lib/components/career/BallotReport.svelte';
 	import {
 		BookOpen,
-		CalendarCheck,
 		Flag,
 		Gavel,
 		Landmark,
@@ -21,30 +20,24 @@
 	import EffectChip from '#lib/components/common/EffectChip.svelte';
 	import ResourceIcon from '#lib/components/common/ResourceIcon.svelte';
 	import { identityOf } from '#lib/components/common/identity.ts';
-	import Stamp from '#lib/components/common/Stamp.svelte';
-	import SpanSummary from '#lib/components/dashboard/SpanSummary.svelte';
-	import type { AccelerationStatus } from '#lib/game/app/controller.ts';
 	import type { NoteHighlightView, QuarterNoteView } from '#lib/game/app/view-model.ts';
 
 	/**
 	 * Note de cabinet (P3-14, PT-P3-09-015) : présentée d'office après un trimestre
 	 * manuel — nouvelle date, statistiques (variation et valeur atteinte), faits
 	 * marquants (résultats d'élection avec graphique et bilan électoral, alternance,
-	 * mandats, partis, justice, entourage, événements) — ou après une accélération
-	 * (note de période). Le reste est au journal.
+	 * mandats, partis, justice, entourage, événements). Le reste est au journal.
 	 * Rouvrable depuis la date de l'en-tête. Échap ou « Préparer ce trimestre »
 	 * la ferment ; une décision en attente s'affiche ensuite.
 	 */
 	interface Props {
-		mode: 'quarter' | 'span';
 		note: QuarterNoteView | null;
-		acceleration: AccelerationStatus | null;
 		decisionPending: boolean;
 		onPrepare: () => void;
 		onJournal: () => void;
 	}
 
-	let { mode, note, acceleration, decisionPending, onPrepare, onJournal }: Props = $props();
+	let { note, decisionPending, onPrepare, onJournal }: Props = $props();
 	let dialog: HTMLDialogElement | undefined = $state();
 	let primary: HTMLButtonElement | undefined = $state();
 
@@ -99,7 +92,7 @@
 	}}
 >
 	<div class="tricolor-rule h-1" aria-hidden="true"></div>
-	{#if mode === 'quarter' && note}
+	{#if note}
 		<div class="note-enter flex flex-col gap-5 p-6">
 			<header class="flex items-center gap-4">
 				<CalendarDate label={note.dateLabel} />
@@ -275,15 +268,6 @@
 						: ''} au journal (revenus, charges, presse).
 				</p>
 			{/if}
-		</div>
-	{:else if mode === 'span' && acceleration?.summary}
-		<div class="note-enter flex flex-col gap-4 p-6">
-			<header class="flex items-center gap-3 border-b-2 border-double border-line pb-3">
-				<CalendarCheck class="size-5 text-primary" aria-hidden="true" />
-				<h2 id="note-title" class="font-display text-xl font-bold text-primary">Note de période</h2>
-				<span class="ml-auto"><Stamp label="Accéléré" tone="warning" /></span>
-			</header>
-			<SpanSummary {acceleration} />
 		</div>
 	{/if}
 	<!-- Bouton principal en premier dans l'ordre de tabulation, affiché à droite. -->

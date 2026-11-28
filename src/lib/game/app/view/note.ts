@@ -1,5 +1,5 @@
 /**
- * Projection de la note de cabinet, du résultat des décisions et du résumé de période (fiche tour-et-acceleration).
+ * Projection de la note de cabinet et du résultat des décisions (fiche tour-et-acceleration).
  *
  * Partie de la projection publique (`PlayerView`, ARCHITECTURE.md §9) : fonctions pures,
  * sans PRNG ni information cachée. Point d’entrée : `../view-model.ts`.
@@ -8,21 +8,13 @@ import type { Content } from '../../content/types.ts';
 import { RESOURCE_IDS } from '../../content/types.ts';
 import type { ChoiceRecord, GameState, HistoryEntry, QuarterSnapshot } from '../../engine/index.ts';
 import { caseStepMessage, displayName, formatTurn, renderTemplate } from '../../engine/index.ts';
-import {
-	RESOURCE_NAMES,
-	formatCompactRange,
-	formatDelta,
-	formatGaugeDelta,
-	formatResource
-} from '../format.ts';
+import { formatCompactRange, formatResource } from '../format.ts';
 import type { BallotReportView } from './career.ts';
 import { ballotReportView, runoffReport } from './career.ts';
-import type { JournalLine, JournalTurnView, PlanAdjustment } from './journal.ts';
+import type { PlanAdjustment } from './journal.ts';
 import {
-	buildJournal,
 	characterLines,
 	familyLines,
-	journalOfChoice,
 	journalOfQuarter,
 	staffLines,
 	worldLines
@@ -547,83 +539,5 @@ export function buildQuarterNote(
 		highlights: shown,
 		journalLines: Math.max(0, journalLines - shown.length),
 		adjustments: adjustments.find((adjustment) => adjustment.turn === state.turn)?.lines ?? []
-	};
-}
-
-/** Choix proposés à la création d'un personnage (P2-08). */
-/** Résumé groupé d'une série de trimestres simulés (DESIGN.md §5, P2-09). */
-export interface SpanSummaryView {
-	/** « du T1 2003 au T4 2005 ». */
-	readonly period: string;
-	readonly turns: number;
-	/** Variations nettes : ressources, santé, stress, popularité. */
-	readonly changes: readonly { readonly name: string; readonly text: string }[];
-	/** Faits marquants : carrière, entourage, famille, décisions, fin. */
-	readonly highlights: readonly string[];
-	/** Faits marquants non affichés faute de place. */
-	readonly moreHighlights: number;
-	readonly events: number;
-	readonly decisions: number;
-	/** Journal détaillé de la période, du plus récent au plus ancien. */
-	readonly quarters: readonly JournalTurnView[];
-}
-
-const HIGHLIGHT_KINDS: ReadonlySet<JournalLine['kind']> = new Set([
-	'career',
-	'people',
-	'decision',
-	'end'
-]);
-const MAX_HIGHLIGHTS = 8;
-
-/**
- * Résume la période écoulée entre deux états d'une même partie (`to` dérive de
- * `from` par des transitions : le journal est un ajout pur). Aucune donnée
- * cachée : seulement ce que le journal et le tableau de bord montrent déjà.
- */
-export function summarizeSpan(from: GameState, to: GameState, content: Content): SpanSummaryView {
-	const entries = to.history.slice(from.history.length);
-	const quarterEntries = entries.filter(
-		(entry): entry is HistoryEntry => entry.type === 'turn.resolved'
-	);
-	const turns = quarterEntries.length;
-	const lastTurn = quarterEntries.at(-1)?.turn ?? from.turn;
-	const lines = entries.flatMap((entry) =>
-		entry.type === 'turn.resolved'
-			? journalOfQuarter(entry, to, content)
-			: journalOfChoice(entry, to, content)
-	);
-	const highlights = lines
-		.filter((line) => HIGHLIGHT_KINDS.has(line.kind))
-		.map((line) => line.text);
-	const gauge = (name: string, before: number, after: number) => ({
-		name,
-		text: formatGaugeDelta(after - before)
-	});
-	return {
-		period:
-			turns <= 1
-				? `au ${formatTurn(from.turn)}`
-				: `du ${formatTurn(from.turn)} au ${formatTurn(lastTurn)}`,
-		turns,
-		changes: [
-			...RESOURCE_IDS.map((id) => ({
-				name: RESOURCE_NAMES[id],
-				text: formatDelta(id, to.resources[id] - from.resources[id])
-			})),
-			gauge('Santé', from.player.health, to.player.health),
-			gauge('Stress', from.player.stress, to.player.stress),
-			gauge('Popularité', from.player.popularity, to.player.popularity)
-		],
-		highlights: highlights.slice(0, MAX_HIGHLIGHTS),
-		moreHighlights: Math.max(0, highlights.length - MAX_HIGHLIGHTS),
-		events: quarterEntries.reduce(
-			(sum, entry) => sum + entry.events.filter((event) => event.outcome !== 'cancelled').length,
-			0
-		),
-		decisions: entries.filter((entry) => entry.type === 'event.resolved').length,
-		quarters: buildJournal(to, content).filter((quarter) =>
-			quarterEntries.some((entry) => quarter.key === `t${entry.turn}`)
-		)
 	};
 }

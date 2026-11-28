@@ -28,9 +28,7 @@
 	const view = $derived(session.snapshot.view);
 	const plan = $derived(view?.plan);
 	/** Modifications fermées pendant l'accélération ou une décision bloquante. */
-	const locked = $derived(
-		session.snapshot.acceleration?.running === true || view?.phase !== 'planning'
-	);
+	const locked = $derived(view?.phase !== 'planning');
 </script>
 
 {#if view && plan}

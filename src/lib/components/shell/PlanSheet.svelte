@@ -21,9 +21,7 @@
 
 	let { session, open, focusSearch, onClose }: Props = $props();
 	const view = $derived(session.snapshot.view);
-	const locked = $derived(
-		session.snapshot.acceleration?.running === true || view?.phase !== 'planning'
-	);
+	const locked = $derived(view?.phase !== 'planning');
 
 	let dialog = $state<HTMLDialogElement | null>(null);
 	let search = $state<HTMLInputElement | null>(null);
@@ -83,9 +81,7 @@
 			<div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5">
 				{#if locked}
 					<p class="rounded border border-line bg-surface px-3 py-2 text-sm text-muted">
-						{session.snapshot.acceleration?.running
-							? 'Accélération en cours : le plan ne peut pas être modifié.'
-							: 'Le plan se modifie pendant la préparation du trimestre.'}
+						Le plan se modifie pendant la préparation du trimestre.
 					</p>
 				{/if}
 				<div class="rounded-md border border-line bg-surface p-4">

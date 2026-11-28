@@ -23,10 +23,8 @@
 	let { session }: Props = $props();
 	const view = $derived(session.snapshot.view);
 	const plan = $derived(view?.plan);
-	/** Modifications fermées pendant l'accélération ou une décision bloquante (P3-13). */
-	const accelerating = $derived(
-		session.snapshot.acceleration?.running === true || view?.phase !== 'planning'
-	);
+	/** Modifications fermées hors de la préparation du trimestre (décision bloquante, fin). */
+	const locked = $derived(view?.phase !== 'planning');
 
 	const healthForecast = $derived(
 		plan ? Math.round((plan.healthAfter.min + plan.healthAfter.max) / 2) : null
@@ -130,7 +128,7 @@
 										title={step.pinned
 											? 'Épinglée : répétée chaque trimestre'
 											: 'Épingler : répéter chaque trimestre'}
-										disabled={accelerating}
+										disabled={locked}
 										onclick={() => session.controller.togglePin(step.index)}
 									>
 										<Pin class="size-3.5 {step.pinned ? 'fill-current' : ''}" aria-hidden="true" />
@@ -140,7 +138,7 @@
 									type="button"
 									class="btn-secondary btn-small"
 									aria-label="Monter « {step.label} »"
-									disabled={accelerating || step.index === 0}
+									disabled={locked || step.index === 0}
 									onclick={() => session.controller.moveStep(step.index, -1)}
 								>
 									<ArrowUp class="size-3.5" aria-hidden="true" />
@@ -149,7 +147,7 @@
 									type="button"
 									class="btn-secondary btn-small"
 									aria-label="Descendre « {step.label} »"
-									disabled={accelerating || step.index === plan.steps.length - 1}
+									disabled={locked || step.index === plan.steps.length - 1}
 									onclick={() => session.controller.moveStep(step.index, 1)}
 								>
 									<ArrowDown class="size-3.5" aria-hidden="true" />
@@ -158,7 +156,7 @@
 									type="button"
 									class="btn-secondary btn-small"
 									aria-label="Retirer « {step.label} »"
-									disabled={accelerating}
+									disabled={locked}
 									onclick={() => session.controller.removeStep(step.index)}
 								>
 									<X class="size-3.5" aria-hidden="true" />
@@ -171,7 +169,7 @@
 			<button
 				type="button"
 				class="btn-secondary btn-small self-start"
-				disabled={accelerating}
+				disabled={locked}
 				onclick={() => session.controller.clearPlan()}
 			>
 				Vider le plan

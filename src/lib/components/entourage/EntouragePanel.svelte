@@ -19,7 +19,6 @@
 	let { session }: Props = $props();
 	const entourage = $derived(session.snapshot.view?.entourage ?? null);
 	const planning = $derived(session.snapshot.view?.phase === 'planning');
-	const accelerating = $derived(session.snapshot.acceleration?.running === true);
 
 	/** Trait exigé par la prochaine recherche, par poste (brouillon d'interface). */
 	let soughtTrait = $state<Record<string, string>>({});
@@ -120,7 +119,7 @@
 												type="radio"
 												name="mission-{post.id}"
 												checked={mission.active}
-												disabled={!planning || accelerating}
+												disabled={!planning}
 												onchange={() =>
 													session.controller.assignMission(occupant.characterId, mission.id)}
 											/>
@@ -143,7 +142,7 @@
 										<button
 											type="button"
 											class="btn-secondary btn-small"
-											disabled={!occupant.dismissable || accelerating}
+											disabled={!occupant.dismissable}
 											aria-label="Prévoir le départ de {occupant.name}"
 											onclick={() =>
 												entourage.dismissActionId &&
@@ -208,7 +207,7 @@
 												<button
 													type="button"
 													class="btn-secondary btn-small"
-													disabled={!candidate.vettable || accelerating}
+													disabled={!candidate.vettable}
 													title={candidate.vetReason ?? undefined}
 													aria-label="Vérifier le dossier de {candidate.name}"
 													onclick={() =>
@@ -236,7 +235,7 @@
 											<button
 												type="button"
 												class="btn-secondary btn-small"
-												disabled={!candidate.interviewable || accelerating}
+												disabled={!candidate.interviewable}
 												title={candidate.interviewReason ?? undefined}
 												aria-label="Prévoir un entretien approfondi avec {candidate.name}"
 												onclick={() =>
@@ -275,7 +274,7 @@
 													<button
 														type="button"
 														class="btn-secondary btn-small"
-														disabled={!offer.addable || accelerating}
+														disabled={!offer.addable}
 														aria-label="{offer.label} à {candidate.name}"
 														onclick={() =>
 															session.controller.addStep({
@@ -314,7 +313,7 @@
 									<select
 										class="rounded border border-line bg-surface px-1.5 py-0.5"
 										bind:value={soughtTrait[post.id]}
-										disabled={!planning || accelerating}
+										disabled={!planning}
 									>
 										<option value="">Aucun</option>
 										{#each search.traits as trait (trait.id)}
@@ -349,7 +348,7 @@
 												<button
 													type="button"
 													class="btn-secondary btn-small"
-													disabled={!option.addable || accelerating}
+													disabled={!option.addable}
 													aria-label="{option.label} pour le poste {post.label}"
 													onclick={() =>
 														session.controller.addStep({

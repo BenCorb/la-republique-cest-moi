@@ -14,7 +14,6 @@
 
 	let { session }: Props = $props();
 	const view = $derived(session.snapshot.view);
-	const accelerating = $derived(session.snapshot.acceleration?.running === true);
 
 	const statusClass = {
 		active: 'border-positive text-positive',
@@ -159,7 +158,7 @@
 										<button
 											type="button"
 											class="btn-secondary btn-small"
-											disabled={group.release.step === null || accelerating}
+											disabled={group.release.step === null}
 											aria-label="Prévoir un départ : {group.label}"
 											onclick={() =>
 												group.release?.step && session.controller.addStep(group.release.step)}
@@ -208,7 +207,7 @@
 								<button
 									type="button"
 									class="btn-secondary btn-small self-end"
-									disabled={!upgrade.addable || accelerating}
+									disabled={!upgrade.addable}
 									aria-label="Planifier l’achat « {upgrade.label} »"
 									aria-describedby={upgrade.reason ? `reason-${upgrade.id}` : undefined}
 									onclick={() => session.controller.addStep({ kind: 'purchase', id: upgrade.id })}

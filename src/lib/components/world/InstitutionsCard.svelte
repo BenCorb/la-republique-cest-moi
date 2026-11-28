@@ -11,10 +11,9 @@
 	interface Props {
 		session: GameSession;
 		institutions: InstitutionsView;
-		accelerating: boolean;
 	}
 
-	let { session, institutions, accelerating }: Props = $props();
+	let { session, institutions }: Props = $props();
 </script>
 
 <section class="card flex flex-col gap-3" aria-labelledby="institutions-title">
@@ -71,7 +70,7 @@
 									<button
 										type="button"
 										class="btn-secondary btn-small"
-										disabled={!option.addable || accelerating}
+										disabled={!option.addable}
 										aria-label="Proposer : {option.label}"
 										aria-describedby={option.reason ? `reform-reason-${option.levelId}` : undefined}
 										onclick={() =>

@@ -11,10 +11,9 @@
 	interface Props {
 		session: GameSession;
 		media: MediaView;
-		accelerating: boolean;
 	}
 
-	let { session, media, accelerating }: Props = $props();
+	let { session, media }: Props = $props();
 </script>
 
 <section class="card flex flex-col gap-3" aria-labelledby="medias-title">
@@ -54,7 +53,7 @@
 								<button
 									type="button"
 									class="btn-secondary btn-small"
-									disabled={!action.addable || accelerating}
+									disabled={!action.addable}
 									aria-label="{action.label} : {outlet.name}"
 									onclick={() =>
 										session.controller.addStep({
