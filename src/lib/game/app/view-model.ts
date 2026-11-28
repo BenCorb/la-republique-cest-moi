@@ -453,6 +453,24 @@ export interface SummaryView {
 		readonly title: string;
 		readonly lines: readonly { readonly label: string; readonly value: string }[];
 	}[];
+	/** Fiche du carnet des carrières (P3-41), archivée dans ce navigateur. */
+	readonly logbook: LogbookEntry;
+}
+
+/**
+ * Fiche d'une carrière terminée au carnet (P3-41) : affichage seul, jamais
+ * mêlée à la sauvegarde en cours, sans bonus ni déblocage.
+ */
+export interface LogbookEntry {
+	/** Seed et trimestre de fin : une carrière n'est archivée qu'une fois. */
+	readonly id: string;
+	readonly seed: string;
+	readonly headline: string;
+	readonly dates: string;
+	readonly cause: string;
+	readonly office: string;
+	readonly ambition: string | null;
+	readonly distinctions: readonly { readonly id: string; readonly label: string }[];
 }
 
 export interface IndicatorView {
@@ -3705,6 +3723,16 @@ function buildSummary(state: GameState, content: Content): SummaryView | null {
 	const paper =
 		regionalMedia(state.player.territory.regionId, content)?.name ?? 'La presse régionale';
 	return {
+		logbook: {
+			id: `${state.rng.seed}@${summary.lastTurn}`,
+			seed: state.rng.seed,
+			headline: obituary ? fill(obituary.headline) : `Fin de carrière à ${summary.age} ans`,
+			dates: `${formatTurn(state.player.birthTurn)} – ${formatTurn(summary.lastTurn)} · ${summary.age} ans`,
+			cause: CAUSE_LABELS[cause],
+			office: office ?? 'Aucun mandat',
+			ambition: ambitionText(state, content),
+			distinctions: distinctionsOf(state, content).map(({ id, label }) => ({ id, label }))
+		},
 		masthead: `${paper} · ${cause === 'prison' ? 'Chronique judiciaire' : cause === 'retirement' ? 'Portrait' : 'Nécrologie'}`,
 		title: obituary ? fill(obituary.headline) : `Fin de carrière à ${summary.age} ans`,
 		text: obituary ? fill(obituary.text) : '',

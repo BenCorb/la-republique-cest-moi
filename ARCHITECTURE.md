@@ -1173,6 +1173,15 @@ Décision du créateur (ROADMAP §5.2 : objectifs guidés dans une vraie carriè
 - **Affichage** : carte « Premiers pas · n/6 » au tableau de bord (liste cochée, bouton vers l'onglet où agir), bulle sur l'onglet concerné. Masquable d'un clic ; la préférence est propre au navigateur (`localStorage`, lecture protégée) et se réactive depuis l'accueil (« Réactiver les premiers pas »). Rien ne s'affiche au bilan.
 - **Tests** : E2E « premiers pas guidés » (bulle à l'agenda, progression après un trimestre, renvoi vers l'onglet, masquage, réactivation depuis l'accueil après rechargement).
 
+### 8.4 unquadragesies Décisions de P3-41 : carnet des carrières (28 novembre 2026)
+
+Recommandation B2 de l'audit ; détails : **décisions déléguées, provisoires**.
+
+- **Fiche** (`SummaryView.logbook`, `LogbookEntry`) construite au bilan : titre de la nécrologie (ou du portrait), dates, cause de fin, plus haute fonction, ambition et son jugement, distinctions, seed ; identifiant « seed@trimestre de fin ».
+- **Archive** (`app/logbook.ts`) dans une clé distincte de la sauvegarde (`la-republique-cest-moi:carnet`), jamais lue par le moteur ni mêlée à la partie en cours : ajout unique à l'affichage du bilan, 50 fiches au plus (les plus récentes), lectures et écritures protégées (contenu illisible ou stockage absent : carnet vide, rien n'est effacé d'autre).
+- **Accueil** : carte « Carnet des carrières » (fiches, distinctions déjà obtenues avec leur nombre, retrait d'une fiche, « Vider le carnet »). Affichage seul : aucun bonus, aucun déblocage.
+- **Tests** : `tests/unit/logbook.test.ts` (ajout unique, ordre, distinctions, retrait, contenu illisible, limite) ; E2E « retraite et carnet des carrières » (confirmation de la retraite, bilan, fiche à l'accueil, vidage).
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.

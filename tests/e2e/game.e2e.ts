@@ -1136,3 +1136,26 @@ test.describe('premiers pas guidés (P3-40)', () => {
 		await expect(page.getByTestId('first-steps')).toBeVisible();
 	});
 });
+
+test.describe('retraite et carnet des carrières (P3-37, P3-41)', () => {
+	test('confirme la retraite, ouvre le bilan et archive la carrière au carnet', async ({
+		page
+	}) => {
+		await startCareer(page, 'e2e-carnet');
+		await page
+			.getByRole('button', { name: 'Ajouter « Se retirer de la vie politique » au plan' })
+			.click();
+		await page.getByRole('button', { name: 'Trimestre suivant' }).click();
+		const confirm = page.getByTestId('retire-dialog');
+		await expect(confirm).toBeVisible();
+		await confirm.getByRole('button', { name: 'Confirmer la retraite' }).click();
+		await expect(page.getByText(/Portrait/u).first()).toBeVisible();
+		// Le carnet, à l'accueil, garde la carrière, puis s'efface sur demande.
+		await page.goto('./');
+		const logbook = page.getByTestId('logbook');
+		await expect(logbook.getByTestId('logbook-entry')).toHaveCount(1);
+		await expect(logbook).toContainText('Seed : e2e-carnet');
+		await logbook.getByRole('button', { name: 'Vider le carnet' }).click();
+		await expect(logbook.getByTestId('logbook-entry')).toHaveCount(0);
+	});
+});

@@ -3,6 +3,8 @@
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 	import GameShell from './GameShell.svelte';
 	import SaveBanner from './SaveBanner.svelte';
+	import LogbookCard from './LogbookCard.svelte';
+	import type { LogbookEntry } from '#lib/game/app/view-model.ts';
 
 	/**
 	 * Accueil (DESIGN.md §4.1) : reprendre (mis en évidence, avec dates), nouvelle
@@ -16,6 +18,9 @@
 		/** Premiers pas masqués (P3-40), réactivables d'ici. */
 		firstStepsHidden?: boolean;
 		onShowFirstSteps?: () => void;
+		/** Carnet des carrières (P3-41). */
+		logbook?: readonly LogbookEntry[];
+		onRemoveLogbook?: (id: string | null) => void;
 	}
 
 	let {
@@ -23,7 +28,9 @@
 		onNewCareer,
 		onImport,
 		firstStepsHidden = false,
-		onShowFirstSteps
+		onShowFirstSteps,
+		logbook = [],
+		onRemoveLogbook
 	}: Props = $props();
 	const home = $derived(session.snapshot.home);
 	let fileInput: HTMLInputElement | undefined = $state();
@@ -113,6 +120,10 @@
 				/>
 			</div>
 		</section>
+
+		{#if onRemoveLogbook}
+			<LogbookCard entries={logbook} onRemove={onRemoveLogbook} />
+		{/if}
 	</div>
 
 	{#snippet status()}

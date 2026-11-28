@@ -21,6 +21,7 @@
 	import type { GameTab } from '#lib/components/shell/tabs.ts';
 	import FirstSteps from '#lib/components/shell/FirstSteps.svelte';
 	import { readFirstStepsHidden, writeFirstStepsHidden } from '#lib/game/app/browser.ts';
+	import { addToLogbook, readLogbook, removeFromLogbook } from '#lib/game/app/logbook.ts';
 	import { createBrowserSession, downloadExport } from '#lib/game/app/browser.ts';
 	import type { GameSession } from '#lib/game/app/session.svelte.ts';
 
@@ -33,6 +34,15 @@
 	let confirmingNewCareer = $state(false);
 	/** Écran de création ouvert, et profil choisi en attente de confirmation éventuelle. */
 	let creating = $state(false);
+	/** Carnet des carrières (P3-41) : archive de ce navigateur, hors sauvegarde. */
+	let logbook = $state(readLogbook());
+	$effect(() => {
+		const entry = snapshot?.view?.summary?.logbook;
+		if (entry && !logbook.some((existing) => existing.id === entry.id)) {
+			logbook = addToLogbook(entry);
+		}
+	});
+
 	/** Premiers pas (P3-40) : préférence de ce navigateur. */
 	let firstStepsHidden = $state(readFirstStepsHidden());
 	function setFirstStepsHidden(hidden: boolean): void {
@@ -112,6 +122,8 @@
 		{session}
 		{firstStepsHidden}
 		onShowFirstSteps={() => setFirstStepsHidden(false)}
+		{logbook}
+		onRemoveLogbook={(id: string | null) => (logbook = removeFromLogbook(id))}
 		onNewCareer={startCareer}
 		onImport={(text: string) => session?.controller.importFile(text)}
 	/>
