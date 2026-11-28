@@ -39,7 +39,7 @@ _À condenser lors de l’audit : les règles et chiffres actuels, tirés du cod
 ## Décisions provisoires à confirmer
 
 - Ton satirique de tout le contenu écrit pendant le rush : à relire par le créateur (B-16a).
-- Guide commun ([docs/content/README.md](../content/README.md), B-06) : normes de longueur fixées sur les valeurs mesurées du catalogue, vouvoiement, typographie sans espace insécable, méthode de tirage de l’échantillon (décisions déléguées, provisoires).
+- Guide commun ([docs/content/README.md](../content/README.md), B-06) : normes de longueur fixées sur les valeurs mesurées du catalogue, vouvoiement, typographie sans espace insécable, méthode de tirage de l’échantillon (décisions déléguées, provisoires). Décision du créateur (28 novembre 2026) : une figure culturelle historique peut être citée comme référence, jamais comme actrice ni avec un comportement répréhensible.
 
 ## Limites connues
 
