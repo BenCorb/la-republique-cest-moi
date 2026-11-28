@@ -12,14 +12,14 @@ Contraintes inchangées : `AGENTS.md`. Sauvegardes conservées depuis la V1 : to
 
 ## 2. État
 
-**Chantier en cours :** B-01 (en revue).
-**Prochaine étape :** B-02, playtest de référence.
+**Chantier en cours :** B-02, playtest de référence : protocole prêt ([playtests/2026-11-28-b-02-reference.md](playtests/2026-11-28-b-02-reference.md)), session à jouer par le créateur.
+**Prochaine étape :** dépouillement de B-02, puis ordre des chantiers B-03 et suivants.
 
 | ID | Chantier | Fiche(s) | Critère de fin | État |
 | --- | --- | --- | --- | --- |
 | B-00 | Réorganisation du dépôt pour la beta | — | Documents dans `docs/`, archive V1, fiches, `npm run verify` ; CI verte | fait (PR #46) |
-| B-01 | Découpage de `app/view-model.ts` par système | interface-coque | Un module de projection par système, `projectView` inchangé ; tous les tests passent sans modification de comportement | en revue |
-| B-02 | Playtest de référence de la V1 | equilibrage, evenements-et-contenu | Carrière complète chronométrée ; relecture du ton ; retours triés par fiche | à faire |
+| B-01 | Découpage de `app/view-model.ts` par système | interface-coque | Un module de projection par système, `projectView` inchangé ; tous les tests passent sans modification de comportement | fait (PR #47) |
+| B-02 | Playtest de référence de la V1 | equilibrage, evenements-et-contenu | Carrière complète chronométrée ; relecture du ton ; retours triés par fiche | protocole prêt |
 | B-03 | Consolidation : coque d’interface et système visuel | interface-coque | Fiche consolidée | à faire |
 | B-04 | Consolidation : agenda et actions | agenda | Fiche consolidée | à faire |
 | B-05 | Consolidation : tour, accélération, note de cabinet | tour-et-acceleration | Fiche consolidée | à faire |
