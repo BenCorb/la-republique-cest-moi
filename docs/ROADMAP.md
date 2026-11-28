@@ -14,7 +14,7 @@ Contraintes : `AGENTS.md`. Sauvegardes : non conservées pendant la beta, sans m
 
 ## 2. État
 
-**Chantier en cours :** aucun ; B-02 dépouillé (décisions D-01 à D-12).
+**Chantier en cours :** B-06 (guide de contenu), en revue ; B-02 dépouillé (décisions D-01 à D-12).
 **Prochaine étape :** B-03 (sauvegardes de beta), puis B-04, B-05 et B-11, qui livrent ensemble la refonte visuelle. En parallèle : B-06 (guide de contenu) dès maintenant, puis B-16a (vague 1 de contenu) et B-07 (fichiers distincts).
 
 | ID | Chantier | Fiche(s) | Décisions | Dépend de | Critère de fin | État |
@@ -27,7 +27,7 @@ Contraintes : `AGENTS.md`. Sauvegardes : non conservées pendant la beta, sans m
 | B-04 | Coque à six onglets et tour par tour | interface-coque, tour-et-acceleration | D-02 (coque), D-07, D-08 (bouton) | B-03 | Six onglets ; carnet permanent ; « Fixe ce trimestre » ; résumé puis détail ; « Accélérer » et « Année suivante » retirés de l’interface (moteur conservé pour la simulation) ; bouton de retraite ; GDD §2 et §2.3 réécrits ; e2e à jour | à faire |
 | B-05 | Démarches sans temps | agenda, tour-et-acceleration | D-02 (démarches), D-08 | B-04 | Liste des démarches sortie de l’agenda ; application à la résolution dans l’ordre du tour ; annulation avant le tour ; « Démarches signées » au carnet ; retraite en démarche | à faire |
 | B-11 | Agenda en cartes | agenda | D-02 (cartes, épingles) | B-05 | Sept thèmes, cinq cartes au gabarit unique, panneau de détail, icône par action, types (toujours là, contexte, rotation, ce trimestre), rotation seedée, règles d’épinglage ; `docs/content/actions.md` | à faire |
-| B-06 | Guide commun de contenu et modèle de commande | evenements-et-contenu | D-12 | — | `docs/content/README.md` (ton, langue, interdits, longueurs, procédure, relecture par échantillon) ; `docs/content/BRIEF.md` révisé pour y renvoyer | à faire ([BRIEF](content/BRIEF.md) provisoire livré) |
+| B-06 | Guide commun de contenu et modèle de commande | evenements-et-contenu | D-12 | — | `docs/content/README.md` (ton, langue, interdits, longueurs, procédure, relecture par échantillon) ; `docs/content/BRIEF.md` révisé pour y renvoyer | fait, en revue (PR à venir) |
 | B-07 | Nom du personnage et diversité des noms | creation-et-profil, personnages-et-relations | D-09 | B-03 | Prénom, nom et accord à la création, tirage seedé ; catalogue élargi et diversifié ; exclusion des personnalités réelles validée ; textes à la 3ᵉ personne accordés | à faire |
 | **Lot 2 — Économie** | | | | | | |
 | B-08 | Montants réalistes | economie-et-organisation, patrimoine, equilibrage | D-11 (montants, frais du député), D-12 (rapport) | B-05 | Barème trimestriel sourcé ; coût de la vie ; salaires de l’équipe ; frais de mandat et crédit collaborateurs ; `npm run content:report` (rendement par point de temps, volumes par thème) | à faire |

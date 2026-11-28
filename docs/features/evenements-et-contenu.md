@@ -38,7 +38,8 @@ _À condenser lors de l’audit : les règles et chiffres actuels, tirés du cod
 
 ## Décisions provisoires à confirmer
 
-- Ton satirique de tout le contenu écrit pendant le rush : à relire par le créateur.
+- Ton satirique de tout le contenu écrit pendant le rush : à relire par le créateur (B-16a).
+- Guide commun ([docs/content/README.md](../content/README.md), B-06) : normes de longueur fixées sur les valeurs mesurées du catalogue, vouvoiement, typographie sans espace insécable, méthode de tirage de l’échantillon (décisions déléguées, provisoires).
 
 ## Limites connues
 
@@ -57,6 +58,7 @@ Ce qui existe avant le guide commun :
 ## Chantier beta
 
 - Décisions du [dépouillement B-02](../playtests/2026-11-28-b-02-reference.md#décisions-par-retour) : D-12 (guides de contenu, relecture par échantillon) → B-06, B-16a, B-16b, B-16c.
+- B-06 : guide commun et modèle de commande livrés ([README](../content/README.md), [BRIEF](../content/BRIEF.md)) ; règles de production ci-dessus.
 - [ ] Audit : règles en vigueur condensées ci-dessus, décisions provisoires listées, partie jouée sur ce système
 - [ ] Problèmes UX/UI relevés (captures, retours de playtest)
 - [ ] Plan de consolidation validé par le créateur
