@@ -15,7 +15,7 @@ Statuts : **à auditer** → **audité** → **en chantier** → **consolidé**.
 
 | Fiche | Système | Statut |
 | --- | --- | --- |
-| [tour-et-acceleration](tour-et-acceleration.md) | Boucle trimestrielle, accélération, note de cabinet | à auditer |
+| [tour-et-acceleration](tour-et-acceleration.md) | Boucle trimestrielle au tour par tour, note de cabinet, retraite | en chantier (B-04) |
 | [agenda](agenda.md) | Plan du trimestre, actions, formats | à auditer |
 | [evenements-et-contenu](evenements-et-contenu.md) | Événements, chaînes, époques, ton | à auditer |
 | [economie-et-organisation](economie-et-organisation.md) | Ressources, améliorations, charges | à auditer |
@@ -32,8 +32,8 @@ Statuts : **à auditer** → **audité** → **en chantier** → **consolidé**.
 | [patrimoine](patrimoine.md) | Actifs, train de vie | à auditer |
 | [institutions](institutions.md) | Réformes institutionnelles | à auditer |
 | [bilan-et-carnet](bilan-et-carnet.md) | Bilan, carnet, seed et partage | à auditer |
-| [interface-coque](interface-coque.md) | Coque, composants partagés, identité visuelle | à auditer |
-| [sauvegarde](sauvegarde.md) | Sauvegarde, refus des anciennes versions, import/export | en chantier (B-03) |
+| [interface-coque](interface-coque.md) | Coque à six onglets, composants partagés, identité visuelle | en chantier (B-04) |
+| [sauvegarde](sauvegarde.md) | Sauvegarde, refus des anciennes versions, import/export | audité (B-03 livré) |
 | [equilibrage](equilibrage.md) | Simulateur, mesures, réglages | à auditer |
 
 ## Modèle d’une fiche

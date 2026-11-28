@@ -14,8 +14,8 @@ Contraintes : `AGENTS.md`. Sauvegardes : non conservées pendant la beta, sans m
 
 ## 2. État
 
-**Chantier en cours :** B-03 (sauvegardes de beta), en revue (PR #52) ; B-06 fait (guide de contenu, PR #51) ; B-02 dépouillé (décisions D-01 à D-12).
-**Prochaine étape :** B-03 (sauvegardes de beta), puis B-04, B-05 et B-11, qui livrent ensemble la refonte visuelle. En parallèle : B-16a (vague 1 de contenu, le guide B-06 étant livré) et B-07 (fichiers distincts).
+**Chantier en cours :** B-04 (coque à six onglets et tour par tour), en revue ; B-03 et B-06 fusionnés (PR #52, #51) ; B-02 dépouillé (décisions D-01 à D-12).
+**Prochaine étape :** B-05 (démarches sans temps), puis B-11 ; ils achèvent avec B-04 la refonte visuelle. En parallèle : B-16a (vague 1 de contenu) et B-07 (fichiers distincts).
 
 | ID | Chantier | Fiche(s) | Décisions | Dépend de | Critère de fin | État |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -23,8 +23,8 @@ Contraintes : `AGENTS.md`. Sauvegardes : non conservées pendant la beta, sans m
 | B-01 | Découpage de `app/view-model.ts` par système | interface-coque | — | — | Un module de projection par système, `projectView` inchangé ; tous les tests passent sans modification de comportement | fait (PR #47) |
 | B-02 | Playtest de référence de la V1 | toutes | D-01 à D-12 | — | Retours triés par fiche, décisions consignées, plan de la beta v2 ; chronométrage reporté à B-18 | fait (dépouillé) |
 | **Lot 1 — Fondations** | | | | | | |
-| B-03 | Sauvegardes de beta | sauvegarde | 0002 | — | Une sauvegarde d’ancienne version est refusée avec message, export et nouvelle partie, sans écriture ; tests de persistance à jour | fait, en revue (PR #52) |
-| B-04 | Coque à six onglets et tour par tour | interface-coque, tour-et-acceleration | D-02 (coque), D-07, D-08 (bouton) | B-03 | Six onglets ; carnet permanent ; « Fixe ce trimestre » ; résumé puis détail ; « Accélérer » et « Année suivante » retirés de l’interface (moteur conservé pour la simulation) ; bouton de retraite ; GDD §2 et §2.3 réécrits ; e2e à jour | à faire |
+| B-03 | Sauvegardes de beta | sauvegarde | 0002 | — | Une sauvegarde d’ancienne version est refusée avec message, export et nouvelle partie, sans écriture ; tests de persistance à jour | fait (PR #52) |
+| B-04 | Coque à six onglets et tour par tour | interface-coque, tour-et-acceleration | D-02 (coque), D-07, D-08 (bouton) | B-03 | Six onglets ; carnet permanent ; « Fixe ce trimestre » ; résumé puis détail ; « Accélérer » et « Année suivante » retirés de l’interface (moteur conservé pour la simulation) ; bouton de retraite ; GDD §2 et §2.3 réécrits ; e2e à jour | fait, en revue (PR à venir) |
 | B-05 | Démarches sans temps | agenda, tour-et-acceleration | D-02 (démarches), D-08 | B-04 | Liste des démarches sortie de l’agenda ; application à la résolution dans l’ordre du tour ; annulation avant le tour ; « Démarches signées » au carnet ; retraite en démarche | à faire |
 | B-11 | Agenda en cartes | agenda | D-02 (cartes, épingles) | B-05 | Sept thèmes, cinq cartes au gabarit unique, panneau de détail, icône par action, types (toujours là, contexte, rotation, ce trimestre), rotation seedée, règles d’épinglage ; `docs/content/actions.md` | à faire |
 | B-06 | Guide commun de contenu et modèle de commande | evenements-et-contenu | D-12 | — | `docs/content/README.md` (ton, langue, interdits, longueurs, procédure, relecture par échantillon) ; `docs/content/BRIEF.md` révisé pour y renvoyer | fait (PR #51) |

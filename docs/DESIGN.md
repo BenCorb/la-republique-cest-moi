@@ -43,22 +43,22 @@ Cible de travail indicative : 1440 × 900, test à 1280 × 720 et à un zoom de 
 
 ```text
 ┌───────────────────────────────────────────────────────────────────────┐
-│ LA RÉPUBLIQUE, C’EST MOI !    T2 2004 · 29 ans · Conseiller municipal   │
-│ Influence 82   Budget 4 200 €   Fortune 9 800 €   Santé / Stress       │
+│ LA RÉPUBLIQUE, C’EST MOI !  Fonction · Étiquette · Territoire · Presse  │
+│ T2 2004 · 29 ans │ Influence  Budget  Argent  Popularité  Santé  Stress│
 ├──────────────┬──────────────────────────────────┬─────────────────────┤
-│ NAVIGATION   │ AGENDA                           │ LA PRESSE           │
-│ Tableau bord │ Temps disponible 45/100          │ Titres du trimestre │
-│ Agenda       │ ┌──────────────────────────────┐ │                     │
-│ Organisation │ │ Distribuer des tracts   15  │ │ ALERTES             │
-│ Carrière     │ │ Rencontrer des élus      20  │ │ Campagne imminente  │
-│ Entourage    │ │ Prendre du repos        25  │ │                     │
-│ Patrimoine   │ └──────────────────────────────┘ │ ÉCHÉANCES           │
-│ Actualités   │ Plan du trimestre / prévisions   │ Municipales : 3 T   │
+│ Trimestre    │ AGENDA (actions du trimestre)    │ PLAN DU TRIMESTRE   │
+│ Politique    │ ▸ Fixe ce trimestre   résumé     │ Temps 55/100        │
+│ Vie privée   │ ▸ Situation           résumé     │ 1. Tracts      15   │
+│ Mon réseau   │ ▸ Soutiens et tendances résumé   │ 2. Élus        20   │
+│ La France    │                                  │ Modifier le plan    │
+│ Journal      │                                  │                     │
 ├──────────────┴──────────────────────────────────┴─────────────────────┤
-│ Temps utilisé : 55/100  ·  Sauvegarde locale    [Trimestre suivant]  │
-│                                     [Année suivante] [Accélérer…]    │
+│ [Se retirer…]  Temps 55/100 · Sauvegardé   [Accueil] [Exporter]       │
+│                                                  [Trimestre suivant]  │
 └───────────────────────────────────────────────────────────────────────┘
 ```
+
+Depuis B-04 (D-02, 28 novembre 2026) : six onglets ; chaque section s’ouvre sur un titre et une ligne de résumé, le détail se déplie à la demande et reste déplié d’un onglet à l’autre pendant la session ; « Fixe ce trimestre » est déplié d’office. Référence visuelle : [maquette de la coque](maquettes/2026-11-28-coque-beta-v2.html).
 
 Dimensions indicatives : navigation 190–220 px, panneau d’informations 280–320 px, centre flexible. En-tête et barre de commandes visibles pendant le défilement du contenu. La navigation ne remet pas le plan en cours à zéro. Les modules non implémentés sont absents du prototype (pas d’onglets morts). Le contenu central défile sans masquer le bouton d’avance.
 
@@ -77,13 +77,12 @@ Les informations cachées restent cachées dans les données de vue : aucune jau
 |---|---|---|
 | Accueil | Nouvelle carrière, reprendre, importer/exporter si disponible, réglages simples | Prototype |
 | Création | Profil fixe de 25 ans ; puis origine, terrain d’engagement (remplace la profession en V1), territoire, famille et aperçu du bagage ; âge toujours fixe | Prototype puis alpha/V1 |
-| Tableau de bord | Situation, flux par trimestre, santé/stress, popularité, bilan du dernier tour | Prototype |
-| Agenda | Catalogue d’actions, coûts, plan modifiable, prévisions et validation | Prototype |
-| Organisation | Base militante (effectif, palier, capacité d’accueil, effets du palier, P3-19), producteurs, achats, charges, date d’activation, missions | Prototype puis alpha |
-| Carrière | Mandats, affiliations, échéances, candidatures, campagne et promesses | Alpha puis V1 |
-| Entourage | Attractivité et masse salariale (P3-20), postes (salaire de référence, salaire convenu du titulaire), candidats (profil, traits connus, salaire demandé, entretien, trois offres avec intérêt estimé en mots), relations, conseils, famille | Alpha |
-| Patrimoine | Argent personnel, actifs, confort, revenus et charges | V1 |
-| Actualités | Fil de presse, contexte national, historique des événements | Prototype puis alpha/V1 |
+| Trimestre (B-04) | Agenda, « Fixe ce trimestre » (revenus et charges certains), situation (ressources, dernier trimestre, profil), soutiens et tendances | Beta |
+| Politique (B-04) | Élections et campagnes (calendrier, candidatures, promesses, résultats), mandats, parti, médias | Beta |
+| Vie privée (B-04) | Santé et stress, exposition et justice, patrimoine (emploi avec B-10) | Beta |
+| Mon réseau (B-04) | Équipe (attractivité, postes, candidats), organisation et financement (base militante, producteurs, achats), relations | Beta |
+| La France (B-04) | Contexte national, partis et intentions de vote, institutions, presse | Beta |
+| Journal | Trimestres résolus et décisions | Prototype |
 | Justice / institutions | Dossiers, échéances, réformes possibles selon le mandat | V1 |
 | Bilan final | Nécrologie, motif de fin, parcours, fortune, promesses, distinction | Prototype puis V1 |
 
@@ -146,7 +145,7 @@ Patrimoine : actifs possédés et opportunités d’achat, coût, revenu et entr
 
 ## 5. Rythme et passage du temps
 
-La barre d’avance contient « Trimestre suivant », puis les commandes d’accélération lorsqu’elles sont implémentées. Elles indiquent le mode choisi et permettent d’interrompre la simulation. Si le temps s’arrête, expliquer pourquoi : choix narratif, échéance, alerte, plan invalide ou fin. Les trimestres simulés produisent un résumé groupé, avec détails consultables. Aucun gain hors ligne ; quitter l’onglet ne fait pas vieillir le personnage.
+Depuis B-04 (D-07, D-08), la barre du bas contient un seul bouton d’avance, « Trimestre suivant », et à gauche, loin de lui, « Se retirer de la vie politique » (confirmation, effet à la fin du trimestre, « Renoncer » jusqu’au passage du tour). Si l’avance est bloquée, expliquer pourquoi : décision, plan invalide, sauvegarde manquante ou fin. Aucun gain hors ligne ; quitter l’onglet ne fait pas vieillir le personnage.
 
 Après un tour, un bilan court indique les variations principales et les actions effectuées. Pas de pop-up pour chaque revenu.
 

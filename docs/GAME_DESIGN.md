@@ -53,7 +53,7 @@ La partie raconte une vie entière plutôt qu’une course vers une victoire pr�
 
 ### 2.1 Un tour = un trimestre
 
-Le temps n’avance que lorsque le joueur valide un tour ou lance une simulation accélérée. Le calendrier débute en 2000 (T1 recommandé pour le prototype). Quatre tours font une année ; les personnages vieillissent avec le calendrier. Les échéances, mandats, affaires, actions et événements sont exprimés en trimestres.
+Le temps n’avance que lorsque le joueur valide un tour : le jeu se joue au tour par tour (décision D-07 du playtest B-02). Le calendrier débute en 2000 (T1 recommandé pour le prototype). Quatre tours font une année ; les personnages vieillissent avec le calendrier. Les échéances, mandats, affaires, actions et événements sont exprimés en trimestres.
 
 Le joueur dispose d’un budget de temps à chaque tour. Proposition initiale : 100 points, représentant 100 % de sa disponibilité trimestrielle. Chaque action consomme une partie de ce budget. Les actions particulièrement lourdes sont donc incompatibles avec d’autres activités importantes au même trimestre. L’achat d’un actif peut aussi coûter du temps si sa nature le justifie.
 
@@ -69,13 +69,13 @@ Le joueur dispose d’un budget de temps à chaque tour. Proposition initiale : 
 
 **Convention de prototypage :** un recrutement ou un investissement réalisé pendant le trimestre T commence à produire ses effets récurrents au trimestre T+1. Les effets immédiats explicitement définis sont appliqués à la résolution de T. Les événements bloquants et leurs réponses doivent être résolus une seule fois avant la prochaine avance. L’ordre exact des sous-phases sera figé dans ARCHITECTURE.md, notamment pour les élections et les événements déclenchant une fin de partie.
 
-### 2.3 Accélération du calendrier
+### 2.3 Tour par tour
 
-Le joueur peut passer un trimestre ou plusieurs, avec un arrêt automatique lorsqu’une intervention pertinente est nécessaire : candidature à préparer, échéance électorale imminente, recrutement devenu vacant, crise de santé, affaire judiciaire, manque de financement, ou choix narratif important. Les tâches déléguées et les charges continuent de fonctionner. L’accélération simule réellement les tours intermédiaires ; elle n’applique pas un multiplicateur simplifié.
+**Décision du créateur (D-07, playtest B-02, 28 novembre 2026), qui remplace l’accélération du calendrier :** le joueur avance un trimestre à la fois, avec le seul bouton « Trimestre suivant ». « Année suivante » et « Jusqu’au prochain événement important » ont quitté l’interface : chaque trimestre doit compter, plutôt que d’être sauté. Les tâches déléguées et les charges continuent de fonctionner d’un trimestre à l’autre ; seules les activités épinglées sont reconduites, et une activité devenue impossible est retirée du plan avec son motif (DESIGN.md §4.3).
 
-Proposition : boutons « Trimestre suivant », « Année suivante » et « Jusqu’au prochain événement important », avec possibilité d’interrompre ce dernier mode. Ne pas forcer une décision à chaque trimestre. Les nouvelles non critiques peuvent être regroupées dans un résumé.
+Ne pas forcer une décision à chaque trimestre : un trimestre sans événement reste valide, et la note de cabinet résume ce qui a changé. Le moteur d’accélération (tours réellement simulés, arrêts motivés) reste pour la simulation et les tests, jamais en jeu. Délégué, provisoire : note de cabinet plus courte et au moins une nouveauté par trimestre, à traiter dans un chantier ultérieur.
 
-**Hypothèses provisoires de l’alpha (P2-09, 25 novembre 2026, choix délégués) :** l’accélération s’arrête quand les candidatures sont ouvertes à une élection accessible (au plus quatre trimestres avant la clôture), au dernier trimestre d’une campagne, au résultat, à une nomination ou une fin de mandat, à l’annonce d’élections anticipées, au départ d’un collaborateur, à l’arrivée de candidatures et quand le budget ne couvre plus les salaires, en plus des décisions, de la santé et des charges menacées. Le plan du trimestre est reconduit d’un tour à l’autre ; achats et démarches ponctuelles n’ont lieu qu’une fois. *Remplacé par P3-11 (26 novembre 2026) : les activités sont ponctuelles par défaut, seules les activités épinglées sont reconduites, et une activité devenue impossible est retirée du plan avec son motif (DESIGN.md §4.3).* Les trimestres simulés sont résumés au tableau de bord, avec le détail consultable. Fréquence des arrêts à juger en playtest.
+Le joueur peut **se retirer de la vie politique** à tout moment (D-08) : bouton dans la barre du bas, à gauche et loin du bouton d’avance, avec confirmation ; la retraite prend effet à la fin du trimestre et reste annulable tant que le trimestre n’est pas joué.
 
 ### 2.4 Progression incrémentale
 

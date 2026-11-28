@@ -1,6 +1,6 @@
 # Coque d’interface et système visuel
 
-> Fiche de fonctionnalité — état au tag `v1.0.0`. **Statut beta : en chantier (B-04).** Modèle et mode d’emploi : [README](README.md).
+> Fiche de fonctionnalité — état au tag `v1.0.0`. **Statut beta : en chantier (B-04, en revue).** Modèle et mode d’emploi : [README](README.md).
 
 ## Rôle dans le jeu
 
@@ -22,9 +22,9 @@ Ce qui est commun à tous les écrans : en-tête, onglets, alertes, carnet du pl
 
 - Moteur (`src/lib/game/engine/`) : —
 - Contenu (`src/lib/game/content/data/`) : —
-- Projection (`src/lib/game/app/`, module `view/shared.ts`, `view/dashboard.ts`, `view-model.ts`) : `PlayerView`, `Alert`, `ChipView`, `TrendView` ; `app/format.ts`
-- Interface (`src/lib/components/`) : `shell/*` (GameLayout, GameShell, HeaderStat, AlertBar, SaveBanner, tabs.ts), `common/*` (identity.ts, EffectChip, StatBar, ScoreBars, Sparkline…), `dashboard/*`, `routes/+page.svelte`, `routes/layout.css`
-- Tests (`tests/`) : `unit/interface.test.ts`, `unit/visual-identity.test.ts`, `unit/controller.test.ts`, `e2e/game.e2e.ts`
+- Projection (`src/lib/game/app/`, modules `view/shared.ts`, `view/shell.ts`, `view/dashboard.ts`, `view-model.ts`) : `PlayerView` (`fixed`, `sections`), `Alert`, `ChipView`, `TrendView` ; `app/format.ts`
+- Interface (`src/lib/components/`) : `shell/*` (GameLayout, GameShell, HeaderStat, AlertBar, SaveBanner, TurnControls, tabs.ts), `tabs/*` (QuarterTab, PoliticsTab, PrivateTab, NetworkTab, FranceTab, Section, FixedCard, sections.svelte.ts), `common/*` (identity.ts, EffectChip, StatBar, ScoreBars, Sparkline…), `dashboard/*`, `routes/+page.svelte`, `routes/layout.css`
+- Tests (`tests/`) : `unit/interface.test.ts`, `unit/shell-view.test.ts`, `unit/visual-identity.test.ts`, `unit/controller.test.ts`, `e2e/game.e2e.ts`
 
 ## État V1
 
@@ -33,23 +33,31 @@ Ce qui est commun à tous les écrans : en-tête, onglets, alertes, carnet du pl
 
 ## Règles en vigueur
 
-_Audit de B-04, avant mise en œuvre ; tiré du code._
-
-- **Coque** (`shell/GameLayout.svelte`) : hauteur de la fenêtre, seules les colonnes défilent. En-tête sur deux bandes : marque, fonction, étiquette, territoire, fil de presse tournant ; puis date et âge (avec lien « Note du … »), six indicateurs (trois ressources avec prévision, popularité, santé, stress avec prévision). Bandeau d’alertes sous l’en-tête (`AlertBar`).
-- **Dix onglets** dans une colonne gauche de 200 px (`tabs.ts`) : Tableau de bord, Agenda, Carrière, Monde politique, Actualités, Entourage, Relations, Organisation, Patrimoine, Journal. Composants : `Dashboard`, `Agenda` + `PlanPanel`, `CareerPanel` (mandats, campagnes, promesses, soutiens, médias), `WorldPanel` + `InstitutionsCard`, `NewsPanel`, `EntouragePanel`, `RelationsPanel`, `Organisation`, `Wealth`, `Journal`. Aiguillage dans `routes/+page.svelte`.
-- **Carnet du plan** permanent en colonne droite de 300 px dès 1 100 px (`PlanNotebook`) ; en dessous, bouton compact « Plan · n activités » qui ouvre le panneau superposé `PlanSheet` (recherche d’actions).
-- **Barre du bas** (`TurnControls`) : temps utilisé, rappel des épinglages, état de sauvegarde, motif de blocage ; boutons Accueil, Exporter, Année suivante, Jusqu’à une alerte, Trimestre suivant (et Interrompre pendant une accélération).
-- **Tableau de bord** : tuiles de ressources, santé et stress, exposition et justice, soutiens, tendances (`TrendsCard`), indicateurs ; résumé de période après accélération (`SpanSummary`, aussi dans la note).
+- **Coque** (`shell/GameLayout.svelte`) : hauteur de la fenêtre, seules les colonnes défilent. En-tête sur deux bandes : marque, fonction, étiquette, territoire, fil de presse tournant (son clic ouvre La France, section Presse dépliée) ; puis date et âge (lien « Note du … »), six indicateurs. Bandeau d’alertes sous l’en-tête (`AlertBar`).
+- **Six onglets** (D-02, `tabs.ts`), dans une colonne gauche de 200 px ; Trimestre par défaut et après chaque tour :
+  - **Trimestre** : agenda, puis sections « Fixe ce trimestre », « Situation » (ressources, dernier trimestre, profil, organisation), « Soutiens et tendances » ;
+  - **Politique** : « Élections et campagnes » (calendrier, candidatures, campagnes, résultats, promesses), « Mandats », « Parti » (étiquette, adhésion ou départ, carrière dans le parti), « Médias » ;
+  - **Vie privée** : « Santé et stress », « Exposition et justice », « Patrimoine » ;
+  - **Mon réseau** : « Équipe », « Organisation et financement », « Relations » ;
+  - **La France** : « Contexte national », « Partis et intentions de vote », « Institutions », « Presse » ;
+  - **Journal**.
+- **Sections** (`tabs/Section.svelte`) : titre et une ligne de résumé calculée par la projection (`PlayerView.sections`, `app/view/shell.ts`) ; le détail se déplie à la demande ; l’état déplié survit au changement d’onglet pendant la session (état d’interface, hors sauvegarde). « Fixe ce trimestre » est déplié d’office.
+- **« Fixe ce trimestre »** (`PlayerView.fixed`) : revenus et charges certains du trimestre en préparation, hors actions du plan, dans l’ordre du tour : train de vie, organisation (production nette par amélioration active), indemnités de mandat, salaires de l’équipe, base militante (cotisations et accueil). Vide une fois la carrière terminée.
+- **Carnet du plan** permanent en colonne droite de 300 px dès 1 100 px (`PlanNotebook`) ; en dessous, bouton compact qui ouvre le panneau `PlanSheet`.
+- **Barre du bas** (`TurnControls`) : à gauche « Se retirer de la vie politique » (ou « Retraite annoncée… Renoncer ») ; temps utilisé, rappel des épinglages, état de sauvegarde, motif de blocage ; Accueil, Exporter, « Trimestre suivant ».
 - Identité visuelle : DESIGN §10.10 (tokens de `routes/layout.css`, pastilles `EffectChip`, barres `StatBar`, `TierBadge`). Vérifiée à 1 100, 1 280 et 1 440 px (tests `@layout`).
 
 ## Décisions provisoires à confirmer
 
-- Décisions D-02 du dépouillement B-02, à appliquer par B-04 : six onglets (Trimestre, Politique, Vie privée, Mon réseau, La France, Journal) ; carnet permanent conservé à droite (délégué) ; chaque section ouvre sur un résumé d’une ligne, le détail à la demande (délégué) ; bloc « Fixe ce trimestre » (revenus et charges certains, délégué).
-- Référence visuelle : [maquette de la coque](../maquettes/2026-11-28-coque-beta-v2.html), non normative pour les textes et les chiffres.
+- Répartition des sections entre onglets (B-04, déléguée, provisoire) : exposition et justice dans Vie privée ; médias dans Politique ; soutiens dans Trimestre ; étiquette du joueur dans Politique, liste des partis dans La France.
+- Sections repliées par défaut sauf « Fixe ce trimestre » ; résumés en une ligne tronquée (B-04, délégué).
+- « Fixe ce trimestre » ne compte pas les missions de l’équipe ni les effets d’événements, incertains (B-04, délégué).
+- Carnet du plan conservé en colonne droite (D-02, délégué).
 
 ## Limites connues
 
-- Dix onglets, dont plusieurs se recouvrent (Carrière et Monde politique, Entourage et Organisation) : retour PT-B02-002.
+- Les cartes d’un panneau gardent leur propre titre sous celui de la section (titres en double, par exemple « Institutions ») : à reprendre avec l’agenda en cartes (B-11).
+- La maquette prévoit des onglets avec pastilles d’alerte : non livrées.
 - Pas d’audit automatisé d’accessibilité ; zoom à 125 % non testé.
 
 ## Chantier beta
@@ -65,4 +73,4 @@ _Audit de B-04, avant mise en œuvre ; tiré du code._
   - La France : contexte, partis et intentions de vote, institutions, presse ;
   - Journal ;
   - chaque section s’ouvre sur une ligne de résumé calculée par la projection, le détail à la demande ; carnet inchangé à droite.
-- [ ] Mise en œuvre, tests et fiche à jour
+- [x] Mise en œuvre, tests et fiche à jour (B-04)

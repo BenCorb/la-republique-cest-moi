@@ -1,6 +1,6 @@
 # Sauvegarde, import et export
 
-> Fiche de fonctionnalité — état au 28 novembre 2026 (B-03). **Statut beta : en chantier (B-03, en revue).** Modèle et mode d’emploi : [README](README.md).
+> Fiche de fonctionnalité — état au 28 novembre 2026 (B-03). **Statut beta : audité (B-03 livré, playtest ciblé à faire).** Modèle et mode d’emploi : [README](README.md).
 
 ## Rôle dans le jeu
 
