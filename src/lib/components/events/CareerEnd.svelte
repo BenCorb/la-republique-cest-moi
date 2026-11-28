@@ -96,7 +96,7 @@
 			{#each summary.sections as section (section.title)}
 				<section aria-label={section.title}>
 					<h3 class="section-title">{section.title}</h3>
-					<dl class="mt-1 grid grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-sm">
+					<dl class="mt-1 grid grid-cols-[minmax(10rem,auto)_1fr] gap-x-6 gap-y-1 text-sm">
 						{#each section.lines as line (line.label)}
 							<dt class="text-muted">{line.label}</dt>
 							<dd class="text-right font-medium tabular-nums">{line.value}</dd>

@@ -1190,6 +1190,16 @@ Recommandations B3 et B4 de l'audit ; détails : **décisions déléguées, prov
 - **« Exporter un retour »** : une fenêtre de note libre, puis le téléchargement d'un seul fichier JSON (`retour-<seed>.json` : format, version, note et sauvegarde complète). Aucun serveur, rien n'est envoyé.
 - **Tests** : contrôleur (seed imposée) ; E2E (seed affichée et retour téléchargé au bilan ; rejouer après confirmation).
 
+### 8.4 terquadragesies Décisions de P3-27 : cohérence visuelle finale (28 novembre 2026)
+
+Prolongement de P3-26 (DESIGN.md §10.10) sur les écrans restants ; interface seule, aucune règle modifiée.
+
+- **Relations** : médaillons (`Avatar`) au liseré du rôle public, attitude en palier coloré (`TierBadge`, le mot toujours écrit), traits connus en pastilles, traits inconnus en pastilles grisées « ? » (texte « trait encore à découvrir » pour les lecteurs d'écran).
+- **Journal** : chaque ligne porte sa rubrique en pastille à icône et couleur d'identité (agenda, organisation, santé, politique, relations, carrière, nouvelle, décision, fin) ; chaque trimestre s'ouvre sur un feuillet de calendrier (`CalendarDate`), le titre restant lisible par les lecteurs d'écran.
+- **Patrimoine** : valeur nette en trois tuiles (argent personnel, biens, total) ; offres d'achat en pastilles (prix en coût, charges en risque, effets en gain, nombre possédé).
+- **Monde politique**, **justice** (carte du tableau de bord) et **bilan** étaient déjà au style de P3-26 ; le bilan élargit la colonne des libellés de son parcours pour qu'ils ne se coupent plus.
+- **Critères de DESIGN.md §10.9** : couleurs prises dans les tokens d'identité (contrastes AA consignés au §10.10), sens jamais porté par la seule couleur (libellé écrit dans chaque pastille et palier), navigation clavier inchangée (mêmes boutons, aucun élément interactif ajouté hors bouton), texte permanent réduit dans les écrans touchés. Vérification sur captures d'écran (1 440 px) et E2E complets.
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.
