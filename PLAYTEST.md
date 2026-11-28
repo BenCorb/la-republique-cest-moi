@@ -207,6 +207,8 @@ parties réelles.
    recrutement (deux trimestres de salaires) est comprise depuis son motif de refus.
 5. Exporter la sauvegarde d’une anomalie, avec la date de jeu concernée.
 
+**Report (décision du créateur, 28 novembre 2026) :** ce playtest se fera sur la V1 publiée.
+
 **Grand playtest de la V1 (rush, 28 novembre 2026).** Le second volet par simulation est fait
 (ARCHITECTURE §8.4 quaterquadragesies). Reste ce chronométrage humain, désormais avec une cible
 de **60 à 90 minutes** actives (décision du créateur du 27 novembre 2026), la relecture du ton de

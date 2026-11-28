@@ -1213,11 +1213,20 @@ Lots de 2 500 carrières (500 par stratégie, seed `p3-09b`), mêmes transitions
 - **Reste à faire pour cocher P3-09** : le playtest chronométré final et la relecture du ton par le créateur ; selon ses retours, ajuster l'accès à Matignon et la durée de la stratégie mixte.
 - `RULES_VERSION = '0.52.0'`. Tests : alertes d'accélération (sortants, épisode « finances »), conditions de toutes les scènes du gouvernement et de Matignon, crises par portefeuille.
 
+### 8.4 quinquadragesies Décisions de P3-10 : livraison statique de la V1 (28 novembre 2026)
+
+**Décision du créateur (28 novembre 2026) :** les playtests sont reportés ; la V1 est livrée sur la foi des mesures de simulation de P3-09 (second volet), du chronométrage estimé et des tests automatiques. Le grand playtest chronométré et la relecture du ton se feront sur la version publiée ; leurs corrections passeront par des mises à jour avec migration de sauvegarde.
+
+- **Premier format conservé** : `SAVE_VERSION = 2`. Une sauvegarde de préversion (format 1 : prototype, alpha et rush) est refusée avec un message explicite (« préversion… conservée telle quelle »), jamais modifiée ni effacée. Toute évolution ultérieure de `GameState` incrémente `SAVE_VERSION` et ajoute une migration testée dans `persistence/migrations.ts` (la première sera 2 → 3).
+- **Sauvegarde témoin** : `tests/fixtures/save-v1.json` (carrière de dix trimestres, ambition et candidatures comprises, ≈ 70 Ko) doit rester lisible par toutes les versions suivantes ; un changement de l'état qui la casserait exige donc une migration.
+- **Diffusion** : message `<noscript>`, seed documentée dans le README, mise en page vérifiée à 1 100 px, plus longue sauvegarde mesurée à 1,21 million de caractères (sous la moitié du quota), limites connues du §15 à jour. Déploiement manuel par le workflow « CI et GitHub Pages » (option `deploy`), sur `main` après fusion de la pull request du rush ; retour arrière : relancer le workflow sur un commit antérieur de `main`.
+- Tests : `tests/unit/persistence.test.ts` (sauvegarde témoin relue sans migration, préversion refusée sans modification).
+
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
 **Mise à jour du rush V1 (28 novembre 2026, préparation de P3-10).** 1 072 tests unitaires et de scénarios et 86 tests E2E passent ; `RULES_VERSION = '0.52.0'`. Changements par rapport au relevé ci-dessous :
 
-- **Sauvegarde** : toujours `SAVE_VERSION = 1` ; le gel du premier format conservé et ses migrations sont reportés à la livraison (P3-10), **après** les corrections du grand playtest de P3-09, pour ne pas imposer une migration à chaque correction. Plus longue sauvegarde mesurée : 1,21 million de caractères (sur 48 carrières longues, 221 trimestres), soit moins de la moitié du quota usuel (≈ 5 millions de caractères) et de `MAX_SAVE_BYTES` ; les procès-verbaux en pèsent ≈ 4 % (§8.4 novovicies).
+- **Sauvegarde** : `SAVE_VERSION = 2`, premier format conservé de la V1 (§8.4 quinquadragesies) ; les sauvegardes de préversion sont refusées sans être effacées, les évolutions suivantes passeront par des migrations. Plus longue sauvegarde mesurée : 1,21 million de caractères (sur 48 carrières longues, 221 trimestres), soit moins de la moitié du quota usuel (≈ 5 millions de caractères) et de `MAX_SAVE_BYTES` ; les procès-verbaux en pèsent ≈ 4 % (§8.4 novovicies).
 - **Seed** : affichée au bilan, rejouable et documentée pour les joueurs dans le README (P3-42) ; `?seed=` reste un paramètre public assumé.
 - **`<noscript>`** : message explicite dans `src/app.html` quand JavaScript est désactivé.
 - **Mise en page** : vérifiée à 1 100 px (aucun défilement horizontal sur les dix onglets, E2E « livraison ») en plus de 1 280 et 1 440 px ; zoom à 125 % toujours non testé automatiquement ; pas d'audit automatisé d'accessibilité.

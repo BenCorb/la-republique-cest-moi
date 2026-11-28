@@ -19,3 +19,4 @@ bun.lockb
 # Sorties de tests
 /test-results/
 /playwright-report/
+tests/fixtures/save-v1.json

@@ -1,4 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { loadContent } from '../../src/lib/game/content/load.ts';
 import {
 	BACKUP_KEY,
 	MAX_SAVE_BYTES,
@@ -379,5 +381,26 @@ describe('export et import', () => {
 		const exported = exportSave(createEnvelope(result.state, alert, SAVED_AT));
 		const imported = importSave(exported.text, alert);
 		expect(imported.ok && imported.envelope.state).toStrictEqual(result.state);
+	});
+});
+
+describe('format de sauvegarde de la V1 (P3-10)', () => {
+	it('relit la sauvegarde témoin de la V1 : toute évolution de l’état exige une migration', () => {
+		const text = readFileSync(new URL('../fixtures/save-v1.json', import.meta.url), 'utf8');
+		const result = parseSaveText(text, loadContent());
+		if (!result.ok) throw new Error(JSON.stringify(result.error));
+		expect(result.envelope.saveVersion).toBe(SAVE_VERSION);
+		expect(result.envelope.state.turn).toBe(10);
+		expect(result.migratedFrom).toBeNull();
+	});
+
+	it('refuse une sauvegarde d’une préversion, sans la modifier', () => {
+		const text = readFileSync(new URL('../fixtures/save-v1.json', import.meta.url), 'utf8');
+		const alpha = text.replace('"saveVersion":2', '"saveVersion":1');
+		const result = parseSaveText(alpha, loadContent());
+		expect(result.ok).toBe(false);
+		if (result.ok) return;
+		expect(result.error.code).toBe('outdated_rules');
+		expect(result.error.message).toMatch(/préversion/u);
 	});
 });
