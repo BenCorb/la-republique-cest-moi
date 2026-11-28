@@ -1215,6 +1215,15 @@ Lots de 2 500 carrières (500 par stratégie, seed `p3-09b`), mêmes transitions
 
 ## 15. État après P1-08 : limites connues, dette technique et règles provisoires
 
+**Mise à jour du rush V1 (28 novembre 2026, préparation de P3-10).** 1 072 tests unitaires et de scénarios et 86 tests E2E passent ; `RULES_VERSION = '0.52.0'`. Changements par rapport au relevé ci-dessous :
+
+- **Sauvegarde** : toujours `SAVE_VERSION = 1` ; le gel du premier format conservé et ses migrations sont reportés à la livraison (P3-10), **après** les corrections du grand playtest de P3-09, pour ne pas imposer une migration à chaque correction. Plus longue sauvegarde mesurée : 1,21 million de caractères (sur 48 carrières longues, 221 trimestres), soit moins de la moitié du quota usuel (≈ 5 millions de caractères) et de `MAX_SAVE_BYTES` ; les procès-verbaux en pèsent ≈ 4 % (§8.4 novovicies).
+- **Seed** : affichée au bilan, rejouable et documentée pour les joueurs dans le README (P3-42) ; `?seed=` reste un paramètre public assumé.
+- **`<noscript>`** : message explicite dans `src/app.html` quand JavaScript est désactivé.
+- **Mise en page** : vérifiée à 1 100 px (aucun défilement horizontal sur les dix onglets, E2E « livraison ») en plus de 1 280 et 1 440 px ; zoom à 125 % toujours non testé automatiquement ; pas d'audit automatisé d'accessibilité.
+- **Limites devenues obsolètes** : la présidentielle reste non jouable mais le président, le Premier ministre et la cohabitation existent (P3-35) ; les scrutins ont plusieurs candidatures et deux tours (P3-29) ; l'argent personnel a des débouchés (P3-39) ; l'accueil a un carnet des carrières et des premiers pas réactivables.
+- **Limites restantes** : recrues militantes d'un scrutin tranché au second tour non comptées (§8.4 novovicies) ; têtes de liste anonymes hors adversaire du joueur ; carrière partisane sans scission ; Matignon sans doute encore accessible (à juger au playtest) ; seed et durée à confirmer par le chronométrage humain ; pas de présidentielle jouable, d'outre-mer ni de départementales (après la V1, ROADMAP §5.2).
+
 Relevé du 24 novembre 2026, pendant P1-10. Rien de ce qui suit n’est un défaut bloquant connu : 381 tests unitaires et de scénarios et 28 tests E2E (racine et sous-répertoire) passent après installation propre.
 
 ### 15.1 Règles provisoires à confirmer

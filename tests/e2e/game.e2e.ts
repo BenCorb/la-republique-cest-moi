@@ -1177,3 +1177,28 @@ test.describe('rejouer une partie (P3-42)', () => {
 		await expect(page.getByTestId('game-date')).toHaveText('T1 2000 · 25 ans');
 	});
 });
+
+test.describe('livraison (P3-10)', () => {
+	test('tient à 1 100 px de large sans défilement horizontal', async ({ page }) => {
+		await page.setViewportSize({ width: 1100, height: 800 });
+		await startCareer(page, 'e2e-1100');
+		for (const name of [
+			'Tableau de bord',
+			'Agenda',
+			'Carrière',
+			'Monde politique',
+			'Actualités',
+			'Entourage',
+			'Relations',
+			'Organisation',
+			'Patrimoine',
+			'Journal'
+		]) {
+			await page.getByRole('button', { name, exact: true }).click();
+			const overflow = await page.evaluate(
+				() => document.documentElement.scrollWidth - window.innerWidth
+			);
+			expect(overflow, name).toBeLessThanOrEqual(0);
+		}
+	});
+});
